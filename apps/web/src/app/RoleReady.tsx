@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FileText, Upload, Layout, Download, MessageSquare, Mail, Briefcase, Plus, Edit, Save, X, Send, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown, Sparkles, FileUp, History, Layers, Type, Palette, Zap, AlertCircle, GripVertical, Link, Phone, MapPin, Linkedin, Github, Globe, Database, Cloud, Search, Bot, Menu, Undo, Redo, Settings, Brain, CheckCircle, Info, Target } from 'lucide-react';
-import { useUndoRedo, useKeyboardShortcuts, useAutoSave, useFormValidation, useSearch } from './hooks/useEnhancedFeatures';
-import { ExportModal, SearchModal, NotificationToast } from './components/EnhancedModals';
+import { useUndoRedo, useKeyboardShortcuts, useAutoSave, useFormValidation, useSearch } from '../hooks/useEnhancedFeatures';
+import { ExportModal, SearchModal, NotificationToast } from '../components/EnhancedModals';
 
 export default function RoleReady() {
   const [activeTab, setActiveTab] = useState('editor');
