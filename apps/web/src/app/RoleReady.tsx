@@ -131,6 +131,7 @@ export default function RoleReady() {
         period: 'May 2023',
         endPeriod: 'Present',
         location: 'St. Louis, MO',
+        skills: ['Azure Data Factory', 'Apache Airflow', 'Kafka', 'Spark', 'Snowflake', 'dbt'],
         bullets: [
           'Designed and managed ADF/Airflow pipelines integrating POS, e-commerce, and vendor feeds',
           'Re-engineered order processing from batch to Kafka + Spark streaming',
@@ -144,6 +145,7 @@ export default function RoleReady() {
         period: 'Jan 2021',
         endPeriod: 'Dec 2022',
         location: 'Hyderabad, India',
+        skills: ['Apache Airflow', 'NiFi', 'Apache Spark', 'HL7', 'FHIR', 'Healthcare Standards'],
         bullets: [
           'Built Airflow/NiFi/Spark pipelines for structured and unstructured healthcare data',
           'Normalized HL7 v2/FHIR payloads and standardized ICD-10, CPT, LOINC, SNOMED codes'
@@ -157,6 +159,7 @@ export default function RoleReady() {
         subtitle: 'Personal Project',
         link: 'github.com/project',
         description: 'Databricks + Delta + ADF incremental processing',
+        skills: ['Databricks', 'Delta Lake', 'Azure Data Factory', 'Python', 'Spark', 'Azure'],
         bullets: [
           'Built an end-to-end lakehouse processing 50 GB per race weekend for $5 in cloud cost'
         ]
@@ -183,8 +186,8 @@ export default function RoleReady() {
       }
     ],
     certifications: [
-      { id: 1, name: 'Neural Networks & Deep Learning', issuer: 'DeepLearning.AI' },
-      { id: 2, name: 'Python for Everybody', issuer: 'University of Michigan' }
+      { id: 1, name: 'Neural Networks & Deep Learning', issuer: 'DeepLearning.AI', link: 'coursera.org/certificate', skills: ['Deep Learning', 'Neural Networks', 'TensorFlow', 'Keras'] },
+      { id: 2, name: 'Python for Everybody', issuer: 'University of Michigan', link: 'coursera.org/certificate', skills: ['Python', 'Programming Fundamentals', 'Data Structures'] }
     ]
   });
 
@@ -203,7 +206,7 @@ export default function RoleReady() {
 
   const [sectionNames, setSectionNames] = useState({
     summary: 'SUMMARY',
-    skills: 'CORE STRENGTHS',
+    skills: 'SKILLS',
     experience: 'EXPERIENCE',
     projects: 'PROJECTS',
     education: 'EDUCATION',
@@ -1102,6 +1105,110 @@ export default function RoleReady() {
     }
   };
 
+  // Skills management for sections
+  const addSectionSkill = (section, itemId, skill) => {
+    if (skill && skill.trim()) {
+      const items = resumeData[section].map(item => {
+        if (item.id === itemId) {
+          const currentSkills = item.skills || [];
+          return {...item, skills: [...currentSkills, skill.trim()]};
+        }
+        return item;
+      });
+      setResumeData({...resumeData, [section]: items});
+    }
+  };
+
+  const removeSectionSkill = (section, itemId, skillIndex) => {
+    const items = resumeData[section].map(item => {
+      if (item.id === itemId) {
+        const updatedSkills = (item.skills || []).filter((_, i) => i !== skillIndex);
+        return {...item, skills: updatedSkills};
+      }
+      return item;
+    });
+    setResumeData({...resumeData, [section]: items});
+  };
+
+  // Link utility functions
+  const formatUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
+  const handleLinkClick = (url) => {
+    if (url) {
+      const formattedUrl = formatUrl(url);
+      window.open(formattedUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // Cloud Storage Functions
+  const [cloudResumes, setCloudResumes] = useState([]);
+  const [showCloudStorage, setShowCloudStorage] = useState(false);
+  const [showSkillInput, setShowSkillInput] = useState(false);
+
+  const saveToCloud = async (resumeName = null) => {
+    try {
+      const name = resumeName || resumeData.name || 'Untitled Resume';
+      const resumeToSave = {
+        id: Date.now(),
+        name: name,
+        data: resumeData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        version: '1.0'
+      };
+
+      // Simulate cloud storage (replace with actual cloud API)
+      const existingResumes = JSON.parse(localStorage.getItem('cloudResumes') || '[]');
+      const updatedResumes = [...existingResumes.filter(r => r.id !== resumeToSave.id), resumeToSave];
+      localStorage.setItem('cloudResumes', JSON.stringify(updatedResumes));
+      
+      setCloudResumes(updatedResumes);
+      showNotification(`Resume "${name}" saved to cloud!`, 'success');
+      return resumeToSave;
+    } catch (error) {
+      showNotification('Failed to save to cloud', 'error');
+      console.error('Cloud save error:', error);
+    }
+  };
+
+  const loadFromCloud = (resumeId) => {
+    try {
+      const resume = cloudResumes.find(r => r.id === resumeId);
+      if (resume) {
+        setResumeData(resume.data);
+        setResumeFileName(resume.name);
+        showNotification(`Resume "${resume.name}" loaded from cloud!`, 'success');
+      }
+    } catch (error) {
+      showNotification('Failed to load from cloud', 'error');
+      console.error('Cloud load error:', error);
+    }
+  };
+
+  const deleteFromCloud = (resumeId) => {
+    try {
+      const updatedResumes = cloudResumes.filter(r => r.id !== resumeId);
+      localStorage.setItem('cloudResumes', JSON.stringify(updatedResumes));
+      setCloudResumes(updatedResumes);
+      showNotification('Resume deleted from cloud', 'success');
+    } catch (error) {
+      showNotification('Failed to delete from cloud', 'error');
+      console.error('Cloud delete error:', error);
+    }
+  };
+
+  // Load cloud resumes on component mount
+  useEffect(() => {
+    const savedResumes = JSON.parse(localStorage.getItem('cloudResumes') || '[]');
+    setCloudResumes(savedResumes);
+  }, []);
+
   const updateBullet = (section, itemId, bulletIndex, newText) => {
     const items = resumeData[section].map(item => {
       if (item.id === itemId) {
@@ -1157,6 +1264,7 @@ export default function RoleReady() {
         period: 'Start Date',
         endPeriod: 'Present',
         location: 'Location',
+        skills: [],
         bullets: ['Describe your achievement...']
       },
       projects: {
@@ -1165,6 +1273,7 @@ export default function RoleReady() {
         subtitle: 'Personal Project',
         link: 'github.com/project',
         description: 'Brief description...',
+        skills: [],
         bullets: ['Key achievement...']
       },
       education: {
@@ -1179,7 +1288,9 @@ export default function RoleReady() {
       certifications: {
         id: Date.now(),
         name: 'Certification Name',
-        issuer: 'Issuing Organization'
+        issuer: 'Issuing Organization',
+        link: '',
+        skills: []
       }
     };
 
@@ -1642,12 +1753,12 @@ export default function RoleReady() {
                     onChange={(e) => setTempSectionName(e.target.value)}
                     onKeyPress={(e) => handleSectionNameKeyPress(e, 'skills')}
                     onBlur={() => saveSectionName('skills')}
-                    className={`${currentFont.title} ${currentHeadingStyle} text-black uppercase tracking-wide bg-transparent border-b-2 border-purple-500 outline-none`}
+                    className={`${currentFont.title} ${currentHeadingStyle} text-black uppercase tracking-wide bg-transparent border-b-2 border-orange-500 outline-none`}
                     autoFocus
                   />
                 ) : (
                   <h3 
-                    className={`${currentFont.title} ${currentHeadingStyle} text-black uppercase tracking-wide cursor-pointer hover:text-purple-600 transition-colors`}
+                    className={`${currentFont.title} ${currentHeadingStyle} text-black uppercase tracking-wide cursor-pointer hover:text-orange-600 transition-colors`}
                     onClick={() => startRenamingSection('skills')}
                     title="Click to rename"
                   >
@@ -1655,29 +1766,79 @@ export default function RoleReady() {
                   </h3>
                 )}
               </div>
+              <button
+                onClick={() => toggleSection('skills')}
+                className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                title="Remove skills section"
+              >
+                <Trash2 size={18} className="text-red-600" />
+              </button>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {resumeData.skills.map((skill, idx) => (
-                <div key={idx} className={`flex items-center gap-2 px-4 py-2.5 bg-white text-black rounded-full text-sm group border-2 border-gray-300 hover:shadow-md transition-all hover:scale-105`}>
-                  <GripVertical size={14} className="text-gray-400 cursor-move" />
-                  <span className="font-semibold">{skill}</span>
-                  <button onClick={() => removeSkill(idx)} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X size={16} className="text-gray-500 hover:text-red-600" />
-                  </button>
-                </div>
-              ))}
-              <input
-                type="text"
-                placeholder="Add skill..."
-                className="px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-400 focus:bg-blue-50 transition-all hover:border-blue-300"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    addSkill(e.target.value);
-                    e.target.value = '';
-                  }
-                }}
-              />
+            
+            {/* Skills Container */}
+            <div className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Skills</h4>
+                <button
+                  onClick={() => setShowSkillInput(true)}
+                  className="text-xs text-orange-600 hover:text-orange-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-orange-50 transition-all"
+                >
+                  <Plus size={12} />
+                  Add
+                </button>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {resumeData.skills.map((skill, idx) => (
+                  <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-gray-300 hover:border-orange-400 transition-all group">
+                    <span className="text-xs text-gray-700 font-medium">{skill}</span>
+                    <button
+                      onClick={() => removeSkill(idx)}
+                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                
+                {/* Inline skill input */}
+                {showSkillInput && (
+                  <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-orange-400">
+                    <input
+                      type="text"
+                      placeholder="Enter skill..."
+                      className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-24"
+                      autoFocus
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          if (e.target.value.trim()) {
+                            addSkill(e.target.value.trim());
+                            setShowSkillInput(false);
+                          }
+                        }
+                      }}
+                      onBlur={(e) => {
+                        if (e.target.value.trim()) {
+                          addSkill(e.target.value.trim());
+                        }
+                        setShowSkillInput(false);
+                      }}
+                    />
+                    <button
+                      onClick={() => setShowSkillInput(false)}
+                      className="text-red-500 hover:text-red-700 transition-all"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                )}
+                
+                {resumeData.skills.length === 0 && !showSkillInput && (
+                  <span className="text-xs text-gray-500 italic">No skills added yet</span>
+                )}
+              </div>
             </div>
+            
             <div className="flex justify-end mt-3">
               <button 
                 onClick={() => openAIGenerateModal('skills')}
@@ -1779,43 +1940,43 @@ export default function RoleReady() {
                     />
                     
                     {/* Custom fields for this experience */}
-                    {exp.customFields && exp.customFields.length > 0 && (
-                      <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-200">
-                        <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Custom Fields</p>
-                        <div className="space-y-2">
-                          {exp.customFields.map((cf, cfIdx) => (
-                            <div key={cfIdx} className="flex items-center gap-2 bg-white rounded-lg p-2">
-                              <label className="text-xs font-semibold text-gray-600 min-w-[100px]">{cf.label}:</label>
-                              <input
-                                className="flex-1 text-sm text-gray-700 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-1.5 transition-all"
-                                value={cf.value}
-                                onChange={(e) => {
-                                  const newCustomFields = [...exp.customFields];
-                                  newCustomFields[cfIdx].value = e.target.value;
-                                  updateField('experience', exp.id, 'customFields', newCustomFields);
-                                }}
-                                placeholder={`Enter ${cf.label.toLowerCase()}`}
-                              />
-                              <button
-                                onClick={() => {
-                                  const newCustomFields = exp.customFields.filter((_, i) => i !== cfIdx);
-                                  updateField('experience', exp.id, 'customFields', newCustomFields);
-                                }}
-                                className="p-1.5 hover:bg-red-100 rounded-lg transition-all"
-                              >
-                                <X size={16} className="text-red-600" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                    {exp.customFields && exp.customFields.map((cf, cfIdx) => (
+                      <div key={cfIdx} className="flex items-center gap-2 group">
+                        <input
+                          className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 transition-all"
+                          value={cf.value}
+                          onChange={(e) => {
+                            const newCustomFields = [...exp.customFields];
+                            newCustomFields[cfIdx].value = e.target.value;
+                            updateField('experience', exp.id, 'customFields', newCustomFields);
+                          }}
+                          placeholder={cf.label}
+                        />
+                        <button
+                          onClick={() => {
+                            const newCustomFields = exp.customFields.filter((_, i) => i !== cfIdx);
+                            updateField('experience', exp.id, 'customFields', newCustomFields);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                    )}
+                    ))}
                     
                     <button
-                      onClick={() => openCustomFieldModal('experience', exp.id)}
-                      className="text-xs text-gray-600 hover:text-blue-600 flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
+                      onClick={() => {
+                        // Add a default custom field directly without popup
+                        const newCustomFields = [...(exp.customFields || []), {
+                          id: Date.now(),
+                          label: 'New Field',
+                          value: ''
+                        }];
+                        updateField('experience', exp.id, 'customFields', newCustomFields);
+                      }}
+                      className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all w-full"
                     >
-                      <Plus size={14} />
+                      <Plus size={16} />
                       Add Custom Field
                     </button>
 
@@ -1856,6 +2017,75 @@ export default function RoleReady() {
                         <Sparkles size={16} />
                         AI Generate
                       </button>
+                    </div>
+
+                    {/* Skills Section */}
+                    <div className="mt-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Environment</h4>
+                        <button
+                          onClick={() => {
+                            const newSkillInput = document.getElementById(`exp-skill-input-${exp.id}`);
+                            if (newSkillInput) {
+                              newSkillInput.style.display = 'flex';
+                              newSkillInput.querySelector('input').focus();
+                            }
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all"
+                        >
+                          <Plus size={12} />
+                          Add Skill
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(exp.skills || []).map((skill, skillIdx) => (
+                          <div key={skillIdx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-gray-300 hover:border-blue-400 transition-all group">
+                            <span className="text-xs text-gray-700 font-medium">{skill}</span>
+                            <button
+                              onClick={() => removeSectionSkill('experience', exp.id, skillIdx)}
+                              className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Inline skill input for experience */}
+                        <div id={`exp-skill-input-${exp.id}`} className="hidden items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-blue-400">
+                          <input
+                            type="text"
+                            placeholder="Enter skill..."
+                            className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-20"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                if (e.target.value.trim()) {
+                                  addSectionSkill('experience', exp.id, e.target.value.trim());
+                                  e.target.value = '';
+                                  e.target.parentElement.style.display = 'none';
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value.trim()) {
+                                addSectionSkill('experience', exp.id, e.target.value.trim());
+                              }
+                              e.target.parentElement.style.display = 'none';
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.target.parentElement.style.display = 'none';
+                            }}
+                            className="text-red-500 hover:text-red-700 transition-all"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                        
+                        {(!exp.skills || exp.skills.length === 0) && (
+                          <span className="text-xs text-gray-500 italic">No skills added yet</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button
@@ -1904,45 +2134,62 @@ export default function RoleReady() {
                       onChange={(e) => updateField('projects', project.id, 'description', e.target.value)}
                       placeholder="Brief description..."
                     />
+                    <div className="relative">
+                      <input 
+                        className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 rounded-lg px-4 py-2 w-full transition-all" 
+                        value={project.link || ''}
+                        onChange={(e) => updateField('projects', project.id, 'link', e.target.value)}
+                        placeholder="Project URL (optional)"
+                      />
+                      {project.link && (
+                        <button
+                          onClick={() => handleLinkClick(project.link)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded transition-all"
+                          title="Open link"
+                        >
+                          <Link size={14} />
+                        </button>
+                      )}
+                    </div>
                     
                     {/* Custom fields for this project */}
-                    {project.customFields && project.customFields.length > 0 && (
-                      <div className="bg-purple-50 rounded-lg p-3 border-2 border-purple-200">
-                        <p className="text-xs font-semibold text-purple-700 mb-2 uppercase tracking-wide">Custom Fields</p>
-                        <div className="space-y-2">
-                          {project.customFields.map((cf, cfIdx) => (
-                            <div key={cfIdx} className="flex items-center gap-2 bg-white rounded-lg p-2">
-                              <label className="text-xs font-semibold text-gray-600 min-w-[100px]">{cf.label}:</label>
-                              <input
-                                className="flex-1 text-sm text-gray-700 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 rounded-lg px-3 py-1.5 transition-all"
-                                value={cf.value}
-                                onChange={(e) => {
-                                  const newCustomFields = [...project.customFields];
-                                  newCustomFields[cfIdx].value = e.target.value;
-                                  updateField('projects', project.id, 'customFields', newCustomFields);
-                                }}
-                                placeholder={`Enter ${cf.label.toLowerCase()}`}
-                              />
-                              <button
-                                onClick={() => {
-                                  const newCustomFields = project.customFields.filter((_, i) => i !== cfIdx);
-                                  updateField('projects', project.id, 'customFields', newCustomFields);
-                                }}
-                                className="p-1.5 hover:bg-red-100 rounded-lg transition-all"
-                              >
-                                <X size={16} className="text-red-600" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                    {project.customFields && project.customFields.map((cf, cfIdx) => (
+                      <div key={cfIdx} className="flex items-center gap-2 group">
+                        <input
+                          className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 rounded-lg px-4 py-2 transition-all"
+                          value={cf.value}
+                          onChange={(e) => {
+                            const newCustomFields = [...project.customFields];
+                            newCustomFields[cfIdx].value = e.target.value;
+                            updateField('projects', project.id, 'customFields', newCustomFields);
+                          }}
+                          placeholder={cf.label}
+                        />
+                        <button
+                          onClick={() => {
+                            const newCustomFields = project.customFields.filter((_, i) => i !== cfIdx);
+                            updateField('projects', project.id, 'customFields', newCustomFields);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                    )}
+                    ))}
                     
                     <button
-                      onClick={() => openCustomFieldModal('projects', project.id)}
-                      className="text-xs text-gray-600 hover:text-purple-600 flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all"
+                      onClick={() => {
+                        // Add a default custom field directly without popup
+                        const newCustomFields = [...(project.customFields || []), {
+                          id: Date.now(),
+                          label: 'New Field',
+                          value: ''
+                        }];
+                        updateField('projects', project.id, 'customFields', newCustomFields);
+                      }}
+                      className="text-sm text-gray-600 hover:text-purple-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all w-full"
                     >
-                      <Plus size={14} />
+                      <Plus size={16} />
                       Add Custom Field
                     </button>
                     
@@ -1978,6 +2225,75 @@ export default function RoleReady() {
                         <Sparkles size={16} />
                         AI Generate
                       </button>
+                    </div>
+
+                    {/* Skills Section */}
+                    <div className="mt-6 p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Skills</h4>
+                        <button
+                          onClick={() => {
+                            const newSkillInput = document.getElementById(`proj-skill-input-${project.id}`);
+                            if (newSkillInput) {
+                              newSkillInput.style.display = 'flex';
+                              newSkillInput.querySelector('input').focus();
+                            }
+                          }}
+                          className="text-xs text-purple-600 hover:text-purple-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-purple-50 transition-all"
+                        >
+                          <Plus size={12} />
+                          Add Skill
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(project.skills || []).map((skill, skillIdx) => (
+                          <div key={skillIdx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-gray-300 hover:border-purple-400 transition-all group">
+                            <span className="text-xs text-gray-700 font-medium">{skill}</span>
+                            <button
+                              onClick={() => removeSectionSkill('projects', project.id, skillIdx)}
+                              className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Inline skill input for projects */}
+                        <div id={`proj-skill-input-${project.id}`} className="hidden items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-purple-400">
+                          <input
+                            type="text"
+                            placeholder="Enter skill..."
+                            className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-20"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                if (e.target.value.trim()) {
+                                  addSectionSkill('projects', project.id, e.target.value.trim());
+                                  e.target.value = '';
+                                  e.target.parentElement.style.display = 'none';
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value.trim()) {
+                                addSectionSkill('projects', project.id, e.target.value.trim());
+                              }
+                              e.target.parentElement.style.display = 'none';
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.target.parentElement.style.display = 'none';
+                            }}
+                            className="text-red-500 hover:text-red-700 transition-all"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                        
+                        {(!project.skills || project.skills.length === 0) && (
+                          <span className="text-xs text-gray-500 italic">No skills added yet</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button
@@ -2043,43 +2359,43 @@ export default function RoleReady() {
                     </div>
                     
                     {/* Custom fields for this education */}
-                    {edu.customFields && edu.customFields.length > 0 && (
-                      <div className="bg-green-50 rounded-lg p-3 border-2 border-green-200">
-                        <p className="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wide">Custom Fields</p>
-                        <div className="space-y-2">
-                          {edu.customFields.map((cf, cfIdx) => (
-                            <div key={cfIdx} className="flex items-center gap-2 bg-white rounded-lg p-2">
-                              <label className="text-xs font-semibold text-gray-600 min-w-[100px]">{cf.label}:</label>
-                              <input
-                                className="flex-1 text-sm text-gray-700 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 rounded-lg px-3 py-1.5 transition-all"
-                                value={cf.value}
-                                onChange={(e) => {
-                                  const newCustomFields = [...edu.customFields];
-                                  newCustomFields[cfIdx].value = e.target.value;
-                                  updateField('education', edu.id, 'customFields', newCustomFields);
-                                }}
-                                placeholder={`Enter ${cf.label.toLowerCase()}`}
-                              />
-                              <button
-                                onClick={() => {
-                                  const newCustomFields = edu.customFields.filter((_, i) => i !== cfIdx);
-                                  updateField('education', edu.id, 'customFields', newCustomFields);
-                                }}
-                                className="p-1.5 hover:bg-red-100 rounded-lg transition-all"
-                              >
-                                <X size={16} className="text-red-600" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                    {edu.customFields && edu.customFields.map((cf, cfIdx) => (
+                      <div key={cfIdx} className="flex items-center gap-2 group">
+                        <input
+                          className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 rounded-lg px-4 py-2 transition-all"
+                          value={cf.value}
+                          onChange={(e) => {
+                            const newCustomFields = [...edu.customFields];
+                            newCustomFields[cfIdx].value = e.target.value;
+                            updateField('education', edu.id, 'customFields', newCustomFields);
+                          }}
+                          placeholder={cf.label}
+                        />
+                        <button
+                          onClick={() => {
+                            const newCustomFields = edu.customFields.filter((_, i) => i !== cfIdx);
+                            updateField('education', edu.id, 'customFields', newCustomFields);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                    )}
+                    ))}
                     
                     <button
-                      onClick={() => openCustomFieldModal('education', edu.id)}
-                      className="text-xs text-gray-600 hover:text-green-600 flex items-center gap-1 px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all"
+                      onClick={() => {
+                        // Add a default custom field directly without popup
+                        const newCustomFields = [...(edu.customFields || []), {
+                          id: Date.now(),
+                          label: 'New Field',
+                          value: ''
+                        }];
+                        updateField('education', edu.id, 'customFields', newCustomFields);
+                      }}
+                      className="text-sm text-gray-600 hover:text-green-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all w-full"
                     >
-                      <Plus size={14} />
+                      <Plus size={16} />
                       Add Custom Field
                     </button>
                   </div>
@@ -2129,6 +2445,92 @@ export default function RoleReady() {
                       onChange={(e) => updateField('certifications', cert.id, 'issuer', e.target.value)}
                       placeholder="Issuing Organization"
                     />
+                    <div className="relative">
+                      <input 
+                        className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 rounded-lg px-4 py-2 w-full transition-all" 
+                        value={cert.link || ''}
+                        onChange={(e) => updateField('certifications', cert.id, 'link', e.target.value)}
+                        placeholder="Certificate URL (optional)"
+                      />
+                      {cert.link && (
+                        <button
+                          onClick={() => handleLinkClick(cert.link)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded transition-all"
+                          title="Open certificate link"
+                        >
+                          <Link size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Skills Section */}
+                    <div className="mt-4 p-3 bg-gray-50 rounded-xl border-2 border-gray-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Skills</h4>
+                        <button
+                          onClick={() => {
+                            const newSkillInput = document.getElementById(`cert-skill-input-${cert.id}`);
+                            if (newSkillInput) {
+                              newSkillInput.style.display = 'flex';
+                              newSkillInput.querySelector('input').focus();
+                            }
+                          }}
+                          className="text-xs text-orange-600 hover:text-orange-700 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-orange-50 transition-all"
+                        >
+                          <Plus size={10} />
+                          Add
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {(cert.skills || []).map((skill, skillIdx) => (
+                          <div key={skillIdx} className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-gray-300 hover:border-orange-400 transition-all group">
+                            <span className="text-xs text-gray-700 font-medium">{skill}</span>
+                            <button
+                              onClick={() => removeSectionSkill('certifications', cert.id, skillIdx)}
+                              className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Inline skill input for certifications */}
+                        <div id={`cert-skill-input-${cert.id}`} className="hidden items-center gap-1 bg-white px-2 py-1 rounded-lg border-2 border-orange-400">
+                          <input
+                            type="text"
+                            placeholder="Enter skill..."
+                            className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-16"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                if (e.target.value.trim()) {
+                                  addSectionSkill('certifications', cert.id, e.target.value.trim());
+                                  e.target.value = '';
+                                  e.target.parentElement.style.display = 'none';
+                                }
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (e.target.value.trim()) {
+                                addSectionSkill('certifications', cert.id, e.target.value.trim());
+                              }
+                              e.target.parentElement.style.display = 'none';
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.target.parentElement.style.display = 'none';
+                            }}
+                            className="text-red-500 hover:text-red-700 transition-all"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                        
+                        {(!cert.skills || cert.skills.length === 0) && (
+                          <span className="text-xs text-gray-500 italic">No skills added yet</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <button
                     onClick={() => deleteItem('certifications', cert.id)}
