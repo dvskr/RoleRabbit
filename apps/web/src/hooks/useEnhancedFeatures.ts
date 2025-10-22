@@ -1,93 +1,54 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-// Undo/Redo Hook
+// Undo/Redo functionality
 export const useUndoRedo = (initialState: any) => {
+  const [state, setState] = useState(initialState);
   const [history, setHistory] = useState([initialState]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const currentState = history[currentIndex];
-  const canUndo = currentIndex > 0;
-  const canRedo = currentIndex < history.length - 1;
-
-  const saveState = useCallback((newState: any) => {
-    const newHistory = history.slice(0, currentIndex + 1);
-    newHistory.push(newState);
-    setHistory(newHistory);
-    setCurrentIndex(newHistory.length - 1);
-  }, [history, currentIndex]);
+  const [historyIndex, setHistoryIndex] = useState(0);
 
   const undo = useCallback(() => {
-    if (canUndo) {
-      setCurrentIndex(currentIndex - 1);
-      return history[currentIndex - 1];
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setState(history[historyIndex - 1]);
     }
-    return currentState;
-  }, [canUndo, currentIndex, history, currentState]);
+  }, [historyIndex, history]);
 
   const redo = useCallback(() => {
-    if (canRedo) {
-      setCurrentIndex(currentIndex + 1);
-      return history[currentIndex + 1];
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setState(history[historyIndex + 1]);
     }
-    return currentState;
-  }, [canRedo, currentIndex, history, currentState]);
+  }, [historyIndex, history]);
+
+  const updateState = useCallback((newState: any) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newState);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    setState(newState);
+  }, [history, historyIndex]);
 
   return {
-    currentState,
-    saveState,
+    state,
+    updateState,
     undo,
     redo,
-    canUndo,
-    canRedo
+    canUndo: historyIndex > 0,
+    canRedo: historyIndex < history.length - 1
   };
 };
 
-// Keyboard Shortcuts Hook
+// Keyboard shortcuts
 export const useKeyboardShortcuts = (shortcuts: Record<string, () => void>) => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const { ctrlKey, metaKey, key } = event;
-      const isCtrlOrCmd = ctrlKey || metaKey;
+      const key = event.ctrlKey || event.metaKey ? 
+        `${event.ctrlKey || event.metaKey ? 'ctrl+' : ''}${event.key.toLowerCase()}` : 
+        event.key.toLowerCase();
 
-      if (isCtrlOrCmd) {
-        switch (key.toLowerCase()) {
-          case 'z':
-            if (event.shiftKey) {
-              shortcuts.redo?.();
-            } else {
-              shortcuts.undo?.();
-            }
-            event.preventDefault();
-            break;
-          case 'y':
-            shortcuts.redo?.();
-            event.preventDefault();
-            break;
-          case 's':
-            shortcuts.save?.();
-            event.preventDefault();
-            break;
-          case 'n':
-            shortcuts.new?.();
-            event.preventDefault();
-            break;
-          case 'o':
-            shortcuts.open?.();
-            event.preventDefault();
-            break;
-          case 'e':
-            shortcuts.export?.();
-            event.preventDefault();
-            break;
-          case 'f':
-            shortcuts.search?.();
-            event.preventDefault();
-            break;
-          case 'a':
-            shortcuts.aiOptimize?.();
-            event.preventDefault();
-            break;
-        }
+      if (shortcuts[key]) {
+        event.preventDefault();
+        shortcuts[key]();
       }
     };
 
@@ -96,144 +57,114 @@ export const useKeyboardShortcuts = (shortcuts: Record<string, () => void>) => {
   }, [shortcuts]);
 };
 
-// Auto Save Hook
-export const useAutoSave = (data: any) => {
-  const [isSaving, setIsSaving] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-
-  const saveToLocalStorage = useCallback(() => {
-    setIsSaving(true);
-    try {
-      localStorage.setItem('roleready-autosave', JSON.stringify(data));
-      setTimeout(() => setIsSaving(false), 1000);
-    } catch (error) {
-      console.error('Auto-save failed:', error);
-      setIsSaving(false);
-    }
-  }, [data]);
-
-  const restoreFromAutoSave = useCallback(() => {
-    try {
-      const saved = localStorage.getItem('roleready-autosave');
-      return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-      console.error('Restore from auto-save failed:', error);
-      return null;
-    }
-  }, []);
+// Auto-save functionality
+export const useAutoSave = (data: any, delay: number = 2000) => {
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
 
-    saveTimeoutRef.current = setTimeout(() => {
-      saveToLocalStorage();
-    }, 2000);
+    timeoutRef.current = setTimeout(() => {
+      // Simulate auto-save
+      localStorage.setItem('resume_autosave', JSON.stringify(data));
+      setLastSaved(new Date());
+    }, delay);
 
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
-  }, [data, saveToLocalStorage]);
+  }, [data, delay]);
 
-  return {
-    isSaving,
-    restoreFromAutoSave
-  };
+  return { lastSaved };
 };
 
-// Form Validation Hook
-export const useFormValidation = () => {
+// Form validation
+export const useFormValidation = (validationRules: Record<string, (value: any) => boolean> = {}) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const validateForm = useCallback((data: any) => {
-    const newErrors: Record<string, string> = {};
+  const validate = useCallback((field: string, value: any) => {
+    if (validationRules[field]) {
+      const isValid = validationRules[field](value);
+      setErrors(prev => ({
+        ...prev,
+        [field]: isValid ? '' : `Invalid ${field}`
+      }));
+      return isValid;
+    }
+    return true;
+  }, [validationRules]);
 
-    if (!data.name?.trim()) {
-      newErrors.name = 'Name is required';
-    }
-    if (!data.email?.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(data.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-    if (!data.title?.trim()) {
-      newErrors.title = 'Job title is required';
-    }
+  const validateAll = useCallback((data: Record<string, any>) => {
+    const newErrors: Record<string, string> = {};
+    let isValid = true;
+
+    Object.keys(validationRules).forEach(field => {
+      if (!validationRules[field](data[field])) {
+        newErrors[field] = `Invalid ${field}`;
+        isValid = false;
+      }
+    });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, []);
+    return isValid;
+  }, [validationRules]);
 
-  const getFieldError = useCallback((fieldName: string) => {
-    return errors[fieldName];
+  const getFieldError = useCallback((field: string) => {
+    return errors[field] ? [errors[field]] : null;
   }, [errors]);
 
-  const setFieldTouched = useCallback((fieldName: string) => {
-    setTouched(prev => ({ ...prev, [fieldName]: true }));
+  const setFieldTouched = useCallback((field: string) => {
+    setTouched(prev => ({
+      ...prev,
+      [field]: true
+    }));
   }, []);
 
-  return {
-    validateForm,
-    getFieldError,
-    setFieldTouched,
-    errors,
+  const isFieldTouched = useCallback((field: string) => {
+    return touched[field] || false;
+  }, [touched]);
+
+  return { 
+    errors, 
+    validate, 
+    validateAll, 
+    getFieldError, 
+    setFieldTouched, 
+    isFieldTouched,
     touched
   };
 };
 
-// Search Hook
-export const useSearch = (data: any) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-
-  const searchInData = useCallback((query: string, data: any) => {
-    if (!query.trim()) return [];
-
-    const results: any[] = [];
-    const lowerQuery = query.toLowerCase();
-
-    const searchInObject = (obj: any, path: string = '') => {
-      if (typeof obj === 'string' && obj.toLowerCase().includes(lowerQuery)) {
-        results.push({ path, value: obj, type: 'text' });
-      } else if (Array.isArray(obj)) {
-        obj.forEach((item, index) => {
-          if (typeof item === 'string' && item.toLowerCase().includes(lowerQuery)) {
-            results.push({ path: `${path}[${index}]`, value: item, type: 'array-item' });
-          } else if (typeof item === 'object') {
-            searchInObject(item, `${path}[${index}]`);
-          }
-        });
-      } else if (typeof obj === 'object' && obj !== null) {
-        Object.entries(obj).forEach(([key, value]) => {
-          searchInObject(value, path ? `${path}.${key}` : key);
-        });
-      }
-    };
-
-    searchInObject(data);
-    return results;
-  }, []);
+// Search functionality
+export const useSearch = (data: any[], searchFields: string[]) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredData, setFilteredData] = useState(data);
 
   useEffect(() => {
-    const results = searchInData(searchQuery, data);
-    setSearchResults(results);
-  }, [searchQuery, data, searchInData]);
+    if (!searchTerm) {
+      setFilteredData(data);
+      return;
+    }
 
-  const highlightText = useCallback((text: string, query: string) => {
-    if (!query.trim()) return text;
+    const filtered = data.filter(item =>
+      searchFields.some(field => {
+        const value = item[field];
+        return value && value.toString().toLowerCase().includes(searchTerm.toLowerCase());
+      })
+    );
 
-    const regex = new RegExp(`(${query})`, 'gi');
-    return text.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
-  }, []);
+    setFilteredData(filtered);
+  }, [searchTerm, data, searchFields]);
 
   return {
-    searchQuery,
-    setSearchQuery,
-    searchResults,
-    highlightText
+    searchTerm,
+    setSearchTerm,
+    filteredData
   };
 };
