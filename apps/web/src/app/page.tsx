@@ -1,7 +1,8 @@
 'use client';
 
-import RoleReady from './RoleReady';
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return <RoleReady />;
+  // Redirect to landing page by default
+  redirect('/landing');
 }
