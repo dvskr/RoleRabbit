@@ -302,11 +302,122 @@ export default function Discussion({}: DiscussionProps) {
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
+  const [showCommunitySettings, setShowCommunitySettings] = useState(false);
+  const [selectedCommunityForSettings, setSelectedCommunityForSettings] = useState<Community | null>(null);
+  const [showModerationTools, setShowModerationTools] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<'relevance' | 'time' | 'votes' | 'comments'>('relevance');
   const [showAIFeatures, setShowAIFeatures] = useState(false);
   const [aiMode, setAiMode] = useState<'assistant' | 'moderator' | 'analyzer'>('assistant');
+  
+  // Community creation form state
+  const [newCommunity, setNewCommunity] = useState({
+    name: '',
+    description: '',
+    category: 'role' as Community['category'],
+    tags: [] as string[],
+    isPrivate: false,
+    rules: [] as string[]
+  });
+  const [newTag, setNewTag] = useState('');
+  const [newRule, setNewRule] = useState('');
+
+  // Community management functions
+  const handleCreateCommunity = () => {
+    if (!newCommunity.name.trim() || !newCommunity.description.trim()) return;
+    
+    const community: Community = {
+      id: Date.now().toString(),
+      name: newCommunity.name,
+      description: newCommunity.description,
+      slug: newCommunity.name.toLowerCase().replace(/\s+/g, '-'),
+      category: newCommunity.category,
+      members: 1,
+      posts: 0,
+      createdAt: 'Just now',
+      creator: {
+        name: 'You',
+        avatar: '/avatars/user.jpg',
+        role: 'user',
+        verified: false
+      },
+      moderators: ['you'],
+      rules: newCommunity.rules,
+      tags: newCommunity.tags,
+      isPrivate: newCommunity.isPrivate,
+      isVerified: false,
+      trending: false,
+      aiGenerated: false,
+      aiScore: 0.8
+    };
+    
+    setCommunities(prev => [community, ...prev]);
+    setNewCommunity({
+      name: '',
+      description: '',
+      category: 'role',
+      tags: [],
+      isPrivate: false,
+      rules: []
+    });
+    setShowCreateCommunity(false);
+  };
+
+  const handleJoinCommunity = (communityId: string) => {
+    setCommunities(prev => prev.map(community => 
+      community.id === communityId 
+        ? { ...community, members: community.members + 1 }
+        : community
+    ));
+  };
+
+  const handleLeaveCommunity = (communityId: string) => {
+    setCommunities(prev => prev.map(community => 
+      community.id === communityId 
+        ? { ...community, members: Math.max(0, community.members - 1) }
+        : community
+    ));
+  };
+
+  const handleDeleteCommunity = (communityId: string) => {
+    setCommunities(prev => prev.filter(community => community.id !== communityId));
+    setShowCommunitySettings(false);
+  };
+
+  const addTag = () => {
+    if (newTag.trim() && !newCommunity.tags.includes(newTag.trim())) {
+      setNewCommunity(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }));
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setNewCommunity(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const addRule = () => {
+    if (newRule.trim() && !newCommunity.rules.includes(newRule.trim())) {
+      setNewCommunity(prev => ({
+        ...prev,
+        rules: [...prev.rules, newRule.trim()]
+      }));
+      setNewRule('');
+    }
+  };
+
+  const removeRule = (ruleToRemove: string) => {
+    setNewCommunity(prev => ({
+      ...prev,
+      rules: prev.rules.filter(rule => rule !== ruleToRemove)
+    }));
+  };
 
   // Sample communities data
   const [communities, setCommunities] = useState<Community[]>([
@@ -1117,14 +1228,23 @@ export default function Discussion({}: DiscussionProps) {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2">
-                      <button className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-sm">
+                      <button 
+                        onClick={() => handleJoinCommunity(community.id)}
+                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-sm"
+                      >
                         Join Network
                       </button>
                       <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                         <Eye size={16} />
                       </button>
-                      <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <MoreHorizontal size={16} />
+                      <button 
+                        onClick={() => {
+                          setSelectedCommunityForSettings(community);
+                          setShowCommunitySettings(true);
+                        }}
+                        className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <Settings size={16} />
                       </button>
                     </div>
                   </div>
@@ -1274,6 +1394,256 @@ export default function Discussion({}: DiscussionProps) {
           </div>
         )}
       </div>
+
+      {/* Create Community Modal */}
+      {showCreateCommunity && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Create Professional Network</h2>
+                <button
+                  onClick={() => setShowCreateCommunity(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Build a community for professionals in your field</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Network Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Network Name</label>
+                <input
+                  type="text"
+                  value={newCommunity.name}
+                  onChange={(e) => setNewCommunity(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Frontend Developers, Data Scientists, Product Managers"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={newCommunity.description}
+                  onChange={(e) => setNewCommunity(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe what your network is about and who should join..."
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                <select
+                  value={newCommunity.category}
+                  onChange={(e) => setNewCommunity(prev => ({ ...prev, category: e.target.value as Community['category'] }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="role">Role-Based</option>
+                  <option value="topic">Topic-Based</option>
+                  <option value="industry">Industry</option>
+                  <option value="skill">Skill-Based</option>
+                  <option value="location">Location</option>
+                  <option value="general">General</option>
+                </select>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Tags</label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                    placeholder="Add a tag..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={addTag}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {newCommunity.tags.map(tag => (
+                    <span key={tag} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-2">
+                      {tag}
+                      <button onClick={() => removeTag(tag)}>
+                        <X size={12} className="text-blue-500 hover:text-blue-700" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rules */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Community Rules</label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={newRule}
+                    onChange={(e) => setNewRule(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addRule()}
+                    placeholder="Add a rule..."
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    onClick={addRule}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {newCommunity.rules.map((rule, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                      <span className="text-sm text-gray-700 flex-1">{rule}</span>
+                      <button onClick={() => removeRule(rule)}>
+                        <X size={14} className="text-gray-500 hover:text-red-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Privacy */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="private"
+                  checked={newCommunity.isPrivate}
+                  onChange={(e) => setNewCommunity(prev => ({ ...prev, isPrivate: e.target.checked }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="private" className="text-sm text-gray-700">
+                  Make this a private network (invite-only)
+                </label>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => setShowCreateCommunity(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateCommunity}
+                disabled={!newCommunity.name.trim() || !newCommunity.description.trim()}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              >
+                Create Network
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Community Settings Modal */}
+      {showCommunitySettings && selectedCommunityForSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">Network Settings</h2>
+                <button
+                  onClick={() => setShowCommunitySettings(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Manage {selectedCommunityForSettings.name}</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Network Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Network Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Members:</span>
+                    <span className="ml-2 font-semibold">{selectedCommunityForSettings.members.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Posts:</span>
+                    <span className="ml-2 font-semibold">{selectedCommunityForSettings.posts.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Created:</span>
+                    <span className="ml-2 font-semibold">{selectedCommunityForSettings.createdAt}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Category:</span>
+                    <span className="ml-2 font-semibold capitalize">{selectedCommunityForSettings.category}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Moderation Tools */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Moderation Tools</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                    <div className="font-medium text-gray-900">Manage Members</div>
+                    <div className="text-sm text-gray-600">View and manage community members</div>
+                  </button>
+                  <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                    <div className="font-medium text-gray-900">Moderate Posts</div>
+                    <div className="text-sm text-gray-600">Review and moderate community content</div>
+                  </button>
+                  <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                    <div className="font-medium text-gray-900">Analytics</div>
+                    <div className="text-sm text-gray-600">View community growth and engagement</div>
+                  </button>
+                  <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                    <div className="font-medium text-gray-900">Invite Members</div>
+                    <div className="text-sm text-gray-600">Send invitations to join the network</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Danger Zone */}
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="font-semibold text-red-600 mb-3">Danger Zone</h3>
+                <div className="space-y-3">
+                  <button className="w-full p-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left">
+                    <div className="font-medium">Transfer Ownership</div>
+                    <div className="text-sm">Transfer network ownership to another member</div>
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteCommunity(selectedCommunityForSettings.id)}
+                    className="w-full p-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                  >
+                    <div className="font-medium">Delete Network</div>
+                    <div className="text-sm">Permanently delete this network and all its content</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowCommunitySettings(false)}
+                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+              >
+                Close Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
