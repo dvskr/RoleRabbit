@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Upload, Layout, Download, MessageSquare, Mail, Briefcase, Plus, Edit, Save, X, Send, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown, Sparkles, FileUp, History, Layers, Type, Palette, Zap, AlertCircle, GripVertical, Link, Phone, MapPin, Linkedin, Github, Globe, Database, Cloud, Search, Bot, Menu, Undo, Redo, Settings, Brain, CheckCircle, Info, Target, User } from 'lucide-react';
+import { FileText, Upload, Layout, Download, MessageSquare, Mail, Briefcase, Plus, Edit, Save, X, Send, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown, Sparkles, FileUp, History, Layers, Type, Palette, Zap, AlertCircle, GripVertical, Link, Phone, MapPin, Linkedin, Github, Globe, Database, Cloud, Search, Bot, Menu, Undo, Redo, Settings, Brain, CheckCircle, Info, Target, User, Home as HomeIcon } from 'lucide-react';
 import { useUndoRedo, useKeyboardShortcuts, useAutoSave, useFormValidation, useSearch } from '../hooks/useEnhancedFeatures';
 import { ExportModal, SearchModal, NotificationToast } from '../components/EnhancedModals';
 import UserProfileModal from '../components/UserProfileModal';
 import JobTracker from '../components/JobTracker';
 import Templates from '../components/Templates';
 import Discussion from '../components/Discussion';
+import Home from '../components/Home';
 
 export default function RoleReady() {
   const [activeTab, setActiveTab] = useState('editor');
@@ -2530,6 +2531,14 @@ export default function RoleReady() {
         
         <nav className={`flex-1 ${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-2 overflow-y-auto`}>
           <button 
+            onClick={() => handleTabChange('home')} 
+            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl transition-all duration-300 ${activeTab === 'home' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+            title={sidebarCollapsed ? 'Home' : ''}
+          >
+            <HomeIcon size={20} />
+            {!sidebarCollapsed && <span className="font-semibold">Home</span>}
+          </button>
+          <button 
             onClick={() => setShowUserProfile(true)} 
             className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-700 hover:bg-white/60 hover:shadow-md"
             title={sidebarCollapsed ? 'User Profile' : ''}
@@ -3353,6 +3362,12 @@ export default function RoleReady() {
           </>
         )}
 
+        {activeTab === 'home' && (
+          <div className="flex-1 overflow-hidden">
+            <Home />
+          </div>
+        )}
+
         {activeTab === 'tracker' && (
           <div className="flex-1 overflow-hidden">
             <JobTracker />
@@ -3371,7 +3386,7 @@ export default function RoleReady() {
           </div>
         )}
 
-        {activeTab !== 'editor' && activeTab !== 'tracker' && activeTab !== 'templates' && activeTab !== 'discussion' && (
+        {activeTab !== 'editor' && activeTab !== 'home' && activeTab !== 'tracker' && activeTab !== 'templates' && activeTab !== 'discussion' && (
           <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
