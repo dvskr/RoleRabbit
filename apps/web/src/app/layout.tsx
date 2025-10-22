@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { AuthProvider } from '../contexts/AuthContext';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -24,11 +25,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <div id="root">
-          {children}
-        </div>
-        <div id="modal-root" />
-        <div id="toast-root" />
+        <AuthProvider>
+          <div id="root">
+            {children}
+          </div>
+          <div id="modal-root" />
+          <div id="toast-root" />
+        </AuthProvider>
       </body>
     </html>
   );

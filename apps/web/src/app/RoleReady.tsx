@@ -1,7 +1,10 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Upload, Layout, Download, MessageSquare, Mail, Briefcase, Plus, Edit, Save, X, Send, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown, Sparkles, FileUp, History, Layers, Type, Palette, Zap, AlertCircle, GripVertical, Link, Phone, MapPin, Linkedin, Github, Globe, Database, Cloud, Search, Bot, Menu, Undo, Redo, Settings, Brain, CheckCircle, Info, Target } from 'lucide-react';
+import { FileText, Upload, Layout, Download, MessageSquare, Mail, Briefcase, Plus, Edit, Save, X, Send, Trash2, Copy, Eye, EyeOff, ChevronUp, ChevronDown, Sparkles, FileUp, History, Layers, Type, Palette, Zap, AlertCircle, GripVertical, Link, Phone, MapPin, Linkedin, Github, Globe, Database, Cloud, Search, Bot, Menu, Undo, Redo, Settings, Brain, CheckCircle, Info, Target, User } from 'lucide-react';
 import { useUndoRedo, useKeyboardShortcuts, useAutoSave, useFormValidation, useSearch } from '../hooks/useEnhancedFeatures';
 import { ExportModal, SearchModal, NotificationToast } from '../components/EnhancedModals';
+import UserProfileModal from '../components/UserProfileModal';
 
 export default function RoleReady() {
   const [activeTab, setActiveTab] = useState('editor');
@@ -1150,6 +1153,7 @@ export default function RoleReady() {
   const [cloudResumes, setCloudResumes] = useState([]);
   const [showCloudStorage, setShowCloudStorage] = useState(false);
   const [showSkillInput, setShowSkillInput] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
 
   const saveToCloud = async (resumeName = null) => {
     try {
@@ -1941,39 +1945,23 @@ export default function RoleReady() {
                     
                     {/* Custom fields for this experience */}
                     {exp.customFields && exp.customFields.map((cf, cfIdx) => (
-                      <div key={cfIdx} className="flex items-center gap-2 group">
+                      <div key={cfIdx} className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700 min-w-[100px]">{cf.label}:</label>
                         <input
-                          className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 transition-all"
+                          className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 w-48 transition-all"
                           value={cf.value}
                           onChange={(e) => {
                             const newCustomFields = [...exp.customFields];
                             newCustomFields[cfIdx].value = e.target.value;
                             updateField('experience', exp.id, 'customFields', newCustomFields);
                           }}
-                          placeholder={cf.label}
+                          placeholder="Enter value..."
                         />
-                        <button
-                          onClick={() => {
-                            const newCustomFields = exp.customFields.filter((_, i) => i !== cfIdx);
-                            updateField('experience', exp.id, 'customFields', newCustomFields);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
-                        >
-                          <X size={16} />
-                        </button>
                       </div>
                     ))}
                     
                     <button
-                      onClick={() => {
-                        // Add a default custom field directly without popup
-                        const newCustomFields = [...(exp.customFields || []), {
-                          id: Date.now(),
-                          label: 'New Field',
-                          value: ''
-                        }];
-                        updateField('experience', exp.id, 'customFields', newCustomFields);
-                      }}
+                      onClick={() => openCustomFieldModal('experience', exp.id)}
                       className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all w-full"
                     >
                       <Plus size={16} />
@@ -2154,39 +2142,23 @@ export default function RoleReady() {
                     
                     {/* Custom fields for this project */}
                     {project.customFields && project.customFields.map((cf, cfIdx) => (
-                      <div key={cfIdx} className="flex items-center gap-2 group">
+                      <div key={cfIdx} className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700 min-w-[100px]">{cf.label}:</label>
                         <input
-                          className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 rounded-lg px-4 py-2 transition-all"
+                          className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 rounded-lg px-3 py-2 w-48 transition-all"
                           value={cf.value}
                           onChange={(e) => {
                             const newCustomFields = [...project.customFields];
                             newCustomFields[cfIdx].value = e.target.value;
                             updateField('projects', project.id, 'customFields', newCustomFields);
                           }}
-                          placeholder={cf.label}
+                          placeholder="Enter value..."
                         />
-                        <button
-                          onClick={() => {
-                            const newCustomFields = project.customFields.filter((_, i) => i !== cfIdx);
-                            updateField('projects', project.id, 'customFields', newCustomFields);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
-                        >
-                          <X size={16} />
-                        </button>
                       </div>
                     ))}
                     
                     <button
-                      onClick={() => {
-                        // Add a default custom field directly without popup
-                        const newCustomFields = [...(project.customFields || []), {
-                          id: Date.now(),
-                          label: 'New Field',
-                          value: ''
-                        }];
-                        updateField('projects', project.id, 'customFields', newCustomFields);
-                      }}
+                      onClick={() => openCustomFieldModal('projects', project.id)}
                       className="text-sm text-gray-600 hover:text-purple-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all w-full"
                     >
                       <Plus size={16} />
@@ -2360,39 +2332,23 @@ export default function RoleReady() {
                     
                     {/* Custom fields for this education */}
                     {edu.customFields && edu.customFields.map((cf, cfIdx) => (
-                      <div key={cfIdx} className="flex items-center gap-2 group">
+                      <div key={cfIdx} className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700 min-w-[100px]">{cf.label}:</label>
                         <input
-                          className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 rounded-lg px-4 py-2 transition-all"
+                          className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 rounded-lg px-3 py-2 w-48 transition-all"
                           value={cf.value}
                           onChange={(e) => {
                             const newCustomFields = [...edu.customFields];
                             newCustomFields[cfIdx].value = e.target.value;
                             updateField('education', edu.id, 'customFields', newCustomFields);
                           }}
-                          placeholder={cf.label}
+                          placeholder="Enter value..."
                         />
-                        <button
-                          onClick={() => {
-                            const newCustomFields = edu.customFields.filter((_, i) => i !== cfIdx);
-                            updateField('education', edu.id, 'customFields', newCustomFields);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
-                        >
-                          <X size={16} />
-                        </button>
                       </div>
                     ))}
                     
                     <button
-                      onClick={() => {
-                        // Add a default custom field directly without popup
-                        const newCustomFields = [...(edu.customFields || []), {
-                          id: Date.now(),
-                          label: 'New Field',
-                          value: ''
-                        }];
-                        updateField('education', edu.id, 'customFields', newCustomFields);
-                      }}
+                      onClick={() => openCustomFieldModal('education', edu.id)}
                       className="text-sm text-gray-600 hover:text-green-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all w-full"
                     >
                       <Plus size={16} />
@@ -2570,6 +2526,14 @@ export default function RoleReady() {
         </div>
         
         <nav className={`flex-1 ${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-2 overflow-y-auto`}>
+          <button 
+            onClick={() => setShowUserProfile(true)} 
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-700 hover:bg-white/60 hover:shadow-md"
+            title={sidebarCollapsed ? 'User Profile' : ''}
+          >
+            <User size={20} />
+            {!sidebarCollapsed && <span className="font-semibold">Profile</span>}
+          </button>
           <button 
             onClick={() => handleTabChange('storage')} 
             className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl transition-all duration-300 ${activeTab === 'storage' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
@@ -4756,6 +4720,12 @@ export default function RoleReady() {
           </div>
         </div>
       )}
+
+      {/* User Profile Modal */}
+      <UserProfileModal 
+        isOpen={showUserProfile} 
+        onClose={() => setShowUserProfile(false)} 
+      />
     </>
   );
 }
