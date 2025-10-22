@@ -10,6 +10,7 @@ import Templates from '../components/Templates';
 import Discussion from '../components/Discussion';
 import Home from '../components/Home';
 import Email from '../components/Email';
+import CloudStorage from '../components/CloudStorage';
 
 export default function RoleReady() {
   const [activeTab, setActiveTab] = useState('editor');
@@ -3393,7 +3394,13 @@ export default function RoleReady() {
           </div>
         )}
 
-        {activeTab !== 'editor' && activeTab !== 'home' && activeTab !== 'tracker' && activeTab !== 'templates' && activeTab !== 'discussion' && activeTab !== 'email' && (
+        {activeTab === 'storage' && (
+          <div className="flex-1 overflow-hidden">
+            <CloudStorage />
+          </div>
+        )}
+
+        {activeTab !== 'editor' && activeTab !== 'home' && activeTab !== 'tracker' && activeTab !== 'templates' && activeTab !== 'discussion' && activeTab !== 'email' && activeTab !== 'storage' && (
           <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
