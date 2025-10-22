@@ -5,6 +5,7 @@ import { FileText, Upload, Layout, Download, MessageSquare, Mail, Briefcase, Plu
 import { useUndoRedo, useKeyboardShortcuts, useAutoSave, useFormValidation, useSearch } from '../hooks/useEnhancedFeatures';
 import { ExportModal, SearchModal, NotificationToast } from '../components/EnhancedModals';
 import UserProfileModal from '../components/UserProfileModal';
+import JobTracker from '../components/JobTracker';
 
 export default function RoleReady() {
   const [activeTab, setActiveTab] = useState('editor');
@@ -3350,7 +3351,13 @@ export default function RoleReady() {
           </>
         )}
 
-        {activeTab !== 'editor' && (
+        {activeTab === 'tracker' && (
+          <div className="flex-1 overflow-hidden">
+            <JobTracker />
+          </div>
+        )}
+
+        {activeTab !== 'editor' && activeTab !== 'tracker' && (
           <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">

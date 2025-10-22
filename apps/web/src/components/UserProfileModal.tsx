@@ -32,7 +32,8 @@ import {
   Edit,
   Filter,
   SortAsc,
-  Clock
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -148,7 +149,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'billing', label: 'Billing', icon: CreditCard },
-    { id: 'jobs', label: 'Job Tracker', icon: Calendar },
     { id: 'support', label: 'Support', icon: HelpCircle },
   ];
 
@@ -1211,86 +1211,152 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
   const renderJobTrackerTab = () => (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">Job Tracker</h3>
-          <p className="text-gray-600 text-sm">Track your job applications and manage your job search</p>
+          <h3 className="text-2xl font-bold text-gray-900">Job Applications</h3>
+          <p className="text-gray-600 text-sm">Organize and track your job search progress</p>
         </div>
         <button
           onClick={() => setShowAddJob(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all flex items-center gap-2"
         >
           <Plus size={16} />
-          Add Job
+          New Application
         </button>
       </div>
 
-      {/* Filters and Stats */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-4">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-blue-600 font-medium">Total Applications</p>
+              <p className="text-2xl font-bold text-blue-900">{jobs.length}</p>
+            </div>
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Calendar size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-green-600 font-medium">Interviews</p>
+              <p className="text-2xl font-bold text-green-900">{jobs.filter(j => j.status === 'interview').length}</p>
+            </div>
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <Clock size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-purple-600 font-medium">Offers</p>
+              <p className="text-2xl font-bold text-purple-900">{jobs.filter(j => j.status === 'offer').length}</p>
+            </div>
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+              <CheckCircle size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-600 font-medium">Response Rate</p>
+              <p className="text-2xl font-bold text-orange-900">
+                {jobs.length > 0 ? Math.round((jobs.filter(j => j.status !== 'applied').length / jobs.length) * 100) : 0}%
+              </p>
+            </div>
+            <div className="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
+              <TrendingUp size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <select
               value={jobFilter}
               onChange={(e) => setJobFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
             >
-              <option value="all">All Jobs</option>
+              <option value="all">All Applications</option>
               <option value="applied">Applied</option>
               <option value="interview">Interview</option>
               <option value="offer">Offer</option>
               <option value="rejected">Rejected</option>
             </select>
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>Total: {jobs.length}</span>
-              <span>•</span>
-              <span>Applied: {jobs.filter(j => j.status === 'applied').length}</span>
-              <span>•</span>
-              <span>Interview: {jobs.filter(j => j.status === 'interview').length}</span>
+              <Filter size={16} />
+              <span>Filter by status</span>
             </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <SortAsc size={16} />
+            <span>Sort by date</span>
           </div>
         </div>
       </div>
 
-      {/* Job List */}
-      <div className="space-y-4">
+      {/* Job Applications List */}
+      <div className="space-y-3">
         {jobs.filter(job => jobFilter === 'all' || job.status === jobFilter).map((job) => (
-          <div key={job.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+          <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h4 className="font-semibold text-gray-900">{job.title}</h4>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    job.status === 'applied' ? 'bg-blue-100 text-blue-800' :
-                    job.status === 'interview' ? 'bg-yellow-100 text-yellow-800' :
-                    job.status === 'offer' ? 'bg-green-100 text-green-800' :
-                    'bg-red-100 text-red-800'
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                    <Building size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900">{job.title}</h4>
+                    <p className="text-gray-600 font-medium">{job.company}</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    job.status === 'applied' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                    job.status === 'interview' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                    job.status === 'offer' ? 'bg-green-100 text-green-800 border border-green-200' :
+                    'bg-red-100 text-red-800 border border-red-200'
                   }`}>
                     {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                  <span className="flex items-center gap-1">
-                    <Building size={14} />
-                    {job.company}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin size={14} />
-                    {job.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar size={14} />
-                    {job.appliedDate}
-                  </span>
+                
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <MapPin size={16} className="text-gray-400" />
+                    <span>{job.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar size={16} className="text-gray-400" />
+                    <span>{job.appliedDate}</span>
+                  </div>
+                  {job.salary && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+                      <span className="text-green-500">$</span>
+                      <span>{job.salary}</span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm text-gray-700 mb-2">{job.description}</p>
-                {job.salary && (
-                  <p className="text-sm font-medium text-green-600 mb-2">{job.salary}</p>
+                
+                {job.description && (
+                  <p className="text-sm text-gray-700 mb-3 line-clamp-2">{job.description}</p>
                 )}
+                
                 {job.notes && (
-                  <p className="text-xs text-gray-500 italic">Notes: {job.notes}</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                    <p className="text-xs text-gray-500 font-medium mb-1">Notes</p>
+                    <p className="text-sm text-gray-700">{job.notes}</p>
+                  </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 ml-4">
+              
+              <div className="flex items-center gap-2 ml-6">
                 {job.url && (
                   <a
                     href={job.url}
@@ -1299,19 +1365,35 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     title="View Job Posting"
                   >
-                    <Eye size={16} />
+                    <Eye size={18} />
                   </a>
                 )}
                 <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                  <Edit size={16} />
+                  <Edit size={18} />
                 </button>
                 <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                  <Trash2 size={16} />
+                  <Trash2 size={18} />
                 </button>
               </div>
             </div>
           </div>
         ))}
+        
+        {jobs.filter(job => jobFilter === 'all' || job.status === jobFilter).length === 0 && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <Calendar size={24} className="text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No applications found</h3>
+            <p className="text-gray-600 mb-4">Start tracking your job applications to stay organized</p>
+            <button
+              onClick={() => setShowAddJob(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Add Your First Application
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add Job Modal */}
@@ -1666,7 +1748,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                   {activeTab === 'security' && renderSecurityTab()}
                   {activeTab === 'preferences' && renderPreferencesTab()}
                   {activeTab === 'billing' && renderBillingTab()}
-                  {activeTab === 'jobs' && renderJobTrackerTab()}
                   {activeTab === 'support' && renderSupportTab()}
                 </>
               )}
