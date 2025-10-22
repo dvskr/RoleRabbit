@@ -25,29 +25,18 @@ export default function LandingPage() {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              {!isAuthenticated ? (
-                <>
-                  <button
-                    onClick={() => setIsLoginModalOpen(true)}
-                    className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
-                  >
-                    Sign In
-                  </button>
-                  <Link
-                    href="/dashboard"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all"
-                  >
-                    Try Free & Get Started
-                  </Link>
-                </>
-              ) : (
-                <Link
-                  href="/dashboard"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all"
-                >
-                  Go to Dashboard
-                </Link>
-              )}
+              <button
+                onClick={() => setIsLoginModalOpen(true)}
+                className="text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100 transition-all"
+              >
+                Sign In
+              </button>
+              <Link
+                href="/dashboard"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+              >
+                Try Free & Get Started
+              </Link>
             </div>
           </div>
         </div>
@@ -178,14 +167,12 @@ export default function LandingPage() {
               Try Free & Get Started
               <ArrowRight size={20} />
             </Link>
-            {!isAuthenticated && (
-              <button
-                onClick={() => setIsSignupModalOpen(true)}
-                className="border-2 border-white text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white hover:text-blue-600 transition-all"
-              >
-                Create Account
-              </button>
-            )}
+            <button
+              onClick={() => setIsSignupModalOpen(true)}
+              className="border-2 border-white text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white hover:text-blue-600 transition-all"
+            >
+              Create Account
+            </button>
           </div>
         </div>
       </section>
@@ -239,46 +226,56 @@ export default function LandingPage() {
       {/* Login Modal */}
       {isLoginModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4 relative">
+            <button 
+              onClick={() => setIsLoginModalOpen(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
                 Welcome Back
               </h3>
-              <button 
-                onClick={() => setIsLoginModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-              >
-                ✕
-              </button>
+              <p className="text-gray-600 text-sm">
+                Sign in to continue
+              </p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Email</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Email Address</label>
                 <input
                   type="email"
                   placeholder="Enter your email"
                   value={loginForm.email}
                   onChange={(e) => setLoginForm({...loginForm, email: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50/50 hover:bg-white"
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Password</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Password</label>
                 <input
                   type="password"
                   placeholder="Enter your password"
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50/50 hover:bg-white"
                 />
               </div>
               <button 
                 onClick={() => login(loginForm.email, loginForm.password)}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+                className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
               >
                 Sign In
               </button>
-              <p className="text-center text-gray-600">
+              <p className="text-center text-gray-600 text-sm">
                 Don't have an account?{' '}
                 <button 
                   onClick={() => {
@@ -287,7 +284,7 @@ export default function LandingPage() {
                   }}
                   className="text-blue-600 hover:text-blue-700 font-semibold"
                 >
-                  Sign up
+                  Create one
                 </button>
               </p>
             </div>
@@ -298,56 +295,66 @@ export default function LandingPage() {
       {/* Signup Modal */}
       {isSignupModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Get Started
+          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md mx-4 relative">
+            <button 
+              onClick={() => setIsSignupModalOpen(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Join RoleReady
               </h3>
-              <button 
-                onClick={() => setIsSignupModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-              >
-                ✕
-              </button>
+              <p className="text-gray-600 text-sm">
+                Create your account to get started
+              </p>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Full Name</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Full Name</label>
                 <input
                   type="text"
                   placeholder="Enter your full name"
                   value={signupForm.name}
                   onChange={(e) => setSignupForm({...signupForm, name: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50/50 hover:bg-white"
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Email</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Email Address</label>
                 <input
                   type="email"
                   placeholder="Enter your email"
                   value={signupForm.email}
                   onChange={(e) => setSignupForm({...signupForm, email: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50/50 hover:bg-white"
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Password</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Password</label>
                 <input
                   type="password"
                   placeholder="Create a password"
                   value={signupForm.password}
                   onChange={(e) => setSignupForm({...signupForm, password: e.target.value})}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all"
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-50/50 hover:bg-white"
                 />
               </div>
               <button 
                 onClick={() => signup(signupForm.name, signupForm.email, signupForm.password)}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+                className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold shadow-md hover:shadow-lg transition-all"
               >
                 Create Account
               </button>
-              <p className="text-center text-gray-600">
+              <p className="text-center text-gray-600 text-sm">
                 Already have an account?{' '}
                 <button 
                   onClick={() => {
