@@ -11,6 +11,7 @@ import Discussion from '../components/Discussion';
 import Home from '../components/Home';
 import Email from '../components/Email';
 import CloudStorage from '../components/CloudStorage';
+import CoverLetterGenerator from '../components/CoverLetterGenerator';
 
 export default function RoleReady() {
   const [activeTab, setActiveTab] = useState('editor');
@@ -2596,6 +2597,14 @@ export default function RoleReady() {
             <Mail size={20} />
             {!sidebarCollapsed && <span className="font-semibold">Email</span>}
           </button>
+          <button 
+            onClick={() => handleTabChange('cover-letter')} 
+            className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl transition-all duration-300 ${activeTab === 'cover-letter' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+            title={sidebarCollapsed ? 'Cover Letter' : ''}
+          >
+            <FileText size={20} />
+            {!sidebarCollapsed && <span className="font-semibold">Cover Letter</span>}
+          </button>
         </nav>
         
         <div className={`${sidebarCollapsed ? 'p-2' : 'p-4'} border-t border-gray-100/50`}>
@@ -3400,7 +3409,13 @@ export default function RoleReady() {
           </div>
         )}
 
-        {activeTab !== 'editor' && activeTab !== 'home' && activeTab !== 'tracker' && activeTab !== 'templates' && activeTab !== 'discussion' && activeTab !== 'email' && activeTab !== 'storage' && (
+        {activeTab === 'cover-letter' && (
+          <div className="flex-1 overflow-hidden">
+            <CoverLetterGenerator />
+          </div>
+        )}
+
+        {activeTab !== 'editor' && activeTab !== 'home' && activeTab !== 'tracker' && activeTab !== 'templates' && activeTab !== 'discussion' && activeTab !== 'email' && activeTab !== 'storage' && activeTab !== 'cover-letter' && (
           <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
