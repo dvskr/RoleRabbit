@@ -26,7 +26,13 @@ import {
   Download,
   Upload,
   Trash2,
-  LogOut
+  LogOut,
+  Search,
+  Plus,
+  Edit,
+  Filter,
+  SortAsc,
+  Clock
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -62,6 +68,56 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     subject: '',
     message: ''
   });
+  const [jobs, setJobs] = useState([
+    {
+      id: 1,
+      title: 'Senior Software Engineer',
+      company: 'Tech Corp',
+      location: 'San Francisco, CA',
+      status: 'applied',
+      appliedDate: '2024-01-15',
+      salary: '$120,000 - $150,000',
+      description: 'Full-stack development role with React and Node.js',
+      url: 'https://example.com/job/1',
+      notes: 'Referred by John Smith'
+    },
+    {
+      id: 2,
+      title: 'Frontend Developer',
+      company: 'StartupXYZ',
+      location: 'Remote',
+      status: 'interview',
+      appliedDate: '2024-01-10',
+      salary: '$90,000 - $110,000',
+      description: 'React and TypeScript focused role',
+      url: 'https://example.com/job/2',
+      notes: 'Interview scheduled for next week'
+    },
+    {
+      id: 3,
+      title: 'Full Stack Developer',
+      company: 'BigTech Inc',
+      location: 'New York, NY',
+      status: 'rejected',
+      appliedDate: '2024-01-05',
+      salary: '$130,000 - $160,000',
+      description: 'Full-stack role with modern tech stack',
+      url: 'https://example.com/job/3',
+      notes: 'Did not meet experience requirements'
+    }
+  ]);
+  const [newJob, setNewJob] = useState({
+    title: '',
+    company: '',
+    location: '',
+    status: 'applied',
+    salary: '',
+    description: '',
+    url: '',
+    notes: ''
+  });
+  const [showAddJob, setShowAddJob] = useState(false);
+  const [jobFilter, setJobFilter] = useState('all');
 
   // Form states
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -92,6 +148,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'billing', label: 'Billing', icon: CreditCard },
+    { id: 'jobs', label: 'Job Tracker', icon: Calendar },
     { id: 'support', label: 'Support', icon: HelpCircle },
   ];
 
@@ -1152,6 +1209,253 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     </div>
   );
 
+  const renderJobTrackerTab = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">Job Tracker</h3>
+          <p className="text-gray-600 text-sm">Track your job applications and manage your job search</p>
+        </div>
+        <button
+          onClick={() => setShowAddJob(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2"
+        >
+          <Plus size={16} />
+          Add Job
+        </button>
+      </div>
+
+      {/* Filters and Stats */}
+      <div className="bg-gray-50 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <select
+              value={jobFilter}
+              onChange={(e) => setJobFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Jobs</option>
+              <option value="applied">Applied</option>
+              <option value="interview">Interview</option>
+              <option value="offer">Offer</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>Total: {jobs.length}</span>
+              <span>•</span>
+              <span>Applied: {jobs.filter(j => j.status === 'applied').length}</span>
+              <span>•</span>
+              <span>Interview: {jobs.filter(j => j.status === 'interview').length}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Job List */}
+      <div className="space-y-4">
+        {jobs.filter(job => jobFilter === 'all' || job.status === jobFilter).map((job) => (
+          <div key={job.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h4 className="font-semibold text-gray-900">{job.title}</h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    job.status === 'applied' ? 'bg-blue-100 text-blue-800' :
+                    job.status === 'interview' ? 'bg-yellow-100 text-yellow-800' :
+                    job.status === 'offer' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
+                  <span className="flex items-center gap-1">
+                    <Building size={14} />
+                    {job.company}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin size={14} />
+                    {job.location}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar size={14} />
+                    {job.appliedDate}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 mb-2">{job.description}</p>
+                {job.salary && (
+                  <p className="text-sm font-medium text-green-600 mb-2">{job.salary}</p>
+                )}
+                {job.notes && (
+                  <p className="text-xs text-gray-500 italic">Notes: {job.notes}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 ml-4">
+                {job.url && (
+                  <a
+                    href={job.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    title="View Job Posting"
+                  >
+                    <Eye size={16} />
+                  </a>
+                )}
+                <button className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
+                  <Edit size={16} />
+                </button>
+                <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add Job Modal */}
+      {showAddJob && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Add New Job Application</h3>
+              <button
+                onClick={() => setShowAddJob(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                  <input
+                    type="text"
+                    value={newJob.title}
+                    onChange={(e) => setNewJob({...newJob, title: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Senior Software Engineer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                  <input
+                    type="text"
+                    value={newJob.company}
+                    onChange={(e) => setNewJob({...newJob, company: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Tech Corp"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    value={newJob.location}
+                    onChange={(e) => setNewJob({...newJob, location: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., San Francisco, CA"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={newJob.status}
+                    onChange={(e) => setNewJob({...newJob, status: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="applied">Applied</option>
+                    <option value="interview">Interview</option>
+                    <option value="offer">Offer</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Salary Range</label>
+                  <input
+                    type="text"
+                    value={newJob.salary}
+                    onChange={(e) => setNewJob({...newJob, salary: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., $100,000 - $120,000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Job URL</label>
+                  <input
+                    type="url"
+                    value={newJob.url}
+                    onChange={(e) => setNewJob({...newJob, url: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Job Description</label>
+                <textarea
+                  value={newJob.description}
+                  onChange={(e) => setNewJob({...newJob, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Brief description of the role..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea
+                  value={newJob.notes}
+                  onChange={(e) => setNewJob({...newJob, notes: e.target.value})}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Additional notes, referrals, etc..."
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowAddJob(false)}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const job = {
+                    ...newJob,
+                    id: Date.now(),
+                    appliedDate: new Date().toISOString().split('T')[0]
+                  };
+                  setJobs([...jobs, job]);
+                  setNewJob({
+                    title: '',
+                    company: '',
+                    location: '',
+                    status: 'applied',
+                    salary: '',
+                    description: '',
+                    url: '',
+                    notes: ''
+                  });
+                  setShowAddJob(false);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Job
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   if (!isOpen) return null;
 
   return (
@@ -1362,6 +1666,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                   {activeTab === 'security' && renderSecurityTab()}
                   {activeTab === 'preferences' && renderPreferencesTab()}
                   {activeTab === 'billing' && renderBillingTab()}
+                  {activeTab === 'jobs' && renderJobTrackerTab()}
                   {activeTab === 'support' && renderSupportTab()}
                 </>
               )}
