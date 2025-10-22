@@ -877,7 +877,7 @@ We welcome contributions from the community! Here's how you can help:
 
 **RoleReady** - Empowering professionals with AI-driven resume building technology.
 
-*Last Updated: October 2024 - Comprehensive analysis completed*
+*Last Updated: October 2025 - Comprehensive analysis completed*
 
 [![Made with ❤️](https://img.shields.io/badge/Made%20with-❤️-red?style=for-the-badge)](https://github.com/dvskr/roleready)
 [![Powered by AI](https://img.shields.io/badge/Powered%20by-AI-blue?style=for-the-badge)](https://openai.com/)
