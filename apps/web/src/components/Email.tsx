@@ -388,7 +388,7 @@ Best regards,
 
   const generateAIEmail = () => {
     const prompt = `Generate a ${aiContext.tone} ${aiContext.recipientType} email for a ${aiContext.position} position in the ${aiContext.industry} industry. Length: ${aiContext.length}. Context: ${aiPrompt}`;
-    
+
     // Simulate AI generation
     const generatedContent = `Hi [Recipient Name],
 
@@ -493,8 +493,8 @@ Best regards,
           <button
             onClick={() => setActiveTab('inbox')}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'inbox' 
-                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+              activeTab === 'inbox'
+                ? 'bg-blue-100 text-blue-700 border border-blue-200'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -504,8 +504,8 @@ Best regards,
           <button
             onClick={() => setActiveTab('compose')}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'compose' 
-                ? 'bg-green-100 text-green-700 border border-green-200' 
+              activeTab === 'compose'
+                ? 'bg-green-100 text-green-700 border border-green-200'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -515,8 +515,8 @@ Best regards,
           <button
             onClick={() => setActiveTab('templates')}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'templates' 
-                ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+              activeTab === 'templates'
+                ? 'bg-purple-100 text-purple-700 border border-purple-200'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -526,8 +526,8 @@ Best regards,
           <button
             onClick={() => setActiveTab('campaigns')}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'campaigns' 
-                ? 'bg-orange-100 text-orange-700 border border-orange-200' 
+              activeTab === 'campaigns'
+                ? 'bg-orange-100 text-orange-700 border border-orange-200'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -537,8 +537,8 @@ Best regards,
           <button
             onClick={() => setActiveTab('analytics')}
             className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'analytics' 
-                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
+              activeTab === 'analytics'
+                ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -996,19 +996,18 @@ Best regards,
                     <option value="retail">Retail</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Position</label>
-                  <select
+                  <input
+                    type="text"
                     value={aiContext.position}
                     onChange={(e) => setAiContext(prev => ({ ...prev, position: e.target.value }))}
+                    placeholder="e.g., Software Engineer"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="software-engineer">Software Engineer</option>
-                    <option value="product-manager">Product Manager</option>
-                    <option value="data-scientist">Data Scientist</option>
-                    <option value="designer">Designer</option>
-                    <option value="marketing">Marketing</option>
-                  </select>
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Tone</label>
@@ -1020,48 +1019,37 @@ Best regards,
                     <option value="professional">Professional</option>
                     <option value="friendly">Friendly</option>
                     <option value="formal">Formal</option>
-                    <option value="casual">Casual</option>
+                    <option value="persuasive">Persuasive</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Context & Instructions</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Additional Context</label>
                 <textarea
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Describe what you want to achieve with this email, any specific points to mention, or context about the situation..."
+                  placeholder="Describe what you want to achieve with this email..."
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Bot size={16} className="text-blue-600" />
-                  <span className="font-semibold text-blue-900">AI Preview</span>
-                </div>
-                <p className="text-sm text-blue-800">
-                  The AI will generate a {aiContext.tone} email for a {aiContext.position} position in the {aiContext.industry} industry, 
-                  targeting {aiContext.recipientType}s, based on your context and instructions.
-                </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAIGenerator(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={generateAIEmail}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-semibold"
+                >
+                  <Bot size={16} className="inline mr-2" />
+                  Generate Email
+                </button>
               </div>
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex gap-3">
-              <button
-                onClick={() => setShowAIGenerator(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={generateAIEmail}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-semibold"
-              >
-                <Bot size={16} className="inline mr-2" />
-                Generate Email
-              </button>
             </div>
           </div>
         </div>
