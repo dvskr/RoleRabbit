@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![RoleReady Logo](https://via.placeholder.com/200x80/3b82f6/ffffff?text=RoleReady)
+
 
 **A comprehensive, full-stack AI-powered resume builder platform built with Next.js, TypeScript, and hybrid backend architecture.**
 
