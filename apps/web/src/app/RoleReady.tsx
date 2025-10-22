@@ -1798,7 +1798,7 @@ export default function RoleReady() {
               </div>
               
               <div className="flex flex-wrap gap-2">
-                {resumeData.skills.map((skill, idx) => (
+              {resumeData.skills.map((skill, idx) => (
                   <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-gray-300 hover:border-orange-400 transition-all group">
                     <span className="text-xs text-gray-700 font-medium">{skill}</span>
                     <button
@@ -1806,20 +1806,20 @@ export default function RoleReady() {
                       className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
                     >
                       <X size={12} />
-                    </button>
-                  </div>
-                ))}
+                  </button>
+                </div>
+              ))}
                 
                 {/* Inline skill input */}
                 {showSkillInput && (
                   <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-orange-400">
-                    <input
-                      type="text"
+              <input
+                type="text"
                       placeholder="Enter skill..."
                       className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-24"
                       autoFocus
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
                           if (e.target.value.trim()) {
                             addSkill(e.target.value.trim());
                             setShowSkillInput(false);
@@ -1839,7 +1839,7 @@ export default function RoleReady() {
                     >
                       <X size={12} />
                     </button>
-                  </div>
+            </div>
                 )}
                 
                 {resumeData.skills.length === 0 && !showSkillInput && (
@@ -1952,18 +1952,18 @@ export default function RoleReady() {
                     {exp.customFields && exp.customFields.map((cf, cfIdx) => (
                       <div key={cfIdx} className="flex items-center gap-2">
                         <label className="text-sm font-medium text-gray-700 min-w-[100px]">{cf.label}:</label>
-                        <input
+                              <input
                           className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 w-48 transition-all"
-                          value={cf.value}
-                          onChange={(e) => {
-                            const newCustomFields = [...exp.customFields];
-                            newCustomFields[cfIdx].value = e.target.value;
-                            updateField('experience', exp.id, 'customFields', newCustomFields);
-                          }}
+                                value={cf.value}
+                                onChange={(e) => {
+                                  const newCustomFields = [...exp.customFields];
+                                  newCustomFields[cfIdx].value = e.target.value;
+                                  updateField('experience', exp.id, 'customFields', newCustomFields);
+                                }}
                           placeholder="Enter value..."
                         />
-                      </div>
-                    ))}
+                            </div>
+                          ))}
                     
                     <button
                       onClick={() => openCustomFieldModal('experience', exp.id)}
@@ -2149,18 +2149,18 @@ export default function RoleReady() {
                     {project.customFields && project.customFields.map((cf, cfIdx) => (
                       <div key={cfIdx} className="flex items-center gap-2">
                         <label className="text-sm font-medium text-gray-700 min-w-[100px]">{cf.label}:</label>
-                        <input
+                              <input
                           className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 rounded-lg px-3 py-2 w-48 transition-all"
-                          value={cf.value}
-                          onChange={(e) => {
-                            const newCustomFields = [...project.customFields];
-                            newCustomFields[cfIdx].value = e.target.value;
-                            updateField('projects', project.id, 'customFields', newCustomFields);
-                          }}
+                                value={cf.value}
+                                onChange={(e) => {
+                                  const newCustomFields = [...project.customFields];
+                                  newCustomFields[cfIdx].value = e.target.value;
+                                  updateField('projects', project.id, 'customFields', newCustomFields);
+                                }}
                           placeholder="Enter value..."
                         />
-                      </div>
-                    ))}
+                            </div>
+                          ))}
                     
                     <button
                       onClick={() => openCustomFieldModal('projects', project.id)}
@@ -2339,18 +2339,18 @@ export default function RoleReady() {
                     {edu.customFields && edu.customFields.map((cf, cfIdx) => (
                       <div key={cfIdx} className="flex items-center gap-2">
                         <label className="text-sm font-medium text-gray-700 min-w-[100px]">{cf.label}:</label>
-                        <input
+                              <input
                           className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 rounded-lg px-3 py-2 w-48 transition-all"
-                          value={cf.value}
-                          onChange={(e) => {
-                            const newCustomFields = [...edu.customFields];
-                            newCustomFields[cfIdx].value = e.target.value;
-                            updateField('education', edu.id, 'customFields', newCustomFields);
-                          }}
+                                value={cf.value}
+                                onChange={(e) => {
+                                  const newCustomFields = [...edu.customFields];
+                                  newCustomFields[cfIdx].value = e.target.value;
+                                  updateField('education', edu.id, 'customFields', newCustomFields);
+                                }}
                           placeholder="Enter value..."
                         />
-                      </div>
-                    ))}
+                            </div>
+                          ))}
                     
                     <button
                       onClick={() => openCustomFieldModal('education', edu.id)}
