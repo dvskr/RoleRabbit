@@ -4480,29 +4480,6 @@ export default function RoleReady() {
 
       </div>
 
-      {/* Enhanced Modals */}
-      <ExportModal 
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        resumeData={resumeData}
-        resumeElement={resumeElementRef.current}
-        />
-
-      <SearchModal
-        isOpen={showSearchModal}
-        onClose={() => setShowSearchModal(false)}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchResults={searchResults}
-        highlightText={highlightText}
-      />
-
-      <NotificationToast
-        message={notification.message}
-        type={notification.type}
-        isVisible={notification.visible}
-        onClose={() => setNotification({...notification, visible: false})}
-      />
 
       {/* UNIVERSAL AI GENERATION MODAL */}
       {showAIGenerateModal && targetSection && (
