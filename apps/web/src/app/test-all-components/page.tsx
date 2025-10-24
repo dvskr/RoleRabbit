@@ -194,6 +194,7 @@ export default function TestAllComponents() {
 
   // AI Panel state
   const [aiMode, setAiMode] = useState('tailor');
+  const [selectedModel, setSelectedModel] = useState('gpt-5');
   const [jobDescription, setJobDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [matchScore, setMatchScore] = useState(0);
@@ -539,10 +540,10 @@ export default function TestAllComponents() {
     // Handle custom sections
     const customSection = customSections.find(s => s.id === section);
     if (customSection) {
-      return (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-gray-800">{customSection.name.toUpperCase()}</h3>
+        return (
+          <div className="mb-6 p-2 sm:p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-bold text-gray-800">{customSection.name.toUpperCase()}</h3>
             <button 
               onClick={() => deleteCustomSection(customSection.id)}
               className="p-1 hover:bg-red-100 rounded-lg transition-colors"
@@ -556,7 +557,7 @@ export default function TestAllComponents() {
           <textarea
             value={customSection.content}
             onChange={(e) => updateCustomSection(customSection.id, e.target.value)}
-            className="w-full h-24 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none"
+            className="w-full h-24 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none break-words overflow-wrap-anywhere"
             placeholder={`Add your ${customSection.name.toLowerCase()} content here...`}
           />
         </div>
@@ -566,7 +567,7 @@ export default function TestAllComponents() {
     switch (section) {
       case 'summary':
         return (
-          <div className="mb-8">
+          <div className="mb-8 p-1 sm:p-2 lg:p-4">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -586,7 +587,7 @@ export default function TestAllComponents() {
             </div>
             <div className="space-y-3">
               <textarea
-                className="w-full text-sm text-gray-700 border-2 border-gray-200 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all"
+                className="w-full text-sm text-gray-700 border-2 border-gray-200 rounded-xl p-2 sm:p-4 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all break-words overflow-wrap-anywhere"
                 rows={4}
                 value={resumeData.summary}
                 onChange={(e) => setResumeData({...resumeData, summary: (e.target as HTMLTextAreaElement).value})}
@@ -606,7 +607,7 @@ export default function TestAllComponents() {
         );
       case 'skills':
         return (
-          <div className="mb-8">
+          <div className="mb-8 p-1 sm:p-2 lg:p-4">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -624,21 +625,21 @@ export default function TestAllComponents() {
             </div>
             
             {/* Skills Container */}
-            <div className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+            <div className="p-1 sm:p-2 lg:p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Skills</h4>
               </div>
               
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 min-w-0 w-full">
                 {resumeData.skills.map((skill, idx) => (
-                  <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
-                    <span className="text-xs text-black font-medium">{skill}</span>
+                  <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group min-w-0 max-w-full flex-shrink-0">
+                    <span className="text-xs text-black font-medium break-words overflow-wrap-anywhere min-w-0">{skill}</span>
                     <button
                       onClick={() => {
                         const updatedSkills = resumeData.skills.filter((_, index) => index !== idx);
                         setResumeData(prev => ({ ...prev, skills: updatedSkills }));
                       }}
-                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all flex-shrink-0"
                     >
                       <X size={12} />
                     </button>
@@ -646,11 +647,11 @@ export default function TestAllComponents() {
                 ))}
                 
                 {/* Inline skill input */}
-                <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
+                <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black min-w-0 max-w-full flex-shrink-0">
                   <input
                     type="text"
                     placeholder="Enter skill..."
-                    className="text-xs text-black font-medium bg-transparent border-none outline-none w-24"
+                    className="text-xs text-black font-medium bg-transparent border-none outline-none w-24 min-w-0 max-w-full break-words overflow-wrap-anywhere"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         if ((e.target as HTMLInputElement).value.trim()) {
@@ -674,7 +675,7 @@ export default function TestAllComponents() {
                         input.value = '';
                       }
                     }}
-                    className="text-black hover:text-gray-600 transition-all"
+                    className="text-black hover:text-gray-600 transition-all flex-shrink-0"
                   >
                     <Plus size={12} />
                   </button>
@@ -699,7 +700,7 @@ export default function TestAllComponents() {
         );
       case 'experience':
         return (
-          <div className="mb-8">
+          <div className="mb-8 p-1 sm:p-2 lg:p-4">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -768,12 +769,12 @@ export default function TestAllComponents() {
             )}
 
             {resumeData.experience.map((exp) => (
-              <div key={exp.id} className="mb-6 group p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 bg-white">
+              <div key={exp.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 bg-white max-w-full overflow-hidden">
                 <div className="flex items-start gap-3 mb-4">
                   <GripVertical size={18} className="text-gray-400 cursor-move mt-2" />
                   <div className="flex-1 space-y-3">
                     <input
-                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-4 py-2 w-full transition-all"
+                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                       value={exp.company}
                       onChange={(e) => {
                         const updatedExperience = resumeData.experience.map((item) => 
@@ -783,9 +784,9 @@ export default function TestAllComponents() {
                       }}
                       placeholder="Company Name"
                     />
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-sm text-gray-600 min-w-0">
                       <input 
-                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all font-medium" 
+                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all font-medium w-full sm:w-auto min-w-0 max-w-full break-words overflow-wrap-anywhere" 
                         value={exp.period}
                         onChange={(e) => {
                           const updatedExperience = resumeData.experience.map((item) => 
@@ -795,9 +796,9 @@ export default function TestAllComponents() {
                         }}
                         placeholder="Start Date"
                       />
-                      <span className="font-bold text-gray-400">→</span>
+                      <span className="font-bold text-gray-400 hidden sm:inline flex-shrink-0">→</span>
                       <input 
-                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all font-medium" 
+                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all font-medium w-full sm:w-auto min-w-0 max-w-full break-words overflow-wrap-anywhere" 
                         value={exp.endPeriod}
                         onChange={(e) => {
                           const updatedExperience = resumeData.experience.map((item) => 
@@ -809,7 +810,7 @@ export default function TestAllComponents() {
                       />
                     </div>
                     <input
-                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 w-full transition-all"
+                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-4 py-2 w-full transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                       value={exp.location}
                       onChange={(e) => {
                         const updatedExperience = resumeData.experience.map((item) => 
@@ -820,7 +821,7 @@ export default function TestAllComponents() {
                       placeholder="Location"
                     />
                     <input
-                      className="font-semibold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-4 py-2 w-full transition-all"
+                      className="font-semibold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                       value={exp.position}
                       onChange={(e) => {
                         const updatedExperience = resumeData.experience.map((item) => 
@@ -835,7 +836,7 @@ export default function TestAllComponents() {
                     {(exp.customFields || []).map((field) => (
                       <div key={field.id} className="flex items-center gap-2 mb-2">
                         <input
-                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all"
+                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                           value={field.name}
                           onChange={(e) => {
                             const updatedExperience = resumeData.experience.map((item) => {
@@ -891,7 +892,7 @@ export default function TestAllComponents() {
                           <GripVertical size={16} className="text-gray-400 mt-2 flex-shrink-0" />
                           <span className="text-sm text-blue-600 mt-2 font-bold">•</span>
                           <textarea
-                            className="flex-1 text-sm text-gray-700 border-2 border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all bg-white"
+                            className="flex-1 text-sm text-gray-700 border-2 border-gray-200 rounded-lg px-2 sm:px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all bg-white min-w-0 max-w-full break-words overflow-wrap-anywhere"
                             rows={2}
                             value={bullet}
                             onChange={(e) => {
@@ -946,10 +947,10 @@ export default function TestAllComponents() {
 
                     {/* Environment Section */}
                     <div className="mt-6 pt-4 border-t border-gray-200">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 min-w-0 w-full">
                         {(exp.environment || []).map((skill, idx) => (
-                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
-                            <span className="text-xs text-black font-medium">{skill}</span>
+                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group min-w-0 max-w-full flex-shrink-0">
+                            <span className="text-xs text-black font-medium break-words overflow-wrap-anywhere min-w-0">{skill}</span>
                             <button
                               onClick={() => {
                                 const updatedExperience = resumeData.experience.map((item) => {
@@ -961,7 +962,7 @@ export default function TestAllComponents() {
                                 });
                                 setResumeData({...resumeData, experience: updatedExperience});
                               }}
-                              className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all"
+                              className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-all flex-shrink-0"
                             >
                               <X size={12} />
                             </button>
@@ -969,12 +970,12 @@ export default function TestAllComponents() {
                         ))}
                         
                         {/* Inline skill input */}
-                        <div className="relative">
-                          <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
+                        <div className="relative min-w-0 max-w-full flex-shrink-0">
+                          <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black min-w-0 max-w-full">
                             <input
                               type="text"
                               placeholder="Enter skill..."
-                              className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
+                              className="text-xs text-black font-medium bg-transparent border-none outline-none w-20 min-w-0 max-w-full break-words overflow-wrap-anywhere"
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
                                   if ((e.target as HTMLInputElement).value.trim()) {
@@ -1016,7 +1017,7 @@ export default function TestAllComponents() {
                                   input.value = '';
                                 }
                               }}
-                              className="text-black hover:text-gray-600 transition-all"
+                              className="text-black hover:text-gray-600 transition-all flex-shrink-0"
                             >
                               <Plus size={12} />
                             </button>
@@ -1053,7 +1054,7 @@ export default function TestAllComponents() {
         );
       case 'projects':
         return (
-          <div className="mb-8">
+          <div className="mb-8 p-2 sm:p-4">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -1123,7 +1124,7 @@ export default function TestAllComponents() {
                   <GripVertical size={18} className="text-gray-400 cursor-move mt-2" />
                   <div className="flex-1 space-y-3">
                     <input
-                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-4 py-2 w-full transition-all"
+                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-4 py-2 w-full transition-all min-w-0 break-words overflow-wrap-anywhere"
                       value={project.name}
                       onChange={(e) => {
                         const updatedProjects = resumeData.projects.map((item) => 
@@ -1134,7 +1135,7 @@ export default function TestAllComponents() {
                       placeholder="Project Name"
                     />
                     <input
-                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 w-full transition-all"
+                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 w-full transition-all min-w-0 break-words overflow-wrap-anywhere"
                       value={project.description}
                       onChange={(e) => {
                         const updatedProjects = resumeData.projects.map((item) => 
@@ -1146,7 +1147,7 @@ export default function TestAllComponents() {
                     />
                     <div className="flex items-center gap-2">
                       <input
-                        className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 transition-all"
+                        className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 transition-all min-w-0 break-words overflow-wrap-anywhere"
                         value={project.link}
                         onChange={(e) => {
                           const updatedProjects = resumeData.projects.map((item) => 
@@ -1167,7 +1168,7 @@ export default function TestAllComponents() {
                     {(project.customFields || []).map((field) => (
                       <div key={field.id} className="flex items-center gap-2 mb-2">
                         <input
-                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all"
+                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all min-w-0 break-words overflow-wrap-anywhere"
                           value={field.name}
                           onChange={(e) => {
                             const updatedProjects = resumeData.projects.map((item) => {
@@ -1223,7 +1224,7 @@ export default function TestAllComponents() {
                           <GripVertical size={16} className="text-gray-400 mt-2 flex-shrink-0" />
                           <span className="text-sm text-purple-600 mt-2 font-bold">•</span>
                           <textarea
-                            className="flex-1 text-sm text-gray-700 border-2 border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all bg-white"
+                            className="flex-1 text-sm text-gray-700 border-2 border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all bg-white min-w-0 break-words overflow-wrap-anywhere"
                             rows={2}
                             value={bullet}
                             onChange={(e) => {
@@ -1282,10 +1283,10 @@ export default function TestAllComponents() {
                         <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">SKILLS</h4>
                       </div>
                       
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 min-w-0">
                         {(project.skills || []).map((skill, idx) => (
-                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
-                            <span className="text-xs text-black font-medium">{skill}</span>
+                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group min-w-0 max-w-full">
+                            <span className="text-xs text-black font-medium break-words overflow-wrap-anywhere">{skill}</span>
                             <button
                               onClick={() => {
                                 const updatedProjects = resumeData.projects.map((item) => {
@@ -1305,11 +1306,11 @@ export default function TestAllComponents() {
                         ))}
                         
                         {/* Inline skill input */}
-                        <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
+                        <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black min-w-0 max-w-full">
                           <input
                             type="text"
                             placeholder="Enter skill..."
-                            className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
+                            className="text-xs text-black font-medium bg-transparent border-none outline-none w-20 min-w-0 break-words overflow-wrap-anywhere"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
                                 if ((e.target as HTMLInputElement).value.trim()) {
@@ -1594,7 +1595,7 @@ export default function TestAllComponents() {
         );
       case 'education':
         return (
-          <div className="mb-8">
+          <div className="mb-8 p-1 sm:p-2 lg:p-4">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
                 <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -1657,12 +1658,12 @@ export default function TestAllComponents() {
             )}
 
             {resumeData.education.map((edu) => (
-              <div key={edu.id} className="mb-6 group p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 bg-white">
+              <div key={edu.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 bg-white max-w-full overflow-hidden">
                 <div className="flex items-start gap-3 mb-4">
                   <GripVertical size={18} className="text-gray-400 cursor-move mt-2" />
                   <div className="flex-1 space-y-3">
                     <input
-                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-4 py-2 w-full transition-all"
+                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                       value={edu.school}
                       onChange={(e) => {
                         const updatedEducation = resumeData.education.map((item) => 
@@ -1673,7 +1674,7 @@ export default function TestAllComponents() {
                       placeholder="University Name, Country"
                     />
                     <input
-                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 w-full transition-all"
+                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-4 py-2 w-full transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                       value={edu.degree}
                       onChange={(e) => {
                         const updatedEducation = resumeData.education.map((item) => 
@@ -1683,9 +1684,9 @@ export default function TestAllComponents() {
                       }}
                       placeholder="Degree, Major"
                     />
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-sm text-gray-600 min-w-0">
                       <input 
-                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all font-medium" 
+                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all font-medium w-full sm:w-auto min-w-0 max-w-full break-words overflow-wrap-anywhere" 
                         value={edu.startDate}
                         onChange={(e) => {
                           const updatedEducation = resumeData.education.map((item) => 
@@ -1695,9 +1696,9 @@ export default function TestAllComponents() {
                         }}
                         placeholder="Start Date"
                       />
-                      <span className="font-bold text-gray-400">→</span>
+                      <span className="font-bold text-gray-400 hidden sm:inline flex-shrink-0">→</span>
                       <input 
-                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all font-medium" 
+                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all font-medium w-full sm:w-auto min-w-0 max-w-full break-words overflow-wrap-anywhere" 
                         value={edu.endDate}
                         onChange={(e) => {
                           const updatedEducation = resumeData.education.map((item) => 
@@ -1713,7 +1714,7 @@ export default function TestAllComponents() {
                     {(edu.customFields || []).map((field) => (
                       <div key={field.id} className="flex items-center gap-2 mb-2">
                         <input
-                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all"
+                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere"
                           value={field.name}
                           onChange={(e) => {
                             const updatedEducation = resumeData.education.map((item) => {
@@ -1975,6 +1976,8 @@ export default function TestAllComponents() {
             aiConversation={aiConversation}
             aiPrompt={aiPrompt}
             setAiPrompt={setAiPrompt}
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
             isMobile={false}
             onAnalyzeJobDescription={analyzeJobDescription}
             onApplyAIRecommendations={applyAIRecommendations}
