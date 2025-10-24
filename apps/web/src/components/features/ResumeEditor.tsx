@@ -148,7 +148,7 @@ export default function ResumeEditor({
   return (
     <div className="flex flex-1 h-full overflow-hidden" style={{ height: '100%', maxHeight: '100%' }}>
       {/* Left Sidebar - Section Controls */}
-      <div className="w-72 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto p-6">
+      <div className="w-64 lg:w-72 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto p-4 lg:p-6 flex-shrink-0">
         {/* File Name Configuration */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
@@ -499,19 +499,19 @@ export default function ResumeEditor({
           </div>
 
       {/* Main Resume Editing Area */}
-      <div className="flex-1 h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-10" style={{ height: '100%', maxHeight: '100%' }}>
-        <div className="w-full bg-white rounded-2xl shadow-2xl border border-gray-100 p-8">
+      <div className="flex-1 h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0" style={{ height: '100%', maxHeight: '100%' }}>
+        <div className="w-full bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full overflow-hidden">
           
           {/* Name Input */}
           <input 
-            className="text-3xl font-bold text-gray-900 w-full border-none outline-none focus:ring-4 focus:ring-blue-300/50 rounded-xl px-3 py-2 mb-4 transition-all" 
+            className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 w-full border-none outline-none focus:ring-4 focus:ring-blue-300/50 rounded-xl px-3 py-2 mb-4 transition-all break-words overflow-wrap-anywhere" 
             value={resumeData.name || ''} 
             onChange={(e) => setResumeData({...resumeData, name: e.target.value})}
             placeholder="Your Name" 
           />
           
           {/* Contact Fields Grid */}
-          <div className="grid grid-cols-3 gap-3 text-sm mb-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 text-sm mb-6 lg:mb-10">
             {['email', 'phone', 'location', 'linkedin', 'github', 'website'].map((field, idx) => (
               <div key={field} className="flex items-center gap-2 group">
                 {idx === 0 && <Mail size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
@@ -521,7 +521,7 @@ export default function ResumeEditor({
                 {idx === 4 && <Github size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
                 {idx === 5 && <Globe size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
                 <input 
-                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-3 py-2 transition-all" 
+                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
                   value={resumeData[field] || ''} 
                   onChange={(e) => setResumeData({...resumeData, [field]: e.target.value})}
                   placeholder={field.charAt(0).toUpperCase() + field.slice(1)} 
@@ -534,7 +534,7 @@ export default function ResumeEditor({
               <div key={field.id} className="flex items-center gap-2 group">
                 {getFieldIcon(field.icon || 'default')}
                 <input 
-                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-3 py-2 transition-all" 
+                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
                   value={field.value} 
                   onChange={(e) => {
                     const updatedFields = customFields.map(f => 
@@ -552,9 +552,9 @@ export default function ResumeEditor({
               <Plus size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
               <button
                 onClick={() => setShowAddFieldModal(true)}
-                className="flex-1 border-2 border-dashed border-gray-300 rounded-lg px-3 py-2 hover:border-blue-400 hover:bg-blue-50 transition-all text-gray-600 hover:text-blue-600 text-left"
+                className="flex-1 border-2 border-dashed border-gray-300 rounded-lg px-2 sm:px-3 py-2 hover:border-blue-400 hover:bg-blue-50 transition-all text-gray-600 hover:text-blue-600 text-left min-w-0 max-w-full"
               >
-                <span className="text-sm font-medium">Add Field</span>
+                <span className="text-xs sm:text-sm font-medium break-words overflow-wrap-anywhere">Add Field</span>
               </button>
         </div>
       </div>

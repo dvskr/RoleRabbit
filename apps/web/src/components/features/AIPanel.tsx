@@ -27,6 +27,8 @@ interface AIPanelProps {
   aiConversation: any[];
   aiPrompt: string;
   setAiPrompt: (prompt: string) => void;
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
   isMobile: boolean;
   onAnalyzeJobDescription: () => void;
   onApplyAIRecommendations: () => void;
@@ -57,6 +59,8 @@ export default function AIPanel({
   aiConversation,
   aiPrompt,
   setAiPrompt,
+  selectedModel,
+  setSelectedModel,
   isMobile,
   onAnalyzeJobDescription,
   onApplyAIRecommendations,
@@ -89,6 +93,14 @@ export default function AIPanel({
     { name: 'Check for Errors', icon: AlertCircle }
   ];
 
+  const aiModels = [
+    { id: 'gpt-5', name: 'GPT-5', description: 'Latest OpenAI model with advanced reasoning', capabilities: ['multimodal', 'code-generation', 'creative-writing'] },
+    { id: 'sonnet-4.5', name: 'Sonnet 4.5', description: 'Anthropic\'s latest model with enhanced safety', capabilities: ['safety', 'long-context', 'creative-writing'] },
+    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model for complex tasks', capabilities: ['text-generation', 'analysis', 'reasoning'] },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient for most tasks', capabilities: ['text-generation', 'analysis'] },
+    { id: 'claude-3-opus', name: 'Claude 3 Opus', description: 'Anthropic\'s most powerful model', capabilities: ['text-generation', 'analysis', 'reasoning'] }
+  ];
+
   return (
     <div className={`fixed right-0 top-0 h-full bg-white shadow-2xl z-40 ${isMobile ? 'w-full' : 'w-80'} border-l border-gray-100`}>
       <div className="h-full flex flex-col">
@@ -116,6 +128,27 @@ export default function AIPanel({
         {/* Panel Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
+            {/* AI Model Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                AI Model
+              </label>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              >
+                {aiModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name} - {model.description}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-1 text-xs text-gray-500">
+                {aiModels.find(m => m.id === selectedModel)?.capabilities.join(', ')}
+              </div>
+            </div>
+
             {/* Mode Selection */}
             <div>
               <div className="flex bg-gray-50 rounded-lg p-1">
