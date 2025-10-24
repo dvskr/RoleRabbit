@@ -11,8 +11,84 @@ import JobTracker from '../../components/JobTracker';
 import Discussion from '../../components/Discussion';
 import Email from '../../components/Email';
 import CoverLetterGenerator from '../../components/CoverLetterGenerator';
-import UserProfileModal from '../../components/UserProfileModal';
+import Profile from '../../components/Profile';
 import { Eye, Sparkles, GripVertical, Trash2, Plus, X } from 'lucide-react';
+
+// TypeScript interfaces
+interface CustomField {
+  id: string;
+  name: string;
+  icon?: string;
+  value?: string;
+}
+
+interface ExperienceItem {
+  id: number;
+  company: string;
+  position: string;
+  period: string;
+  endPeriod: string;
+  location: string;
+  bullets: string[];
+  environment: string[];
+  customFields: CustomField[];
+}
+
+interface ProjectItem {
+  id: number;
+  name: string;
+  description: string;
+  link: string;
+  bullets: string[];
+  skills: string[];
+  customFields: CustomField[];
+}
+
+interface EducationItem {
+  id: number;
+  school: string;
+  degree: string;
+  startDate: string;
+  endDate: string;
+  customFields: CustomField[];
+}
+
+interface CertificationItem {
+  id: number;
+  name: string;
+  issuer: string;
+  link: string;
+  skills: string[];
+}
+
+interface ResumeData {
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  location: string;
+  summary: string;
+  skills: string[];
+  experience: ExperienceItem[];
+  education: EducationItem[];
+  projects: ProjectItem[];
+  certifications: CertificationItem[];
+}
+
+interface CustomSection {
+  id: string;
+  name: string;
+  content: string;
+}
+
+interface AIMessage {
+  role: string;
+  text: string;
+}
+
+interface SectionVisibility {
+  [key: string]: boolean;
+}
 
 export default function TestAllComponents() {
   // State management
@@ -21,7 +97,6 @@ export default function TestAllComponents() {
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [previousSidebarState, setPreviousSidebarState] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showUserProfile, setShowUserProfile] = useState(false);
   const [showNewResumeModal, setShowNewResumeModal] = useState(false);
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
@@ -33,7 +108,7 @@ export default function TestAllComponents() {
   const [showAddFieldModal, setShowAddFieldModal] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldIcon, setNewFieldIcon] = useState('link');
-  const [customFields, setCustomFields] = useState([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [showAIGenerateModal, setShowAIGenerateModal] = useState(false);
   const [aiGenerateSection, setAiGenerateSection] = useState('summary');
   const [aiPrompt, setAiPrompt] = useState('');
@@ -52,7 +127,7 @@ export default function TestAllComponents() {
   const [headingStyle, setHeadingStyle] = useState('bold');
   const [bulletStyle, setBulletStyle] = useState('disc');
   
-  const [resumeData, setResumeData] = useState({
+  const [resumeData, setResumeData] = useState<ResumeData>({
     name: 'John Doe',
     title: 'Software Engineer',
     email: 'john.doe@example.com',
@@ -65,16 +140,22 @@ export default function TestAllComponents() {
         id: 1,
         company: 'Tech Corp',
         position: 'Senior Software Engineer',
-        duration: '2020 - Present',
-        description: 'Led development of web applications...'
+        period: '2020',
+        endPeriod: 'Present',
+        location: 'San Francisco, CA',
+        bullets: ['Led development of web applications...'],
+        environment: ['React', 'Node.js', 'AWS'],
+        customFields: []
       }
     ],
     education: [
       {
         id: 1,
-        degree: 'Bachelor of Computer Science',
         school: 'University of California',
-        year: '2018'
+        degree: 'Bachelor of Computer Science',
+        startDate: '2014',
+        endDate: '2018',
+        customFields: []
       }
     ],
     projects: [
@@ -84,7 +165,8 @@ export default function TestAllComponents() {
         description: 'Full-stack e-commerce application built with React and Node.js',
         link: 'https://github.com/username/ecommerce',
         bullets: ['Implemented secure payment processing', 'Built responsive UI with React', 'Deployed on AWS'],
-        skills: ['React', 'Node.js', 'MongoDB', 'AWS']
+        skills: ['React', 'Node.js', 'MongoDB', 'AWS'],
+        customFields: []
       }
     ],
     certifications: [
@@ -100,7 +182,7 @@ export default function TestAllComponents() {
 
   // Section management
   const [sectionOrder, setSectionOrder] = useState(['summary', 'skills', 'experience', 'education', 'projects', 'certifications']);
-  const [sectionVisibility, setSectionVisibility] = useState({
+  const [sectionVisibility, setSectionVisibility] = useState<SectionVisibility>({
     summary: true,
     skills: true,
     experience: true,
@@ -108,7 +190,7 @@ export default function TestAllComponents() {
     projects: true,
     certifications: true
   });
-  const [customSections, setCustomSections] = useState([]);
+  const [customSections, setCustomSections] = useState<CustomSection[]>([]);
 
   // AI Panel state
   const [aiMode, setAiMode] = useState('tailor');
@@ -116,16 +198,16 @@ export default function TestAllComponents() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [matchScore, setMatchScore] = useState(0);
   const [showATSScore, setShowATSScore] = useState(false);
-  const [matchedKeywords, setMatchedKeywords] = useState([]);
-  const [missingKeywords, setMissingKeywords] = useState([]);
-  const [aiRecommendations, setAiRecommendations] = useState(null);
+  const [matchedKeywords, setMatchedKeywords] = useState<string[]>([]);
+  const [missingKeywords, setMissingKeywords] = useState<string[]>([]);
+  const [aiRecommendations, setAiRecommendations] = useState<string | null>(null);
   const [tailorEditMode, setTailorEditMode] = useState('partial');
   const [selectedTone, setSelectedTone] = useState('professional');
   const [selectedLength, setSelectedLength] = useState('concise');
-  const [aiConversation, setAiConversation] = useState([]);
+  const [aiConversation, setAiConversation] = useState<AIMessage[]>([]);
 
   // Undo/Redo state
-  const [history, setHistory] = useState([resumeData]);
+  const [history, setHistory] = useState<ResumeData[]>([resumeData]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
   // Control body scrolling based on active tab
@@ -343,11 +425,9 @@ export default function TestAllComponents() {
   const addCustomField = () => {
     if (!newFieldName.trim()) return;
     
-    const newField = {
+    const newField: CustomField = {
       id: `custom-field-${Date.now()}`,
-      name: newFieldName.trim(),
-      icon: newFieldIcon,
-      value: ''
+      name: newFieldName.trim()
     };
     
     setCustomFields(prev => [...prev, newField]);
@@ -380,7 +460,8 @@ export default function TestAllComponents() {
           endPeriod: 'Present',
           location: 'Remote',
           bullets: ['Developed scalable web applications', 'Collaborated with cross-functional teams', 'Implemented best practices'],
-          environment: ['React', 'Node.js', 'AWS']
+          environment: ['React', 'Node.js', 'AWS'],
+          customFields: []
         };
         setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
         break;
@@ -391,7 +472,8 @@ export default function TestAllComponents() {
           description: 'A full-stack web application built with modern technologies',
           link: 'https://github.com/username/project',
           bullets: ['Implemented responsive design', 'Integrated third-party APIs', 'Optimized performance'],
-          skills: ['React', 'Node.js', 'MongoDB']
+          skills: ['React', 'Node.js', 'MongoDB'],
+          customFields: []
         };
         setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
         break;
@@ -505,9 +587,9 @@ export default function TestAllComponents() {
             <div className="space-y-3">
               <textarea
                 className="w-full text-sm text-gray-700 border-2 border-gray-200 rounded-xl p-4 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all"
-                rows="4"
+                rows={4}
                 value={resumeData.summary}
-                onChange={(e) => setResumeData({...resumeData, summary: e.target.value})}
+                onChange={(e) => setResumeData({...resumeData, summary: (e.target as HTMLTextAreaElement).value})}
                 placeholder="Write a compelling professional summary..."
               />
                 <div className="flex justify-end">
@@ -571,22 +653,22 @@ export default function TestAllComponents() {
                     className="text-xs text-black font-medium bg-transparent border-none outline-none w-24"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
-                        if (e.target.value.trim()) {
-                          setResumeData(prev => ({ ...prev, skills: [...prev.skills, e.target.value.trim()] }));
-                          e.target.value = '';
+                        if ((e.target as HTMLInputElement).value.trim()) {
+                          setResumeData(prev => ({ ...prev, skills: [...prev.skills, (e.target as HTMLInputElement).value.trim()] }));
+                          (e.target as HTMLInputElement).value = '';
                         }
                       }
                     }}
                     onBlur={(e) => {
-                      if (e.target.value.trim()) {
-                        setResumeData(prev => ({ ...prev, skills: [...prev.skills, e.target.value.trim()] }));
-                        e.target.value = '';
+                      if ((e.target as HTMLInputElement).value.trim()) {
+                        setResumeData(prev => ({ ...prev, skills: [...prev.skills, (e.target as HTMLInputElement).value.trim()] }));
+                        (e.target as HTMLInputElement).value = '';
                       }
                     }}
                   />
                   <button
                     onClick={(e) => {
-                      const input = e.currentTarget.parentElement.querySelector('input');
+                      const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
                       if (input && input.value.trim()) {
                         setResumeData(prev => ({ ...prev, skills: [...prev.skills, input.value.trim()] }));
                         input.value = '';
@@ -636,7 +718,8 @@ export default function TestAllComponents() {
                       endPeriod: '',
                       location: '',
                       bullets: [''],
-                      environment: []
+                      environment: [],
+                      customFields: []
                     };
                     setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
                   }}
@@ -671,7 +754,8 @@ export default function TestAllComponents() {
                       endPeriod: '',
                       location: '',
                       bullets: [''],
-                      environment: []
+                      environment: [],
+                      customFields: []
                     };
                     setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
                   }}
@@ -789,7 +873,7 @@ export default function TestAllComponents() {
                       onClick={() => {
                         const updatedExperience = resumeData.experience.map((item) => {
                           if (item.id === exp.id) {
-                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: '', value: '' }] };
+                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now().toString(), name: '', value: '' }] };
                           }
                           return item;
                         });
@@ -808,7 +892,7 @@ export default function TestAllComponents() {
                           <span className="text-sm text-blue-600 mt-2 font-bold">•</span>
                           <textarea
                             className="flex-1 text-sm text-gray-700 border-2 border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all bg-white"
-                            rows="2"
+                            rows={2}
                             value={bullet}
                             onChange={(e) => {
                               const updatedExperience = resumeData.experience.map((item) => {
@@ -893,34 +977,34 @@ export default function TestAllComponents() {
                               className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
-                                  if (e.target.value.trim()) {
+                                  if ((e.target as HTMLInputElement).value.trim()) {
                                     const updatedExperience = resumeData.experience.map((item) => {
                                       if (item.id === exp.id) {
-                                        return { ...item, environment: [...(item.environment || []), e.target.value.trim()] };
+                                        return { ...item, environment: [...(item.environment || []), (e.target as HTMLInputElement).value.trim()] };
                                       }
                                       return item;
                                     });
                                     setResumeData({...resumeData, experience: updatedExperience});
-                                    e.target.value = '';
+                                    (e.target as HTMLInputElement).value = '';
                                   }
                                 }
                               }}
                               onBlur={(e) => {
-                                if (e.target.value.trim()) {
+                                if ((e.target as HTMLInputElement).value.trim()) {
                                   const updatedExperience = resumeData.experience.map((item) => {
                                     if (item.id === exp.id) {
-                                      return { ...item, environment: [...(item.environment || []), e.target.value.trim()] };
+                                      return { ...item, environment: [...(item.environment || []), (e.target as HTMLInputElement).value.trim()] };
                                     }
                                     return item;
                                   });
                                   setResumeData({...resumeData, experience: updatedExperience});
-                                  e.target.value = '';
+                                  (e.target as HTMLInputElement).value = '';
                                 }
                               }}
                             />
                             <button
                               onClick={(e) => {
-                                const input = e.currentTarget.parentElement.querySelector('input');
+                                const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
                                 if (input && input.value.trim()) {
                                   const updatedExperience = resumeData.experience.map((item) => {
                                     if (item.id === exp.id) {
@@ -986,7 +1070,8 @@ export default function TestAllComponents() {
                       description: '',
                       link: '',
                       bullets: [''],
-                      skills: []
+                      skills: [],
+                      customFields: []
                     };
                     setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
                   }}
@@ -1019,7 +1104,8 @@ export default function TestAllComponents() {
                       description: '',
                       link: '',
                       bullets: [''],
-                      skills: []
+                      skills: [],
+                      customFields: []
                     };
                     setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
                   }}
@@ -1119,7 +1205,7 @@ export default function TestAllComponents() {
                       onClick={() => {
                         const updatedProjects = resumeData.projects.map((item) => {
                           if (item.id === project.id) {
-                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: '', value: '' }] };
+                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now().toString(), name: '', value: '' }] };
                           }
                           return item;
                         });
@@ -1138,7 +1224,7 @@ export default function TestAllComponents() {
                           <span className="text-sm text-purple-600 mt-2 font-bold">•</span>
                           <textarea
                             className="flex-1 text-sm text-gray-700 border-2 border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none transition-all bg-white"
-                            rows="2"
+                            rows={2}
                             value={bullet}
                             onChange={(e) => {
                               const updatedProjects = resumeData.projects.map((item) => {
@@ -1226,34 +1312,34 @@ export default function TestAllComponents() {
                             className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
-                                if (e.target.value.trim()) {
+                                if ((e.target as HTMLInputElement).value.trim()) {
                                   const updatedProjects = resumeData.projects.map((item) => {
                                     if (item.id === project.id) {
-                                      return { ...item, skills: [...(item.skills || []), e.target.value.trim()] };
+                                      return { ...item, skills: [...(item.skills || []), (e.target as HTMLInputElement).value.trim()] };
                                     }
                                     return item;
                                   });
                                   setResumeData({...resumeData, projects: updatedProjects});
-                                  e.target.value = '';
+                                  (e.target as HTMLInputElement).value = '';
                                 }
                               }
                             }}
                             onBlur={(e) => {
-                              if (e.target.value.trim()) {
+                              if ((e.target as HTMLInputElement).value.trim()) {
                                 const updatedProjects = resumeData.projects.map((item) => {
                                   if (item.id === project.id) {
-                                    return { ...item, skills: [...(item.skills || []), e.target.value.trim()] };
+                                    return { ...item, skills: [...(item.skills || []), (e.target as HTMLInputElement).value.trim()] };
                                   }
                                   return item;
                                 });
                                 setResumeData({...resumeData, projects: updatedProjects});
-                                e.target.value = '';
+                                (e.target as HTMLInputElement).value = '';
                               }
                             }}
                           />
                           <button
                             onClick={(e) => {
-                              const input = e.currentTarget.parentElement.querySelector('input');
+                              const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
                               if (input && input.value.trim()) {
                                 const updatedProjects = resumeData.projects.map((item) => {
                                   if (item.id === project.id) {
@@ -1443,34 +1529,34 @@ export default function TestAllComponents() {
                             className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
-                                if (e.target.value.trim()) {
+                                if ((e.target as HTMLInputElement).value.trim()) {
                                   const updatedCertifications = resumeData.certifications.map((item) => {
                                     if (item.id === cert.id) {
-                                      return { ...item, skills: [...(item.skills || []), e.target.value.trim()] };
+                                      return { ...item, skills: [...(item.skills || []), (e.target as HTMLInputElement).value.trim()] };
                                     }
                                     return item;
                                   });
                                   setResumeData({...resumeData, certifications: updatedCertifications});
-                                  e.target.value = '';
+                                  (e.target as HTMLInputElement).value = '';
                                 }
                               }
                             }}
                             onBlur={(e) => {
-                              if (e.target.value.trim()) {
+                              if ((e.target as HTMLInputElement).value.trim()) {
                                 const updatedCertifications = resumeData.certifications.map((item) => {
                                   if (item.id === cert.id) {
-                                    return { ...item, skills: [...(item.skills || []), e.target.value.trim()] };
+                                    return { ...item, skills: [...(item.skills || []), (e.target as HTMLInputElement).value.trim()] };
                                   }
                                   return item;
                                 });
                                 setResumeData({...resumeData, certifications: updatedCertifications});
-                                e.target.value = '';
+                                (e.target as HTMLInputElement).value = '';
                               }
                             }}
                           />
                           <button
                             onClick={(e) => {
-                              const input = e.currentTarget.parentElement.querySelector('input');
+                              const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
                               if (input && input.value.trim()) {
                                 const updatedCertifications = resumeData.certifications.map((item) => {
                                   if (item.id === cert.id) {
@@ -1524,7 +1610,8 @@ export default function TestAllComponents() {
                       school: '',
                       degree: '',
                       startDate: '',
-                      endDate: ''
+                      endDate: '',
+                      customFields: []
                     };
                     setResumeData(prev => ({ ...prev, education: [...prev.education, newEducation] }));
                   }}
@@ -1556,7 +1643,8 @@ export default function TestAllComponents() {
                       school: '',
                       degree: '',
                       startDate: '',
-                      endDate: ''
+                      endDate: '',
+                      customFields: []
                     };
                     setResumeData(prev => ({ ...prev, education: [...prev.education, newEducation] }));
                   }}
@@ -1663,7 +1751,7 @@ export default function TestAllComponents() {
                       onClick={() => {
                         const updatedEducation = resumeData.education.map((item) => {
                           if (item.id === edu.id) {
-                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: '', value: '' }] };
+                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now().toString(), name: '', value: '' }] };
                           }
                           return item;
                         });
@@ -1703,11 +1791,7 @@ export default function TestAllComponents() {
       setShowATSScore(true);
       setMatchedKeywords(['JavaScript', 'React', 'Node.js']);
       setMissingKeywords(['TypeScript', 'AWS']);
-      setAiRecommendations([
-        'Add TypeScript to your skills section',
-        'Include AWS experience in your experience section',
-        'Update your summary to mention cloud technologies'
-      ]);
+      setAiRecommendations('Add TypeScript to your skills section, Include AWS experience in your experience section, Update your summary to mention cloud technologies');
       setIsAnalyzing(false);
     }, 2000);
   };
@@ -1740,7 +1824,6 @@ export default function TestAllComponents() {
         activeTab={activeTab}
         sidebarCollapsed={sidebarCollapsed}
         onTabChange={handleTabChange}
-        onShowUserProfile={() => setShowUserProfile(true)}
         onShowNewResumeModal={() => setShowNewResumeModal(true)}
         onShowImportModal={() => setShowImportModal(true)}
       />
@@ -1775,6 +1858,12 @@ export default function TestAllComponents() {
               {activeTab === 'home' && (
                 <div className="w-full h-full overflow-hidden">
                   <Home />
+                </div>
+              )}
+              
+              {activeTab === 'profile' && (
+                <div className="w-full h-full overflow-hidden">
+                  <Profile />
                 </div>
               )}
               
@@ -2533,11 +2622,6 @@ export default function TestAllComponents() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* User Profile Modal */}
-      {showUserProfile && (
-        <UserProfileModal isOpen={showUserProfile} onClose={() => setShowUserProfile(false)} />
       )}
     </div>
   );

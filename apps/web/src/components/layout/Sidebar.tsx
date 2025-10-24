@@ -7,7 +7,6 @@ interface SidebarProps {
   activeTab: string;
   sidebarCollapsed: boolean;
   onTabChange: (tab: string) => void;
-  onShowUserProfile: () => void;
   onShowNewResumeModal: () => void;
   onShowImportModal: () => void;
 }
@@ -16,7 +15,6 @@ export default function Sidebar({
   activeTab,
   sidebarCollapsed,
   onTabChange,
-  onShowUserProfile,
   onShowNewResumeModal,
   onShowImportModal
 }: SidebarProps) {
@@ -45,9 +43,9 @@ export default function Sidebar({
           {!sidebarCollapsed && <span className="font-semibold">Home</span>}
         </button>
         <button 
-          onClick={onShowUserProfile} 
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-300 text-gray-700 hover:bg-white/60 hover:shadow-md"
-          title={sidebarCollapsed ? 'User Profile' : ''}
+          onClick={() => onTabChange('profile')} 
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl transition-all duration-300 ${activeTab === 'profile' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          title={sidebarCollapsed ? 'Profile' : ''}
         >
           <User size={20} />
           {!sidebarCollapsed && <span className="font-semibold">Profile</span>}

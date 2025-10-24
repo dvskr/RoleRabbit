@@ -35,8 +35,8 @@ interface ResumeEditorProps {
   renderSection: (section: string) => React.ReactNode;
   showAddFieldModal: boolean;
   setShowAddFieldModal: (show: boolean) => void;
-  customFields: Array<{ id: string; name: string; icon: string; value: string }>;
-  setCustomFields: (fields: Array<{ id: string; name: string; icon: string; value: string }>) => void;
+  customFields: Array<{ id: string; name: string; icon?: string; value?: string }>;
+  setCustomFields: (fields: Array<{ id: string; name: string; icon?: string; value?: string }>) => void;
   newFieldName: string;
   setNewFieldName: (name: string) => void;
   newFieldIcon: string;
