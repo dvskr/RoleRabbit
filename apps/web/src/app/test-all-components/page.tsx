@@ -487,10 +487,10 @@ export default function TestAllComponents() {
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => hideSection('summary')}
-                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
                   title="Hide summary section"
                 >
-                  <Trash2 size={18} className="text-red-600" />
+                  <Eye size={18} className="text-gray-600" />
                 </button>
               </div>
             </div>
@@ -526,10 +526,10 @@ export default function TestAllComponents() {
               </div>
               <button
                 onClick={() => hideSection('skills')}
-                className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                className="p-2 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
                 title="Hide skills section"
               >
-                <Trash2 size={18} className="text-red-600" />
+                <Eye size={18} className="text-gray-600" />
               </button>
             </div>
             
@@ -639,10 +639,10 @@ export default function TestAllComponents() {
                 </button>
                 <button 
                   onClick={() => hideSection('experience')}
-                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
                   title="Hide experience section"
                 >
-                  <Trash2 size={18} className="text-red-600" />
+                  <Eye size={18} className="text-gray-600" />
                 </button>
               </div>
             </div>
@@ -963,6 +963,16 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
+                  <button
+                    onClick={() => {
+                      const updatedExperience = resumeData.experience.filter((item) => item.id !== exp.id);
+                      setResumeData({...resumeData, experience: updatedExperience});
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
+                    title="Delete this experience entry"
+                  >
+                    <Trash2 size={18} className="text-red-600" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1008,10 +1018,10 @@ export default function TestAllComponents() {
                 </button>
                 <button 
                   onClick={() => hideSection('projects')}
-                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
                   title="Hide projects section"
                 >
-                  <Trash2 size={18} className="text-red-600" />
+                  <Eye size={18} className="text-gray-600" />
                 </button>
               </div>
             </div>
@@ -1314,6 +1324,16 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
+                  <button
+                    onClick={() => {
+                      const updatedProjects = resumeData.projects.filter((item) => item.id !== project.id);
+                      setResumeData({...resumeData, projects: updatedProjects});
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
+                    title="Delete this project entry"
+                  >
+                    <Trash2 size={18} className="text-red-600" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1358,10 +1378,10 @@ export default function TestAllComponents() {
                 </button>
                 <button 
                   onClick={() => hideSection('certifications')}
-                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
                   title="Hide certifications section"
                 >
-                  <Trash2 size={18} className="text-red-600" />
+                  <Eye size={18} className="text-gray-600" />
                 </button>
               </div>
             </div>
@@ -1521,6 +1541,16 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
+                  <button
+                    onClick={() => {
+                      const updatedCertifications = resumeData.certifications.filter((item) => item.id !== cert.id);
+                      setResumeData({...resumeData, certifications: updatedCertifications});
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
+                    title="Delete this certification entry"
+                  >
+                    <Trash2 size={18} className="text-red-600" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1555,10 +1585,10 @@ export default function TestAllComponents() {
                 </button>
                 <button 
                   onClick={() => hideSection('education')}
-                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-all hover:scale-110"
                   title="Hide education section"
                 >
-                  <Trash2 size={18} className="text-red-600" />
+                  <Eye size={18} className="text-gray-600" />
                 </button>
               </div>
             </div>
@@ -1725,6 +1755,16 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
+                  <button
+                    onClick={() => {
+                      const updatedEducation = resumeData.education.filter((item) => item.id !== edu.id);
+                      setResumeData({...resumeData, education: updatedEducation});
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
+                    title="Delete this education entry"
+                  >
+                    <Trash2 size={18} className="text-red-600" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -1785,30 +1825,31 @@ export default function TestAllComponents() {
       />
 
       {/* Main Content */}
-      <div className={`flex-1 h-screen overflow-hidden flex flex-col transition-all duration-300 ${showRightPanel ? 'mr-80' : ''}`}>
+      <div className="flex-1 h-screen overflow-hidden flex flex-col">
         {activeTab === 'editor' && (
           <>
-              <Header
-                isMobile={false}
-                isSaving={false}
-                canUndo={historyIndex > 0}
-                canRedo={historyIndex < history.length - 1}
-                showRightPanel={showRightPanel}
-                previousSidebarState={previousSidebarState}
-                sidebarCollapsed={sidebarCollapsed}
-                onExport={() => setShowExportModal(true)}
-                onUndo={undo}
-                onRedo={redo}
-                onImport={() => setShowImportModal(true)}
-                onSave={saveResume}
-                onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
-                onShowMobileMenu={() => setShowMobileMenu(true)}
-                onTemplateSelect={handleTemplateSelect}
-                setPreviousSidebarState={setPreviousSidebarState}
-                setSidebarCollapsed={setSidebarCollapsed}
-                setShowRightPanel={setShowRightPanel}
-              />
-            <ResumeEditor
+            <Header
+              isMobile={false}
+              isSaving={false}
+              canUndo={historyIndex > 0}
+              canRedo={historyIndex < history.length - 1}
+              showRightPanel={showRightPanel}
+              previousSidebarState={previousSidebarState}
+              sidebarCollapsed={sidebarCollapsed}
+              onExport={() => setShowExportModal(true)}
+              onUndo={undo}
+              onRedo={redo}
+              onImport={() => setShowImportModal(true)}
+              onSave={saveResume}
+              onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
+              onShowMobileMenu={() => setShowMobileMenu(true)}
+              onTemplateSelect={handleTemplateSelect}
+              setPreviousSidebarState={setPreviousSidebarState}
+              setSidebarCollapsed={setSidebarCollapsed}
+              setShowRightPanel={setShowRightPanel}
+            />
+            <div className={`flex-1 transition-all duration-300 ${showRightPanel ? 'mr-80' : ''}`} style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
+              <ResumeEditor
               resumeFileName={resumeFileName}
               setResumeFileName={setResumeFileName}
               sectionOrder={sectionOrder}
@@ -1848,6 +1889,7 @@ export default function TestAllComponents() {
               setNewFieldIcon={setNewFieldIcon}
               onAddCustomField={addCustomField}
             />
+            </div>
           </>
         )}
       </div>
