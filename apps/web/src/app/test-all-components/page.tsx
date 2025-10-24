@@ -12,7 +12,7 @@ import Discussion from '../../components/Discussion';
 import Email from '../../components/Email';
 import CoverLetterGenerator from '../../components/CoverLetterGenerator';
 import UserProfileModal from '../../components/UserProfileModal';
-import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X } from 'lucide-react';
+import { Eye, Sparkles, GripVertical, Trash2, Plus, X } from 'lucide-react';
 
 export default function TestAllComponents() {
   // State management
@@ -237,12 +237,10 @@ export default function TestAllComponents() {
     switch (format) {
       case 'pdf':
         // In a real app, you'd generate PDF here
-        console.log('Exporting as PDF:', exportData);
         alert('PDF export would be implemented here');
         break;
       case 'word':
         // In a real app, you'd generate DOCX here
-        console.log('Exporting as Word:', exportData);
         alert('Word export would be implemented here');
         break;
       case 'json':
@@ -420,7 +418,6 @@ export default function TestAllComponents() {
   const handleTemplateSelect = (template: string) => {
     if (template) {
       // In a real app, this would load the selected template
-      console.log('Selected template:', template);
       alert(`Template "${template}" selected! This would load the template in a real application.`);
     }
   };
@@ -451,7 +448,6 @@ export default function TestAllComponents() {
 
   const saveResume = () => {
     // In a real app, this would save to backend
-    console.log('Saving resume:', resumeData);
     alert('Resume saved successfully!');
   };
 
