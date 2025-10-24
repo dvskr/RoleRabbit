@@ -21,8 +21,8 @@ export default function Sidebar({
   onShowImportModal
 }: SidebarProps) {
   return (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-xl flex flex-col mt-2`}>
-      <div className={`${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-gray-100/50`}>
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-blue-50/30 to-purple-50/30 backdrop-blur-xl border-r border-blue-200/30 shadow-xl flex flex-col mt-2`}>
+      <div className={`${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-blue-200/20 bg-gradient-to-r from-blue-100/20 to-purple-100/20`}>
         <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
             <Sparkles size={20} className="text-white" />
@@ -110,7 +110,7 @@ export default function Sidebar({
         </button>
       </nav>
       
-      <div className={`${sidebarCollapsed ? 'p-2' : 'p-3'} border-t border-gray-100/50`}>
+      <div className={`${sidebarCollapsed ? 'p-2' : 'p-3'} border-t border-blue-200/20 bg-gradient-to-r from-blue-100/20 to-purple-100/20`}>
         <button 
           onClick={onShowNewResumeModal} 
           className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white ${sidebarCollapsed ? 'px-2 py-3' : 'px-4 py-3.5'} rounded-xl hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-center gap-2'} font-semibold mb-2`}

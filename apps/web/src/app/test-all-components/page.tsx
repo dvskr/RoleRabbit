@@ -578,8 +578,8 @@ export default function TestAllComponents() {
                   />
                   <button
                     onClick={(e) => {
-                      const input = e.target.parentElement.querySelector('input');
-                      if (input.value.trim()) {
+                      const input = e.currentTarget.parentElement.querySelector('input');
+                      if (input && input.value.trim()) {
                         setResumeData(prev => ({ ...prev, skills: [...prev.skills, input.value.trim()] }));
                         input.value = '';
                       }
@@ -912,8 +912,8 @@ export default function TestAllComponents() {
                             />
                             <button
                               onClick={(e) => {
-                                const input = e.target.parentElement.querySelector('input');
-                                if (input.value.trim()) {
+                                const input = e.currentTarget.parentElement.querySelector('input');
+                                if (input && input.value.trim()) {
                                   const updatedExperience = resumeData.experience.map((item) => {
                                     if (item.id === exp.id) {
                                       return { ...item, environment: [...(item.environment || []), input.value.trim()] };
@@ -1245,8 +1245,8 @@ export default function TestAllComponents() {
                           />
                           <button
                             onClick={(e) => {
-                              const input = e.target.parentElement.querySelector('input');
-                              if (input.value.trim()) {
+                              const input = e.currentTarget.parentElement.querySelector('input');
+                              if (input && input.value.trim()) {
                                 const updatedProjects = resumeData.projects.map((item) => {
                                   if (item.id === project.id) {
                                     return { ...item, skills: [...(item.skills || []), input.value.trim()] };
@@ -1462,8 +1462,8 @@ export default function TestAllComponents() {
                           />
                           <button
                             onClick={(e) => {
-                              const input = e.target.parentElement.querySelector('input');
-                              if (input.value.trim()) {
+                              const input = e.currentTarget.parentElement.querySelector('input');
+                              if (input && input.value.trim()) {
                                 const updatedCertifications = resumeData.certifications.map((item) => {
                                   if (item.id === cert.id) {
                                     return { ...item, skills: [...(item.skills || []), input.value.trim()] };
@@ -1761,7 +1761,7 @@ export default function TestAllComponents() {
               setSidebarCollapsed={setSidebarCollapsed}
               setShowRightPanel={setShowRightPanel}
             />
-            <div className={`flex-1 transition-all duration-300 ${showRightPanel ? 'mr-80' : ''}`} style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
+            <div className={`flex-1 ${showRightPanel ? 'mr-80' : ''}`} style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
               <ResumeEditor
               resumeFileName={resumeFileName}
               setResumeFileName={setResumeFileName}
@@ -2120,6 +2120,92 @@ export default function TestAllComponents() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 Import Resume
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Resume Modal */}
+      {showNewResumeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-purple-600">New Resume</h3>
+              <button 
+                onClick={() => setShowNewResumeModal(false)} 
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Resume Name
+                </label>
+                <input
+                  type="text"
+                  value={resumeFileName}
+                  onChange={(e) => setResumeFileName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Enter resume name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Choose Template
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  defaultValue=""
+                >
+                  <option value="">Select a template</option>
+                  <option value="modern">Modern</option>
+                  <option value="classic">Classic</option>
+                  <option value="creative">Creative</option>
+                  <option value="minimal">Minimal</option>
+                  <option value="professional">Professional</option>
+                  <option value="executive">Executive</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowNewResumeModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Reset resume data to default
+                  setResumeData({
+                    name: '',
+                    title: '',
+                    email: '',
+                    phone: '',
+                    location: '',
+                    summary: '',
+                    skills: [],
+                    experience: [],
+                    education: [],
+                    projects: [],
+                    certifications: []
+                  });
+                  setShowNewResumeModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create Resume
               </button>
             </div>
           </div>

@@ -78,7 +78,7 @@ export default function Header({
         <div className="relative">
           <select
             onChange={(e) => onTemplateSelect(e.target.value)}
-            className="px-4 py-2 border bg-white rounded-lg text-sm hover:bg-gray-50 appearance-none pr-8"
+            className="px-4 py-2.5 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl text-sm font-medium text-gray-700 hover:border-blue-400 hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 transition-all duration-300 appearance-none pr-10 shadow-sm hover:shadow-md"
           >
             <option value="">Select Template</option>
             <option value="modern">Modern</option>
@@ -88,7 +88,7 @@ export default function Header({
             <option value="professional">Professional</option>
             <option value="executive">Executive</option>
           </select>
-          <FileText size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <FileText size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-500 pointer-events-none" />
         </div>
         <button 
           onClick={onExport}
@@ -119,7 +119,7 @@ export default function Header({
         </button>
         <button 
           onClick={handleToggleAIPanel}
-          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:shadow-purple-500/30 hover:scale-105 flex items-center gap-2"
+          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center gap-2"
         >
           <Sparkles size={18} />
           AI Assistant
