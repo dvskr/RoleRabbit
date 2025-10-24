@@ -62,7 +62,7 @@ export const RealTimeResumeEditor: React.FC<RealTimeResumeEditorProps> = ({
   // Handle real-time updates from other collaborators
   useEffect(() => {
     const handleResumeUpdate = (changes: any) => {
-      setResumeData(prevData => ({
+      setResumeData((prevData: any) => ({
         ...prevData,
         ...changes
       }));
@@ -76,7 +76,7 @@ export const RealTimeResumeEditor: React.FC<RealTimeResumeEditorProps> = ({
   }, []);
 
   const handleFieldChange = useCallback((field: string, value: any) => {
-    setResumeData(prevData => ({
+    setResumeData((prevData: any) => ({
       ...prevData,
       [field]: value
     }));

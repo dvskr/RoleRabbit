@@ -16,8 +16,8 @@ interface AIPanelProps {
   setShowATSScore: (show: boolean) => void;
   matchedKeywords: string[];
   missingKeywords: string[];
-  aiRecommendations: any;
-  setAiRecommendations: (rec: any) => void;
+  aiRecommendations: string[];
+  setAiRecommendations: (rec: string[]) => void;
   tailorEditMode: string;
   setTailorEditMode: (mode: string) => void;
   selectedTone: string;
@@ -252,7 +252,7 @@ export default function AIPanel({
                 )}
 
                 {/* AI Recommendations */}
-                {aiRecommendations && (
+                {aiRecommendations && Array.isArray(aiRecommendations) && aiRecommendations.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <h4 className="text-sm font-medium text-gray-900 mb-3">AI Recommendations</h4>
                     <div className="space-y-2">

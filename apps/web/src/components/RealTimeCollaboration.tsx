@@ -7,7 +7,7 @@ interface Collaborator {
   userId: string;
   username: string;
   cursor?: any;
-  isTyping?: boolean;
+  isTyping: boolean;
   color?: string;
   selection?: {
     start: number;

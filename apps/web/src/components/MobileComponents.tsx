@@ -105,16 +105,16 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           />
           
           {/* Sidebar */}
-          <motion.div
-            ref={sidebarRef}
-            initial={{ x: '-100%' }}
-            animate={{ x: dragOffset }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            {...bind()}
-            className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl z-50"
-            style={{ touchAction: 'none' }}
-          >
+          <div {...bind()}>
+            <motion.div
+              ref={sidebarRef}
+              initial={{ x: '-100%' }}
+              animate={{ x: dragOffset }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl z-50"
+              style={{ touchAction: 'none' }}
+            >
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
               <button
@@ -128,6 +128,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
               {children}
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
@@ -179,16 +180,16 @@ export const MobileModal: React.FC<MobileModalProps> = ({
           />
           
           {/* Modal */}
-          <motion.div
-            ref={modalRef}
-            initial={{ y: '100%' }}
-            animate={{ y: dragOffset }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            {...bind()}
-            className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-lg shadow-xl z-50 max-h-[90vh] ${className}`}
-            style={{ touchAction: 'none' }}
-          >
+          <div {...bind()}>
+            <motion.div
+              ref={modalRef}
+              initial={{ y: '100%' }}
+              animate={{ y: dragOffset }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-lg shadow-xl z-50 max-h-[90vh] ${className}`}
+              style={{ touchAction: 'none' }}
+            >
             {/* Handle */}
             <div className="flex justify-center pt-2 pb-1">
               <div className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -210,6 +211,7 @@ export const MobileModal: React.FC<MobileModalProps> = ({
               {children}
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
@@ -401,16 +403,16 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
           />
           
           {/* Drawer */}
-          <motion.div
-            ref={drawerRef}
-            initial={getInitialPosition()}
-            animate={getAnimatePosition()}
-            exit={getInitialPosition()}
-            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            {...bind()}
-            className={`fixed bg-white shadow-xl z-50 ${getPositionClasses()} ${className}`}
-            style={{ touchAction: 'none' }}
-          >
+          <div {...bind()}>
+            <motion.div
+              ref={drawerRef}
+              initial={getInitialPosition()}
+              animate={getAnimatePosition()}
+              exit={getInitialPosition()}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className={`fixed bg-white shadow-xl z-50 ${getPositionClasses()} ${className}`}
+              style={{ touchAction: 'none' }}
+            >
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Drawer</h2>
               <button
@@ -424,6 +426,7 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
               {children}
             </div>
           </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
