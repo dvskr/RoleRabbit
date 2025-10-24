@@ -146,7 +146,7 @@ export default function ResumeEditor({
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-1 h-full overflow-hidden" style={{ height: '100%', maxHeight: '100%' }}>
       {/* Left Sidebar - Section Controls */}
       <div className="w-72 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto p-6">
         {/* File Name Configuration */}
@@ -176,45 +176,45 @@ export default function ResumeEditor({
           </p>
         </div>
 
-         {/* Sections */}
+        {/* Sections */}
          <div className="mb-6">
            <div className="flex items-center justify-between mb-4">
              <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
                <Layers size={18} className="text-purple-600" />
-               Sections
-             </h3>
-             <button
+            Sections
+          </h3>
+          <button
                onClick={onShowAddSectionModal}
-               className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
-               title="Add Custom Section"
-             >
-               <Plus size={16} />
-             </button>
-           </div>
-          
-           <div className="space-y-2">
-             {sectionOrder.map((section, index) => {
-               const isCustom = customSections.find(s => s.id === section);
-               const displayName = isCustom ? isCustom.name : section;
-
-               return (
+            className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
+            title="Add Custom Section"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+        
+        <div className="space-y-2">
+          {sectionOrder.map((section, index) => {
+            const isCustom = customSections.find(s => s.id === section);
+            const displayName = isCustom ? isCustom.name : section;
+            
+            return (
                  <div key={section} className="p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between group hover:shadow-sm transition-all duration-200">
-                   <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                      <button
                        onClick={() => onToggleSection(section)}
                        className="p-1 hover:bg-gray-100 rounded transition-colors"
                      >
-                       {sectionVisibility[section] ? (
+                    {sectionVisibility[section] ? (
                          <Eye size={16} className="text-blue-600" />
-                       ) : (
+                    ) : (
                          <EyeOff size={16} className="text-gray-400" />
-                       )}
-                     </button>
+                    )}
+                  </button>
                      <span className="text-sm font-medium text-gray-800">{displayName.charAt(0).toUpperCase() + displayName.slice(1)}</span>
-                   </div>
+                </div>
                    <div className="flex items-center gap-1">
                      {index > 0 && (
-                       <button
+                  <button 
                          onClick={() => onMoveSection(index, 'up')}
                          className="p-1 hover:bg-gray-100 rounded transition-colors"
                          title="Move Up"
@@ -222,10 +222,10 @@ export default function ResumeEditor({
                          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                          </svg>
-                       </button>
+                  </button>
                      )}
                      {index < sectionOrder.length - 1 && (
-                       <button
+                  <button 
                          onClick={() => onMoveSection(index, 'down')}
                          className="p-1 hover:bg-gray-100 rounded transition-colors"
                          title="Move Down"
@@ -233,44 +233,44 @@ export default function ResumeEditor({
                          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                          </svg>
-                       </button>
+                  </button>
                      )}
-                   </div>
-                 </div>
-               );
-             })}
+                </div>
+              </div>
+            );
+          })}
            </div>
         </div>
-
+        
          {/* Formatting */}
          <div className="mb-6">
            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base mb-4">
              <Palette size={18} className="text-purple-600" />
-             Formatting
-           </h3>
+            Formatting
+          </h3>
 
-          {/* Font Family */}
+            {/* Font Family */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 flex items-center gap-2 text-sm mb-2">
               <Type size={14} className="text-gray-500" />
               FONT FAMILY
             </h4>
-            <select
-              value={fontFamily}
-              onChange={(e) => setFontFamily(e.target.value)}
+              <select 
+                value={fontFamily} 
+                onChange={(e) => setFontFamily(e.target.value)} 
               className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all bg-white/90"
             >
               <option value="arial">Arial (ATS Recommended)</option>
               <option value="calibri">Calibri</option>
               <option value="times">Times New Roman</option>
               <option value="helvetica">Helvetica</option>
-            </select>
-          </div>
+              </select>
+            </div>
 
-          {/* Font Size */}
+            {/* Font Size */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 text-sm mb-2">FONT SIZE</h4>
-            <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setFontSize('ats10pt')}
                 className={`p-3 rounded-lg text-sm font-medium transition-all ${
@@ -285,18 +285,18 @@ export default function ResumeEditor({
                 </div>
                 <div className="text-xs mt-1">ATS</div>
               </button>
-              <button
+                  <button
                 onClick={() => setFontSize('ats11pt')}
                 className={`p-3 rounded-lg text-sm font-medium transition-all ${
                   fontSize === 'ats11pt' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
+                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
                 <div className="flex items-center justify-center gap-1">
                   <span>11pt</span>
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                </div>
+                    </div>
                 <div className="text-xs mt-1">ATS</div>
               </button>
               <button
@@ -310,30 +310,30 @@ export default function ResumeEditor({
                 <div className="flex items-center justify-center gap-1">
                   <span>12pt</span>
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                </div>
+                      </div>
                 <div className="text-xs mt-1">ATS</div>
-              </button>
+                  </button>
+              </div>
             </div>
-          </div>
 
-          {/* Line Spacing */}
+            {/* Line Spacing */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 text-sm mb-2">LINE SPACING</h4>
-            <select
-              value={lineSpacing}
-              onChange={(e) => setLineSpacing(e.target.value)}
+              <select 
+                value={lineSpacing} 
+                onChange={(e) => setLineSpacing(e.target.value)} 
               className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all bg-white/90"
-            >
-              <option value="tight">Tight</option>
-              <option value="normal">Normal</option>
-              <option value="loose">Loose</option>
-            </select>
-          </div>
+              >
+                <option value="tight">Tight</option>
+                <option value="normal">Normal</option>
+                <option value="loose">Loose</option>
+              </select>
+            </div>
 
-          {/* Section Spacing */}
+            {/* Section Spacing */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 text-sm mb-2">SECTION SPACING</h4>
-            <div className="flex gap-2">
+              <div className="flex gap-2">
               <button
                 onClick={() => setSectionSpacing('tight')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
@@ -354,23 +354,23 @@ export default function ResumeEditor({
               >
                 Medium
               </button>
-              <button
+                  <button
                 onClick={() => setSectionSpacing('loose')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                   sectionSpacing === 'loose' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
+                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
                 Loose
-              </button>
+                  </button>
+              </div>
             </div>
-          </div>
 
-          {/* Page Margins */}
+            {/* Page Margins */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 text-sm mb-2">PAGE MARGINS</h4>
-            <div className="flex gap-2">
+              <div className="flex gap-2">
               <button
                 onClick={() => setMargins('narrow')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
@@ -391,37 +391,37 @@ export default function ResumeEditor({
               >
                 Normal
               </button>
-              <button
+                  <button
                 onClick={() => setMargins('wide')}
                 className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                   margins === 'wide' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
+                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
                 Wide
-              </button>
+                  </button>
+              </div>
             </div>
-          </div>
 
-          {/* Heading Weight */}
+            {/* Heading Weight */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 text-sm mb-2">HEADING WEIGHT</h4>
-            <select
-              value={headingStyle}
-              onChange={(e) => setHeadingStyle(e.target.value)}
+              <select 
+                value={headingStyle} 
+                onChange={(e) => setHeadingStyle(e.target.value)} 
               className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all bg-white/90"
-            >
+              >
               <option value="bold">Bold</option>
-              <option value="semibold">Semi Bold</option>
+                <option value="semibold">Semi Bold</option>
               <option value="extrabold">Extra Bold</option>
-            </select>
-          </div>
+              </select>
+            </div>
 
-          {/* Bullet Style */}
+            {/* Bullet Style */}
           <div className="mb-4">
             <h4 className="font-semibold text-gray-700 text-sm mb-2">BULLET STYLE</h4>
-            <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setBulletStyle('disc')}
                 className={`p-3 rounded-lg text-sm font-medium transition-all ${
@@ -472,34 +472,34 @@ export default function ResumeEditor({
               >
                 <div className="text-lg">✓</div>
               </button>
-              <button
+                  <button
                 onClick={() => setBulletStyle('dash')}
                 className={`p-3 rounded-lg text-sm font-medium transition-all ${
                   bulletStyle === 'dash' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
+                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
                 <div className="text-lg">–</div>
-              </button>
+                  </button>
+              </div>
             </div>
-          </div>
 
           {/* Reset to Default */}
-          <button
+              <button
             onClick={onResetToDefault}
             className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
           >
             <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
               <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
             </div>
-            Reset to Default
-          </button>
-        </div>
-      </div>
+                Reset to Default
+              </button>
+            </div>
+          </div>
 
       {/* Main Resume Editing Area */}
-      <div className="flex-1 overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-10">
+      <div className="flex-1 h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-10" style={{ height: '100%', maxHeight: '100%' }}>
         <div className="w-full bg-white rounded-2xl shadow-2xl border border-gray-100 p-8">
           
           {/* Name Input */}
@@ -556,11 +556,11 @@ export default function ResumeEditor({
               >
                 <span className="text-sm font-medium">Add Field</span>
               </button>
-            </div>
-          </div>
+        </div>
+      </div>
 
           {/* Render All Sections */}
-          {sectionOrder.map((section) => renderSection(section))}
+            {sectionOrder.map((section) => renderSection(section))}
           
         </div>
       </div>

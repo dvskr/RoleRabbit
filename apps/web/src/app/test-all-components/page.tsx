@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
 import { ResumeEditor, AIPanel } from '../../components/features';
@@ -27,7 +27,8 @@ export default function TestAllComponents() {
   const [newFieldIcon, setNewFieldIcon] = useState('link');
   const [customFields, setCustomFields] = useState([]);
   const [showAIGenerateModal, setShowAIGenerateModal] = useState(false);
-  const [summaryAiPrompt, setSummaryAiPrompt] = useState('');
+  const [aiGenerateSection, setAiGenerateSection] = useState('summary');
+  const [aiPrompt, setAiPrompt] = useState('');
   const [writingTone, setWritingTone] = useState('professional');
   const [contentLength, setContentLength] = useState('concise');
 
@@ -68,8 +69,25 @@ export default function TestAllComponents() {
         year: '2018'
       }
     ],
-    projects: [],
-    certifications: []
+    projects: [
+      {
+        id: 1,
+        name: 'E-Commerce Platform',
+        description: 'Full-stack e-commerce application built with React and Node.js',
+        link: 'https://github.com/username/ecommerce',
+        bullets: ['Implemented secure payment processing', 'Built responsive UI with React', 'Deployed on AWS'],
+        skills: ['React', 'Node.js', 'MongoDB', 'AWS']
+      }
+    ],
+    certifications: [
+      {
+        id: 1,
+        name: 'AWS Certified Solutions Architect',
+        issuer: 'Amazon Web Services',
+        link: 'https://aws.amazon.com/certification/',
+        skills: ['AWS', 'Cloud Architecture', 'DevOps']
+      }
+    ]
   });
 
   // Section management
@@ -97,7 +115,26 @@ export default function TestAllComponents() {
   const [selectedTone, setSelectedTone] = useState('professional');
   const [selectedLength, setSelectedLength] = useState('concise');
   const [aiConversation, setAiConversation] = useState([]);
-  const [aiPrompt, setAiPrompt] = useState('');
+
+  // Undo/Redo state
+  const [history, setHistory] = useState([resumeData]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  // Prevent body scrolling
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
+  // Save changes to history when resumeData changes
+  useEffect(() => {
+    if (historyIndex === history.length - 1) {
+      // Only save to history if we're at the latest state (not during undo/redo)
+      saveToHistory(resumeData);
+    }
+  }, [resumeData]);
 
   // Mock functions
   const handleTabChange = (tab: string) => {
@@ -310,13 +347,100 @@ export default function TestAllComponents() {
   };
 
   const generateAIContent = () => {
-    if (!summaryAiPrompt.trim()) return;
+    if (!aiPrompt.trim()) return;
     
     // In a real app, this would call an AI API
-    const generatedContent = `Generated summary based on: "${summaryAiPrompt}" with ${writingTone} tone and ${contentLength} length.`;
-    setResumeData(prev => ({ ...prev, summary: generatedContent }));
+    const generatedContent = `Generated ${aiGenerateSection} content based on: "${aiPrompt}" with ${writingTone} tone and ${contentLength} length.`;
+    
+    switch (aiGenerateSection) {
+      case 'summary':
+        setResumeData(prev => ({ ...prev, summary: generatedContent }));
+        break;
+      case 'skills':
+        const suggestedSkills = ['JavaScript', 'React', 'Node.js', 'TypeScript', 'Python', 'SQL', 'AWS', 'Docker'];
+        const newSkills = [...resumeData.skills, ...suggestedSkills.filter(skill => !resumeData.skills.includes(skill))];
+        setResumeData(prev => ({ ...prev, skills: newSkills }));
+        break;
+      case 'experience':
+        const newExperience = {
+          id: Date.now(),
+          company: 'AI-Generated Company',
+          position: 'Software Engineer',
+          period: '2023',
+          endPeriod: 'Present',
+          location: 'Remote',
+          bullets: ['Developed scalable web applications', 'Collaborated with cross-functional teams', 'Implemented best practices'],
+          environment: ['React', 'Node.js', 'AWS']
+        };
+        setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
+        break;
+      case 'projects':
+        const newProject = {
+          id: Date.now(),
+          name: 'AI-Generated Project',
+          description: 'A full-stack web application built with modern technologies',
+          link: 'https://github.com/username/project',
+          bullets: ['Implemented responsive design', 'Integrated third-party APIs', 'Optimized performance'],
+          skills: ['React', 'Node.js', 'MongoDB']
+        };
+        setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
+        break;
+    }
+    
     setShowAIGenerateModal(false);
-    setSummaryAiPrompt('');
+    setAiPrompt('');
+  };
+
+  // Unified AI Generate function
+  const openAIGenerateModal = (section: string) => {
+    setAiGenerateSection(section);
+    setShowAIGenerateModal(true);
+  };
+
+  const hideSection = (section: string) => {
+    // Only hide the section, don't remove it from sectionOrder
+    setSectionVisibility(prev => ({
+      ...prev,
+      [section]: false
+    }));
+  };
+
+  const handleTemplateSelect = (template: string) => {
+    if (template) {
+      // In a real app, this would load the selected template
+      console.log('Selected template:', template);
+      alert(`Template "${template}" selected! This would load the template in a real application.`);
+    }
+  };
+
+  // Undo/Redo functions
+  const saveToHistory = (newData: any) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newData);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setResumeData(history[newIndex]);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setResumeData(history[newIndex]);
+    }
+  };
+
+  const saveResume = () => {
+    // In a real app, this would save to backend
+    console.log('Saving resume:', resumeData);
+    alert('Resume saved successfully!');
   };
 
   const renderSection = (section: string) => {
@@ -361,7 +485,11 @@ export default function TestAllComponents() {
                 </h3>
               </div>
               <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110">
+                <button 
+                  onClick={() => hideSection('summary')}
+                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  title="Hide summary section"
+                >
                   <Trash2 size={18} className="text-red-600" />
                 </button>
               </div>
@@ -374,15 +502,15 @@ export default function TestAllComponents() {
                 onChange={(e) => setResumeData({...resumeData, summary: e.target.value})}
                 placeholder="Write a compelling professional summary..."
               />
-              <div className="flex justify-end">
-                <button 
-                  onClick={() => setShowAIGenerateModal(true)}
-                  className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
-                >
-                  <Sparkles size={16} />
-                  AI Generate
-                </button>
-              </div>
+                <div className="flex justify-end">
+                  <button 
+                    onClick={() => openAIGenerateModal('summary')}
+                    className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
+                  >
+                    <Sparkles size={16} />
+                    AI Generate
+                  </button>
+                </div>
             </div>
           </div>
         );
@@ -397,9 +525,9 @@ export default function TestAllComponents() {
                 </h3>
               </div>
               <button
-                onClick={() => onToggleSection('skills')}
+                onClick={() => hideSection('skills')}
                 className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
-                title="Remove skills section"
+                title="Hide skills section"
               >
                 <Trash2 size={18} className="text-red-600" />
               </button>
@@ -413,8 +541,8 @@ export default function TestAllComponents() {
               
               <div className="flex flex-wrap gap-2">
                 {resumeData.skills.map((skill, idx) => (
-                  <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-gray-300 hover:border-orange-400 transition-all group">
-                    <span className="text-xs text-gray-700 font-medium">{skill}</span>
+                  <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
+                    <span className="text-xs text-black font-medium">{skill}</span>
                     <button
                       onClick={() => {
                         const updatedSkills = resumeData.skills.filter((_, index) => index !== idx);
@@ -428,11 +556,11 @@ export default function TestAllComponents() {
                 ))}
                 
                 {/* Inline skill input */}
-                <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-orange-400">
+                <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
                   <input
                     type="text"
                     placeholder="Enter skill..."
-                    className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-24"
+                    className="text-xs text-black font-medium bg-transparent border-none outline-none w-24"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         if (e.target.value.trim()) {
@@ -456,7 +584,7 @@ export default function TestAllComponents() {
                         input.value = '';
                       }
                     }}
-                    className="text-orange-500 hover:text-orange-700 transition-all"
+                    className="text-black hover:text-gray-600 transition-all"
                   >
                     <Plus size={12} />
                   </button>
@@ -468,15 +596,15 @@ export default function TestAllComponents() {
               </div>
             </div>
             
-            <div className="flex justify-end mt-3">
-              <button 
-                onClick={() => {/* Add AI Generate for skills */}}
-                className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
-              >
-                <Sparkles size={16} />
-                AI Generate
-              </button>
-            </div>
+              <div className="flex justify-end mt-3">
+                <button 
+                  onClick={() => openAIGenerateModal('skills')}
+                  className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
+                >
+                  <Sparkles size={16} />
+                  AI Generate
+                </button>
+              </div>
           </div>
         );
       case 'experience':
@@ -489,25 +617,34 @@ export default function TestAllComponents() {
                   EXPERIENCE
                 </h3>
               </div>
-              <button 
-                onClick={() => {
-                  const newExperience = {
-                    id: Date.now(),
-                    company: '',
-                    position: '',
-                    period: '',
-                    endPeriod: '',
-                    location: '',
-                    bullets: [''],
-                    environment: []
-                  };
-                  setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
-                }}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
-              >
-                <Plus size={18} />
-                Add
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const newExperience = {
+                      id: Date.now(),
+                      company: '',
+                      position: '',
+                      period: '',
+                      endPeriod: '',
+                      location: '',
+                      bullets: [''],
+                      environment: []
+                    };
+                    setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
+                  }}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
+                >
+                  <Plus size={18} />
+                  Add
+                </button>
+                <button 
+                  onClick={() => hideSection('experience')}
+                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  title="Hide experience section"
+                >
+                  <Trash2 size={18} className="text-red-600" />
+                </button>
+              </div>
             </div>
 
             {resumeData.experience.length === 0 && (
@@ -602,12 +739,88 @@ export default function TestAllComponents() {
                       placeholder="Job Title"
                     />
                     
+                    {/* Custom Fields */}
+                    {(exp.customFields || []).map((field) => (
+                      <div key={field.id} className="flex items-center gap-2 mb-2">
+                        <input
+                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all"
+                          value={field.name}
+                          onChange={(e) => {
+                            const updatedExperience = resumeData.experience.map((item) => {
+                              if (item.id === exp.id) {
+                                const updatedFields = item.customFields.map((f) => 
+                                  f.id === field.id ? { ...f, name: e.target.value } : f
+                                );
+                                return { ...item, customFields: updatedFields };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, experience: updatedExperience});
+                          }}
+                          placeholder="Field name"
+                        />
+                        <button
+                          onClick={() => {
+                            const updatedExperience = resumeData.experience.map((item) => {
+                              if (item.id === exp.id) {
+                                const updatedFields = item.customFields.filter((f) => f.id !== field.id);
+                                return { ...item, customFields: updatedFields };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, experience: updatedExperience});
+                          }}
+                          className="p-2 hover:bg-red-100 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                        </button>
+                      </div>
+                    ))}
+
                     <button
-                      className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all w-full"
+                      onClick={() => {
+                        const updatedExperience = resumeData.experience.map((item) => {
+                          if (item.id === exp.id) {
+                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: '', value: '' }] };
+                          }
+                          return item;
+                        });
+                        setResumeData({...resumeData, experience: updatedExperience});
+                      }}
+                      className="w-8 h-8 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
+                      title="Add Custom Field"
                     >
-                      <Plus size={16} />
-                      Add Custom Field
+                      <Plus size={16} className="text-gray-600" />
                     </button>
+
+                    {/* Template Selection */}
+                    <div className="mt-2">
+                      <select
+                        className="w-full text-xs text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const updatedExperience = resumeData.experience.map((item) => {
+                              if (item.id === exp.id) {
+                                return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: e.target.value, value: '' }] };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, experience: updatedExperience});
+                            e.target.value = ''; // Reset selection
+                          }
+                        }}
+                      >
+                        <option value="">Select template...</option>
+                        <option value="Department">Department</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Team Size">Team Size</option>
+                        <option value="Salary">Salary</option>
+                        <option value="Location">Location</option>
+                        <option value="Start Date">Start Date</option>
+                        <option value="End Date">End Date</option>
+                        <option value="Technologies">Technologies</option>
+                      </select>
+                    </div>
 
                     <div className="space-y-3 mt-4">
                       {(exp.bullets || ['']).map((bullet, idx) => (
@@ -672,8 +885,8 @@ export default function TestAllComponents() {
                     <div className="mt-6 pt-4 border-t border-gray-200">
                       <div className="flex flex-wrap gap-2">
                         {(exp.environment || []).map((skill, idx) => (
-                          <div key={idx} className="flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 hover:border-blue-400 transition-all group">
-                            <span className="text-xs text-blue-700 font-medium">{skill}</span>
+                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
+                            <span className="text-xs text-black font-medium">{skill}</span>
                             <button
                               onClick={() => {
                                 const updatedExperience = resumeData.experience.map((item) => {
@@ -694,11 +907,11 @@ export default function TestAllComponents() {
                         
                         {/* Inline skill input */}
                         <div className="relative">
-                          <div className="flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-lg border-2 border-blue-400">
+                          <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
                             <input
                               type="text"
                               placeholder="Enter skill..."
-                              className="text-xs text-blue-700 font-medium bg-transparent border-none outline-none w-20"
+                              className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
                               onKeyPress={(e) => {
                                 if (e.key === 'Enter') {
                                   if (e.target.value.trim()) {
@@ -740,7 +953,7 @@ export default function TestAllComponents() {
                                   input.value = '';
                                 }
                               }}
-                              className="text-blue-500 hover:text-blue-700 transition-all"
+                              className="text-black hover:text-gray-600 transition-all"
                             >
                               <Plus size={12} />
                             </button>
@@ -750,22 +963,13 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => {
-                      const updatedExperience = resumeData.experience.filter((item) => item.id !== exp.id);
-                      setResumeData({...resumeData, experience: updatedExperience});
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
-                  >
-                    <Trash2 size={18} className="text-red-600" />
-                  </button>
                 </div>
               </div>
             ))}
             
             <div className="flex justify-end mt-3">
               <button 
-                onClick={() => {/* Add AI Generate for experience */}}
+                onClick={() => openAIGenerateModal('experience')}
                 className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
               >
                 <Sparkles size={16} />
@@ -784,23 +988,32 @@ export default function TestAllComponents() {
                   PROJECT HIGHLIGHTS
                 </h3>
               </div>
-              <button 
-                onClick={() => {
-                  const newProject = {
-                    id: Date.now(),
-                    name: '',
-                    description: '',
-                    link: '',
-                    bullets: [''],
-                    skills: []
-                  };
-                  setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
-                }}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
-              >
-                <Plus size={18} />
-                Add
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const newProject = {
+                      id: Date.now(),
+                      name: '',
+                      description: '',
+                      link: '',
+                      bullets: [''],
+                      skills: []
+                    };
+                    setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
+                  }}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
+                >
+                  <Plus size={18} />
+                  Add
+                </button>
+                <button 
+                  onClick={() => hideSection('projects')}
+                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  title="Hide projects section"
+                >
+                  <Trash2 size={18} className="text-red-600" />
+                </button>
+              </div>
             </div>
 
             {resumeData.projects.length === 0 && (
@@ -875,12 +1088,88 @@ export default function TestAllComponents() {
                       </div>
                     </div>
                     
+                    {/* Custom Fields */}
+                    {(project.customFields || []).map((field) => (
+                      <div key={field.id} className="flex items-center gap-2 mb-2">
+                        <input
+                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all"
+                          value={field.name}
+                          onChange={(e) => {
+                            const updatedProjects = resumeData.projects.map((item) => {
+                              if (item.id === project.id) {
+                                const updatedFields = item.customFields.map((f) => 
+                                  f.id === field.id ? { ...f, name: e.target.value } : f
+                                );
+                                return { ...item, customFields: updatedFields };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, projects: updatedProjects});
+                          }}
+                          placeholder="Field name"
+                        />
+                        <button
+                          onClick={() => {
+                            const updatedProjects = resumeData.projects.map((item) => {
+                              if (item.id === project.id) {
+                                const updatedFields = item.customFields.filter((f) => f.id !== field.id);
+                                return { ...item, customFields: updatedFields };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, projects: updatedProjects});
+                          }}
+                          className="p-2 hover:bg-red-100 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                        </button>
+                      </div>
+                    ))}
+
                     <button
-                      className="text-sm text-gray-600 hover:text-blue-600 flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all w-full"
+                      onClick={() => {
+                        const updatedProjects = resumeData.projects.map((item) => {
+                          if (item.id === project.id) {
+                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: '', value: '' }] };
+                          }
+                          return item;
+                        });
+                        setResumeData({...resumeData, projects: updatedProjects});
+                      }}
+                      className="w-8 h-8 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
+                      title="Add Custom Field"
                     >
-                      <Plus size={16} />
-                      Add Custom Field
+                      <Plus size={16} className="text-gray-600" />
                     </button>
+
+                    {/* Template Selection */}
+                    <div className="mt-2">
+                      <select
+                        className="w-full text-xs text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const updatedProjects = resumeData.projects.map((item) => {
+                              if (item.id === project.id) {
+                                return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: e.target.value, value: '' }] };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, projects: updatedProjects});
+                            e.target.value = ''; // Reset selection
+                          }
+                        }}
+                      >
+                        <option value="">Select template...</option>
+                        <option value="Technologies">Technologies</option>
+                        <option value="Budget">Budget</option>
+                        <option value="Timeline">Timeline</option>
+                        <option value="Team Size">Team Size</option>
+                        <option value="Client">Client</option>
+                        <option value="Status">Status</option>
+                        <option value="Repository">Repository</option>
+                        <option value="Demo Link">Demo Link</option>
+                      </select>
+                    </div>
 
                     <div className="space-y-3 mt-4">
                       {(project.bullets || ['']).map((bullet, idx) => (
@@ -949,8 +1238,8 @@ export default function TestAllComponents() {
                       
                       <div className="flex flex-wrap gap-2">
                         {(project.skills || []).map((skill, idx) => (
-                          <div key={idx} className="flex items-center gap-1 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-200 hover:border-purple-400 transition-all group">
-                            <span className="text-xs text-purple-700 font-medium">{skill}</span>
+                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
+                            <span className="text-xs text-black font-medium">{skill}</span>
                             <button
                               onClick={() => {
                                 const updatedProjects = resumeData.projects.map((item) => {
@@ -970,11 +1259,11 @@ export default function TestAllComponents() {
                         ))}
                         
                         {/* Inline skill input */}
-                        <div className="flex items-center gap-1 bg-purple-50 px-3 py-1.5 rounded-lg border-2 border-purple-400">
+                        <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
                           <input
                             type="text"
                             placeholder="Enter skill..."
-                            className="text-xs text-purple-700 font-medium bg-transparent border-none outline-none w-20"
+                            className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
                                 if (e.target.value.trim()) {
@@ -1016,7 +1305,7 @@ export default function TestAllComponents() {
                                 input.value = '';
                               }
                             }}
-                            className="text-purple-500 hover:text-purple-700 transition-all"
+                            className="text-black hover:text-gray-600 transition-all"
                           >
                             <Plus size={12} />
                           </button>
@@ -1025,22 +1314,13 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => {
-                      const updatedProjects = resumeData.projects.filter((item) => item.id !== project.id);
-                      setResumeData({...resumeData, projects: updatedProjects});
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
-                  >
-                    <Trash2 size={18} className="text-red-600" />
-                  </button>
                 </div>
               </div>
             ))}
             
             <div className="flex justify-end mt-3">
               <button 
-                onClick={() => {/* Add AI Generate for projects */}}
+                onClick={() => openAIGenerateModal('projects')}
                 className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
               >
                 <Sparkles size={16} />
@@ -1059,22 +1339,31 @@ export default function TestAllComponents() {
                   CERTIFICATIONS
                 </h3>
               </div>
-              <button 
-                onClick={() => {
-                  const newCertification = {
-                    id: Date.now(),
-                    name: '',
-                    issuer: '',
-                    link: '',
-                    skills: []
-                  };
-                  setResumeData(prev => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
-                }}
-                className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
-              >
-                <Plus size={18} />
-                Add
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const newCertification = {
+                      id: Date.now(),
+                      name: '',
+                      issuer: '',
+                      link: '',
+                      skills: []
+                    };
+                    setResumeData(prev => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
+                  }}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
+                >
+                  <Plus size={18} />
+                  Add
+                </button>
+                <button 
+                  onClick={() => hideSection('certifications')}
+                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  title="Hide certifications section"
+                >
+                  <Trash2 size={18} className="text-red-600" />
+                </button>
+              </div>
             </div>
 
             {resumeData.certifications.length === 0 && (
@@ -1156,8 +1445,8 @@ export default function TestAllComponents() {
                       
                       <div className="flex flex-wrap gap-2">
                         {(cert.skills || []).map((skill, idx) => (
-                          <div key={idx} className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-400 transition-all group">
-                            <span className="text-xs text-gray-700 font-medium">{skill}</span>
+                          <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600 transition-all group">
+                            <span className="text-xs text-black font-medium">{skill}</span>
                             <button
                               onClick={() => {
                                 const updatedCertifications = resumeData.certifications.map((item) => {
@@ -1177,11 +1466,11 @@ export default function TestAllComponents() {
                         ))}
                         
                         {/* Inline skill input */}
-                        <div className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-lg border-2 border-gray-400">
+                        <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black">
                           <input
                             type="text"
                             placeholder="Enter skill..."
-                            className="text-xs text-gray-700 font-medium bg-transparent border-none outline-none w-20"
+                            className="text-xs text-black font-medium bg-transparent border-none outline-none w-20"
                             onKeyPress={(e) => {
                               if (e.key === 'Enter') {
                                 if (e.target.value.trim()) {
@@ -1223,7 +1512,7 @@ export default function TestAllComponents() {
                                 input.value = '';
                               }
                             }}
-                            className="text-gray-500 hover:text-gray-700 transition-all"
+                            className="text-black hover:text-gray-600 transition-all"
                           >
                             <Plus size={12} />
                           </button>
@@ -1232,51 +1521,211 @@ export default function TestAllComponents() {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => {
-                      const updatedCertifications = resumeData.certifications.filter((item) => item.id !== cert.id);
-                      setResumeData({...resumeData, certifications: updatedCertifications});
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-lg transition-all"
-                  >
-                    <Trash2 size={18} className="text-red-600" />
-                  </button>
                 </div>
               </div>
             ))}
-            
-            <div className="flex justify-end mt-3">
-              <button 
-                onClick={() => {/* Add AI Generate for certifications */}}
-                className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 transition-all"
-              >
-                <Sparkles size={16} />
-                AI Generate
-              </button>
-            </div>
           </div>
         );
       case 'education':
         return (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">EDUCATION</h3>
-              <button
-                onClick={() => onToggleSection('education')}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                {sectionVisibility.education ? (
-                  <Eye size={20} />
-                ) : (
-                  <EyeOff size={20} />
-                )}
-              </button>
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <GripVertical size={18} className="text-gray-400 cursor-move" />
+                <h3 className="text-lg font-bold text-black uppercase tracking-wide">
+                  EDUCATION
+                </h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    const newEducation = {
+                      id: Date.now(),
+                      school: '',
+                      degree: '',
+                      startDate: '',
+                      endDate: ''
+                    };
+                    setResumeData(prev => ({ ...prev, education: [...prev.education, newEducation] }));
+                  }}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all"
+                >
+                  <Plus size={18} />
+                  Add
+                </button>
+                <button 
+                  onClick={() => hideSection('education')}
+                  className="p-2 hover:bg-red-100 rounded-xl transition-all hover:scale-110"
+                  title="Hide education section"
+                >
+                  <Trash2 size={18} className="text-red-600" />
+                </button>
+              </div>
             </div>
-            
+
+            {resumeData.education.length === 0 && (
+              <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-blue-50 hover:border-blue-300 transition-all">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                  <Plus size={32} className="text-white" />
+                </div>
+                <p className="text-gray-600 mb-4 font-semibold">No education added yet</p>
+                <button 
+                  onClick={() => {
+                    const newEducation = {
+                      id: Date.now(),
+                      school: '',
+                      degree: '',
+                      startDate: '',
+                      endDate: ''
+                    };
+                    setResumeData(prev => ({ ...prev, education: [...prev.education, newEducation] }));
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/30 inline-flex items-center gap-2 font-bold transition-all hover:scale-105"
+                >
+                  <Plus size={18} />
+                  Add Education
+                </button>
+              </div>
+            )}
+
             {resumeData.education.map((edu) => (
-              <div key={edu.id} className="mb-4 p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-semibold text-gray-800">{edu.degree}</h4>
-                <p className="text-gray-600">{edu.school} • {edu.year}</p>
+              <div key={edu.id} className="mb-6 group p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 bg-white">
+                <div className="flex items-start gap-3 mb-4">
+                  <GripVertical size={18} className="text-gray-400 cursor-move mt-2" />
+                  <div className="flex-1 space-y-3">
+                    <input
+                      className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-4 py-2 w-full transition-all"
+                      value={edu.school}
+                      onChange={(e) => {
+                        const updatedEducation = resumeData.education.map((item) => 
+                          item.id === edu.id ? { ...item, school: e.target.value } : item
+                        );
+                        setResumeData({...resumeData, education: updatedEducation});
+                      }}
+                      placeholder="University Name, Country"
+                    />
+                    <input
+                      className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-4 py-2 w-full transition-all"
+                      value={edu.degree}
+                      onChange={(e) => {
+                        const updatedEducation = resumeData.education.map((item) => 
+                          item.id === edu.id ? { ...item, degree: e.target.value } : item
+                        );
+                        setResumeData({...resumeData, education: updatedEducation});
+                      }}
+                      placeholder="Degree, Major"
+                    />
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <input 
+                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all font-medium" 
+                        value={edu.startDate}
+                        onChange={(e) => {
+                          const updatedEducation = resumeData.education.map((item) => 
+                            item.id === edu.id ? { ...item, startDate: e.target.value } : item
+                          );
+                          setResumeData({...resumeData, education: updatedEducation});
+                        }}
+                        placeholder="Start Date"
+                      />
+                      <span className="font-bold text-gray-400">→</span>
+                      <input 
+                        className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all font-medium" 
+                        value={edu.endDate}
+                        onChange={(e) => {
+                          const updatedEducation = resumeData.education.map((item) => 
+                            item.id === edu.id ? { ...item, endDate: e.target.value } : item
+                          );
+                          setResumeData({...resumeData, education: updatedEducation});
+                        }}
+                        placeholder="End Date"
+                      />
+                    </div>
+                    
+                    {/* Custom Fields */}
+                    {(edu.customFields || []).map((field) => (
+                      <div key={field.id} className="flex items-center gap-2 mb-2">
+                        <input
+                          className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-3 py-2 transition-all"
+                          value={field.name}
+                          onChange={(e) => {
+                            const updatedEducation = resumeData.education.map((item) => {
+                              if (item.id === edu.id) {
+                                const updatedFields = item.customFields.map((f) => 
+                                  f.id === field.id ? { ...f, name: e.target.value } : f
+                                );
+                                return { ...item, customFields: updatedFields };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, education: updatedEducation});
+                          }}
+                          placeholder="Field name"
+                        />
+                        <button
+                          onClick={() => {
+                            const updatedEducation = resumeData.education.map((item) => {
+                              if (item.id === edu.id) {
+                                const updatedFields = item.customFields.filter((f) => f.id !== field.id);
+                                return { ...item, customFields: updatedFields };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, education: updatedEducation});
+                          }}
+                          className="p-2 hover:bg-red-100 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      onClick={() => {
+                        const updatedEducation = resumeData.education.map((item) => {
+                          if (item.id === edu.id) {
+                            return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: '', value: '' }] };
+                          }
+                          return item;
+                        });
+                        setResumeData({...resumeData, education: updatedEducation});
+                      }}
+                      className="w-8 h-8 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
+                      title="Add Custom Field"
+                    >
+                      <Plus size={16} className="text-gray-600" />
+                    </button>
+
+                    {/* Template Selection */}
+                    <div className="mt-2">
+                      <select
+                        className="w-full text-xs text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const updatedEducation = resumeData.education.map((item) => {
+                              if (item.id === edu.id) {
+                                return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: e.target.value, value: '' }] };
+                              }
+                              return item;
+                            });
+                            setResumeData({...resumeData, education: updatedEducation});
+                            e.target.value = ''; // Reset selection
+                          }
+                        }}
+                      >
+                        <option value="">Select template...</option>
+                        <option value="GPA">GPA</option>
+                        <option value="Major">Major</option>
+                        <option value="Minor">Minor</option>
+                        <option value="Thesis">Thesis</option>
+                        <option value="Honors">Honors</option>
+                        <option value="Activities">Activities</option>
+                        <option value="Relevant Coursework">Relevant Coursework</option>
+                        <option value="Study Abroad">Study Abroad</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                </div>
               </div>
             ))}
           </div>
@@ -1324,7 +1773,7 @@ export default function TestAllComponents() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 overflow-hidden" style={{ height: '100vh', maxHeight: '100vh' }}>
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -1336,28 +1785,29 @@ export default function TestAllComponents() {
       />
 
       {/* Main Content */}
-      <div className={`flex-1 overflow-hidden flex flex-col transition-all duration-300 ${showRightPanel ? 'mr-80' : ''}`}>
+      <div className={`flex-1 h-screen overflow-hidden flex flex-col transition-all duration-300 ${showRightPanel ? 'mr-80' : ''}`}>
         {activeTab === 'editor' && (
           <>
-            <Header
-              isMobile={false}
-              isSaving={false}
-              canUndo={true}
-              canRedo={true}
-              showRightPanel={showRightPanel}
-              previousSidebarState={previousSidebarState}
-              sidebarCollapsed={sidebarCollapsed}
-              onExport={() => setShowExportModal(true)}
-              onUndo={() => console.log('Undo clicked')}
-              onRedo={() => console.log('Redo clicked')}
-              onImport={() => setShowImportModal(true)}
-              onSave={() => console.log('Save clicked')}
-              onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
-              onShowMobileMenu={() => setShowMobileMenu(true)}
-              setPreviousSidebarState={setPreviousSidebarState}
-              setSidebarCollapsed={setSidebarCollapsed}
-              setShowRightPanel={setShowRightPanel}
-            />
+              <Header
+                isMobile={false}
+                isSaving={false}
+                canUndo={historyIndex > 0}
+                canRedo={historyIndex < history.length - 1}
+                showRightPanel={showRightPanel}
+                previousSidebarState={previousSidebarState}
+                sidebarCollapsed={sidebarCollapsed}
+                onExport={() => setShowExportModal(true)}
+                onUndo={undo}
+                onRedo={redo}
+                onImport={() => setShowImportModal(true)}
+                onSave={saveResume}
+                onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
+                onShowMobileMenu={() => setShowMobileMenu(true)}
+                onTemplateSelect={handleTemplateSelect}
+                setPreviousSidebarState={setPreviousSidebarState}
+                setSidebarCollapsed={setSidebarCollapsed}
+                setShowRightPanel={setShowRightPanel}
+              />
             <ResumeEditor
               resumeFileName={resumeFileName}
               setResumeFileName={setResumeFileName}
@@ -1365,6 +1815,7 @@ export default function TestAllComponents() {
               sectionVisibility={sectionVisibility}
               customSections={customSections}
               resumeData={resumeData}
+              setResumeData={setResumeData}
               fontFamily={fontFamily}
               setFontFamily={setFontFamily}
               fontSize={fontSize}
@@ -1793,12 +2244,12 @@ export default function TestAllComponents() {
                 <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
                   <Sparkles size={20} className="text-white" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                    AI Generate for Summary
-                  </h3>
-                  <p className="text-sm text-gray-500">Create professional content with AI assistance.</p>
-                </div>
+                  <div>
+                    <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                      AI Generate for {aiGenerateSection.charAt(0).toUpperCase() + aiGenerateSection.slice(1)}
+                    </h3>
+                    <p className="text-sm text-gray-500">Create professional content with AI assistance.</p>
+                  </div>
               </div>
               <button
                 onClick={() => setShowAIGenerateModal(false)}
@@ -1825,13 +2276,13 @@ export default function TestAllComponents() {
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <label className="text-sm font-medium text-gray-700">What would you like to generate?</label>
                 </div>
-                <div className="relative">
-                  <textarea
-                    value={summaryAiPrompt}
-                    onChange={(e) => setSummaryAiPrompt(e.target.value)}
-                    placeholder="Start typing your prompt or paste a job description..."
-                    className="w-full h-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none resize-none"
-                  />
+                  <div className="relative">
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      placeholder="Start typing your prompt or paste a job description..."
+                      className="w-full h-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none resize-none"
+                    />
                   <div className="absolute top-2 right-2 w-6 h-6 bg-purple-600 rounded flex items-center justify-center">
                     <span className="text-white text-xs font-bold">AI</span>
                   </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu } from 'lucide-react';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, FileText } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -18,6 +18,7 @@ interface HeaderProps {
   onSave: () => void;
   onToggleAIPanel: () => void;
   onShowMobileMenu: () => void;
+  onTemplateSelect: (template: string) => void;
   setPreviousSidebarState: (state: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowRightPanel: (show: boolean) => void;
@@ -38,6 +39,7 @@ export default function Header({
   onSave,
   onToggleAIPanel,
   onShowMobileMenu,
+  onTemplateSelect,
   setPreviousSidebarState,
   setSidebarCollapsed,
   setShowRightPanel
@@ -77,6 +79,21 @@ export default function Header({
         )}
       </div>
       <div className="flex gap-3">
+        <div className="relative">
+          <select
+            onChange={(e) => onTemplateSelect(e.target.value)}
+            className="px-4 py-2 border bg-white rounded-lg text-sm hover:bg-gray-50 appearance-none pr-8"
+          >
+            <option value="">Select Template</option>
+            <option value="modern">Modern</option>
+            <option value="classic">Classic</option>
+            <option value="creative">Creative</option>
+            <option value="minimal">Minimal</option>
+            <option value="professional">Professional</option>
+            <option value="executive">Executive</option>
+          </select>
+          <FileText size={16} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
         <button 
           onClick={onExport}
           className="px-4 py-2 border bg-white rounded-lg text-sm hover:bg-gray-50"
