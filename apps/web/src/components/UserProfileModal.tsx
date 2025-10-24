@@ -383,10 +383,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                   placeholder="Add skill..."
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
-                      const skill = e.target.value.trim();
+                      const skill = (e.target as HTMLInputElement).value.trim();
                       if (skill && !profileForm.skills?.includes(skill)) {
                         setProfileForm({...profileForm, skills: [...(profileForm.skills || []), skill]});
-                        e.target.value = '';
+                        (e.target as HTMLInputElement).value = '';
                       }
                     }
                   }}

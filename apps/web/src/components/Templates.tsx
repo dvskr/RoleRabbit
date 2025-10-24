@@ -57,6 +57,7 @@ export default function Templates({}: TemplatesProps) {
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [templatesPerPage] = useState(12);
 
   const filteredTemplates = useMemo(() => {
