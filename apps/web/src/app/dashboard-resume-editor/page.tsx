@@ -1,5 +1,5 @@
-import RoleReadyWithResumeEditor from '../RoleReadyWithResumeEditor';
+import TestAllComponents from '../test-all-components/page';
 
 export default function DashboardResumeEditorPage() {
-  return <RoleReadyWithResumeEditor />;
+  return <TestAllComponents />;
 }

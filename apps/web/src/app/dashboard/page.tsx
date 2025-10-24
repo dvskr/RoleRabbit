@@ -1,5 +1,5 @@
-import RoleReady from '../RoleReady';
+import TestAllComponents from '../test-all-components/page';
 
 export default function DashboardPage() {
-  return <RoleReady />;
+  return <TestAllComponents />;
 }

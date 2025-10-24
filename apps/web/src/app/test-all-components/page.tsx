@@ -4,11 +4,19 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
 import { ResumeEditor, AIPanel } from '../../components/features';
+import Home from '../../components/Home';
+import CloudStorage from '../../components/CloudStorage';
+import Templates from '../../components/Templates';
+import JobTracker from '../../components/JobTracker';
+import Discussion from '../../components/Discussion';
+import Email from '../../components/Email';
+import CoverLetterGenerator from '../../components/CoverLetterGenerator';
+import UserProfileModal from '../../components/UserProfileModal';
 import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X } from 'lucide-react';
 
 export default function TestAllComponents() {
   // State management
-  const [activeTab, setActiveTab] = useState('editor');
+  const [activeTab, setActiveTab] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [previousSidebarState, setPreviousSidebarState] = useState(false);
@@ -120,13 +128,17 @@ export default function TestAllComponents() {
   const [history, setHistory] = useState([resumeData]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
-  // Prevent body scrolling
+  // Control body scrolling based on active tab
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
+    if (activeTab === 'editor') {
+      document.body.style.overflow = 'auto';
+    } else {
+      document.body.style.overflow = 'hidden';
+    }
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = 'auto';
     };
-  }, []);
+  }, [activeTab]);
 
   // Save changes to history when resumeData changes
   useEffect(() => {
@@ -1726,7 +1738,7 @@ export default function TestAllComponents() {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 overflow-hidden" style={{ height: '100vh', maxHeight: '100vh' }}>
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50" style={{ height: '100vh', maxHeight: '100vh' }}>
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -1739,72 +1751,116 @@ export default function TestAllComponents() {
 
       {/* Main Content */}
       <div className="flex-1 h-screen overflow-hidden flex flex-col">
+        {/* Header only shows for Resume Editor */}
         {activeTab === 'editor' && (
-          <>
-            <Header
-              isMobile={false}
-              isSaving={false}
-              canUndo={historyIndex > 0}
-              canRedo={historyIndex < history.length - 1}
-              showRightPanel={showRightPanel}
-              previousSidebarState={previousSidebarState}
-              sidebarCollapsed={sidebarCollapsed}
-              onExport={() => setShowExportModal(true)}
-              onUndo={undo}
-              onRedo={redo}
-              onImport={() => setShowImportModal(true)}
-              onSave={saveResume}
-              onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
-              onShowMobileMenu={() => setShowMobileMenu(true)}
-              onTemplateSelect={handleTemplateSelect}
-              setPreviousSidebarState={setPreviousSidebarState}
-              setSidebarCollapsed={setSidebarCollapsed}
-              setShowRightPanel={setShowRightPanel}
-            />
-            <div className={`flex-1 ${showRightPanel ? 'mr-80' : ''}`} style={{ height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
-              <ResumeEditor
-              resumeFileName={resumeFileName}
-              setResumeFileName={setResumeFileName}
-              sectionOrder={sectionOrder}
-              sectionVisibility={sectionVisibility}
-              customSections={customSections}
-              resumeData={resumeData}
-              setResumeData={setResumeData}
-              fontFamily={fontFamily}
-              setFontFamily={setFontFamily}
-              fontSize={fontSize}
-              setFontSize={setFontSize}
-              lineSpacing={lineSpacing}
-              setLineSpacing={setLineSpacing}
-              sectionSpacing={sectionSpacing}
-              setSectionSpacing={setSectionSpacing}
-              margins={margins}
-              setMargins={setMargins}
-              headingStyle={headingStyle}
-              setHeadingStyle={setHeadingStyle}
-              bulletStyle={bulletStyle}
-              setBulletStyle={setBulletStyle}
-              onToggleSection={toggleSection}
-              onMoveSection={moveSection}
-              onShowAddSectionModal={() => setShowAddSectionModal(true)}
-              onDeleteCustomSection={deleteCustomSection}
-              onUpdateCustomSection={updateCustomSection}
-              onGenerateSmartFileName={generateSmartFileName}
-              onResetToDefault={resetToDefault}
-              renderSection={renderSection}
-              showAddFieldModal={showAddFieldModal}
-              setShowAddFieldModal={setShowAddFieldModal}
-              customFields={customFields}
-              setCustomFields={setCustomFields}
-              newFieldName={newFieldName}
-              setNewFieldName={setNewFieldName}
-              newFieldIcon={newFieldIcon}
-              setNewFieldIcon={setNewFieldIcon}
-              onAddCustomField={addCustomField}
-            />
-            </div>
-          </>
+          <Header
+                isMobile={false}
+                isSaving={false}
+                canUndo={historyIndex > 0}
+                canRedo={historyIndex < history.length - 1}
+                showRightPanel={showRightPanel}
+                previousSidebarState={previousSidebarState}
+                sidebarCollapsed={sidebarCollapsed}
+                onExport={() => setShowExportModal(true)}
+                onUndo={undo}
+                onRedo={redo}
+                onImport={() => setShowImportModal(true)}
+                onSave={saveResume}
+                onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
+                onShowMobileMenu={() => setShowMobileMenu(true)}
+                onTemplateSelect={handleTemplateSelect}
+                setPreviousSidebarState={setPreviousSidebarState}
+                setSidebarCollapsed={setSidebarCollapsed}
+                setShowRightPanel={setShowRightPanel}
+              />
         )}
+            <div className={`flex-1 ${showRightPanel ? 'mr-80' : ''}`} style={{ height: activeTab === 'editor' ? 'calc(100vh - 80px)' : '100vh', overflow: activeTab === 'editor' ? 'auto' : 'hidden', minHeight: activeTab === 'editor' ? 'calc(100vh - 80px)' : '100vh' }}>
+              {/* Component Switcher */}
+              {activeTab === 'home' && (
+                <div className="w-full h-full overflow-hidden">
+                  <Home />
+                </div>
+              )}
+              
+              {activeTab === 'storage' && (
+                <div className="w-full h-full overflow-hidden">
+                  <CloudStorage />
+                </div>
+              )}
+              
+              {activeTab === 'editor' && (
+                <ResumeEditor
+                  resumeFileName={resumeFileName}
+                  setResumeFileName={setResumeFileName}
+                  sectionOrder={sectionOrder}
+                  sectionVisibility={sectionVisibility}
+                  customSections={customSections}
+                  resumeData={resumeData}
+                  setResumeData={setResumeData}
+                  fontFamily={fontFamily}
+                  setFontFamily={setFontFamily}
+                  fontSize={fontSize}
+                  setFontSize={setFontSize}
+                  lineSpacing={lineSpacing}
+                  setLineSpacing={setLineSpacing}
+                  sectionSpacing={sectionSpacing}
+                  setSectionSpacing={setSectionSpacing}
+                  margins={margins}
+                  setMargins={setMargins}
+                  headingStyle={headingStyle}
+                  setHeadingStyle={setHeadingStyle}
+                  bulletStyle={bulletStyle}
+                  setBulletStyle={setBulletStyle}
+                  onToggleSection={toggleSection}
+                  onMoveSection={moveSection}
+                  onShowAddSectionModal={() => setShowAddSectionModal(true)}
+                  onDeleteCustomSection={deleteCustomSection}
+                  onUpdateCustomSection={updateCustomSection}
+                  onGenerateSmartFileName={generateSmartFileName}
+                  onResetToDefault={resetToDefault}
+                  renderSection={renderSection}
+                  showAddFieldModal={showAddFieldModal}
+                  setShowAddFieldModal={setShowAddFieldModal}
+                  customFields={customFields}
+                  setCustomFields={setCustomFields}
+                  newFieldName={newFieldName}
+                  setNewFieldName={setNewFieldName}
+                  newFieldIcon={newFieldIcon}
+                  setNewFieldIcon={setNewFieldIcon}
+                  onAddCustomField={addCustomField}
+                />
+              )}
+              
+              {activeTab === 'templates' && (
+                <div className="w-full h-full overflow-hidden">
+                  <Templates />
+                </div>
+              )}
+              
+              {activeTab === 'tracker' && (
+                <div className="w-full h-full overflow-hidden">
+                  <JobTracker />
+                </div>
+              )}
+              
+              {activeTab === 'discussion' && (
+                <div className="w-full h-full overflow-hidden">
+                  <Discussion />
+                </div>
+              )}
+              
+              {activeTab === 'email' && (
+                <div className="w-full h-full overflow-hidden">
+                  <Email />
+                </div>
+              )}
+              
+              {activeTab === 'cover-letter' && (
+                <div className="w-full h-full overflow-hidden">
+                  <CoverLetterGenerator />
+                </div>
+              )}
+            </div>
       </div>
 
       {/* AI Panel */}
@@ -2481,6 +2537,11 @@ export default function TestAllComponents() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* User Profile Modal */}
+      {showUserProfile && (
+        <UserProfileModal isOpen={showUserProfile} onClose={() => setShowUserProfile(false)} />
       )}
     </div>
   );

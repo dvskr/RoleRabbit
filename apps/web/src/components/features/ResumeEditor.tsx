@@ -560,7 +560,11 @@ export default function ResumeEditor({
       </div>
 
           {/* Render All Sections */}
-            {sectionOrder.map((section) => renderSection(section))}
+            {sectionOrder.map((section) => (
+              <div key={section}>
+                {renderSection(section)}
+              </div>
+            ))}
           
         </div>
       </div>
