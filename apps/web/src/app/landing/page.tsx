@@ -32,7 +32,7 @@ export default function LandingPage() {
                 Sign In
               </button>
               <Link
-                href="/dashboard"
+                href="/test-all-components"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/30 transition-all"
               >
                 Try Free & Get Started
@@ -57,7 +57,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/dashboard"
+                href="/test-all-components"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
               >
                 Try Free & Get Started
@@ -161,7 +161,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="/dashboard"
+              href="/test-all-components"
               className="bg-white text-blue-600 px-8 py-4 rounded-xl text-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
             >
               Try Free & Get Started
@@ -192,7 +192,7 @@ export default function LandingPage() {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link href="/dashboard" className="hover:text-white transition-colors">Resume Builder</Link></li>
+                <li><Link href="/test-all-components" className="hover:text-white transition-colors">Resume Builder</Link></li>
                 <li><a href="#" className="hover:text-white transition-colors">Job Tracker</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Templates</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">AI Assistant</a></li>
