@@ -787,40 +787,11 @@ export default function TestAllComponents() {
                         });
                         setResumeData({...resumeData, experience: updatedExperience});
                       }}
-                      className="w-8 h-8 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
-                      title="Add Custom Field"
+                      className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-blue-50 transition-all"
                     >
-                      <Plus size={16} className="text-gray-600" />
+                      <Plus size={16} />
+                      Add Field
                     </button>
-
-                    {/* Template Selection */}
-                    <div className="mt-2">
-                      <select
-                        className="w-full text-xs text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            const updatedExperience = resumeData.experience.map((item) => {
-                              if (item.id === exp.id) {
-                                return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: e.target.value, value: '' }] };
-                              }
-                              return item;
-                            });
-                            setResumeData({...resumeData, experience: updatedExperience});
-                            e.target.value = ''; // Reset selection
-                          }
-                        }}
-                      >
-                        <option value="">Select template...</option>
-                        <option value="Department">Department</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Team Size">Team Size</option>
-                        <option value="Salary">Salary</option>
-                        <option value="Location">Location</option>
-                        <option value="Start Date">Start Date</option>
-                        <option value="End Date">End Date</option>
-                        <option value="Technologies">Technologies</option>
-                      </select>
-                    </div>
 
                     <div className="space-y-3 mt-4">
                       {(exp.bullets || ['']).map((bullet, idx) => (
@@ -1146,40 +1117,11 @@ export default function TestAllComponents() {
                         });
                         setResumeData({...resumeData, projects: updatedProjects});
                       }}
-                      className="w-8 h-8 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
-                      title="Add Custom Field"
+                      className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-blue-50 transition-all"
                     >
-                      <Plus size={16} className="text-gray-600" />
+                      <Plus size={16} />
+                      Add Field
                     </button>
-
-                    {/* Template Selection */}
-                    <div className="mt-2">
-                      <select
-                        className="w-full text-xs text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            const updatedProjects = resumeData.projects.map((item) => {
-                              if (item.id === project.id) {
-                                return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: e.target.value, value: '' }] };
-                              }
-                              return item;
-                            });
-                            setResumeData({...resumeData, projects: updatedProjects});
-                            e.target.value = ''; // Reset selection
-                          }
-                        }}
-                      >
-                        <option value="">Select template...</option>
-                        <option value="Technologies">Technologies</option>
-                        <option value="Budget">Budget</option>
-                        <option value="Timeline">Timeline</option>
-                        <option value="Team Size">Team Size</option>
-                        <option value="Client">Client</option>
-                        <option value="Status">Status</option>
-                        <option value="Repository">Repository</option>
-                        <option value="Demo Link">Demo Link</option>
-                      </select>
-                    </div>
 
                     <div className="space-y-3 mt-4">
                       {(project.bullets || ['']).map((bullet, idx) => (
@@ -1719,40 +1661,11 @@ export default function TestAllComponents() {
                         });
                         setResumeData({...resumeData, education: updatedEducation});
                       }}
-                      className="w-8 h-8 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
-                      title="Add Custom Field"
+                      className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-blue-50 transition-all"
                     >
-                      <Plus size={16} className="text-gray-600" />
+                      <Plus size={16} />
+                      Add Field
                     </button>
-
-                    {/* Template Selection */}
-                    <div className="mt-2">
-                      <select
-                        className="w-full text-xs text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            const updatedEducation = resumeData.education.map((item) => {
-                              if (item.id === edu.id) {
-                                return { ...item, customFields: [...(item.customFields || []), { id: Date.now(), name: e.target.value, value: '' }] };
-                              }
-                              return item;
-                            });
-                            setResumeData({...resumeData, education: updatedEducation});
-                            e.target.value = ''; // Reset selection
-                          }
-                        }}
-                      >
-                        <option value="">Select template...</option>
-                        <option value="GPA">GPA</option>
-                        <option value="Major">Major</option>
-                        <option value="Minor">Minor</option>
-                        <option value="Thesis">Thesis</option>
-                        <option value="Honors">Honors</option>
-                        <option value="Activities">Activities</option>
-                        <option value="Relevant Coursework">Relevant Coursework</option>
-                        <option value="Study Abroad">Study Abroad</option>
-                      </select>
-                    </div>
                   </div>
                   
                   <button

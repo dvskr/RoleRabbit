@@ -21,9 +21,9 @@ export default function Sidebar({
   onShowImportModal
 }: SidebarProps) {
   return (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-xl flex flex-col`}>
-      <div className={`${sidebarCollapsed ? 'p-3' : 'p-6'} border-b border-gray-100/50`}>
-        <div className="flex items-center gap-3 mb-2">
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-xl flex flex-col mt-2`}>
+      <div className={`${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-gray-100/50`}>
+        <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
             <Sparkles size={20} className="text-white" />
           </div>
@@ -33,12 +33,9 @@ export default function Sidebar({
             </div>
           )}
         </div>
-        {!sidebarCollapsed && (
-          <p className="text-sm text-gray-600 pl-12">AI-Powered Resume Builder</p>
-        )}
       </div>
       
-      <nav className={`flex-1 ${sidebarCollapsed ? 'p-2' : 'p-4'} space-y-2 overflow-y-auto`}>
+      <nav className={`flex-1 ${sidebarCollapsed ? 'p-2' : 'p-3'} space-y-1 overflow-y-auto`}>
         <button 
           onClick={() => onTabChange('home')} 
           className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl transition-all duration-300 ${activeTab === 'home' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
@@ -113,7 +110,7 @@ export default function Sidebar({
         </button>
       </nav>
       
-      <div className={`${sidebarCollapsed ? 'p-2' : 'p-4'} border-t border-gray-100/50`}>
+      <div className={`${sidebarCollapsed ? 'p-2' : 'p-3'} border-t border-gray-100/50`}>
         <button 
           onClick={onShowNewResumeModal} 
           className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white ${sidebarCollapsed ? 'px-2 py-3' : 'px-4 py-3.5'} rounded-xl hover:shadow-lg hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105 flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-center gap-2'} font-semibold mb-2`}

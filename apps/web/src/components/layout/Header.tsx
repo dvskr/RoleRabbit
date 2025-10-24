@@ -67,10 +67,6 @@ export default function Header({
             <Menu size={20} />
           </button>
         )}
-        <div>
-          <h2 className="font-bold text-xl text-gray-800">Resume Editor</h2>
-          <p className="text-sm text-gray-500">Build your perfect resume</p>
-        </div>
         {isSaving && (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
