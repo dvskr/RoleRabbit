@@ -367,17 +367,33 @@ sequenceDiagram
 
 2. **Install dependencies**
    ```bash
+   # Using npm (recommended for Windows)
+   npm install
+   
+   # Or using pnpm
    pnpm install
    ```
 
 3. **Start all services**
+
+   **Option A: Easy Windows Setup**
    ```bash
-   # Start both backends
-   pnpm run dev:api
-   pnpm run dev:api-python
+   # Double-click start-dev.bat or run:
+   start-dev.bat
    
-   # Start frontend (in separate terminal)
-   pnpm run dev:web
+   # Or for PowerShell:
+   .\start-dev.ps1
+   ```
+
+   **Option B: Manual Setup**
+   ```bash
+   # Start all services with one command
+   npm run dev:all
+   
+   # Or start individually:
+   npm run dev:api        # Node.js API
+   npm run dev:api-python # Python API  
+   npm run dev:web        # Next.js Frontend
    ```
 
 4. **Access the application**

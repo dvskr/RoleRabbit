@@ -4,7 +4,7 @@ import { ResumeData, CertificationItem, CustomField } from '../../types/resume';
 
 interface CertificationsSectionProps {
   resumeData: ResumeData;
-  setResumeData: (data: ResumeData) => void;
+  setResumeData: React.Dispatch<React.SetStateAction<ResumeData>>;
   sectionVisibility: { [key: string]: boolean };
   onHideSection: (section: string) => void;
 }
@@ -24,7 +24,7 @@ export default function CertificationsSection({
       skills: [],
       customFields: []
     };
-    setResumeData(prev => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
+    setResumeData((prev: ResumeData) => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
   };
 
   const updateCertification = (id: number, updates: Partial<CertificationItem>) => {
