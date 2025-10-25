@@ -225,9 +225,10 @@ export default function Home({}: HomeProps) {
   ];
 
   return (
-    <div className="h-full bg-gray-50 overflow-y-auto">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white">
+    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto">
+        {/* Hero Section */}
+        <div className="bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 text-white">
         <div className="px-6 py-12">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
@@ -445,6 +446,7 @@ export default function Home({}: HomeProps) {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

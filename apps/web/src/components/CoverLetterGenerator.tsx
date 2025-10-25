@@ -321,7 +321,7 @@ ${personalInfo.name}`;
   };
 
   return (
-    <div className={`h-full flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
+    <div className={`h-full flex flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Enhanced Header */}
       <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 p-6 shadow-sm">
         <div className="flex items-center justify-between mb-6">
@@ -330,9 +330,6 @@ ${personalInfo.name}`;
               <FileText className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Cover Letter Generator
-              </h1>
               <p className="text-gray-600 mt-1">AI-powered cover letter creation with professional templates</p>
             </div>
           </div>

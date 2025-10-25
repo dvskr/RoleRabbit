@@ -462,12 +462,11 @@ Best regards,
   };
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col">
+    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 mb-1">AI-Powered Email</h1>
             <p className="text-sm text-gray-600">Send professional emails with AI assistance</p>
           </div>
           <div className="flex items-center gap-2">
