@@ -60,7 +60,7 @@ export function QuickActionsPanel({
     }
   };
 
-  const enabledActions = actions.filter(action => action.isEnabled);
+  const enabledActions = (actions || []).filter(action => action.isEnabled);
 
   // Calculate dynamic height to fill available space
   const getDynamicHeight = () => {

@@ -89,7 +89,7 @@ export function ActivityFeed({
   return (
     <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full">
       {/* Header - Compact */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xl font-bold text-gray-900">Activity Feed</h3>
           <button
