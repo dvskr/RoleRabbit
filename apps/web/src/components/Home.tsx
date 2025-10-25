@@ -18,10 +18,35 @@ import {
   Play,
   Quote
 } from 'lucide-react';
+import { MissionControlDashboard } from './dashboard';
+import { DashboardConfig } from './dashboard/types/dashboard';
 
-interface HomeProps {}
+interface HomeProps {
+  // NEW OPTIONAL PROPS (backward compatible)
+  enableMissionControl?: boolean; // Default: false
+  dashboardConfig?: Partial<DashboardConfig>;
+  onQuickAction?: (actionId: string) => void;
+  onNavigateToTab?: (tab: string) => void;
+}
 
-export default function Home({}: HomeProps) {
+export default function Home({ 
+  enableMissionControl = false,
+  dashboardConfig,
+  onQuickAction,
+  onNavigateToTab
+}: HomeProps) {
+  // If Mission Control is enabled, render the dashboard
+  if (enableMissionControl) {
+    return (
+      <MissionControlDashboard
+        config={dashboardConfig}
+        onQuickAction={onQuickAction}
+        onNavigateToTab={onNavigateToTab}
+      />
+    );
+  }
+
+  // Existing marketing page (unchanged)
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 

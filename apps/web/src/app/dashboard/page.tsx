@@ -329,7 +329,34 @@ export default function DashboardPage() {
   const renderActiveComponent = () => {
     switch (activeTab) {
       case 'home':
-        return <Home />;
+        return (
+          <Home 
+            enableMissionControl={true}
+            onQuickAction={(actionId) => {
+              console.log('Quick action:', actionId);
+              // Handle quick actions - could navigate to specific tabs
+              switch (actionId) {
+                case '1': // Start New Application
+                  handleTabChange('tracker');
+                  break;
+                case '2': // Send Follow-up
+                  handleTabChange('email');
+                  break;
+                case '3': // Update Resume
+                  handleTabChange('editor');
+                  break;
+                case '4': // Research Companies
+                  handleTabChange('discussion');
+                  break;
+                default:
+                  break;
+              }
+            }}
+            onNavigateToTab={(tab) => {
+              handleTabChange(tab);
+            }}
+          />
+        );
       case 'profile':
         return <Profile />;
       case 'storage':
@@ -434,7 +461,7 @@ export default function DashboardPage() {
                  activeTab === 'email' ? 'Email' :
                  activeTab === 'cover-letter' ? 'Cover Letter' :
                  activeTab === 'templates' ? 'Templates' :
-                 activeTab === 'profile' ? 'Profile' : 'Home'}
+                 activeTab === 'profile' ? 'Profile' : ''}
               </h1>
             </div>
           )}

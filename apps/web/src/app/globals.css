@@ -27,6 +27,16 @@
   background: #9ca3af;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
 /* Force scrollbar visibility */
 .force-scrollbar::-webkit-scrollbar {
   width: 12px !important;
