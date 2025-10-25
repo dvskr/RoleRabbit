@@ -9,12 +9,12 @@ import {
   SupportTicket, 
   FeedbackForm, 
   JobApplication, 
-  ProfileTab 
+  UserProfileTab 
 } from '../types/userProfile';
 
 export const useUserProfile = () => {
   // Tab management
-  const [activeTab, setActiveTab] = useState<ProfileTab>('profile');
+  const [activeTab, setActiveTab] = useState<UserProfileTab>('profile');
   
   // Authentication state
   const [isLoginMode, setIsLoginMode] = useState(true);

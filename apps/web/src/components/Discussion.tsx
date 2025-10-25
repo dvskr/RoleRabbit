@@ -58,19 +58,16 @@ export default function Discussion() {
   } = useDiscussion();
 
   const handleVote = (postId: string, direction: 'up' | 'down') => {
-    console.log(`Vote ${direction} on post ${postId}`);
     // TODO: Implement actual vote functionality
     // This would update the post's vote count in the state
   };
 
   const handleComment = (postId: string) => {
-    console.log(`Comment on post ${postId}`);
     // TODO: Implement comment functionality
     // This would open a comment modal or expand comment section
   };
 
   const handleShare = (postId: string) => {
-    console.log(`Share post ${postId}`);
     // TODO: Implement share functionality
     // This could copy link to clipboard or open share modal
   };

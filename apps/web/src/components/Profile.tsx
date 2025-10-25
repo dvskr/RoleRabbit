@@ -118,7 +118,6 @@ export default function Profile() {
 
   const handleChangePhoto = () => {
     // Handle profile picture change
-    console.log('Change photo clicked');
   };
 
   const renderTabContent = () => {

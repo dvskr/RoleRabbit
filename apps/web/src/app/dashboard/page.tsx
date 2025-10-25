@@ -327,7 +327,6 @@ export default function DashboardPage() {
   };
 
   const renderActiveComponent = () => {
-    console.log('Rendering component for activeTab:', activeTab);
     switch (activeTab) {
       case 'home':
         return <Home />;

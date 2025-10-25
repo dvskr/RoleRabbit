@@ -116,4 +116,4 @@ export interface UserProfileModalProps {
   onClose: () => void;
 }
 
-export type ProfileTab = 'profile' | 'security' | 'preferences' | 'billing' | 'support' | 'jobs';
+export type UserProfileTab = 'profile' | 'security' | 'preferences' | 'billing' | 'support' | 'jobs';

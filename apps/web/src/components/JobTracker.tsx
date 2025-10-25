@@ -40,12 +40,10 @@ export default function JobTracker() {
 
   const handleViewJob = (job: Job) => {
     // TODO: Implement job details view
-    console.log('View job:', job);
   };
 
   const handleAddJobToColumn = (status: Job['status']) => {
     // TODO: Implement add job to specific column
-    console.log('Add job to column:', status);
   };
 
   const renderJobs = () => {
