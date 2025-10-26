@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, MessageSquare, RefreshCw, X, ChevronDown, ChevronUp, Reply, ThumbsUp, ThumbsDown, Clock, User, Bookmark, Flag, Search as SearchIcon, Users } from 'lucide-react';
+import { Plus, MessageSquare, RefreshCw, X, ChevronDown, ChevronUp, Reply, ThumbsUp, ThumbsDown, Clock, User, Bookmark, Flag, Search as SearchIcon, Users, Shield, Trash2 } from 'lucide-react';
 import { useDiscussion } from '../hooks/useDiscussion';
 import DiscussionHeader from './discussion/DiscussionHeader';
 import DiscussionTabs from './discussion/DiscussionTabs';
@@ -88,6 +88,21 @@ export default function Discussion() {
   const [animatingCommunityId, setAnimatingCommunityId] = useState<string | null>(null);
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
   const [showCommunityDropdown, setShowCommunityDropdown] = useState(false);
+  const [showManageMembers, setShowManageMembers] = useState(false);
+  const [showCommunityModerationTools, setShowCommunityModerationTools] = useState(false);
+  const [managingMembersFor, setManagingMembersFor] = useState<Community | null>(null);
+  const [moderatingCommunity, setModeratingCommunity] = useState<Community | null>(null);
+  
+  // Sample member data for communities
+  const [communityMembers] = useState<Record<string, any[]>>({
+    '1': [
+      { id: 'user1', name: 'John Doe', email: 'john@example.com', role: 'admin', joinedAt: '2024-01-15', postCount: 45, lastActive: '2024-10-26' },
+      { id: 'user2', name: 'Jane Smith', email: 'jane@example.com', role: 'moderator', joinedAt: '2024-02-20', postCount: 32, lastActive: '2024-10-25' },
+      { id: 'user3', name: 'Mike Johnson', email: 'mike@example.com', role: 'member', joinedAt: '2024-03-10', postCount: 18, lastActive: '2024-10-24' },
+      { id: 'user4', name: 'Sarah Wilson', email: 'sarah@example.com', role: 'member', joinedAt: '2024-04-05', postCount: 12, lastActive: '2024-10-26' },
+      { id: 'user5', name: 'David Brown', email: 'david@example.com', role: 'member', joinedAt: '2024-05-12', postCount: 8, lastActive: '2024-10-23' }
+    ]
+  });
   
   // Animation state for icons
   const [animatingIcons, setAnimatingIcons] = useState<Record<string, string>>({});
@@ -416,13 +431,13 @@ export default function Discussion() {
   };
 
   const handleManageMembers = (community: Community) => {
-    // Show members modal
-    alert(`Manage members of ${community.name}\n\nMembers: ${community.memberCount}\nModerators: ${community.moderators.length}`);
+    setManagingMembersFor(community);
+    setShowManageMembers(true);
   };
 
   const handleModerationTools = (community: Community) => {
-    // Show moderation tools
-    alert(`Moderation Tools for ${community.name}\n\nThis would show:\n- Reported posts\n- Flagged content\n- Member violations\n- Community rules`);
+    setModeratingCommunity(community);
+    setShowCommunityModerationTools(true);
   };
 
   const handleDeleteCommunity = (community: Community) => {
@@ -811,7 +826,7 @@ export default function Discussion() {
         />
       )}
 
-      {/* TODO: Add other modals */}
+      {/* Create Post Modal */}
       {showCreatePost && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -906,12 +921,49 @@ export default function Discussion() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tags (optional)
                 </label>
-                <input
-                  type="text"
-                  placeholder="Add tags separated by commas"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <p className="text-xs text-gray-500 mt-1">Tags help others find your post</p>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add tags separated by commas"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const input = e.target as HTMLInputElement;
+                          const newTags = input.value.split(',').map(t => t.trim()).filter(t => t && !newPost.tags.includes(t));
+                          if (newTags.length > 0) {
+                            setNewPost(prev => ({ ...prev, tags: [...prev.tags, ...newTags] }));
+                            input.value = '';
+                          }
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  {/* Display tags */}
+                  {newPost.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {newPost.tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => {
+                              setNewPost(prev => ({ ...prev, tags: prev.tags.filter((_, i) => i !== index) }));
+                            }}
+                            className="ml-2 text-blue-600 hover:text-blue-800"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Tags help others find your post. Press Enter to add.</p>
               </div>
 
               {/* Post Options */}
@@ -1368,6 +1420,208 @@ export default function Discussion() {
               >
                 Save Changes
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Members Modal */}
+      {showManageMembers && managingMembersFor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Manage Members - {managingMembersFor.name}</h2>
+              <button
+                onClick={() => {
+                  setShowManageMembers(false);
+                  setManagingMembersFor(null);
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Members ({communityMembers[managingMembersFor.id]?.length || 0})</h3>
+                    <p className="text-sm text-gray-600">Manage roles and permissions</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                      <Users size={16} />
+                      Invite Members
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Search */}
+                <input
+                  type="text"
+                  placeholder="Search members..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              {/* Members List */}
+              <div className="space-y-3">
+                {(communityMembers[managingMembersFor.id] || []).map((member, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {member.name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-900">{member.name}</h4>
+                            {member.role === 'admin' && (
+                              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Admin</span>
+                            )}
+                            {member.role === 'moderator' && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Mod</span>
+                            )}
+                            {member.role === 'member' && (
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">Member</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{member.email}</p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                            <span>{member.postCount} posts</span>
+                            <span>Joined {member.joinedAt}</span>
+                            <span>Last active: {member.lastActive}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={member.role}
+                          onChange={(e) => {
+                            // In real app, update member role
+                            logger.debug(`Change role for ${member.name} to ${e.target.value}`);
+                          }}
+                          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="member">Member</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove ${member.name} from ${managingMembersFor.name}?`)) {
+                              logger.debug(`Removed ${member.name}`);
+                              // In real app, remove member from community
+                            }
+                          }}
+                          className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Moderation Tools Modal */}
+      {showCommunityModerationTools && moderatingCommunity && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Moderation Tools - {moderatingCommunity.name}</h2>
+              <button
+                onClick={() => {
+                  setShowCommunityModerationTools(false);
+                  setModeratingCommunity(null);
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Tabs */}
+              <div className="flex gap-2 mb-6 border-b border-gray-200">
+                <button className="px-4 py-2 border-b-2 border-red-600 text-red-600 font-medium">Reported Posts (2)</button>
+                <button className="px-4 py-2 text-gray-600 hover:text-gray-900">Flagged Content</button>
+                <button className="px-4 py-2 text-gray-600 hover:text-gray-900">Member Violations</button>
+                <button className="px-4 py-2 text-gray-600 hover:text-gray-900">Rules</button>
+              </div>
+              
+              {/* Reported Posts */}
+              <div className="space-y-4">
+                <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900">Post: "Need Help with Resume"</h4>
+                        <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded-full">Reported</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">Reason: Spam/Inappropriate content</p>
+                      <p className="text-xs text-gray-500">Reported by: 3 users | Author: @username</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        Approve
+                      </button>
+                      <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900">Post: "Job Interview Tips"</h4>
+                        <span className="px-2 py-0.5 bg-orange-600 text-white text-xs rounded-full">Under Review</span>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">Reason: Misleading information</p>
+                      <p className="text-xs text-gray-500">Reported by: 1 user | Author: @username2</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                        Approve
+                      </button>
+                      <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                        Remove
+                      </button>
+                      <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                        Review
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Quick Actions */}
+              <div className="mt-8 border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
+                    <Shield size={24} className="mx-auto text-blue-600 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">Automod Settings</p>
+                  </button>
+                  <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
+                    <Users size={24} className="mx-auto text-green-600 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">Ban Members</p>
+                  </button>
+                  <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
+                    <Trash2 size={24} className="mx-auto text-red-600 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">Clean Up Posts</p>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
