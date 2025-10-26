@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, FileText, DollarSign, Building2, UserPlus, ClipboardList, Bell } from 'lucide-react';
+import { logger } from '../../utils/logger';
 import { Job } from '../../types/job';
 import { 
   InterviewTracker, 
@@ -32,67 +33,67 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
   ];
 
   const handleAddInterviewNote = (jobId: string, note: any) => {
-    console.log('Add interview note:', jobId, note);
+    logger.debug('Add interview note:', jobId, note);
     // TODO: Implement actual state management
   };
 
   const handleDeleteInterviewNote = (jobId: string, noteId: string) => {
-    console.log('Delete interview note:', jobId, noteId);
+    logger.debug('Delete interview note:', jobId, noteId);
     // TODO: Implement actual state management
   };
 
   const handleAddSalaryOffer = (jobId: string, offer: any) => {
-    console.log('Add salary offer:', jobId, offer);
+    logger.debug('Add salary offer:', jobId, offer);
     // TODO: Implement actual state management
   };
 
   const handleDeleteSalaryOffer = (jobId: string, offerId: string) => {
-    console.log('Delete salary offer:', jobId, offerId);
+    logger.debug('Delete salary offer:', jobId, offerId);
     // TODO: Implement actual state management
   };
 
   const handleAddCompanyInsight = (jobId: string, insight: any) => {
-    console.log('Add company insight:', jobId, insight);
+    logger.debug('Add company insight:', jobId, insight);
     // TODO: Implement actual state management
   };
 
   const handleDeleteCompanyInsight = (jobId: string, insightId: string) => {
-    console.log('Delete company insight:', jobId, insightId);
+    logger.debug('Delete company insight:', jobId, insightId);
     // TODO: Implement actual state management
   };
 
   const handleAddReferral = (jobId: string, referral: any) => {
-    console.log('Add referral:', jobId, referral);
+    logger.debug('Add referral:', jobId, referral);
     // TODO: Implement actual state management
   };
 
   const handleDeleteReferral = (jobId: string, referralId: string) => {
-    console.log('Delete referral:', jobId, referralId);
+    logger.debug('Delete referral:', jobId, referralId);
     // TODO: Implement actual state management
   };
 
   const handleAddNote = (jobId: string, note: any) => {
-    console.log('Add note:', jobId, note);
+    logger.debug('Add note:', jobId, note);
     // TODO: Implement actual state management
   };
 
   const handleDeleteNote = (jobId: string, noteId: string) => {
-    console.log('Delete note:', jobId, noteId);
+    logger.debug('Delete note:', jobId, noteId);
     // TODO: Implement actual state management
   };
 
   const handleAddReminder = (jobId: string, reminder: any) => {
-    console.log('Add reminder:', jobId, reminder);
+    logger.debug('Add reminder:', jobId, reminder);
     // TODO: Implement actual state management
   };
 
   const handleDeleteReminder = (jobId: string, reminderId: string) => {
-    console.log('Delete reminder:', jobId, reminderId);
+    logger.debug('Delete reminder:', jobId, reminderId);
     // TODO: Implement actual state management
   };
 
   const handleToggleComplete = (jobId: string, reminderId: string) => {
-    console.log('Toggle reminder:', jobId, reminderId);
+    logger.debug('Toggle reminder:', jobId, reminderId);
     // TODO: Implement actual state management
   };
 

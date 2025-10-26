@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
 import { useJobs } from '../hooks/useJobs';
 import { Job } from '../types/job';
+import { logger } from '../utils/logger';
 
 export default function JobTracker() {
   const {
@@ -73,7 +74,7 @@ export default function JobTracker() {
         reader.onload = (event) => {
           try {
             const importedJobs = JSON.parse(event.target?.result as string);
-            console.log('Imported jobs:', importedJobs);
+            logger.debug('Imported jobs:', importedJobs);
             // TODO: Add logic to import jobs into state
           } catch (error) {
             console.error('Error importing jobs:', error);
@@ -258,14 +259,14 @@ export default function JobTracker() {
       
       {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <button
+              <button
           onClick={() => setShowAddJob(true)}
           className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
           title="Add Job"
         >
           <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
-        </button>
-      </div>
+              </button>
+            </div>
     </div>
   );
 }

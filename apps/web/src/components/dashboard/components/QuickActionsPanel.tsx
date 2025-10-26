@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Mail, FileText, Search, ArrowRight, Zap } from 'lucide-react';
 import { QuickAction } from '../types/dashboard';
 
@@ -15,6 +15,7 @@ export function QuickActionsPanel({
   onQuickAction,
   isLoading
 }: QuickActionsPanelProps) {
+  const [height, setHeight] = useState(600);
   const getActionIcon = (iconName: string) => {
     switch (iconName) {
       case 'Plus':
@@ -63,19 +64,23 @@ export function QuickActionsPanel({
   const enabledActions = (actions || []).filter(action => action.isEnabled);
 
   // Calculate dynamic height to fill available space
-  const getDynamicHeight = () => {
-    if (typeof window !== 'undefined') {
-      const baseHeight = 80; // Header height
-      const itemHeight = 50; // Item height
-      const availableHeight = window.innerHeight * 0.6; // Use 60% of viewport height
-      const calculatedHeight = baseHeight + (enabledActions.length * itemHeight);
-      return Math.max(calculatedHeight, availableHeight); // Fill minimum space
-    }
-    return 600;
-  };
+  useEffect(() => {
+    const calculateHeight = () => {
+      if (typeof window !== 'undefined') {
+        const baseHeight = 80; // Header height
+        const itemHeight = 50; // Item height
+        const availableHeight = window.innerHeight * 0.6; // Use 60% of viewport height
+        const calculatedHeight = baseHeight + (enabledActions.length * itemHeight);
+        setHeight(Math.max(calculatedHeight, availableHeight));
+      }
+    };
+    calculateHeight();
+    window.addEventListener('resize', calculateHeight);
+    return () => window.removeEventListener('resize', calculateHeight);
+  }, [enabledActions.length]);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col" style={{ height: `${getDynamicHeight()}px` }}>
+    <div className="bg-white rounded-lg border border-gray-200 flex flex-col" style={{ height: `${height}px` }}>
       {/* Header - Ultra Compact */}
       <div className="p-2 border-b border-gray-200">
         <div className="flex items-center gap-1 mb-1">

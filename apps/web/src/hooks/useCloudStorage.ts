@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { ResumeFile, FileType, SortBy, ViewMode, StorageInfo, SharePermission, FileComment, ShareLink, User } from '../types/cloudStorage';
+import { ResumeFile, FileType, SortBy, ViewMode, StorageInfo, SharePermission, FileComment, ShareLink, User, CredentialInfo, CredentialReminder, AccessLog, CloudIntegration } from '../types/cloudStorage';
+import { logger } from '../utils/logger';
 
 export const useCloudStorage = () => {
   // File management
@@ -146,7 +147,89 @@ export const useCloudStorage = () => {
       viewCount: 234,
       isStarred: true,
       isArchived: false,
-      description: 'Creative resume template for designers and artists'
+      description: 'Creative resume template for tech positions'
+    },
+    {
+      id: '7',
+      name: 'Cover Letter - Software Engineer',
+      type: 'cover_letter',
+      size: '0.8 MB',
+      lastModified: '2024-10-22',
+      isPublic: false,
+      tags: ['cover-letter', 'software-engineer', 'job-application'],
+      version: 2,
+      owner: 'john.doe@example.com',
+      sharedWith: [],
+      comments: [],
+      downloadCount: 3,
+      viewCount: 12,
+      isStarred: false,
+      isArchived: false,
+      description: 'Customized cover letter for software engineer positions'
+    },
+    {
+      id: '8',
+      name: 'AWS Cloud Practitioner Certificate',
+      type: 'certification',
+      size: '1.2 MB',
+      lastModified: '2024-01-15',
+      isPublic: true,
+      tags: ['certification', 'aws', 'cloud'],
+      version: 1,
+      owner: 'john.doe@example.com',
+      sharedWith: [],
+      comments: [],
+      downloadCount: 8,
+      viewCount: 32,
+      isStarred: true,
+      isArchived: false,
+      description: 'AWS Cloud Practitioner certification document',
+      credentialInfo: {
+        credentialType: 'certification',
+        issuer: 'AWS',
+        issuedDate: '2024-01-15',
+        expirationDate: '2026-01-15',
+        credentialId: 'ARN:aws:cloudformation::123456789',
+        verificationStatus: 'verified',
+        verificationUrl: 'https://aws.amazon.com/verification/certificate/123456',
+        associatedDocuments: ['8']
+      }
+    },
+    {
+      id: '9',
+      name: 'University Transcript',
+      type: 'transcript',
+      size: '2.1 MB',
+      lastModified: '2024-06-01',
+      isPublic: false,
+      tags: ['transcript', 'degree', 'education'],
+      version: 1,
+      owner: 'john.doe@example.com',
+      sharedWith: [],
+      comments: [],
+      downloadCount: 2,
+      viewCount: 5,
+      isStarred: false,
+      isArchived: false,
+      description: 'Official university transcript with degree confirmation'
+    },
+    {
+      id: '10',
+      name: 'Portfolio - Web Projects',
+      type: 'portfolio',
+      size: '15.3 MB',
+      lastModified: '2024-10-20',
+      isPublic: true,
+      tags: ['portfolio', 'projects', 'web-development'],
+      version: 3,
+      owner: 'john.doe@example.com',
+      sharedWith: [],
+      comments: [],
+      downloadCount: 45,
+      viewCount: 267,
+      isStarred: true,
+      isArchived: false,
+      description: 'Collection of web development projects and demos'
     }
   ]);
 
@@ -161,6 +244,87 @@ export const useCloudStorage = () => {
   // Storage info
   const [storageUsed, setStorageUsed] = useState(9.6);
   const [storageLimit, setStorageLimit] = useState(100);
+
+  // Credential management
+  const [credentials] = useState<CredentialInfo[]>([
+    {
+      credentialType: 'certification',
+      issuer: 'AWS',
+      issuedDate: '2024-01-15',
+      expirationDate: '2026-01-15',
+      credentialId: 'ARN:aws:cloudformation::123456789',
+      verificationStatus: 'verified',
+      verificationUrl: 'https://aws.amazon.com/verification/certificate/123456',
+      associatedDocuments: []
+    },
+    {
+      credentialType: 'license',
+      issuer: 'State Board',
+      issuedDate: '2022-06-01',
+      expirationDate: '2025-06-01',
+      credentialId: 'LIC-789456',
+      verificationStatus: 'verified',
+      associatedDocuments: []
+    }
+  ]);
+
+  const [credentialReminders] = useState<CredentialReminder[]>([
+    {
+      id: 'reminder_1',
+      credentialId: 'LIC-789456',
+      credentialName: 'State Board License',
+      expirationDate: '2025-06-01',
+      reminderDate: '2024-12-01',
+      isSent: false,
+      priority: 'medium'
+    }
+  ]);
+
+  // Access tracking
+  const [accessLogs] = useState<AccessLog[]>([
+    {
+      id: 'log_1',
+      fileId: '1',
+      userId: 'user_2',
+      userName: 'Sarah Johnson',
+      userEmail: 'sarah.johnson@example.com',
+      action: 'view',
+      timestamp: '2024-10-22T10:30:00Z',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    },
+    {
+      id: 'log_2',
+      fileId: '1',
+      userId: 'user_2',
+      userName: 'Sarah Johnson',
+      userEmail: 'sarah.johnson@example.com',
+      action: 'download',
+      timestamp: '2024-10-22T11:15:00Z',
+      ipAddress: '192.168.1.100',
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    }
+  ]);
+
+  // Cloud integrations
+  const [cloudIntegrations] = useState<CloudIntegration[]>([
+    {
+      provider: 'google_drive',
+      isConnected: true,
+      connectedAt: '2024-09-15T08:00:00Z',
+      lastSyncAt: '2024-10-22T09:30:00Z',
+      accountEmail: 'user@example.com',
+      quotaUsed: 45.2,
+      quotaTotal: 100
+    },
+    {
+      provider: 'dropbox',
+      isConnected: false,
+      accountEmail: '',
+      quotaUsed: 0,
+      quotaTotal: 0
+    }
+  ]);
 
   // Computed values
   const filteredFiles = useMemo(() => {
@@ -222,12 +386,12 @@ export const useCloudStorage = () => {
   }, []);
 
   const handleDownloadFile = useCallback((file: ResumeFile) => {
-    console.log('Downloading file:', file.name);
+    logger.debug('Downloading file:', file.name);
     // TODO: Implement actual download logic
   }, []);
 
   const handleShareFile = useCallback((file: ResumeFile) => {
-    console.log('Sharing file:', file.name);
+    logger.debug('Sharing file:', file.name);
     // TODO: Implement actual share logic
   }, []);
 
@@ -262,7 +426,7 @@ export const useCloudStorage = () => {
   }, []);
 
   const handleRefresh = useCallback(() => {
-    console.log('Refreshing files...');
+    logger.debug('Refreshing files...');
     // TODO: Implement actual refresh logic
   }, []);
 
@@ -319,11 +483,12 @@ export const useCloudStorage = () => {
       createdBy: 'current-user@example.com'
     };
     
-    console.log('Created share link:', shareLink);
+    logger.debug('Created share link:', shareLink);
     return shareLink;
   }, []);
 
   const handleAddComment = useCallback((fileId: string, content: string) => {
+    logger.debug('Adding comment to file:', fileId, content);
     const newComment: FileComment = {
       id: `comment_${Date.now()}`,
       userId: 'current-user',
@@ -335,11 +500,13 @@ export const useCloudStorage = () => {
       isResolved: false
     };
 
-    setFiles(prev => prev.map(file => 
-      file.id === fileId 
-        ? { ...file, comments: [...file.comments, newComment] }
-        : file
-    ));
+    setFiles(prev => prev.map(file => {
+      if (file.id === fileId) {
+        logger.debug('Comment added to file:', file.name, 'Total comments:', file.comments.length + 1);
+        return { ...file, comments: [...file.comments, newComment] };
+      }
+      return file;
+    }));
   }, []);
 
   const handleStarFile = useCallback((fileId: string) => {
@@ -358,6 +525,57 @@ export const useCloudStorage = () => {
     ));
   }, []);
 
+  // Credential handlers
+  const handleAddCredential = useCallback((credential: Partial<CredentialInfo>) => {
+    logger.debug('Adding credential:', credential);
+    // TODO: Implement actual credential addition logic
+  }, []);
+
+  const handleUpdateCredential = useCallback((id: string, updates: Partial<CredentialInfo>) => {
+    logger.debug('Updating credential:', id, updates);
+    // TODO: Implement actual credential update logic
+  }, []);
+
+  const handleDeleteCredential = useCallback((id: string) => {
+    logger.debug('Deleting credential:', id);
+    // TODO: Implement actual credential deletion logic
+  }, []);
+
+  const handleGenerateQRCode = useCallback((id: string) => {
+    logger.debug('Generating QR code for:', id);
+    // TODO: Implement actual QR code generation
+    return `https://roleready.com/credential/${id}/verify`;
+  }, []);
+
+  // Access tracking handlers
+  const handleLogAccess = useCallback((fileId: string, action: 'view' | 'download' | 'share' | 'edit' | 'delete') => {
+    logger.debug('Logging file access:', fileId, action);
+    // TODO: Implement actual access logging
+  }, []);
+
+  const handleGetAccessLogs = useCallback((fileId?: string) => {
+    if (fileId) {
+      return accessLogs.filter(log => log.fileId === fileId);
+    }
+    return accessLogs;
+  }, [accessLogs]);
+
+  // Cloud integration handlers
+  const handleConnectCloud = useCallback((provider: 'google_drive' | 'dropbox' | 'onedrive') => {
+    logger.debug('Connecting to cloud provider:', provider);
+    // TODO: Implement actual cloud connection logic
+  }, []);
+
+  const handleSyncCloud = useCallback((provider: 'google_drive' | 'dropbox' | 'onedrive') => {
+    logger.debug('Syncing with cloud provider:', provider);
+    // TODO: Implement actual cloud sync logic
+  }, []);
+
+  const handleDisconnectCloud = useCallback((provider: 'google_drive' | 'dropbox' | 'onedrive') => {
+    logger.debug('Disconnecting from cloud provider:', provider);
+    // TODO: Implement actual cloud disconnection logic
+  }, []);
+
   return {
     // State
     files,
@@ -368,6 +586,10 @@ export const useCloudStorage = () => {
     viewMode,
     showUploadModal,
     storageInfo,
+    credentials,
+    credentialReminders,
+    accessLogs,
+    cloudIntegrations,
     
     // Computed
     filteredFiles,
@@ -401,6 +623,21 @@ export const useCloudStorage = () => {
     handleCreateShareLink,
     handleAddComment,
     handleStarFile,
-    handleArchiveFile
+    handleArchiveFile,
+    
+    // Credential Management
+    handleAddCredential,
+    handleUpdateCredential,
+    handleDeleteCredential,
+    handleGenerateQRCode,
+    
+    // Access Tracking
+    handleLogAccess,
+    handleGetAccessLogs,
+    
+    // Cloud Integration
+    handleConnectCloud,
+    handleSyncCloud,
+    handleDisconnectCloud
   };
 };
