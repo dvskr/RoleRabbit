@@ -77,7 +77,7 @@ export default function JobTracker() {
             logger.debug('Imported jobs:', importedJobs);
             // TODO: Add logic to import jobs into state
           } catch (error) {
-            console.error('Error importing jobs:', error);
+            logger.error('Error importing jobs:', error);
             alert('Failed to import jobs. Please check the file format.');
           }
         };

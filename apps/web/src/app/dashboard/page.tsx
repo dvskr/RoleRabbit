@@ -337,7 +337,7 @@ export default function DashboardPage() {
           <Home 
             enableMissionControl={true}
             onQuickAction={(actionId) => {
-              console.log('Quick action:', actionId);
+              logger.debug('Quick action:', actionId);
               // Handle quick actions - could navigate to specific tabs
               switch (actionId) {
                 case '1': // Start New Application
@@ -446,7 +446,7 @@ export default function DashboardPage() {
             onAddTemplates={(templateIds) => {
               // Add multiple templates at once
               setAddedTemplates([...addedTemplates, ...templateIds]);
-              console.log('Templates added to editor:', templateIds);
+              logger.debug('Templates added to editor:', templateIds);
             }}
             onNavigateToTemplates={() => {
               handleTabChange('templates');
@@ -461,7 +461,7 @@ export default function DashboardPage() {
             if (!addedTemplates.includes(templateId)) {
               setAddedTemplates([...addedTemplates, templateId]);
             }
-            console.log('Template added to editor:', templateId);
+            logger.debug('Template added to editor:', templateId);
           }}
           addedTemplates={addedTemplates}
           onRemoveTemplate={(templateId) => {
@@ -586,7 +586,7 @@ export default function DashboardPage() {
         headingStyle={headingStyle}
         bulletStyle={bulletStyle}
         onExport={(format) => {
-          console.log('Export format:', format);
+          logger.debug('Export format:', format);
           // TODO: Implement export functionality
         }}
       />
@@ -600,7 +600,7 @@ export default function DashboardPage() {
         importJsonData={importJsonData}
         setImportJsonData={setImportJsonData}
         onImport={() => {
-          console.log('Import triggered');
+          logger.debug('Import triggered');
           // TODO: Implement import functionality
         }}
       />

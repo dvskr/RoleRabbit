@@ -107,7 +107,7 @@ export default function ResumeEditor({
   useEffect(() => {
     if (selectedTemplateId && onTemplateApply) {
       // Show a visual notification that template was applied
-      console.log('Template applied to editor:', selectedTemplateId);
+      // Template applied silently without popup
       onTemplateApply(selectedTemplateId);
     }
   }, [selectedTemplateId, onTemplateApply]);
