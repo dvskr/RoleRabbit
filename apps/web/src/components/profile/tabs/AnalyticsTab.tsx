@@ -73,6 +73,48 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         </div>
       </div>
 
+      {/* Additional Enhanced Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-cyan-50 to-blue-100 p-6 rounded-2xl border border-cyan-200/50 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-cyan-100 rounded-xl">
+              <CheckCircle size={24} className="text-cyan-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-cyan-900">{userData.profileCompleteness}%</p>
+              <p className="text-sm text-cyan-600 font-medium">Complete</p>
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-gray-700">Profile Completeness</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-emerald-50 to-green-100 p-6 rounded-2xl border border-emerald-200/50 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-emerald-100 rounded-xl">
+              <TrendingUp size={24} className="text-emerald-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-emerald-900">{userData.skillMatchRate}%</p>
+              <p className="text-sm text-emerald-600 font-medium">Match Rate</p>
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-gray-700">Skills Match</p>
+        </div>
+        
+        <div className="bg-gradient-to-br from-orange-50 to-red-100 p-6 rounded-2xl border border-orange-200/50 shadow-lg">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-orange-100 rounded-xl">
+              <Calendar size={24} className="text-orange-600" />
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-orange-900">{userData.avgResponseTime}d</p>
+              <p className="text-sm text-orange-600 font-medium">Avg Response</p>
+            </div>
+          </div>
+          <p className="text-sm font-semibold text-gray-700">Response Time</p>
+        </div>
+      </div>
+
       {/* Enhanced Performance Metrics */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Profile Performance</h3>
@@ -80,34 +122,46 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
           <div>
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm font-semibold text-gray-700">Profile Completeness</span>
-              <span className="text-sm font-bold text-blue-600">85%</span>
+              <span className="text-sm font-bold text-cyan-600">{userData.profileCompleteness}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 rounded-full transition-all duration-1000" style={{ width: '85%' }}></div>
+              <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${userData.profileCompleteness}%` }}></div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Complete your profile to increase visibility by 40%</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {userData.profileCompleteness < 70 ? 'Complete your profile to increase visibility by 40%' :
+               userData.profileCompleteness < 85 ? 'Your profile is looking good! Complete a few more sections for optimal results.' :
+               'Excellent! Your profile is complete and optimized'}
+            </p>
           </div>
           
           <div>
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm font-semibold text-gray-700">Skills Match Rate</span>
-              <span className="text-sm font-bold text-green-600">92%</span>
+              <span className="text-sm font-bold text-emerald-600">{userData.skillMatchRate}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all duration-1000" style={{ width: '92%' }}></div>
+              <div className="bg-gradient-to-r from-emerald-500 to-green-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${userData.skillMatchRate}%` }}></div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Your skills match well with current job openings</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {userData.skillMatchRate >= 90 ? 'Your skills match excellently with current job openings!' :
+               userData.skillMatchRate >= 75 ? 'Your skills match well with current opportunities' :
+               'Consider adding more in-demand skills to improve your match rate'}
+            </p>
           </div>
           
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold text-gray-700">Response Rate</span>
-              <span className="text-sm font-bold text-yellow-600">78%</span>
+              <span className="text-sm font-semibold text-gray-700">Average Response Time</span>
+              <span className="text-sm font-bold text-orange-600">{userData.avgResponseTime} days</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
-              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 h-3 rounded-full transition-all duration-1000" style={{ width: '78%' }}></div>
+              <div className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, userData.avgResponseTime * 10)}%` }}></div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Recruiters respond to your applications frequently</p>
+            <p className="text-xs text-gray-500 mt-2">
+              {userData.avgResponseTime <= 2 ? 'Recruiters are responding quickly to your applications!' :
+               userData.avgResponseTime <= 5 ? 'Response time is reasonable' :
+               'Consider optimizing your applications for faster responses'}
+            </p>
           </div>
         </div>
       </div>

@@ -58,23 +58,95 @@ export default function Profile() {
     availability: 'Open to opportunities',
     salaryExpectation: '$120,000 - $150,000',
     workPreference: 'Hybrid',
+    professionalSummary: {
+      overview: 'Seasoned full-stack engineer with expertise in modern web technologies, cloud infrastructure, and scalable system design.',
+      keyStrengths: ['Full-stack development', 'System architecture', 'Cloud infrastructure', 'Team leadership'],
+      currentFocus: 'Leading migration to microservices architecture and optimizing application performance',
+      achievements: ['Reduced app load time by 60%', 'Led team of 5 engineers', 'Deployed 100+ production releases'],
+      lookingFor: 'Tech lead role in a innovative product company'
+    },
     
-    // Skills & Expertise
-    skills: ['JavaScript', 'React', 'Node.js', 'Python', 'AWS', 'Docker'],
-    certifications: ['AWS Certified Developer', 'Google Cloud Professional'],
-    languages: ['English (Native)', 'Spanish (Fluent)', 'French (Conversational)'],
+    // Skills & Expertise (Enhanced with Proficiency)
+    skills: [
+      { name: 'JavaScript', proficiency: 'Expert', yearsOfExperience: 5, verified: true },
+      { name: 'React', proficiency: 'Advanced', yearsOfExperience: 4, verified: true },
+      { name: 'Node.js', proficiency: 'Advanced', yearsOfExperience: 4, verified: true },
+      { name: 'Python', proficiency: 'Intermediate', yearsOfExperience: 3, verified: true },
+      { name: 'AWS', proficiency: 'Advanced', yearsOfExperience: 3, verified: true },
+      { name: 'Docker', proficiency: 'Advanced', yearsOfExperience: 3, verified: true }
+    ],
+    certifications: [
+      { name: 'AWS Certified Developer', issuer: 'Amazon Web Services', date: '2023-01-15', credentialUrl: 'https://aws.amazon.com/verification', verified: true },
+      { name: 'Google Cloud Professional', issuer: 'Google Cloud', date: '2022-08-20', verified: true }
+    ],
+    languages: [
+      { name: 'English', proficiency: 'Native' },
+      { name: 'Spanish', proficiency: 'Fluent' },
+      { name: 'French', proficiency: 'Conversational' }
+    ],
     
-    // Career Goals
-    careerGoals: 'Looking to transition into a tech lead role',
+    // Education History
+    education: [
+      {
+        institution: 'Stanford University',
+        degree: 'Bachelor of Science',
+        field: 'Computer Science',
+        startDate: '2015-09',
+        endDate: '2019-06',
+        gpa: '3.8',
+        honors: 'Dean\'s List, Cum Laude',
+        description: 'Focused on software engineering and distributed systems'
+      }
+    ],
+    
+    // Career Goals (Enhanced)
+    careerGoals: [
+      { title: 'Become a Tech Lead', description: 'Lead engineering teams and drive technical strategy', targetDate: '2025-12', progress: 60, category: 'Role' },
+      { title: 'Join Google', description: 'Secure a senior role at Google', targetDate: '2025-06', progress: 30, category: 'Company' }
+    ],
     targetRoles: ['Tech Lead', 'Senior Developer', 'Architect'],
     targetCompanies: ['Google', 'Microsoft', 'Apple'],
     relocationWillingness: 'Open to relocation',
     
-    // Portfolio & Links
+    // Portfolio & Links (Enhanced)
     portfolio: 'https://johndoe.dev',
     linkedin: 'https://linkedin.com/in/johndoe',
     github: 'https://github.com/johndoe',
     website: 'https://johndoe.com',
+    socialLinks: [
+      { platform: 'LinkedIn', url: 'https://linkedin.com/in/johndoe' },
+      { platform: 'GitHub', url: 'https://github.com/johndoe' },
+      { platform: 'Twitter', url: 'https://twitter.com/johndoe' },
+      { platform: 'Medium', url: 'https://medium.com/@johndoe' }
+    ],
+    projects: [
+      {
+        title: 'E-Commerce Platform',
+        description: 'Built a scalable e-commerce platform handling 10K+ daily transactions',
+        technologies: ['React', 'Node.js', 'MongoDB', 'Stripe'],
+        link: 'https://example.com/ecommerce',
+        github: 'https://github.com/johndoe/ecommerce',
+        date: '2023-01'
+      },
+      {
+        title: 'Real-time Collaboration Tool',
+        description: 'Developed a real-time document collaboration tool with WebSocket',
+        technologies: ['React', 'Socket.io', 'PostgreSQL', 'AWS'],
+        github: 'https://github.com/johndoe/collab-tool',
+        date: '2022-08'
+      }
+    ],
+    achievements: [
+      { title: 'Employee of the Year', description: 'Recognized for outstanding contributions', date: '2023-12', type: 'Award', link: '#' },
+      { title: 'Tech Conference Speaker', description: 'Spoke at React Summit 2023', date: '2023-06', type: 'Speaking', link: 'https://reactsummit.com' }
+    ],
+    
+    // Career Timeline
+    careerTimeline: [
+      { id: '1', title: 'Joined Tech Corp', description: 'Started as Senior Software Engineer', date: '2023-01', type: 'Work', icon: 'briefcase', color: 'blue' },
+      { id: '2', title: 'AWS Certification', description: 'Earned AWS Certified Developer credential', date: '2023-01', type: 'Certification', icon: 'certificate', color: 'green' },
+      { id: '3', title: 'Graduated Stanford', description: 'BS in Computer Science', date: '2019-06', type: 'Education', icon: 'graduation', color: 'purple' }
+    ],
     
     // Preferences
     jobAlerts: true,
@@ -83,12 +155,15 @@ export default function Profile() {
     privacyLevel: 'Professional',
     profileVisibility: 'Public',
     
-    // Analytics & Insights
+    // Analytics & Insights (Enhanced)
     profileViews: 1247,
     applicationsSent: 23,
     interviewsScheduled: 8,
     offersReceived: 2,
-    successRate: 8.7
+    successRate: 8.7,
+    profileCompleteness: 85,
+    skillMatchRate: 92,
+    avgResponseTime: 2.5
   });
 
   const tabs: ProfileTabConfig[] = [
