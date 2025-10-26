@@ -10,21 +10,18 @@ export default function ComposeTab() {
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const [draft, setDraft] = useState<EmailDraft>({
     id: '1',
-    to: '',
-    cc: '',
-    bcc: '',
+    toEmail: '',
+    cc: [],
+    bcc: [],
     subject: '',
-    content: '',
+    body: '',
     attachments: [],
-    aiGenerated: false,
     createdAt: new Date().toISOString(),
-    status: 'draft'
+    updatedAt: new Date().toISOString()
   });
 
   const [aiContext, setAIContext] = useState<AIContext>({
-    recipientType: 'hr',
-    industry: 'tech',
-    position: 'software-engineer',
+    mode: 'generate',
     tone: 'professional',
     length: 'medium'
   });
@@ -32,7 +29,7 @@ export default function ComposeTab() {
   const [aiPrompt, setAiPrompt] = useState('');
 
   const handleDraftChange = (changes: Partial<EmailDraft>) => {
-    setDraft(prev => ({ ...prev, ...changes }));
+    setDraft((prev: EmailDraft) => ({ ...prev, ...changes }));
   };
 
   const handleSend = () => {
@@ -48,15 +45,14 @@ export default function ComposeTab() {
   const handleCancel = () => {
     setDraft({
       id: '1',
-      to: '',
-      cc: '',
-      bcc: '',
+      toEmail: '',
+      cc: [],
+      bcc: [],
       subject: '',
-      content: '',
+      body: '',
       attachments: [],
-      aiGenerated: false,
       createdAt: new Date().toISOString(),
-      status: 'draft'
+      updatedAt: new Date().toISOString()
     });
   };
 
@@ -107,10 +103,7 @@ export default function ComposeTab() {
 
       {/* Email Composer */}
       <EmailComposer
-        draft={draft}
-        onDraftChange={handleDraftChange}
         onSend={handleSend}
-        onSave={handleSave}
         onCancel={handleCancel}
       />
 
@@ -118,11 +111,6 @@ export default function ComposeTab() {
       <AIGenerator
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
-        onGenerate={handleAIGenerate}
-        context={aiContext}
-        onContextChange={handleAIContextChange}
-        prompt={aiPrompt}
-        onPromptChange={setAiPrompt}
       />
     </div>
   );

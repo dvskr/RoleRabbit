@@ -63,3 +63,66 @@ export interface EmailThread {
   lastActivity: string;
   isArchived: boolean;
 }
+
+// Component Props
+export interface AIGeneratorProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onGenerate?: (prompt: string) => void;
+  context?: AIContext;
+  onContextChange?: (changes: Partial<AIContext>) => void;
+  prompt?: string;
+  onPromptChange?: (prompt: string) => void;
+}
+
+export interface CampaignCardProps {
+  campaign: any;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onSend: (id: string) => void;
+  onPause?: (id: string) => void;
+  onResume?: (id: string) => void;
+}
+
+export interface EmailHeaderProps {
+  title?: string;
+  subtitle?: string;
+  onCompose?: () => void;
+  onSync?: () => void;
+}
+
+export interface EmailTabsProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  recipientCount: number;
+  recipients?: string[];
+  template?: any;
+  sent?: number;
+  opened?: number;
+  replied?: number;
+  clicked?: number;
+  scheduledAt?: string;
+  status: 'draft' | 'scheduled' | 'sending' | 'sent' | 'completed' | 'active' | 'paused';
+  createdAt: string;
+}
+
+export interface AIContext {
+  mode: 'generate' | 'improve' | 'reply';
+  tone: string;
+  length: string;
+  customPrompt?: string;
+}
+
+export interface EmailComposerProps {
+  recipientEmail?: string;
+  recipientName?: string;
+  onSend?: (emailData: any) => void;
+  onCancel?: () => void;
+}

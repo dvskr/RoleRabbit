@@ -33,7 +33,7 @@ export default function RemindersPanel({
     e.preventDefault();
     onAddReminder(jobId, {
       ...formData,
-      id: `${Date.now()}`,
+      jobId: jobId,
       dueDate: formData.dueDate
     });
     setFormData({

@@ -31,9 +31,8 @@ export default function InterviewTracker({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddNote(jobId, {
-      ...formData,
-      id: `${Date.now()}`
-    });
+      ...formData
+    } as Omit<InterviewNote, 'id'>);
     setFormData({
       type: 'technical',
       date: new Date().toISOString().split('T')[0],
@@ -85,13 +84,13 @@ export default function InterviewTracker({
                 <span className="text-xs font-medium text-gray-700 capitalize">{note.type}</span>
                 <span className="text-xs text-gray-500">{note.date}</span>
               </div>
-              {note.rating > 0 && (
+              {(note.rating ?? 0) > 0 && (
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       size={12}
-                      className={i < note.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}
+                      className={i < (note.rating ?? 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}
                     />
                   ))}
                 </div>

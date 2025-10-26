@@ -74,7 +74,7 @@ export default function ExportModal({ onClose, data }: ExportModalProps) {
                     name="format"
                     value={option.value}
                     checked={selectedFormat === option.value}
-                    onChange={(e) => setSelectedFormat(e.target.value as 'csv' | 'xlsx' | 'json')}
+                    onChange={(e) => setSelectedFormat(e.target.value as 'csv' | 'xlsx')}
                     className="mt-1"
                   />
                   <Icon 

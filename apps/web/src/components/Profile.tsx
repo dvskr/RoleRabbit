@@ -265,7 +265,7 @@ export default function Profile() {
               {tabs.find(tab => tab.id === activeTab)?.label}
             </h2>
             <p className="text-gray-600">This section is coming soon...</p>
-          </div>
+                  </div>
         );
     }
   };
@@ -295,7 +295,7 @@ export default function Profile() {
           <div className="p-8">
             <div className="max-w-5xl mx-auto">
               {renderTabContent()}
-            </div>
+                      </div>
           </div>
         </div>
       </div>

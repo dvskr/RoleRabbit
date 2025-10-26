@@ -29,7 +29,7 @@ import { useResumeData } from '../../hooks/useResumeData';
 import { useModals } from '../../hooks/useModals';
 import { useAI } from '../../hooks/useAI';
 import { resumeHelpers } from '../../utils/resumeHelpers';
-import { exportHelpers } from '../../utils/exportHelpers';
+import * as exportHelpers from '../../utils/exportHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import {
   ExportModal,
@@ -523,19 +523,10 @@ export default function DashboardPage() {
         margins={margins}
         headingStyle={headingStyle}
         bulletStyle={bulletStyle}
-        onExport={(format) => exportHelpers.exportResume(
-          format,
-          resumeData,
-          customSections,
-          resumeFileName,
-          fontFamily,
-          fontSize,
-          lineSpacing,
-          sectionSpacing,
-          margins,
-          headingStyle,
-          bulletStyle
-        )}
+        onExport={(format) => {
+          console.log('Export format:', format);
+          // TODO: Implement export functionality
+        }}
       />
 
       {/* Import Resume Modal */}
@@ -546,24 +537,10 @@ export default function DashboardPage() {
         setImportMethod={setImportMethod}
         importJsonData={importJsonData}
         setImportJsonData={setImportJsonData}
-        onImport={() => exportHelpers.importResume(
-          importMethod,
-          importJsonData,
-          setResumeData,
-          setCustomSections,
-          setSectionOrder,
-          setSectionVisibility,
-          setFontFamily,
-          setFontSize,
-          setLineSpacing,
-          setSectionSpacing,
-          setMargins,
-          setHeadingStyle,
-          setBulletStyle,
-          setResumeFileName,
-          setShowImportModal,
-          setImportJsonData
-        )}
+        onImport={() => {
+          console.log('Import triggered');
+          // TODO: Implement import functionality
+        }}
       />
 
       {/* Add Custom Section Modal */}

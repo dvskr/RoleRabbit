@@ -30,9 +30,8 @@ export default function ReferralTracker({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddReferral(jobId, {
-      ...formData,
-      id: `${Date.now()}`
-    });
+      ...formData
+    } as Omit<ReferralContact, 'id'>);
     setFormData({
       name: '',
       position: '',
