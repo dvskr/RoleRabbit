@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Briefcase, Star, Target, Trophy, CheckCircle } from 'lucide-react';
 import FormField from '../components/FormField';
 import { UserData } from '../types/profile';
 
@@ -25,6 +26,82 @@ export default function ProfessionalTab({
       </div>
       
       <div className="space-y-8">
+        {/* Professional Summary */}
+        {userData.professionalSummary && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
+            <div className="flex items-center gap-2 mb-6">
+              <Briefcase className="text-blue-600" size={24} />
+              <h3 className="text-xl font-semibold text-gray-900">Professional Summary</h3>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Overview */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Target size={16} />
+                  Overview
+                </h4>
+                <p className="text-gray-700 leading-relaxed">{userData.professionalSummary.overview}</p>
+              </div>
+
+              {/* Key Strengths */}
+              {userData.professionalSummary.keyStrengths && userData.professionalSummary.keyStrengths.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Star size={16} />
+                    Key Strengths
+                  </h4>
+                  <div className="flex flex-wrap gap-3">
+                    {userData.professionalSummary.keyStrengths.map((strength, index) => (
+                      <span key={index} className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-full text-sm font-medium shadow-sm border border-blue-200/50 flex items-center gap-2">
+                        <CheckCircle size={14} />
+                        {strength}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Current Focus */}
+              {userData.professionalSummary.currentFocus && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <Target size={16} />
+                    Current Focus
+                  </h4>
+                  <p className="text-gray-700 leading-relaxed">{userData.professionalSummary.currentFocus}</p>
+                </div>
+              )}
+
+              {/* Key Achievements */}
+              {userData.professionalSummary.achievements && userData.professionalSummary.achievements.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Trophy size={16} />
+                    Key Achievements
+                  </h4>
+                  <div className="space-y-3">
+                    {userData.professionalSummary.achievements.map((achievement, index) => (
+                      <div key={index} className="flex items-start gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200/50">
+                        <Trophy size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-gray-700">{achievement}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Looking For */}
+              {userData.professionalSummary.lookingFor && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Looking For</h4>
+                  <p className="text-gray-700 leading-relaxed">{userData.professionalSummary.lookingFor}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Current Role & Company */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Current Position</h3>

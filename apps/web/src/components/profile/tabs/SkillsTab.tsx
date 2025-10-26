@@ -58,19 +58,39 @@ export default function SkillsTab({
         {/* Technical Skills */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Technical Skills</h3>
-          <div className="flex flex-wrap gap-3 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {userData.skills.map((skill, index) => (
-              <span key={index} className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm border border-blue-200/50">
-                {skill}
-                {isEditing && (
-                  <button
-                    onClick={() => removeSkill(index)}
-                    className="text-blue-600 hover:text-blue-800 transition-colors ml-1"
-                  >
-                    ×
-                  </button>
-                )}
-              </span>
+              <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-gray-900">{skill.name}</span>
+                  {isEditing && (
+                    <button
+                      onClick={() => removeSkill(index)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    skill.proficiency === 'Expert' ? 'bg-green-100 text-green-800' :
+                    skill.proficiency === 'Advanced' ? 'bg-blue-100 text-blue-800' :
+                    skill.proficiency === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {skill.proficiency}
+                  </span>
+                  {skill.yearsOfExperience && (
+                    <span className="text-xs text-gray-600">{skill.yearsOfExperience} years</span>
+                  )}
+                  {skill.verified && (
+                    <span className="ml-auto text-blue-600 text-xs flex items-center gap-1">
+                      <Award size={12} /> Verified
+                    </span>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
           {isEditing && (
@@ -100,19 +120,39 @@ export default function SkillsTab({
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Certifications</h3>
           <div className="space-y-4">
             {userData.certifications.map((cert, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200/50">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Award size={20} className="text-yellow-600" />
+              <div key={index} className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200/50 hover:shadow-md transition-all">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Award size={20} className="text-yellow-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-gray-900 font-semibold">{cert.name}</h4>
+                      {isEditing && (
+                        <button
+                          onClick={() => removeCertification(index)}
+                          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{cert.issuer}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-xs text-gray-500">{cert.date}</span>
+                      {cert.verified && (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                          Verified
+                        </span>
+                      )}
+                      {cert.credentialUrl && (
+                        <a href={cert.credentialUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                          View Credential
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-gray-900 font-medium flex-1">{cert}</span>
-                {isEditing && (
-                  <button
-                    onClick={() => removeCertification(index)}
-                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
               </div>
             ))}
           </div>
@@ -143,11 +183,16 @@ export default function SkillsTab({
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Languages</h3>
           <div className="space-y-4">
             {userData.languages.map((lang, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200/50">
+              <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200/50 hover:shadow-md transition-all">
                 <div className="p-2 bg-green-100 rounded-lg">
                   <Globe size={20} className="text-green-600" />
                 </div>
-                <span className="text-gray-900 font-medium flex-1">{lang}</span>
+                <div className="flex-1 flex items-center justify-between">
+                  <span className="text-gray-900 font-medium">{lang.name}</span>
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                    {lang.proficiency}
+                  </span>
+                </div>
                 {isEditing && (
                   <button
                     onClick={() => removeLanguage(index)}
