@@ -1,7 +1,7 @@
 export interface ResumeFile {
   id: string;
   name: string;
-  type: 'resume' | 'template' | 'backup';
+  type: 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample';
   size: string;
   lastModified: string;
   isPublic: boolean;
@@ -16,6 +16,30 @@ export interface ResumeFile {
   isArchived: boolean;
   thumbnail?: string;
   description?: string;
+  // Credential Management (if applicable)
+  credentialInfo?: CredentialInfo;
+}
+
+export interface CredentialInfo {
+  credentialType: 'certification' | 'license' | 'visa' | 'degree' | 'badge';
+  issuer: string;
+  issuedDate: string;
+  expirationDate?: string;
+  credentialId?: string;
+  verificationStatus: 'pending' | 'verified' | 'expired' | 'revoked';
+  verificationUrl?: string;
+  qrCode?: string;
+  associatedDocuments: string[]; // File IDs
+}
+
+export interface CredentialReminder {
+  id: string;
+  credentialId: string;
+  credentialName: string;
+  expirationDate: string;
+  reminderDate: string;
+  isSent: boolean;
+  priority: 'low' | 'medium' | 'high';
 }
 
 export interface SharePermission {
@@ -66,7 +90,7 @@ export interface CloudStorageProps {
   onClose?: () => void;
 }
 
-export type FileType = 'all' | 'resume' | 'template' | 'backup';
+export type FileType = 'all' | 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample';
 export type SortBy = 'name' | 'date' | 'size';
 export type ViewMode = 'grid' | 'list';
 
@@ -80,4 +104,26 @@ export interface FileOperation {
   type: 'download' | 'share' | 'delete' | 'togglePublic' | 'edit';
   fileId: string;
   data?: any;
+}
+
+export interface AccessLog {
+  id: string;
+  fileId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  action: 'view' | 'download' | 'share' | 'edit' | 'delete';
+  timestamp: string;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface CloudIntegration {
+  provider: 'google_drive' | 'dropbox' | 'onedrive';
+  isConnected: boolean;
+  connectedAt?: string;
+  lastSyncAt?: string;
+  accountEmail: string;
+  quotaUsed?: number;
+  quotaTotal?: number;
 }

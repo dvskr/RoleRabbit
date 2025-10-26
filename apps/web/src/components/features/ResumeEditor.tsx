@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
-import { FileText, Sparkles, Layers, Plus, GripVertical, Trash2, Type, Palette, Eye, EyeOff, Mail, Phone, MapPin, Linkedin, Github, Globe } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { FileText, Sparkles, Layers, Plus, GripVertical, Trash2, Type, Palette, Eye, EyeOff, Mail, Phone, MapPin, Linkedin, Github, Globe, CheckCircle, X, Layout } from 'lucide-react';
+import MultiResumeManager from './MultiResumeManager';
+import { resumeTemplates } from '../../data/templates';
 
 interface ResumeEditorProps {
   resumeFileName: string;
@@ -42,6 +44,12 @@ interface ResumeEditorProps {
   newFieldIcon: string;
   setNewFieldIcon: (icon: string) => void;
   onAddCustomField: () => void;
+  selectedTemplateId?: string | null;
+  onTemplateApply?: (templateId: string) => void;
+  addedTemplates?: string[];
+  onRemoveTemplate?: (templateId: string) => void;
+  onAddTemplates?: (templateIds: string[]) => void;
+  onNavigateToTemplates?: () => void;
 }
 
 export default function ResumeEditor({
@@ -82,8 +90,28 @@ export default function ResumeEditor({
   setNewFieldName,
   newFieldIcon,
   setNewFieldIcon,
-  onAddCustomField
+  onAddCustomField,
+  selectedTemplateId,
+  onTemplateApply,
+  addedTemplates = [],
+  onRemoveTemplate,
+  onAddTemplates,
+  onNavigateToTemplates
 }: ResumeEditorProps) {
+  // Get the selected template data
+  const selectedTemplate = selectedTemplateId 
+    ? resumeTemplates.find(t => t.id === selectedTemplateId) 
+    : null;
+
+  // Apply template when selectedTemplateId changes
+  useEffect(() => {
+    if (selectedTemplateId && onTemplateApply) {
+      // Show a visual notification that template was applied
+      console.log('Template applied to editor:', selectedTemplateId);
+      onTemplateApply(selectedTemplateId);
+    }
+  }, [selectedTemplateId, onTemplateApply]);
+
   const getFieldIcon = (iconType: string) => {
     const iconClass = "w-4 h-4 text-gray-400";
     
@@ -176,21 +204,37 @@ export default function ResumeEditor({
           </p>
         </div>
 
+        {/* Templates Horizontal Scroller */}
+        <div className="mb-6">
+          <MultiResumeManager
+            onSwitchResume={() => {}}
+            onSelectTemplate={(templateId) => {
+              onTemplateApply?.(templateId);
+            }}
+            showHorizontalScroller={true}
+            addedTemplates={addedTemplates}
+            onRemoveTemplate={onRemoveTemplate}
+            onAddTemplates={onAddTemplates}
+            onNavigateToTemplates={onNavigateToTemplates}
+            selectedTemplateId={selectedTemplateId}
+          />
+        </div>
+
         {/* Sections */}
          <div className="mb-6">
            <div className="flex items-center justify-between mb-4">
              <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
                <Layers size={18} className="text-purple-600" />
-            Sections
-          </h3>
-          <button
-               onClick={onShowAddSectionModal}
-            className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all"
-            title="Add Custom Section"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
+             Sections
+           </h3>
+           <button
+                onClick={onShowAddSectionModal}
+             className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all"
+             title="Add Custom Section"
+           >
+             <Plus size={16} />
+           </button>
+         </div>
         
         <div className="space-y-2">
           {sectionOrder.map((section, index) => {
@@ -499,8 +543,24 @@ export default function ResumeEditor({
           </div>
 
       {/* Main Resume Editing Area */}
-      <div className="flex-1 h-full overflow-y-auto bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0" style={{ height: '100%', maxHeight: '100%' }}>
-        <div className="w-full bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full overflow-hidden">
+      <div className={`flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 ${
+        selectedTemplate?.colorScheme === 'blue' 
+          ? 'bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100'
+          : selectedTemplate?.colorScheme === 'green'
+          ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100'
+          : selectedTemplate?.colorScheme === 'monochrome'
+          ? 'bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100'
+          : 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50'
+      }`} style={{ height: '100%', maxHeight: '100%' }}>
+        <div className={`w-full bg-white rounded-2xl shadow-2xl border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full overflow-hidden ${
+          selectedTemplate?.colorScheme === 'blue'
+            ? 'border-blue-200'
+            : selectedTemplate?.colorScheme === 'green'
+            ? 'border-green-200'
+            : selectedTemplate?.colorScheme === 'monochrome'
+            ? 'border-gray-300'
+            : 'border-gray-100'
+        }`}>
           
           {/* Name Input */}
           <input 

@@ -31,6 +31,8 @@ import { useAI } from '../../hooks/useAI';
 import { resumeHelpers } from '../../utils/resumeHelpers';
 import * as exportHelpers from '../../utils/exportHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
+import { resumeTemplates } from '../../data/templates';
+import { logger } from '../../utils/logger';
 import {
   ExportModal,
   ImportModal,
@@ -60,6 +62,8 @@ export default function DashboardPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [previousSidebarState, setPreviousSidebarState] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>('ats-classic');
+  const [addedTemplates, setAddedTemplates] = useState<string[]>(['ats-classic', 'ats-modern']);
 
   // Destructure hooks for easier access
   const {
@@ -402,10 +406,68 @@ export default function DashboardPage() {
             newFieldIcon={newFieldIcon}
             setNewFieldIcon={setNewFieldIcon}
             onAddCustomField={addCustomField}
+            selectedTemplateId={selectedTemplateId}
+            onTemplateApply={(templateId) => {
+              // Apply template styling
+              setSelectedTemplateId(templateId);
+              
+              // Get the template from the templates data
+              const template = resumeTemplates.find(t => t.id === templateId);
+              if (template) {
+                // Apply template-specific styling
+                logger.debug('Applying template:', template.name);
+                
+                // Apply color scheme
+                if (template.colorScheme === 'blue') {
+                  // Could apply blue theme
+                } else if (template.colorScheme === 'green') {
+                  // Could apply green theme
+                } else if (template.colorScheme === 'monochrome') {
+                  // Could apply monochrome theme
+                }
+                
+                // Apply layout style
+                if (template.layout === 'two-column') {
+                  // Could apply two-column layout
+                } else if (template.layout === 'single-column') {
+                  // Could apply single-column layout
+                }
+              }
+            }}
+            addedTemplates={addedTemplates}
+            onRemoveTemplate={(templateId) => {
+              // Prevent removing the last template
+              if (addedTemplates.length > 1) {
+                setAddedTemplates(addedTemplates.filter(id => id !== templateId));
+              } else {
+                alert('You must have at least one template in the editor');
+              }
+            }}
+            onAddTemplates={(templateIds) => {
+              // Add multiple templates at once
+              setAddedTemplates([...addedTemplates, ...templateIds]);
+              console.log('Templates added to editor:', templateIds);
+            }}
+            onNavigateToTemplates={() => {
+              handleTabChange('templates');
+            }}
           />
         );
       case 'templates':
-        return <Templates />;
+        return <Templates 
+          onAddToEditor={(templateId) => {
+            // Save template ID so editor can apply it
+            setSelectedTemplateId(templateId);
+            if (!addedTemplates.includes(templateId)) {
+              setAddedTemplates([...addedTemplates, templateId]);
+            }
+            console.log('Template added to editor:', templateId);
+          }}
+          addedTemplates={addedTemplates}
+          onRemoveTemplate={(templateId) => {
+            setAddedTemplates(addedTemplates.filter(id => id !== templateId));
+          }}
+        />;
       case 'tracker':
         return <JobTracker />;
       case 'discussion':
