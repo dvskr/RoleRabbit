@@ -1,14 +1,29 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Edit3, Save, FileText, Lightbulb } from 'lucide-react';
 import CoverLetterEditor from '../components/CoverLetterEditor';
 import { logger } from '../../../utils/logger';
 
-export default function CustomTab() {
-  const [content, setContent] = useState('');
-  const [wordCount, setWordCount] = useState(0);
-  const [title, setTitle] = useState('');
+interface CustomTabProps {
+  content: string;
+  setContent: (content: string) => void;
+  title: string;
+  setTitle: (title: string) => void;
+  setWordCount: (count: number) => void;
+}
+
+export default function CustomTab({ content, setContent, title, setTitle, setWordCount }: CustomTabProps) {
+  // Calculate word count from content
+  const wordCount = useMemo(() => {
+    const words = content.trim().split(/\s+/).filter(word => word.length > 0);
+    return content.trim() === '' ? 0 : words.length;
+  }, [content]);
+
+  // Sync word count with parent
+  useEffect(() => {
+    setWordCount(wordCount);
+  }, [wordCount, setWordCount]);
 
   const handleContentChange = (newContent: string) => {
     setContent(newContent);

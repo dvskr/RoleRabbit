@@ -1,37 +1,18 @@
+'use client';
+
 import React from 'react';
 import { X, Download, FileText, Printer, Cloud } from 'lucide-react';
-import { ResumeData, CustomSection } from '../../types/resume';
 
 interface ExportModalProps {
   showExportModal: boolean;
   setShowExportModal: (show: boolean) => void;
-  resumeData: ResumeData;
-  customSections: CustomSection[];
-  resumeFileName: string;
-  fontFamily: string;
-  fontSize: string;
-  lineSpacing: string;
-  sectionSpacing: string;
-  margins: string;
-  headingStyle: string;
-  bulletStyle: string;
-  onExport: (format: string) => void;
+  onExport: (format: 'pdf' | 'word' | 'print') => void;
   onSaveToCloud?: () => void;
 }
 
 export default function ExportModal({
   showExportModal,
   setShowExportModal,
-  resumeData,
-  customSections,
-  resumeFileName,
-  fontFamily,
-  fontSize,
-  lineSpacing,
-  sectionSpacing,
-  margins,
-  headingStyle,
-  bulletStyle,
   onExport,
   onSaveToCloud
 }: ExportModalProps) {
@@ -60,11 +41,11 @@ export default function ExportModal({
             <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
               <Download className="text-white" size={18} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800">Export Resume</h2>
+            <h2 className="text-xl font-bold text-gray-800">Export Cover Letter</h2>
           </div>
           <button
             onClick={() => setShowExportModal(false)}
-            className="p-2 hover:bg-gray-100 rounded-xl  duration-200 group"
+            className="p-2 hover:bg-gray-100 rounded-xl duration-200 group"
           >
             <X size={18} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
           </button>
@@ -72,8 +53,11 @@ export default function ExportModal({
         
         <div className="grid grid-cols-1 gap-3">
           <button
-            onClick={() => onExport('pdf')}
-            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-red-300 hover:bg-red-50  duration-300 hover:shadow-lg hover:shadow-red-500/20"
+            onClick={() => {
+              onExport('pdf');
+              setShowExportModal(false);
+            }}
+            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-red-300 hover:bg-red-50 duration-300 hover:shadow-lg hover:shadow-red-500/20"
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-500 rounded-lg group-hover:bg-red-600 transition-colors">
@@ -87,8 +71,11 @@ export default function ExportModal({
           </button>
           
           <button
-            onClick={() => onExport('word')}
-            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50  duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+            onClick={() => {
+              onExport('word');
+              setShowExportModal(false);
+            }}
+            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 duration-300 hover:shadow-lg hover:shadow-blue-500/20"
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500 rounded-lg group-hover:bg-blue-600 transition-colors">
@@ -102,15 +89,18 @@ export default function ExportModal({
           </button>
           
           <button
-            onClick={() => onExport('print')}
-            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50  duration-300 hover:shadow-lg hover:shadow-gray-500/20"
+            onClick={() => {
+              onExport('print');
+              setShowExportModal(false);
+            }}
+            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50 duration-300 hover:shadow-lg hover:shadow-gray-500/20"
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-500 rounded-lg group-hover:bg-gray-600 transition-colors">
                 <Printer className="text-white" size={20} />
               </div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-800 group-hover:text-gray-700 transition-colors">Print Resume</h3>
+                <h3 className="font-semibold text-gray-800 group-hover:text-gray-700 transition-colors">Print Cover Letter</h3>
                 <p className="text-sm text-gray-600">Send directly to printer</p>
               </div>
             </div>
@@ -122,7 +112,7 @@ export default function ExportModal({
                 onSaveToCloud();
                 setShowExportModal(false);
               }}
-              className="group p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50  duration-300 hover:shadow-lg hover:shadow-indigo-500/20"
+              className="group p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 duration-300 hover:shadow-lg hover:shadow-indigo-500/20"
             >
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-indigo-500 rounded-lg group-hover:bg-indigo-600 transition-colors">
@@ -130,7 +120,7 @@ export default function ExportModal({
                 </div>
                 <div className="text-left">
                   <h3 className="font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors">Save to Cloud</h3>
-                  <p className="text-sm text-gray-600">Store resume in cloud storage</p>
+                  <p className="text-sm text-gray-600">Store cover letter in cloud storage</p>
                 </div>
               </div>
             </button>
@@ -140,3 +130,4 @@ export default function ExportModal({
     </div>
   );
 }
+

@@ -1,15 +1,33 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Sparkles, Bot, Wand2 } from 'lucide-react';
 import AIContextForm from '../components/AIContextForm';
 import CoverLetterEditor from '../components/CoverLetterEditor';
 import { AIContext } from '../types/coverletter';
 
-export default function AITab() {
-  const [content, setContent] = useState('');
-  const [wordCount, setWordCount] = useState(0);
+interface AITabProps {
+  content: string;
+  setContent: (content: string) => void;
+  title: string;
+  setTitle: (title: string) => void;
+  setWordCount: (count: number) => void;
+  setActiveTab: (tab: 'templates' | 'ai' | 'custom' | 'preview') => void;
+}
+
+export default function AITab({ content, setContent, title, setTitle, setWordCount, setActiveTab }: AITabProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Calculate word count from content
+  const wordCount = useMemo(() => {
+    const words = content.trim().split(/\s+/).filter(word => word.length > 0);
+    return content.trim() === '' ? 0 : words.length;
+  }, [content]);
+
+  // Sync word count with parent
+  useEffect(() => {
+    setWordCount(wordCount);
+  }, [wordCount, setWordCount]);
   const [aiContext, setAiContext] = useState<AIContext>({
     jobTitle: '',
     companyName: '',
