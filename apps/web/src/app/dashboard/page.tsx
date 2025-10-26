@@ -187,6 +187,34 @@ export default function DashboardPage() {
     setShowImportModal(false);
   };
 
+  const handleDuplicateResume = () => {
+    logger.debug('Duplicating resume');
+    
+    // Get current timestamp for unique filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const newFileName = `${resumeFileName} - Copy`;
+    
+    // Duplicate all resume state
+    const duplicatedResumeData = JSON.parse(JSON.stringify(resumeData));
+    const duplicatedCustomSections = JSON.parse(JSON.stringify(customSections));
+    const duplicatedSectionOrder = [...sectionOrder];
+    const duplicatedSectionVisibility = {...sectionVisibility};
+    
+    // Update all states with duplicated data
+    setResumeFileName(newFileName);
+    setResumeData(duplicatedResumeData);
+    setCustomSections(duplicatedCustomSections);
+    setSectionOrder(duplicatedSectionOrder);
+    setSectionVisibility(duplicatedSectionVisibility);
+    
+    // Reset history for the new resume
+    const newHistory = [duplicatedResumeData];
+    setHistory(newHistory);
+    setHistoryIndex(0);
+    
+    logger.debug('Resume duplicated successfully');
+  };
+
   // Destructure hooks for easier access
   const {
     resumeFileName, setResumeFileName,
@@ -626,6 +654,7 @@ export default function DashboardPage() {
               onUndo={undo}
               onRedo={redo}
               onImport={() => setShowImportModal(true)}
+              onDuplicate={handleDuplicateResume}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onShowMobileMenu={() => setShowMobileMenu(true)}

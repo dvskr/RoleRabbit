@@ -17,6 +17,7 @@ export const useCloudStorage = () => {
       tags: ['software', 'engineer', 'react'],
       version: 3,
       owner: 'john.doe@example.com',
+      folderId: 'folder-tech',
       sharedWith: [
         {
           id: 'share_1',
@@ -57,6 +58,7 @@ export const useCloudStorage = () => {
       tags: ['product', 'management', 'strategy'],
       version: 2,
       owner: 'john.doe@example.com',
+      folderId: 'folder-product',
       sharedWith: [],
       comments: [],
       downloadCount: 8,
@@ -75,6 +77,7 @@ export const useCloudStorage = () => {
       tags: ['template', 'modern', 'clean'],
       version: 1,
       owner: 'john.doe@example.com',
+      folderId: 'folder-templates',
       sharedWith: [],
       comments: [],
       downloadCount: 156,
@@ -245,6 +248,14 @@ export const useCloudStorage = () => {
   const [storageUsed, setStorageUsed] = useState(9.6);
   const [storageLimit, setStorageLimit] = useState(100);
 
+  // Folder management
+  const [folders, setFolders] = useState<import('../types/cloudStorage').Folder[]>([
+    { id: 'folder-tech', name: 'Tech Resumes', color: '#3B82F6', createdAt: '2024-10-01', updatedAt: '2024-10-01', fileCount: 1 },
+    { id: 'folder-product', name: 'Product Management', color: '#10B981', createdAt: '2024-10-05', updatedAt: '2024-10-05', fileCount: 1 },
+    { id: 'folder-templates', name: 'Templates', color: '#8B5CF6', createdAt: '2024-09-15', updatedAt: '2024-09-15', fileCount: 1 }
+  ]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
   // Credential management
   const [credentials] = useState<CredentialInfo[]>([
     {
@@ -332,7 +343,8 @@ export const useCloudStorage = () => {
       const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            file.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesFilter = filterType === 'all' || file.type === filterType;
-      return matchesSearch && matchesFilter;
+      const matchesFolder = selectedFolderId === null ? file.folderId === undefined : file.folderId === selectedFolderId;
+      return matchesSearch && matchesFilter && matchesFolder;
     });
 
     // Sort files
@@ -349,7 +361,7 @@ export const useCloudStorage = () => {
     });
 
     return filtered;
-  }, [files, searchTerm, filterType, sortBy]);
+  }, [files, searchTerm, filterType, sortBy, selectedFolderId]);
 
   const storageInfo: StorageInfo = useMemo(() => ({
     used: storageUsed,
@@ -576,6 +588,59 @@ export const useCloudStorage = () => {
     // TODO: Implement actual cloud disconnection logic
   }, []);
 
+  // Folder management functions
+  const handleCreateFolder = useCallback((name: string, color?: string) => {
+    const newFolder: import('../types/cloudStorage').Folder = {
+      id: `folder_${Date.now()}`,
+      name,
+      color: color || '#6B7280',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      fileCount: 0
+    };
+    setFolders(prev => [...prev, newFolder]);
+    logger.debug('Folder created:', newFolder);
+  }, []);
+
+  const handleRenameFolder = useCallback((folderId: string, newName: string) => {
+    setFolders(prev => prev.map(folder => 
+      folder.id === folderId 
+        ? { ...folder, name: newName, updatedAt: new Date().toISOString() }
+        : folder
+    ));
+    logger.debug('Folder renamed:', folderId, newName);
+  }, []);
+
+  const handleDeleteFolder = useCallback((folderId: string) => {
+    setFolders(prev => prev.filter(folder => folder.id !== folderId));
+    // Move files from deleted folder back to root
+    setFiles(prev => prev.map(file => 
+      file.folderId === folderId ? { ...file, folderId: undefined } : file
+    ));
+    logger.debug('Folder deleted:', folderId);
+  }, []);
+
+  const handleMoveToFolder = useCallback((fileId: string, folderId: string | null) => {
+    setFiles(prev => prev.map(file => 
+      file.id === fileId ? { ...file, folderId } : file
+    ));
+    
+    // Update folder file counts
+    if (folderId) {
+      const file = files.find(f => f.id === fileId);
+      const oldFolderId = file?.folderId;
+      
+      setFolders(prev => prev.map(folder => {
+        let count = folder.fileCount || 0;
+        if (folder.id === oldFolderId) count = Math.max(0, count - 1);
+        if (folder.id === folderId) count++;
+        return { ...folder, fileCount: count };
+      }));
+    }
+    
+    logger.debug('File moved to folder:', fileId, folderId);
+  }, [files]);
+
   return {
     // State
     files,
@@ -588,6 +653,8 @@ export const useCloudStorage = () => {
     storageInfo,
     credentials,
     credentialReminders,
+    folders,
+    selectedFolderId,
     accessLogs,
     cloudIntegrations,
     
@@ -604,6 +671,7 @@ export const useCloudStorage = () => {
     setShowUploadModal,
     setStorageUsed,
     setStorageLimit,
+    setSelectedFolderId,
     
     // Actions
     handleFileSelect,
@@ -638,6 +706,12 @@ export const useCloudStorage = () => {
     // Cloud Integration
     handleConnectCloud,
     handleSyncCloud,
-    handleDisconnectCloud
+    handleDisconnectCloud,
+    
+    // Folder Management
+    handleCreateFolder,
+    handleRenameFolder,
+    handleDeleteFolder,
+    handleMoveToFolder
   };
 };
