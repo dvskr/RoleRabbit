@@ -25,6 +25,7 @@ import {
   X
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
+import { logger } from '../../utils/logger';
 
 interface FileCardProps {
   file: ResumeFile;
@@ -140,7 +141,7 @@ export default function FileCard({
       };
       
       // Store the share link data
-      console.log('Sharing with options:', shareOptions);
+      logger.debug('Sharing with options:', shareOptions);
       onShareWithUser(file.id, shareEmail.trim(), sharePermission);
       
       // Reset form
@@ -157,7 +158,7 @@ export default function FileCard({
     if (newComment.trim()) {
       onAddComment(file.id, newComment.trim());
       setNewComment('');
-      console.log('Comment submitted for file:', file.id);
+      logger.debug('Comment submitted for file:', file.id);
     }
   };
 
@@ -396,7 +397,7 @@ export default function FileCard({
           <div className="flex items-center space-x-1">
             <button
               onClick={() => {
-                console.log('Comment button clicked! Current state:', showComments);
+                logger.debug('Comment button clicked! Current state:', showComments);
                 setShowComments(!showComments);
               }}
               className={`p-2 rounded-lg transition-colors ${
@@ -635,7 +636,7 @@ export default function FileCard({
         </button>
         <button
           onClick={() => {
-            console.log('Comment button clicked (list view)! Current state:', showComments);
+            logger.debug('Comment button clicked (list view)! Current state:', showComments);
             setShowComments(!showComments);
           }}
           className={`p-2 rounded-lg transition-colors ${

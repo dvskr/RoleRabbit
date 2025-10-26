@@ -34,6 +34,7 @@ export interface Post {
   views: number;
   isPinned: boolean;
   isLocked: boolean;
+  isBookmarked?: boolean;
   tags: string[];
   aiScore: number;
   type: 'text' | 'image' | 'link' | 'poll' | 'question';

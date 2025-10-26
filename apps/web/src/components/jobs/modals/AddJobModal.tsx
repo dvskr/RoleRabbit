@@ -6,9 +6,10 @@ import { X } from 'lucide-react';
 interface AddJobModalProps {
   onClose: () => void;
   onAdd: (job: any) => void;
+  initialStatus?: 'applied' | 'interview' | 'offer' | 'rejected';
 }
 
-export default function AddJobModal({ onClose, onAdd }: AddJobModalProps) {
+export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     company: '',
@@ -24,7 +25,7 @@ export default function AddJobModal({ onClose, onAdd }: AddJobModalProps) {
     onAdd({
       ...formData,
       id: `job-${Date.now()}`,
-      status: 'applied' as 'applied' | 'interview' | 'offer' | 'rejected'
+      status: initialStatus || 'applied'
     });
     onClose();
   };
