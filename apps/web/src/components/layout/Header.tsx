@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu } from 'lucide-react';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Shield, Share2 } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -15,9 +15,12 @@ interface HeaderProps {
   onUndo: () => void;
   onRedo: () => void;
   onImport: () => void;
+  onDuplicate?: () => void;
   onSave: () => void;
   onToggleAIPanel: () => void;
   onShowMobileMenu: () => void;
+  onShowATSChecker?: () => void;
+  onShowResumeSharing?: () => void;
   setPreviousSidebarState: (state: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowRightPanel: (show: boolean) => void;
@@ -35,9 +38,12 @@ export default function Header({
   onUndo,
   onRedo,
   onImport,
+  onDuplicate,
   onSave,
   onToggleAIPanel,
   onShowMobileMenu,
+  onShowATSChecker,
+  onShowResumeSharing,
   setPreviousSidebarState,
   setSidebarCollapsed,
   setShowRightPanel
@@ -96,6 +102,15 @@ export default function Header({
           <Upload size={16} className="text-gray-600 group-hover:text-purple-600" />
           <span className="font-medium">Import</span>
         </button>
+        {onDuplicate && (
+          <button 
+            onClick={onDuplicate}
+            className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
+          >
+            <Copy size={16} className="text-gray-600 group-hover:text-indigo-600" />
+            <span className="font-medium">Duplicate</span>
+          </button>
+        )}
         <button 
           onClick={onExport}
           className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-green-400 hover:bg-green-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
@@ -103,6 +118,24 @@ export default function Header({
           <Download size={16} className="text-gray-600 group-hover:text-green-600" />
           <span className="font-medium">Export</span>
         </button>
+        {onShowATSChecker && (
+          <button 
+            onClick={onShowATSChecker}
+            className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
+          >
+            <Shield size={16} className="text-gray-600 group-hover:text-indigo-600" />
+            <span className="font-medium">ATS Check</span>
+          </button>
+        )}
+        {onShowResumeSharing && (
+          <button 
+            onClick={onShowResumeSharing}
+            className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-purple-400 hover:bg-purple-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
+          >
+            <Share2 size={16} className="text-gray-600 group-hover:text-purple-600" />
+            <span className="font-medium">Share</span>
+          </button>
+        )}
         <button 
           onClick={handleToggleAIPanel}
           className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center gap-2 transition-all duration-200"

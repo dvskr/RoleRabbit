@@ -48,22 +48,26 @@ export default function TemplateCard({ template, onUse, onEdit, onDelete }: Temp
           <Mail size={14} />
           <span>{template.usageCount} uses</span>
         </div>
-        {template.isCustom && (
+        {(onEdit || onDelete) && (
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => onEdit?.(template)}
-              className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-              title="Edit"
-            >
-              <Edit size={14} className="text-gray-600" />
-            </button>
-            <button
-              onClick={() => onDelete?.(template)}
-              className="p-1.5 hover:bg-red-50 rounded transition-colors"
-              title="Delete"
-            >
-              <Trash2 size={14} className="text-red-600" />
-            </button>
+            {onEdit && (
+              <button
+                onClick={() => onEdit(template)}
+                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                title="Edit"
+              >
+                <Edit size={14} className="text-gray-600" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(template)}
+                className="p-1.5 hover:bg-red-50 rounded transition-colors"
+                title="Delete"
+              >
+                <Trash2 size={14} className="text-red-600" />
+              </button>
+            )}
           </div>
         )}
       </div>

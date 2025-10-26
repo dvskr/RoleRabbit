@@ -435,23 +435,23 @@ export default function FileCard({
 
         {/* Comments Section */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="space-y-3">
+          <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-full overflow-hidden">
+            <div className="space-y-3 max-w-full">
               {/* Existing Comments */}
               {file.comments && file.comments.length > 0 ? (
                 file.comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <div key={comment.id} className="flex space-x-3 max-w-full">
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs text-white font-medium">
                         {comment.userName?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
                         <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
                       </div>
-                      <p className="text-sm text-gray-700">{comment.content}</p>
+                      <p className="text-sm text-gray-700 break-words">{comment.content}</p>
                     </div>
                   </div>
                 ))
@@ -462,23 +462,23 @@ export default function FileCard({
               )}
               
               {/* Add Comment */}
-              <div className="flex space-x-3">
-                <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
+              <div className="flex space-x-3 max-w-full">
+                <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-xs text-white font-medium">U</span>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 max-w-full">
                   <textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm box-border"
                     rows={2}
                   />
                   <div className="flex justify-end mt-2 space-x-2">
                     <button
                       onClick={handleCommentSubmit}
                       disabled={!newComment.trim()}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                     >
                       Comment
                     </button>
@@ -487,7 +487,7 @@ export default function FileCard({
                         setNewComment('');
                         setShowComments(false);
                       }}
-                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
                     >
                       Cancel
                     </button>
@@ -503,22 +503,23 @@ export default function FileCard({
 
   // List view - Enhanced version
   return (
-    <div className={`group flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-all duration-300 ${
+    <div className={`group flex flex-col p-4 border rounded-xl hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full ${
       isSelected ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'
     }`}>
-      <div className="flex items-center space-x-4 flex-1">
+      <div className="flex items-center justify-between w-full min-w-0">
+        <div className="flex items-center space-x-4 flex-1 min-w-0">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => onSelect(file.id)}
-          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
         />
         
-        <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center">
+        <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0">
           {getFileIcon(file.type)}
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-w-full">
           <div className="flex items-center space-x-3 mb-1">
             <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
               {file.name}
@@ -573,10 +574,10 @@ export default function FileCard({
         </div>
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
         <button
           onClick={() => onStar(file.id)}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
             file.isStarred 
               ? 'text-yellow-500 bg-yellow-100' 
               : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-100'
@@ -587,7 +588,7 @@ export default function FileCard({
         </button>
         <button
           onClick={() => onTogglePublic(file.id)}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
             file.isPublic 
               ? 'text-green-600 bg-green-100' 
               : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
@@ -596,10 +597,10 @@ export default function FileCard({
         >
           {file.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
         </button>
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowDownloadFormat(!showDownloadFormat)}
-            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0"
             title="Download"
           >
             <Download size={16} />
@@ -629,7 +630,7 @@ export default function FileCard({
         </div>
         <button
           onClick={() => setShowShareModal(true)}
-          className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+          className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors flex-shrink-0"
           title="Share"
         >
           <Share2 size={16} />
@@ -639,7 +640,7 @@ export default function FileCard({
             logger.debug('Comment button clicked (list view)! Current state:', showComments);
             setShowComments(!showComments);
           }}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
             showComments 
               ? 'text-purple-600 bg-purple-100' 
               : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
@@ -650,29 +651,29 @@ export default function FileCard({
         </button>
         <button
           onClick={() => onEdit(file.id)}
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           title="Edit"
         >
           <Edit size={16} />
         </button>
         <button
           onClick={() => onArchive(file.id)}
-          className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+          className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors flex-shrink-0"
           title={file.isArchived ? 'Unarchive' : 'Archive'}
         >
           <Archive size={16} />
         </button>
         <button
           onClick={() => onDelete(file.id)}
-          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors flex-shrink-0"
           title="Delete"
         >
           <Trash2 size={16} />
         </button>
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <button 
             onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             title="More options"
           >
             <MoreVertical size={16} />
@@ -721,26 +722,27 @@ export default function FileCard({
           )}
         </div>
       </div>
+    </div>
 
-      {/* Comments Section - List View */}
+    {/* Comments Section - List View */}
       {showComments && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="space-y-3">
+        <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-full overflow-hidden">
+          <div className="space-y-3 max-w-full">
             {/* Existing Comments */}
             {file.comments && file.comments.length > 0 ? (
               file.comments.map((comment) => (
-                <div key={comment.id} className="flex space-x-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                <div key={comment.id} className="flex space-x-3 max-w-full">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-xs text-white font-medium">
                       {comment.userName?.charAt(0).toUpperCase() || 'U'}
                     </span>
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
                       <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-sm text-gray-700">{comment.content}</p>
+                    <p className="text-sm text-gray-700 break-words">{comment.content}</p>
                   </div>
                 </div>
               ))
@@ -751,23 +753,23 @@ export default function FileCard({
             )}
             
             {/* Add Comment */}
-            <div className="flex space-x-3">
-              <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
+            <div className="flex space-x-3 max-w-full">
+              <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-xs text-white font-medium">U</span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0 max-w-full">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                  className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm box-border"
                   rows={2}
                 />
                 <div className="flex justify-end mt-2 space-x-2">
                   <button
                     onClick={handleCommentSubmit}
                     disabled={!newComment.trim()}
-                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                   >
                     Comment
                   </button>
@@ -776,7 +778,7 @@ export default function FileCard({
                       setNewComment('');
                       setShowComments(false);
                     }}
-                    className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                    className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
                   >
                     Cancel
                   </button>

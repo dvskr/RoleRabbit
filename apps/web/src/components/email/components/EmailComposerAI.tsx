@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Send, Paperclip, X, Wand2, Sparkles, RefreshCw, Check, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, Paperclip, X, Wand2, Sparkles, RefreshCw, MessageSquare, FileText } from 'lucide-react';
 
 interface EmailComposerAIProps {
   recipientEmail?: string;
@@ -27,6 +27,27 @@ export default function EmailComposerAI({
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showPromptInput, setShowPromptInput] = useState(false);
+  
+  // Template states
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  
+  // Load templates
+  useEffect(() => {
+    const saved = localStorage.getItem('emailTemplates');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTemplates(parsed);
+        }
+      } catch (e) {
+        console.error('Error loading templates:', e);
+      }
+    }
+  }, []);
 
   const handleSend = () => {
     if (onSend) {
@@ -101,6 +122,51 @@ Best regards,
     setIsGenerating(false);
   };
 
+  const handleSelectTemplate = (template: any) => {
+    setSelectedTemplate(template);
+    // Extract variables from template
+    const vars: string[] = [];
+    const subjectVars = template.subject.match(/{{(\w+)}}/g) || [];
+    const bodyVars = template.body.match(/{{(\w+)}}/g) || [];
+    
+    [...new Set([...subjectVars, ...bodyVars])].forEach(v => {
+      const varName = v.replace(/{{|}}/g, '');
+      if (!vars.includes(varName)) vars.push(varName);
+    });
+    
+    setVariableValues({});
+    // If no variables, apply directly
+    if (vars.length === 0) {
+      applyTemplate(template, {});
+    } else {
+      // Show variable input modal by showing the template modal with variable inputs
+    }
+    setShowTemplateModal(true);
+  };
+
+  const applyTemplate = (template: any, values: Record<string, string>) => {
+    let finalSubject = template.subject;
+    let finalBody = template.body;
+    
+    // Replace all variables
+    Object.keys(values).forEach(key => {
+      finalSubject = finalSubject.replace(new RegExp(`{{${key}}}`, 'g'), values[key] || '');
+      finalBody = finalBody.replace(new RegExp(`{{${key}}}`, 'g'), values[key] || '');
+    });
+    
+    setSubject(finalSubject);
+    setBody(finalBody);
+    setShowTemplateModal(false);
+    setSelectedTemplate(null);
+    setVariableValues({});
+  };
+
+  const handleApplyTemplateWithVariables = () => {
+    if (selectedTemplate) {
+      applyTemplate(selectedTemplate, variableValues);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
@@ -112,6 +178,16 @@ Best regards,
             title="Attach File"
           >
             <Paperclip size={18} className="text-gray-600" />
+          </button>
+
+          {/* Use Template Button */}
+          <button
+            onClick={() => setShowTemplateModal(true)}
+            className="p-2 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-2"
+            title="Use Email Template"
+          >
+            <FileText size={18} className="text-indigo-600" />
+            <span className="text-xs text-indigo-600 font-medium">Template</span>
           </button>
           
           {/* AI Assistant Button */}
@@ -315,6 +391,65 @@ Best regards,
           </div>
         </div>
       </div>
+
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 rounded-lg">
+                  <FileText size={24} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Select Email Template</h3>
+                  <p className="text-sm text-gray-600">Choose a template to use in your email</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.map(template => (
+                <div
+                  key={template.id}
+                  onClick={() => handleSelectTemplate(template)}
+                  className="p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h4 className="font-semibold text-gray-900">{template.name}</h4>
+                    {template.isCustom && (
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                        Custom
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{template.category}</p>
+                  <p className="text-sm text-gray-600 truncate mb-1">{template.subject}</p>
+                  <p className="text-xs text-gray-500 line-clamp-2">{template.body}</p>
+                  <div className="flex items-center gap-1 mt-3 text-xs text-gray-500">
+                    <MessageSquare size={12} />
+                    <span>{template.usageCount} uses</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {templates.length === 0 && (
+              <div className="text-center py-12">
+                <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500 mb-2">No templates available</p>
+                <p className="text-sm text-gray-400">Create templates in the Templates tab</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
