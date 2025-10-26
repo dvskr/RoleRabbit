@@ -277,7 +277,6 @@ export const MobileTabSwiper: React.FC<MobileTabSwiperProps> = ({
 
       {/* Swipeable Content */}
       <div
-        ref={containerRef}
         {...swipeHandlers}
         className="relative overflow-hidden"
       >
@@ -484,7 +483,6 @@ export const MobileButton: React.FC<MobileButtonProps> = ({
         ${sizeClasses[size]}
         ${className}
       `}
-      {...props}
     >
       {children}
     </motion.button>

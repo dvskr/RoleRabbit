@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { CheckCircle, Circle, Clock, Filter, Plus, Zap } from 'lucide-react';
-import { DashboardTodo } from '../../types/dashboard';
+import { DashboardTodo } from '../types/dashboard';
 
 interface SmartTodoSystemProps {
   todos: DashboardTodo[];
@@ -179,7 +179,7 @@ export function SmartTodoSystem({
                       {todo.title}
                     </h4>
                     {todo.aiGenerated && (
-                      <Zap size={8} className="text-yellow-500" title="AI Generated" />
+                      <Zap size={8} className="text-yellow-500" />
                     )}
                   </div>
                   

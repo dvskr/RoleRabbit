@@ -240,7 +240,15 @@ export const useCloudStorage = () => {
       lastModified: new Date().toISOString().split('T')[0],
       isPublic: fileData.isPublic || false,
       tags: fileData.tags || [],
-      version: 1
+      version: 1,
+      owner: 'current-user',
+      sharedWith: [],
+      comments: [],
+      downloadCount: 0,
+      isStarred: false,
+      isArchived: false,
+      description: '',
+      viewCount: 0
     };
     
     setFiles(prev => [newFile, ...prev]);
@@ -381,6 +389,7 @@ export const useCloudStorage = () => {
     handleDeleteFiles,
     handleTogglePublic,
     handleDownloadFile,
+    handleShareFile,
     handleUploadFile,
     handleEditFile,
     handleRefresh,

@@ -6,7 +6,7 @@ import { UserProfile } from '../../types/userProfile';
 
 interface ProfileTabProps {
   profileForm: UserProfile;
-  setProfileForm: (profile: UserProfile) => void;
+  setProfileForm: (profile: UserProfile | ((prev: UserProfile) => UserProfile)) => void;
   isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   onSave: (profile: UserProfile) => void;

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Save, Download, Printer, FileText } from 'lucide-react';
-import { CoverLetterHeaderProps } from '../types/coverletter';
+import { CoverLetterHeaderProps } from './types/coverletter';
 
 export default function CoverLetterHeader({ 
   onSave, 

@@ -6,7 +6,7 @@ import { UserPreferences } from '../../types/userProfile';
 
 interface PreferencesTabProps {
   preferences: UserPreferences;
-  setPreferences: (preferences: UserPreferences) => void;
+  setPreferences: (preferences: UserPreferences | ((prev: UserPreferences) => UserPreferences)) => void;
   onUpdate: (preferences: UserPreferences) => void;
 }
 

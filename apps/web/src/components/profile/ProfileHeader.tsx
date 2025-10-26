@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Save, Edit } from 'lucide-react';
-import { ProfileHeaderProps } from '../types/profile';
+import { ProfileHeaderProps } from './types/profile';
 
 export default function ProfileHeader({
   isEditing,

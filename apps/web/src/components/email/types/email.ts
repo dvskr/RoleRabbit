@@ -82,7 +82,7 @@ export interface AIGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (content: string) => void;
-  context: AIGontext;
+  context: AIContext;
   onContextChange: (context: Partial<AIContext>) => void;
   prompt: string;
   onPromptChange: (prompt: string) => void;

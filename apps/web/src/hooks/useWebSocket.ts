@@ -13,6 +13,7 @@ interface UseWebSocketOptions {
 interface UseWebSocketReturn {
   socket: WebSocket | null;
   isConnected: boolean;
+  connectionState: 'connecting' | 'connected' | 'disconnecting' | 'disconnected';
   sendMessage: (message: string | object) => void;
   reconnect: () => void;
   disconnect: () => void;
@@ -31,15 +32,18 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
 
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<'connecting' | 'connected' | 'disconnecting' | 'disconnected'>('disconnected');
   const reconnectAttempts = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
 
   const connect = () => {
     try {
+      setConnectionState('connecting');
       const ws = new WebSocket(url);
       
       ws.onopen = (event) => {
         setIsConnected(true);
+        setConnectionState('connected');
         reconnectAttempts.current = 0;
         onOpen?.(event);
       };
@@ -50,6 +54,7 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
 
       ws.onclose = (event) => {
         setIsConnected(false);
+        setConnectionState('disconnected');
         onClose?.(event);
         
         // Attempt to reconnect if not manually closed
@@ -62,12 +67,14 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
       };
 
       ws.onerror = (event) => {
+        setConnectionState('disconnected');
         onError?.(event);
       };
 
       setSocket(ws);
     } catch (error) {
       console.error('WebSocket connection error:', error);
+      setConnectionState('disconnected');
     }
   };
 
@@ -109,6 +116,7 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
   return {
     socket,
     isConnected,
+    connectionState,
     sendMessage,
     reconnect,
     disconnect

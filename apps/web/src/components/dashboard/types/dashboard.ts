@@ -86,6 +86,16 @@ export interface DashboardData {
 }
 
 // Configuration for easy backend integration later
+export interface DashboardWidget {
+  id: string;
+  type: 'activity' | 'todos' | 'metrics' | 'alerts' | 'actions' | 'premium';
+  title: string;
+  description: string;
+  isVisible: boolean;
+  order: number;
+  size: 'small' | 'medium' | 'large';
+}
+
 export interface DashboardConfig {
   // Data source configuration
   dataSource: 'mock' | 'api' | 'hybrid';

@@ -204,7 +204,11 @@ interface ConnectionStatusProps {
 }
 
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ className = '' }) => {
-  const { isConnected, connectionState, reconnect } = useWebSocket();
+  const { isConnected, connectionState, reconnect } = useWebSocket({
+    url: 'ws://localhost:8080',
+    reconnectInterval: 3000,
+    maxReconnectAttempts: 5
+  });
 
   const getStatusColor = () => {
     switch (connectionState) {

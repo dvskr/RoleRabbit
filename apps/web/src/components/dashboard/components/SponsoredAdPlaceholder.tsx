@@ -86,16 +86,16 @@ export function SponsoredAdPlaceholder() {
       </div>
 
       {/* Features Grid - Fill all available space */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide p-3">
-        <div className="grid grid-cols-1 gap-2">
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-2">
+        <div className="grid grid-cols-1 gap-1.5">
           {roleReadyFeatures.map(feature => (
             <div
               key={feature.id}
-              className="p-2 rounded border border-gray-200 hover:shadow-sm transition-shadow cursor-pointer group bg-gradient-to-r from-white to-gray-50"
+              className="p-1.5 rounded border border-gray-200 hover:shadow-sm transition-shadow cursor-pointer group bg-gradient-to-r from-white to-gray-50"
             >
               <div className="flex items-start gap-2">
                 <div className={`p-1.5 rounded ${feature.color} text-white flex-shrink-0`}>
-                  <feature.icon size={12} />
+                  <feature.icon size={10} />
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -108,11 +108,11 @@ export function SponsoredAdPlaceholder() {
                     </span>
                   </div>
                   
-                  <p className="text-xs text-gray-600 line-clamp-2 mb-1">
+                  <p className="text-[10px] text-gray-600 line-clamp-1 mb-0.5">
                     {feature.description}
                   </p>
                   
-                  <button className="text-xs text-blue-600 hover:text-blue-700 font-medium group-hover:underline">
+                  <button className="text-[10px] text-blue-600 hover:text-blue-700 font-medium group-hover:underline">
                     {feature.action} →
                   </button>
                 </div>

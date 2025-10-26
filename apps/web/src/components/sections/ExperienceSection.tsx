@@ -4,7 +4,7 @@ import { ResumeData, ExperienceItem, CustomField } from '../../types/resume';
 
 interface ExperienceSectionProps {
   resumeData: ResumeData;
-  setResumeData: (data: ResumeData) => void;
+  setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
   sectionVisibility: { [key: string]: boolean };
   onHideSection: (section: string) => void;
   onOpenAIGenerateModal: (section: string) => void;

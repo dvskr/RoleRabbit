@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { TrendingUp, TrendingDown, Minus, BarChart3, Target, Clock } from 'lucide-react';
-import { DashboardMetrics } from '../../types/dashboard';
+import { DashboardMetrics } from '../types/dashboard';
 
 interface ProgressMetricsProps {
   metrics: DashboardMetrics;
@@ -85,14 +85,14 @@ export function ProgressMetrics({
   ];
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col" style={{ height: `${getDynamicHeight()}px` }}>
+    <div className="bg-white rounded-lg border border-gray-200 flex flex-col h-full">
       {/* Header - Compact */}
       <div className="p-3 border-b border-gray-200">
         <h3 className="text-base font-semibold text-gray-900">Progress Metrics</h3>
         <p className="text-xs text-gray-600">Your job search performance</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(4)].map((_, i) => (

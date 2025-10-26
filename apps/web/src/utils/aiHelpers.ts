@@ -2,7 +2,7 @@ import { ResumeData, AIMessage } from '../types/resume';
 
 // AI helper functions
 export const aiHelpers = {
-  generateAIContent: (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData) => void, setShowAIGenerateModal: (show: boolean) => void) => {
+  generateAIContent: (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void, setShowAIGenerateModal: (show: boolean) => void) => {
     if (!aiPrompt.trim()) return;
     
     try {
@@ -189,7 +189,7 @@ export const aiHelpers = {
     setAiRecommendations([]);
   },
 
-  sendAIMessage: (aiPrompt: string, setAiPrompt: (prompt: string) => void, aiConversation: AIMessage[], setAiConversation: (conversation: AIMessage[]) => void) => {
+  sendAIMessage: (aiPrompt: string, setAiPrompt: (prompt: string) => void, aiConversation: AIMessage[], setAiConversation: (conversation: AIMessage[] | ((prev: AIMessage[]) => AIMessage[])) => void) => {
     if (!aiPrompt.trim()) return;
     
     const newMessage = { role: 'user', text: aiPrompt };

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Job, JobFilters, JobStats, ViewMode } from '../../types/job';
+import { Job, JobFilters, JobStats, ViewMode } from '../types/job';
 
 const initialJobs: Job[] = [
   {

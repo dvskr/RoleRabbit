@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
-import { EmailHeaderProps } from '../types/email';
+import { EmailHeaderProps } from './types/email';
 
 export default function EmailHeader({ onCompose, onSync }: EmailHeaderProps) {
   return (
