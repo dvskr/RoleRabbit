@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable } from './jobs';
+import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
 import { useJobs } from '../hooks/useJobs';
 import { Job } from '../types/job';
 
@@ -29,21 +29,67 @@ export default function JobTracker() {
 
   const [showAddJob, setShowAddJob] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [viewingJob, setViewingJob] = useState<Job | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const handleAddJob = () => {
     setShowAddJob(true);
+  };
+
+  const handleAddJobSubmit = (jobData: any) => {
+    addJob(jobData);
+    setShowAddJob(false);
   };
 
   const handleEditJob = (job: Job) => {
     setEditingJob(job);
   };
 
+  const handleEditJobSubmit = (jobData: Job) => {
+    updateJob(jobData);
+    setEditingJob(null);
+  };
+
   const handleViewJob = (job: Job) => {
-    // TODO: Implement job details view
+    setViewingJob(job);
   };
 
   const handleAddJobToColumn = (status: Job['status']) => {
     // TODO: Implement add job to specific column
+  };
+
+  const handleExportJobs = () => {
+    setShowExportModal(true);
+  };
+
+  const handleImportJobs = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const importedJobs = JSON.parse(event.target?.result as string);
+            console.log('Imported jobs:', importedJobs);
+            // TODO: Add logic to import jobs into state
+          } catch (error) {
+            console.error('Error importing jobs:', error);
+            alert('Failed to import jobs. Please check the file format.');
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  };
+
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const handleShowSettings = () => {
+    setShowSettingsModal(true);
   };
 
   const renderJobs = () => {
@@ -80,16 +126,12 @@ export default function JobTracker() {
       case 'table':
     return (
           <div className="p-6">
-            <JobTable
+            <EditableJobTable
               jobs={jobs}
-              favorites={favorites}
-              selectedJobs={selectedJobs}
-              onToggleFavorite={toggleFavorite}
-              onToggleSelection={toggleJobSelection}
-              onSelectAll={selectAllJobs}
               onEdit={handleEditJob}
               onDelete={deleteJob}
               onView={handleViewJob}
+              onAdd={handleAddJob}
             />
       </div>
     );
@@ -144,9 +186,9 @@ export default function JobTracker() {
         onBulkUpdateStatus={bulkUpdateStatus}
         onBulkDelete={bulkDelete}
         onClearSelection={clearSelection}
-        onExport={() => console.log('Export jobs')}
-        onImport={() => console.log('Import jobs')}
-        onShowSettings={() => console.log('Show settings')}
+        onExport={handleExportJobs}
+        onImport={handleImportJobs}
+        onShowSettings={handleShowSettings}
       />
 
       {/* Scrollable Content */}
@@ -174,52 +216,44 @@ export default function JobTracker() {
         )}
       </div>
 
-      {/* TODO: Add Job Form Modal */}
+      {/* Add Job Modal */}
       {showAddJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Add New Job</h2>
-            <p className="text-gray-600 mb-4">Job form will be implemented here</p>
-            <div className="flex gap-3">
-            <button
-                onClick={() => setShowAddJob(false)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-                Cancel
-            </button>
-              <button
-                onClick={() => setShowAddJob(false)}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Add Job
-              </button>
-            </div>
-                </div>
-              </div>
+        <AddJobModal
+          onClose={() => setShowAddJob(false)}
+          onAdd={handleAddJobSubmit}
+        />
       )}
 
-      {/* TODO: Edit Job Modal */}
+      {/* Edit Job Modal */}
       {editingJob && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold mb-4">Edit Job</h2>
-            <p className="text-gray-600 mb-4">Job edit form will be implemented here</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setEditingJob(null)}
-                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setEditingJob(null)}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditJobModal
+          job={editingJob}
+          onClose={() => setEditingJob(null)}
+          onUpdate={handleEditJobSubmit}
+        />
+      )}
+
+      {/* Job Detail View */}
+      {viewingJob && (
+        <JobDetailView
+          job={viewingJob}
+          onClose={() => setViewingJob(null)}
+        />
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          data={jobs}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <SettingsModal
+          onClose={() => setShowSettingsModal(false)}
+        />
       )}
       
       {/* Floating Action Button */}

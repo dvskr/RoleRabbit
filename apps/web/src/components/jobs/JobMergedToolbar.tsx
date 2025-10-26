@@ -136,6 +136,24 @@ export default function JobMergedToolbar({
           {/* View Mode Toggle */}
           <div className="flex items-center border border-gray-300 rounded-md p-0.5">
             <button
+              onClick={() => onViewModeChange('table')}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === 'table' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
+              }`}
+              title="Table View"
+            >
+              <BarChart3 size={14} />
+            </button>
+            <button
+              onClick={() => onViewModeChange('kanban')}
+              className={`p-1.5 rounded transition-colors ${
+                viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
+              }`}
+              title="Kanban View"
+            >
+              <Columns size={14} />
+            </button>
+            <button
               onClick={() => onViewModeChange('list')}
               className={`p-1.5 rounded transition-colors ${
                 viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
@@ -153,27 +171,9 @@ export default function JobMergedToolbar({
             >
               <Grid size={14} />
             </button>
-            <button
-              onClick={() => onViewModeChange('kanban')}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === 'kanban' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
-              }`}
-              title="Kanban View"
-            >
-              <Columns size={14} />
-            </button>
-            <button
-              onClick={() => onViewModeChange('table')}
-              className={`p-1.5 rounded transition-colors ${
-                viewMode === 'table' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
-              }`}
-              title="Table View"
-            >
-              <BarChart3 size={14} />
-            </button>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - Reordered to: Download, Upload, Settings */}
           <div className="flex items-center gap-1">
             <button
               onClick={onExport}

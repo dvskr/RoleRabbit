@@ -76,9 +76,12 @@ export default function JobCard({
           
           <div className="flex items-center gap-1">
             <button
-              onClick={() => onView(job)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onView(job);
+              }}
               className="p-1 text-gray-400 hover:text-blue-600 rounded transition-colors"
-              title="View Details"
+              title="View Details & Trackers"
             >
               <Eye size={16} />
             </button>
