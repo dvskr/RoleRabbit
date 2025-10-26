@@ -1,0 +1,55 @@
+{
+  "name": "roleready-fullstack",
+  "version": "1.0.0",
+  "description": "AI-Powered Resume Builder Platform - Full Stack Application",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:api-python": "cd apps/api-python && python start.py",
+    "dev:all": "concurrently \"npm run dev:api\" \"npm run dev:api-python\" \"npm run dev:web\"",
+    "build": "turbo run build",
+    "build:web": "cd apps/web && npm run build",
+    "build:api": "cd apps/api && npm run build",
+    "lint": "turbo run lint",
+    "lint:web": "cd apps/web && npm run lint",
+    "lint:api": "cd apps/api && npm run lint",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "clean": "turbo run clean",
+    "install:all": "npm install && cd apps/web && npm install && cd ../api && npm install",
+    "start:web": "cd apps/web && npm run start",
+    "start:api": "cd apps/api && npm run start"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.0",
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "resume-builder",
+    "ai-powered",
+    "nextjs",
+    "typescript",
+    "fullstack",
+    "career-platform"
+  ],
+  "author": "Sathish Kumar <dvskr.333@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dvskr/roleready-fullstack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dvskr/roleready-fullstack/issues"
+  },
+  "homepage": "https://github.com/dvskr/roleready-fullstack#readme"
+}

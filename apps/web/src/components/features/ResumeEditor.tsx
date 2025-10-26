@@ -158,7 +158,7 @@ export default function ResumeEditor({
             </h3>
             <button
               onClick={() => setResumeFileName(onGenerateSmartFileName())}
-              className="p-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
+              className="p-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all"
               title="Generate Smart Filename"
             >
               <Sparkles size={12} />
@@ -185,7 +185,7 @@ export default function ResumeEditor({
           </h3>
           <button
                onClick={onShowAddSectionModal}
-            className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all hover:scale-110"
+            className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all"
             title="Add Custom Section"
           >
             <Plus size={16} />

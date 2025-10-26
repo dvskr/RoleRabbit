@@ -1,0 +1,103 @@
+﻿
+> @roleready/web@1.0.0 type-check
+> tsc --noEmit
+
+e2e/accessibility.spec.ts(143,46): error TS2345: Argument of type 'Element | null' is not assignable to parameter of type 'Element'.
+  Type 'null' is not assignable to type 'Element'.
+e2e/advanced-features.spec.ts(336,11): error TS7022: 'performance' implicitly has type 'any' because it does not have a type annotation and is referenced directly or indirectly in its own initializer.
+e2e/advanced-features.spec.ts(336,45): error TS7024: Function implicitly has return type 'any' because it does not have a return type annotation and is referenced directly or indirectly in one of its return expressions.
+e2e/api-integration.spec.ts(159,9): error TS2322: Type 'File' is not assignable to type 'string | number | boolean | ReadStream | { name: string; mimeType: string; buffer: Buffer<ArrayBufferLike>; }'.
+  Type 'File' is missing the following properties from type '{ name: string; mimeType: string; buffer: Buffer<ArrayBufferLike>; }': mimeType, buffer
+e2e/api.spec.ts(46,9): error TS2322: Type 'File' is not assignable to type 'string | number | boolean | ReadStream | { name: string; mimeType: string; buffer: Buffer<ArrayBufferLike>; }'.
+  Type 'File' is missing the following properties from type '{ name: string; mimeType: string; buffer: Buffer<ArrayBufferLike>; }': mimeType, buffer
+e2e/backend-integration.spec.ts(247,21): error TS2339: Property 'applicationLogs' does not exist on type 'Window & typeof globalThis'.
+e2e/backend-integration.spec.ts(263,21): error TS2339: Property 'analyticsData' does not exist on type 'Window & typeof globalThis'.
+e2e/compatibility.spec.ts(89,16): error TS2339: Property 'emulate' does not exist on type 'Page'.
+e2e/compatibility.spec.ts(96,16): error TS2339: Property 'emulate' does not exist on type 'Page'.
+e2e/compatibility.spec.ts(105,16): error TS2339: Property 'emulate' does not exist on type 'Page'.
+e2e/compatibility.spec.ts(238,18): error TS2339: Property 'emulate' does not exist on type 'Page'.
+e2e/cross-browser.spec.ts(209,12): error TS18048: 'headers' is possibly 'undefined'.
+e2e/cross-browser.spec.ts(210,12): error TS18048: 'headers' is possibly 'undefined'.
+e2e/error-handling.spec.ts(301,21): error TS2339: Property 'errorLogs' does not exist on type 'Window & typeof globalThis'.
+e2e/performance.spec.ts(25,13): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+  No index signature with a parameter of type 'string' was found on type '{}'.
+e2e/performance.spec.ts(25,41): error TS2339: Property 'value' does not exist on type 'PerformanceEntry'.
+e2e/performance.spec.ts(196,26): error TS2339: Property 'memory' does not exist on type 'Performance'.
+e2e/performance.spec.ts(196,47): error TS2339: Property 'memory' does not exist on type 'Performance'.
+e2e/performance.spec.ts(208,26): error TS2339: Property 'memory' does not exist on type 'Performance'.
+e2e/performance.spec.ts(208,47): error TS2339: Property 'memory' does not exist on type 'Performance'.
+e2e/security.spec.ts(138,12): error TS18048: 'headers' is possibly 'undefined'.
+e2e/security.spec.ts(139,12): error TS18048: 'headers' is possibly 'undefined'.
+e2e/security.spec.ts(140,12): error TS18048: 'headers' is possibly 'undefined'.
+e2e/security.spec.ts(141,12): error TS18048: 'headers' is possibly 'undefined'.
+src/components/__tests__/MobileComponents.test.tsx(8,45): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(13,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(17,13): error TS2741: Property 'title' is missing in type '{ children: string; isOpen: true; onClose: () => void; }' but required in type 'MobileModalProps'.
+src/components/__tests__/MobileComponents.test.tsx(18,47): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(22,36): error TS2322: Type 'string' is not assignable to type '{ id: string; label: string; content: ReactNode; }'.
+src/components/__tests__/MobileComponents.test.tsx(22,45): error TS2322: Type 'string' is not assignable to type '{ id: string; label: string; content: ReactNode; }'.
+src/components/__tests__/MobileComponents.test.tsx(22,55): error TS2322: Type 'number' is not assignable to type 'string'.
+src/components/__tests__/MobileComponents.test.tsx(23,45): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(27,13): error TS2741: Property 'position' is missing in type '{ children: string; isOpen: true; onClose: () => void; }' but required in type 'MobileDrawerProps'.
+src/components/__tests__/MobileComponents.test.tsx(28,48): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(33,49): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(40,25): error TS2339: Property 'toHaveBeenCalled' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(46,41): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(51,13): error TS2741: Property 'title' is missing in type '{ children: string; isOpen: true; onClose: Mock<any, any, any>; }' but required in type 'MobileModalProps'.
+src/components/__tests__/MobileComponents.test.tsx(52,39): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/components/__tests__/MobileComponents.test.tsx(57,13): error TS2741: Property 'position' is missing in type '{ children: string; isOpen: true; onClose: Mock<any, any, any>; }' but required in type 'MobileDrawerProps'.
+src/components/__tests__/MobileComponents.test.tsx(58,40): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(14,33): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(15,39): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+src/stores/__tests__/appStore.test.ts(24,41): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(25,48): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(26,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(27,46): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(28,53): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(29,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(30,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(31,50): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+src/stores/__tests__/appStore.test.ts(48,33): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+src/stores/__tests__/appStore.test.ts(67,39): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+src/stores/__tests__/appStore.test.ts(86,47): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+src/stores/__tests__/appStore.test.ts(96,41): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(106,48): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(116,50): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(126,49): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(127,57): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(128,60): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(139,52): error TS2551: Property 'toEqual' does not exist on type 'Assertion'. Did you mean 'equal'?
+src/stores/__tests__/appStore.test.ts(149,46): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(156,22): error TS2339: Property 'toggleSidebar' does not exist on type 'AppStore'.
+src/stores/__tests__/appStore.test.ts(159,53): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(169,51): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(179,42): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(189,9): error TS2353: Object literal may only specify known properties, and 'timestamp' does not exist in type 'Omit<{ id: string; title: string; message: string; type: "success" | "error" | "info" | "warning"; timestamp: Date; read: boolean; }, "id" | "timestamp">'.
+src/stores/__tests__/appStore.test.ts(193,50): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(194,61): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(204,9): error TS2353: Object literal may only specify known properties, and 'timestamp' does not exist in type 'Omit<{ id: string; title: string; message: string; type: "success" | "error" | "info" | "warning"; timestamp: Date; read: boolean; }, "id" | "timestamp">'.
+src/stores/__tests__/appStore.test.ts(211,22): error TS2339: Property 'removeNotification' does not exist on type 'AppStore'.
+src/stores/__tests__/appStore.test.ts(214,50): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(224,9): error TS2353: Object literal may only specify known properties, and 'timestamp' does not exist in type 'Omit<{ id: string; title: string; message: string; type: "success" | "error" | "info" | "warning"; timestamp: Date; read: boolean; }, "id" | "timestamp">'.
+src/stores/__tests__/appStore.test.ts(232,50): error TS2339: Property 'toHaveLength' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(253,33): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+src/stores/__tests__/appStore.test.ts(254,46): error TS2339: Property 'toBe' does not exist on type 'Assertion'.
+tests/roleready.spec.ts(145,79): error TS2345: Argument of type '{ min: number; }' is not assignable to parameter of type 'number'.
+tests/roleready.spec.ts(220,68): error TS2345: Argument of type '{ min: number; }' is not assignable to parameter of type 'number'.
+tests/roleready.spec.ts(221,67): error TS2345: Argument of type '{ min: number; }' is not assignable to parameter of type 'number'.
+tests/roleready.spec.ts(222,65): error TS2345: Argument of type '{ min: number; }' is not assignable to parameter of type 'number'.
+tests/roleready.spec.ts(227,61): error TS2345: Argument of type '{ min: number; }' is not assignable to parameter of type 'number'.
+npm : npm error Lifecycle script `type-check` failed with error:
+At C:\Users\sathish.kumar\Downloads\CursorSetup-x64-1.7.44.exe\ps-script-9ad7f413-c591-441a-ab79-4077c3a1d304.ps1:88 
+char:14
++ cd apps/web; npm run type-check 2>&1 | Out-File -FilePath "type-check ...
++              ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm error Lifec...led with error::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm error code 2
+npm error path C:\Users\sathish.kumar\RoleReady-FullStack\apps\web
+npm error workspace @roleready/web@1.0.0
+npm error location C:\Users\sathish.kumar\RoleReady-FullStack\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc --noEmit

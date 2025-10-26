@@ -161,12 +161,11 @@ export default function Templates({}: TemplatesProps) {
   };
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col">
+    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 mb-1">Resume Templates</h1>
             <p className="text-sm text-gray-600">50+ professionally designed templates</p>
           </div>
           <div className="flex items-center gap-2">
@@ -341,7 +340,10 @@ export default function Templates({}: TemplatesProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 force-scrollbar" style={{ 
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#d1d5db #f3f4f6'
+      }}>
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
@@ -394,67 +396,67 @@ export default function Templates({}: TemplatesProps) {
 
         {/* Templates Grid/List */}
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
             {currentTemplates.map(template => (
-              <div key={template.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all duration-200 group">
+              <div key={template.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all duration-200 group flex flex-col h-full">
                 {/* Template Preview */}
-                <div className="relative h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="w-12 h-16 bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center">
-                    <Layout size={18} className="text-gray-400" />
+                <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                  <div className="w-16 h-20 bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center">
+                    <Layout size={20} className="text-gray-400" />
                   </div>
                   {template.isPremium && (
-                    <div className="absolute top-1.5 right-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-0.5">
+                    <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                       <Crown size={10} />
                       Premium
                     </div>
                   )}
-                  <div className="absolute top-1.5 left-1.5">
+                  <div className="absolute top-2 left-2">
                     <button
                       onClick={() => toggleFavorite(template.id)}
-                      className={`p-1.5 rounded-full transition-colors ${
+                      className={`p-2 rounded-full transition-colors ${
                         favorites.includes(template.id) 
                           ? 'bg-red-500 text-white' 
                           : 'bg-white/80 text-gray-600 hover:bg-white'
                       }`}
                     >
-                      <Heart size={12} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
+                      <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
                     </button>
                   </div>
-                  <div className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-1.5 bg-white/80 text-gray-600 hover:bg-white rounded-full transition-colors">
-                      <Eye size={12} />
+                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-2 bg-white/80 text-gray-600 hover:bg-white rounded-full transition-colors">
+                      <Eye size={14} />
                     </button>
                   </div>
                 </div>
 
                 {/* Template Info */}
-                <div className="p-3">
-                  <div className="flex items-start justify-between mb-1.5">
-                    <h3 className="font-semibold text-gray-900 text-xs">{template.name}</h3>
-                    <div className="flex items-center gap-0.5 text-xs text-gray-500">
-                      <Star size={10} className="text-yellow-400 fill-current" />
-                      {template.rating}
+                <div className="p-4 flex flex-col flex-1">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900 text-sm leading-tight">{template.name}</h3>
+                    <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
+                      <Star size={12} className="text-yellow-400 fill-current" />
+                      <span className="font-medium">{template.rating}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{template.description}</p>
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">{template.description}</p>
                   
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
                       {template.difficulty}
                     </span>
-                    <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                       {template.layout}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-0.5 text-xs text-gray-500">
-                      <Download size={10} />
-                      {(template.downloads / 1000).toFixed(0)}k
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <Download size={12} />
+                      <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                     </div>
                     <button
                       onClick={() => handleSelectTemplate(template.id)}
-                      className="px-2.5 py-1 bg-blue-600 text-white text-xs font-semibold rounded-md hover:bg-blue-700 transition-colors"
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       Use
                     </button>
@@ -464,84 +466,85 @@ export default function Templates({}: TemplatesProps) {
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4 pb-8">
             {currentTemplates.map(template => (
-              <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
-                <div className="flex items-start gap-3">
+              <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
+                <div className="flex items-start gap-4">
                   {/* Template Preview */}
-                  <div className="relative w-16 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <div className="w-6 h-8 bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center">
-                      <Layout size={12} className="text-gray-400" />
+                  <div className="relative w-20 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-10 bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center">
+                      <Layout size={16} className="text-gray-400" />
                     </div>
                     {template.isPremium && (
-                      <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-1 py-0.5 rounded-full text-xs font-semibold">
-                        <Crown size={8} />
+                      <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <Crown size={10} />
+                        Premium
                       </div>
                     )}
                   </div>
 
                   {/* Template Details */}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-1.5">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 text-sm mb-0.5">{template.name}</h3>
-                        <p className="text-xs text-gray-600 mb-1.5">{template.description}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 text-base mb-1 truncate">{template.name}</h3>
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.description}</p>
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={() => toggleFavorite(template.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${
+                          className={`p-2 rounded-lg transition-colors ${
                             favorites.includes(template.id) 
                               ? 'bg-red-50 text-red-600' 
                               : 'text-gray-400 hover:bg-gray-100'
                           }`}
                         >
-                          <Heart size={12} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
+                          <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
                         </button>
-                        <button className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors">
-                          <Eye size={12} />
+                        <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors">
+                          <Eye size={14} />
                         </button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex items-center gap-0.5 text-xs text-gray-500">
-                        <Star size={10} className="text-yellow-400 fill-current" />
-                        {template.rating}
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <Star size={12} className="text-yellow-400 fill-current" />
+                        <span className="font-medium">{template.rating}</span>
                       </div>
-                      <div className="flex items-center gap-0.5 text-xs text-gray-500">
-                        <Download size={10} />
-                        {(template.downloads / 1000).toFixed(0)}k
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <Download size={12} />
+                        <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                       </div>
-                      <div className="flex items-center gap-0.5 text-xs text-gray-500">
-                        <Clock size={10} />
-                        {template.createdAt}
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <Clock size={12} />
+                        <span>{template.createdAt}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
                         {template.difficulty}
                       </span>
-                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                         {template.layout}
                       </span>
-                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                         {template.colorScheme}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {template.features.slice(0, 3).map(feature => (
-                          <span key={feature} className="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">
+                          <span key={feature} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
                             {feature}
                           </span>
                         ))}
                       </div>
                       <button
                         onClick={() => handleSelectTemplate(template.id)}
-                        className="px-3 py-1.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
                         Use Template
                       </button>
@@ -555,7 +558,7 @@ export default function Templates({}: TemplatesProps) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-center mt-6 gap-1">
+          <div className="flex items-center justify-center mt-6 mb-4 gap-1">
             <button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}

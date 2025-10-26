@@ -267,7 +267,7 @@ export const useWebSocket = () => {
 // Hook for resume collaboration
 export const useResumeCollaboration = (resumeId: string, userId: string) => {
   const { socket, isConnected } = useWebSocket();
-  const [collaborators, setCollaborators] = useState<Array<{ userId: string; username: string; cursor?: any }>>([]);
+  const [collaborators, setCollaborators] = useState<Array<{ userId: string; username: string; cursor?: any; isTyping?: boolean; selection?: any }>>([]);
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
@@ -308,6 +308,16 @@ export const useResumeCollaboration = (resumeId: string, userId: string) => {
       }
     });
 
+    const unsubscribeResumeSelection = socket.on('resume_selection', (data) => {
+      if (data.userId !== userId) {
+        setCollaborators(prev => prev.map(c => 
+          c.userId === data.userId 
+            ? { ...c, selection: data.selection }
+            : c
+        ));
+      }
+    });
+
     const unsubscribeUserTyping = socket.on('user_typing', (data) => {
       if (data.userId !== userId) {
         setCollaborators(prev => prev.map(c => 
@@ -325,6 +335,7 @@ export const useResumeCollaboration = (resumeId: string, userId: string) => {
       unsubscribeResumeUpdated();
       unsubscribeResumeCursor();
       unsubscribeUserTyping();
+      if (unsubscribeResumeSelection) unsubscribeResumeSelection();
     };
   }, [isConnected, resumeId, userId, socket]);
 

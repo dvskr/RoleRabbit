@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, FileText } from 'lucide-react';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -18,7 +18,6 @@ interface HeaderProps {
   onSave: () => void;
   onToggleAIPanel: () => void;
   onShowMobileMenu: () => void;
-  onTemplateSelect: (template: string) => void;
   setPreviousSidebarState: (state: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowRightPanel: (show: boolean) => void;
@@ -39,7 +38,6 @@ export default function Header({
   onSave,
   onToggleAIPanel,
   onShowMobileMenu,
-  onTemplateSelect,
   setPreviousSidebarState,
   setSidebarCollapsed,
   setShowRightPanel
@@ -75,61 +73,49 @@ export default function Header({
         )}
       </div>
       <div className="flex gap-3">
-        <div className="relative">
-          <select
-            onChange={(e) => onTemplateSelect(e.target.value)}
-            className="px-4 py-2.5 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl text-sm font-medium text-gray-700 hover:border-blue-400 hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 transition-all duration-300 appearance-none pr-10 shadow-sm hover:shadow-md"
-          >
-            <option value="">Select Template</option>
-            <option value="modern">Modern</option>
-            <option value="classic">Classic</option>
-            <option value="creative">Creative</option>
-            <option value="minimal">Minimal</option>
-            <option value="professional">Professional</option>
-            <option value="executive">Executive</option>
-          </select>
-          <FileText size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-500 pointer-events-none" />
-        </div>
-        <button 
-          onClick={onExport}
-          className="px-4 py-2 border bg-white rounded-lg text-sm hover:bg-gray-50"
-        >
-          <Download size={16} className="inline mr-1" />Export
-        </button>
         <button 
           onClick={onUndo}
           disabled={!canUndo}
-          className="px-4 py-2 border bg-white rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+          className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-orange-400 hover:bg-orange-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Undo size={16} className="inline mr-1" />Undo
+          <Undo size={16} className="text-gray-600 group-hover:text-orange-600" />
+          <span className="font-medium">Undo</span>
         </button>
         <button 
           onClick={onRedo}
           disabled={!canRedo}
-          className="px-4 py-2 border bg-white rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
+          className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-orange-400 hover:bg-orange-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Redo size={16} className="inline mr-1" />Redo
+          <Redo size={16} className="text-gray-600 group-hover:text-orange-600" />
+          <span className="font-medium">Redo</span>
         </button>
         <button 
           onClick={onImport}
-          className="px-5 py-2.5 border-2 border-gray-200 bg-white rounded-xl text-sm font-semibold hover:border-green-500 hover:shadow-md transition-all duration-300 hover:scale-105 flex items-center gap-2"
+          className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-purple-400 hover:bg-purple-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
         >
-          <Upload size={18} />
-          Import
+          <Upload size={16} className="text-gray-600 group-hover:text-purple-600" />
+          <span className="font-medium">Import</span>
+        </button>
+        <button 
+          onClick={onExport}
+          className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-green-400 hover:bg-green-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
+        >
+          <Download size={16} className="text-gray-600 group-hover:text-green-600" />
+          <span className="font-medium">Export</span>
         </button>
         <button 
           onClick={handleToggleAIPanel}
-          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center gap-2"
+          className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:shadow-purple-500/30 flex items-center gap-2 transition-all duration-200"
         >
-          <Sparkles size={18} />
-          AI Assistant
+          <Sparkles size={16} />
+          <span className="font-semibold">AI Assistant</span>
         </button>
         <button 
           onClick={onSave}
-          className="px-5 py-2.5 border-2 border-gray-200 bg-white rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 hover:border-blue-500 hover:shadow-md hover:scale-105"
+          className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
         >
-          <Save size={18} />
-          Save
+          <Save size={16} className="text-gray-600 group-hover:text-blue-600" />
+          <span className="font-medium">Save</span>
         </button>
       </div>
     </div>

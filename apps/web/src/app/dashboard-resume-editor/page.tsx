@@ -1,5 +1,5 @@
-import TestAllComponents from '../test-all-components/page';
+import { redirect } from 'next/navigation';
 
 export default function DashboardResumeEditorPage() {
-  return <TestAllComponents />;
+  redirect('/dashboard?tab=editor');
 }
