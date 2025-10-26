@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Save, Download, Upload, FileText } from 'lucide-react';
+import { Save, Download, Upload, FileText, TrendingUp } from 'lucide-react';
 import { CoverLetterHeaderProps } from './types/coverletter';
 
 export default function CoverLetterHeader({ 
@@ -11,10 +11,12 @@ export default function CoverLetterHeader({
   wordCount, 
   isSaving,
   onImport,
-  onExportClick
+  onExportClick,
+  onAnalytics
 }: CoverLetterHeaderProps & {
   onImport?: () => void;
   onExportClick?: () => void;
+  onAnalytics?: () => void;
 }) {
   return (
     <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-8 py-4 flex justify-between items-center shadow-sm relative z-50">
@@ -55,6 +57,15 @@ export default function CoverLetterHeader({
           <Download size={16} className="text-white" />
           <span className="font-medium">Export</span>
         </button>
+        {onAnalytics && (
+          <button 
+            onClick={onAnalytics}
+            className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-green-400 hover:bg-green-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
+          >
+            <TrendingUp size={16} className="text-gray-600 group-hover:text-green-600" />
+            <span className="font-medium">Analytics</span>
+          </button>
+        )}
       </div>
     </div>
   );
