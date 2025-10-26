@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { logger } from '../utils/logger';
 import {
   Search,
   Filter,
@@ -38,13 +39,21 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  Cloud,
+  Folder,
+  XCircle
 } from 'lucide-react';
 import { resumeTemplates, templateCategories, getTemplatesByCategory, searchTemplates } from '../data/templates';
 
-interface TemplatesProps {}
+interface TemplatesProps {
+  onAddToEditor?: (templateId: string) => void;
+  addedTemplates?: string[];
+  onRemoveTemplate?: (templateId: string) => void;
+}
 
-export default function Templates({}: TemplatesProps) {
+export default function Templates({ onAddToEditor, addedTemplates = [], onRemoveTemplate }: TemplatesProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -59,6 +68,13 @@ export default function Templates({}: TemplatesProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [templatesPerPage] = useState(12);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [addedTemplateId, setAddedTemplateId] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadSource, setUploadSource] = useState<'cloud' | 'system'>('cloud');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewResume, setPreviewResume] = useState<string | null>(null);
 
   const filteredTemplates = useMemo(() => {
     let templates = resumeTemplates;
@@ -120,6 +136,10 @@ export default function Templates({}: TemplatesProps) {
   const startIndex = (currentPage - 1) * templatesPerPage;
   const endIndex = startIndex + templatesPerPage;
   const currentTemplates = filteredTemplates.slice(startIndex, endIndex);
+  
+  // Separate added and not-added templates
+  const addedTemplatesList = filteredTemplates.filter(t => addedTemplates.includes(t.id));
+  const notAddedTemplates = filteredTemplates.filter(t => !addedTemplates.includes(t.id));
 
   const toggleFavorite = (templateId: string) => {
     setFavorites(prev => 
@@ -156,8 +176,359 @@ export default function Templates({}: TemplatesProps) {
 
   const handleSelectTemplate = (templateId: string) => {
     // Here you would integrate with the resume editor
-    console.log('Selected template:', templateId);
+    logger.debug('Selected template:', templateId);
     setShowTemplateSelector(false);
+  };
+
+  const handlePreviewTemplate = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    setShowPreviewModal(true);
+  };
+
+  const handleUseTemplate = (templateId: string) => {
+    logger.debug('Adding template to editor:', templateId);
+    
+    // Call the callback to add template to editor
+    if (onAddToEditor) {
+      onAddToEditor(templateId);
+    }
+    
+    // Set animation state
+    setAddedTemplateId(templateId);
+    
+    // Show success animation for 2 seconds
+    setTimeout(() => {
+      setAddedTemplateId(null);
+    }, 2000);
+    
+    // Don't close the modal
+  };
+
+  const handleDownloadTemplate = () => {
+    if (!currentSelectedTemplate) return;
+    logger.debug('Downloading template:', currentSelectedTemplate.name);
+    
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${currentSelectedTemplate.name} - Resume Template</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+    .template-info { border-bottom: 2px solid #4CAF50; padding-bottom: 20px; margin-bottom: 30px; }
+    .template-info h1 { color: #4CAF50; margin: 0; }
+    .section { margin-bottom: 25px; }
+    .section h2 { color: #2196F3; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+    .features { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .feature { background: #e3f2fd; color: #1976D2; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; }
+    .specs { background: #f5f5f5; padding: 20px; border-radius: 8px; }
+    .spec-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="template-info">
+    <h1>${currentSelectedTemplate.name}</h1>
+    <p>${currentSelectedTemplate.description}</p>
+  </div>
+  
+  <div class="section">
+    <h2>Template Features</h2>
+    <div class="features">
+      ${currentSelectedTemplate.features.map(feature => `<span class="feature">${feature}</span>`).join('')}
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Template Specifications</h2>
+    <div class="specs">
+      <div class="spec-row">
+        <span><strong>Category:</strong></span>
+        <span>${currentSelectedTemplate.category}</span>
+      </div>
+      <div class="spec-row">
+        <span><strong>Difficulty:</strong></span>
+        <span>${currentSelectedTemplate.difficulty}</span>
+      </div>
+      <div class="spec-row">
+        <span><strong>Layout:</strong></span>
+        <span>${currentSelectedTemplate.layout}</span>
+      </div>
+      <div class="spec-row">
+        <span><strong>Color Scheme:</strong></span>
+        <span>${currentSelectedTemplate.colorScheme}</span>
+      </div>
+      <div class="spec-row">
+        <span><strong>Rating:</strong></span>
+        <span>${currentSelectedTemplate.rating} / 5.0</span>
+      </div>
+      <div class="spec-row">
+        <span><strong>Downloads:</strong></span>
+        <span>${(currentSelectedTemplate.downloads / 1000).toFixed(0)}k</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h2>Compatible Industries</h2>
+    <div class="features">
+      ${currentSelectedTemplate.industry.map(ind => `<span class="feature">${ind}</span>`).join('')}
+    </div>
+  </div>
+  
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.85em; color: #999;">
+    <p>Template from RoleReady - Your Complete Job Search Platform</p>
+    <p>Created: ${currentSelectedTemplate.createdAt} | Updated: ${currentSelectedTemplate.updatedAt}</p>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${currentSelectedTemplate.name.replace(/\s+/g, '-')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShareTemplate = () => {
+    if (!currentSelectedTemplate) return;
+    logger.debug('Sharing template:', currentSelectedTemplate.name);
+    
+    if (navigator.share) {
+      navigator.share({
+        title: currentSelectedTemplate.name,
+        text: currentSelectedTemplate.description,
+        url: window.location.href
+      }).catch(err => logger.debug('Share failed:', err));
+    } else {
+      // Fallback: Copy to clipboard
+      navigator.clipboard.writeText(`${currentSelectedTemplate.name} - ${currentSelectedTemplate.description}`);
+      alert('Template link copied to clipboard!');
+    }
+  };
+
+  const currentSelectedTemplate = selectedTemplate 
+    ? resumeTemplates.find(t => t.id === selectedTemplate) 
+    : null;
+
+  const generateSampleResumePreview = (template: any): React.ReactNode => {
+    if (!template) return null;
+
+    const sampleData = {
+      name: 'John Anderson',
+      title: 'Senior Software Engineer',
+      email: 'john.anderson@email.com',
+      phone: '(555) 123-4567',
+      location: 'San Francisco, CA',
+      summary: 'Experienced software engineer with 8+ years of expertise in full-stack development, cloud architecture, and team leadership. Proven track record of delivering scalable solutions.',
+      experiences: [
+        {
+          company: 'Tech Corp',
+          role: 'Senior Software Engineer',
+          period: '2020 - Present',
+          bullets: [
+            'Led development of microservices architecture handling 10M+ requests',
+            'Mentored team of 5 junior developers',
+            'Reduced deployment time by 40%'
+          ]
+        },
+        {
+          company: 'StartUpCo',
+          role: 'Software Engineer',
+          period: '2018 - 2020',
+          bullets: [
+            'Built RESTful APIs serving 5M+ users',
+            'Implemented CI/CD pipelines',
+            'Collaborated with product team'
+          ]
+        }
+      ],
+      skills: ['JavaScript', 'Python', 'React', 'Node.js', 'AWS', 'Docker', 'Kubernetes', 'PostgreSQL'],
+      education: {
+        degree: 'B.S. Computer Science',
+        school: 'University of California',
+        year: '2018'
+      }
+  };
+
+  return (
+      <div className="bg-white p-6 shadow-lg">
+        {template.layout === 'single-column' && (
+          <div className="space-y-4">
+            <div className="text-center border-b pb-4">
+              <h1 className="text-2xl font-bold mb-1">{sampleData.name}</h1>
+              <p className="text-blue-600 font-semibold">{sampleData.title}</p>
+              <p className="text-sm text-gray-600 mt-2">
+                {sampleData.email} | {sampleData.phone} | {sampleData.location}
+              </p>
+            </div>
+            
+            <div>
+              <h2 className="font-semibold text-lg mb-2 border-b pb-1">Professional Summary</h2>
+              <p className="text-sm text-gray-700">{sampleData.summary}</p>
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-lg mb-2 border-b pb-1">Experience</h2>
+              {sampleData.experiences.map((exp, i) => (
+                <div key={i} className="mb-3">
+                  <div className="flex justify-between items-start mb-1">
+                    <div>
+                      <p className="font-semibold">{exp.role}</p>
+                      <p className="text-blue-600 text-sm">{exp.company}</p>
+                    </div>
+                    <span className="text-xs text-gray-600">{exp.period}</span>
+                  </div>
+                  <ul className="list-disc list-inside text-sm space-y-1 text-gray-700 ml-2">
+                    {exp.bullets.map((bullet, j) => (
+                      <li key={j}>{bullet}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-lg mb-2 border-b pb-1">Skills</h2>
+              <div className="flex flex-wrap gap-2">
+                {sampleData.skills.map((skill, i) => (
+                  <span key={i} className="px-3 py-1 bg-gray-100 rounded text-sm">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="font-semibold text-lg mb-2 border-b pb-1">Education</h2>
+              <p className="font-semibold">{sampleData.education.degree}</p>
+              <p className="text-sm text-gray-700">{sampleData.education.school} - {sampleData.education.year}</p>
+            </div>
+          </div>
+        )}
+
+        {template.layout === 'two-column' && (
+          <div className="flex gap-6">
+            <div className="w-1/3 bg-gray-100 p-4">
+              <h1 className="text-xl font-bold mb-2">{sampleData.name}</h1>
+              <p className="text-sm mb-3">{sampleData.title}</p>
+              
+              <div className="mb-4">
+                <h3 className="font-semibold text-sm mb-2 border-b pb-1">Contact</h3>
+                <p className="text-xs mb-1">{sampleData.email}</p>
+                <p className="text-xs mb-1">{sampleData.phone}</p>
+                <p className="text-xs">{sampleData.location}</p>
+              </div>
+
+              <div className="mb-4">
+                <h3 className="font-semibold text-sm mb-2 border-b pb-1">Skills</h3>
+                <div className="space-y-1">
+                  {sampleData.skills.map((skill, i) => (
+                    <p key={i} className="text-xs">{skill}</p>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-sm mb-2 border-b pb-1">Education</h3>
+                <p className="text-xs font-semibold">{sampleData.education.degree}</p>
+                <p className="text-xs">{sampleData.education.school}</p>
+                <p className="text-xs">{sampleData.education.year}</p>
+              </div>
+            </div>
+
+            <div className="w-2/3 space-y-4">
+              <div>
+                <h2 className="font-semibold text-lg mb-2 border-b pb-1">Summary</h2>
+                <p className="text-sm text-gray-700">{sampleData.summary}</p>
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-lg mb-2 border-b pb-1">Experience</h2>
+                {sampleData.experiences.map((exp, i) => (
+                  <div key={i} className="mb-3">
+                    <div className="flex justify-between items-start mb-1">
+                      <div>
+                        <p className="font-semibold text-sm">{exp.role}</p>
+                        <p className="text-blue-600 text-xs">{exp.company}</p>
+                      </div>
+                      <span className="text-xs text-gray-600">{exp.period}</span>
+                    </div>
+                    <ul className="list-disc list-inside text-xs space-y-1 text-gray-700 ml-2">
+                      {exp.bullets.map((bullet, j) => (
+                        <li key={j}>{bullet}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {template.layout === 'hybrid' && (
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-lg">
+              <h1 className="text-3xl font-bold mb-2">{sampleData.name}</h1>
+              <p className="text-lg mb-3">{sampleData.title}</p>
+              <p className="text-sm">{sampleData.email} | {sampleData.phone} | {sampleData.location}</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2">
+                <div className="mb-4">
+                  <h2 className="font-semibold text-lg mb-2">Professional Summary</h2>
+                  <p className="text-sm text-gray-700">{sampleData.summary}</p>
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-lg mb-2">Experience</h2>
+                  {sampleData.experiences.map((exp, i) => (
+                    <div key={i} className="mb-3">
+                      <div className="flex justify-between items-start mb-1">
+                        <div>
+                          <p className="font-semibold text-sm">{exp.role}</p>
+                          <p className="text-blue-600 text-xs">{exp.company}</p>
+                        </div>
+                        <span className="text-xs text-gray-600">{exp.period}</span>
+                      </div>
+                      <ul className="list-disc list-inside text-xs space-y-1 text-gray-700 ml-2">
+                        {exp.bullets.map((bullet, j) => (
+                          <li key={j}>{bullet}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-semibold text-sm mb-2">Skills</h3>
+                  <div className="space-y-1">
+                    {sampleData.skills.map((skill, i) => (
+                      <p key={i} className="text-xs px-2 py-1 bg-gray-100 rounded">{skill}</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-sm mb-2">Education</h3>
+                  <p className="text-xs font-semibold">{sampleData.education.degree}</p>
+                  <p className="text-xs">{sampleData.education.school}</p>
+                  <p className="text-xs">{sampleData.education.year}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -394,15 +765,219 @@ export default function Templates({}: TemplatesProps) {
           </div>
         </div>
 
-        {/* Templates Grid/List */}
+        {/* Added Templates Section */}
+        {addedTemplatesList.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle size={20} className="text-green-600" />
+              <h2 className="text-lg font-bold text-gray-900">Added Templates ({addedTemplatesList.length}/10)</h2>
+              <div className="h-1 flex-1 bg-gray-200 rounded"></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {addedTemplatesList.map(template => (
+                <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg overflow-hidden shadow-md group flex flex-col h-full">
+                  {/* Template Preview */}
+                  <div className="relative h-40 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center overflow-hidden">
+                    {/* Mini Resume Preview */}
+                    <div className="w-28 h-40 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                      <div className="p-2 h-full flex flex-col space-y-1">
+                        {/* Name/Header Bar */}
+                        <div className={`h-2 rounded ${
+                          template.colorScheme === 'blue' ? 'bg-blue-600' :
+                          template.colorScheme === 'green' ? 'bg-green-600' :
+                          template.colorScheme === 'monochrome' ? 'bg-gray-700' :
+                          'bg-gradient-to-r from-purple-500 to-pink-500'
+                        }`}></div>
+                        
+                        {/* Contact Line */}
+                        <div className="h-1 bg-gray-200 rounded w-10/12"></div>
+                        
+                        {/* Summary Section */}
+                        <div className="space-y-0.5">
+                          <div className={`h-1 rounded w-8 ${
+                            template.colorScheme === 'blue' ? 'bg-blue-500' :
+                            template.colorScheme === 'green' ? 'bg-green-500' :
+                            template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                            'bg-purple-400'
+                          }`}></div>
+                          <div className="h-1 bg-gray-100 rounded w-full"></div>
+                          <div className="h-1 bg-gray-100 rounded w-5/6"></div>
+                        </div>
+                        
+                        {/* Experience Section */}
+                        <div className="space-y-0.5">
+                          <div className={`h-1 rounded w-7 ${
+                            template.colorScheme === 'blue' ? 'bg-blue-500' :
+                            template.colorScheme === 'green' ? 'bg-green-500' :
+                            template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                            'bg-purple-400'
+                          }`}></div>
+                          <div className="h-1 bg-gray-100 rounded w-full"></div>
+                          <div className="h-1 bg-gray-100 rounded w-4/5"></div>
+                        </div>
+                        
+                        {/* Bullet Points */}
+                        <div className="flex items-center gap-1">
+                          <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                          <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                          <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                        </div>
+                        
+                        {/* Skills Tags */}
+                        <div className="flex gap-1">
+                          <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                          <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                        </div>
+                      </div>
+                    </div>
+                    {template.isPremium && (
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <Crown size={10} />
+                        Premium
+                      </div>
+                    )}
+                    <div className="absolute top-2 left-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(template.id);
+                        }}
+                        className={`p-2 rounded-full transition-colors ${
+                          favorites.includes(template.id) 
+                            ? 'bg-red-500 text-white' 
+                            : 'bg-white/80 text-gray-600 hover:bg-white'
+                        }`}
+                      >
+                        <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
+                      </button>
+                    </div>
+                    <div className="absolute -top-1 -right-1 z-10 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                      <CheckCircle size={12} />
+                      Added
+                    </div>
+                  </div>
+
+                  {/* Template Info */}
+                  <div className="p-4 flex flex-col flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900 text-sm leading-tight">{template.name}</h3>
+                      <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
+                        <Star size={12} className="text-yellow-400 fill-current" />
+                        <span className="font-medium">{template.rating}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">{template.description}</p>
+                    
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
+                        {template.difficulty}
+                      </span>
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                        {template.layout}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                        <Download size={12} />
+                        <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreviewTemplate(template.id);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Preview
+                        </button>
+                        {onRemoveTemplate && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRemoveTemplate(template.id);
+                            }}
+                            className="px-3 py-2 bg-red-100 text-red-700 text-sm font-semibold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                          >
+                            <X size={14} />
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* All Templates Section */}
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
             {currentTemplates.map(template => (
               <div key={template.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all duration-200 group flex flex-col h-full">
                 {/* Template Preview */}
-                <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="w-16 h-20 bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center">
-                    <Layout size={20} className="text-gray-400" />
+                <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden group cursor-pointer"
+                     onClick={() => handlePreviewTemplate(template.id)}>
+                  {/* Mini Resume Preview - Enhanced */}
+                  <div className="w-28 h-40 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                    <div className="p-2 h-full flex flex-col space-y-1">
+                      {/* Name/Header Bar */}
+                      <div className={`h-2 rounded ${
+                        template.colorScheme === 'blue' ? 'bg-blue-600' :
+                        template.colorScheme === 'green' ? 'bg-green-600' :
+                        template.colorScheme === 'monochrome' ? 'bg-gray-700' :
+                        'bg-gradient-to-r from-purple-500 to-pink-500'
+                      }`}></div>
+                      
+                      {/* Contact Line */}
+                      <div className="h-1 bg-gray-200 rounded w-10/12"></div>
+                      
+                      {/* Summary Section */}
+                      <div className="space-y-0.5">
+                        <div className={`h-1 rounded w-8 ${
+                          template.colorScheme === 'blue' ? 'bg-blue-500' :
+                          template.colorScheme === 'green' ? 'bg-green-500' :
+                          template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                          'bg-purple-400'
+                        }`}></div>
+                        <div className="h-1 bg-gray-100 rounded w-full"></div>
+                        <div className="h-1 bg-gray-100 rounded w-5/6"></div>
+                      </div>
+                      
+                      {/* Experience Section */}
+                      <div className="space-y-0.5">
+                        <div className={`h-1 rounded w-7 ${
+                          template.colorScheme === 'blue' ? 'bg-blue-500' :
+                          template.colorScheme === 'green' ? 'bg-green-500' :
+                          template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                          'bg-purple-400'
+                        }`}></div>
+                        <div className="h-1 bg-gray-100 rounded w-full"></div>
+                        <div className="h-1 bg-gray-100 rounded w-4/5"></div>
+                      </div>
+                      
+                      {/* Bullet Points */}
+                      <div className="flex items-center gap-1">
+                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                        <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                        <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                      </div>
+                      
+                      {/* Skills Tags */}
+                      <div className="flex gap-1">
+                        <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                        <div className="h-1 bg-gray-100 rounded flex-1"></div>
+                      </div>
+                    </div>
                   </div>
                   {template.isPremium && (
                     <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -423,7 +998,11 @@ export default function Templates({}: TemplatesProps) {
                     </button>
                   </div>
                   <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 bg-white/80 text-gray-600 hover:bg-white rounded-full transition-colors">
+                    <button 
+                      onClick={() => handlePreviewTemplate(template.id)}
+                      className="p-2 bg-white/80 text-gray-600 hover:bg-white rounded-full transition-colors"
+                      title="Preview"
+                    >
                       <Eye size={14} />
                     </button>
                   </div>
@@ -454,26 +1033,267 @@ export default function Templates({}: TemplatesProps) {
                       <Download size={12} />
                       <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                     </div>
-                    <button
-                      onClick={() => handleSelectTemplate(template.id)}
-                      className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      Use
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {!addedTemplates.includes(template.id) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUseTemplate(template.id);
+                          }}
+                          className={`px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 relative overflow-hidden ${
+                            addedTemplateId === template.id
+                              ? 'bg-green-500 shadow-lg scale-105'
+                              : 'bg-purple-600 hover:bg-purple-700'
+                          }`}
+                        >
+                          {addedTemplateId === template.id ? (
+                            <>
+                              <CheckCircle size={14} className="animate-bounce" />
+                              <span>Added!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus size={14} />
+                              Add
+                            </>
+                          )}
+                        </button>
+                      )}
+                      {addedTemplates.includes(template.id) && (
+                        <div className="px-3 py-2 bg-green-100 text-green-700 text-sm font-semibold rounded-lg flex items-center gap-1.5">
+                          <CheckCircle size={14} />
+                          <span>Already Added</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => handlePreviewTemplate(template.id)}
+                        className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                        title="Preview Template"
+                      >
+                        <Eye size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="space-y-4 pb-8">
+          <>
+            {/* Added Templates List View */}
+            {addedTemplatesList.length > 0 && (
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle size={20} className="text-green-600" />
+                  <h2 className="text-lg font-bold text-gray-900">Added Templates to Resume Editor ({addedTemplatesList.length}/10)</h2>
+                  <div className="h-1 flex-1 bg-gray-200 rounded"></div>
+                </div>
+                <div className="space-y-4">
+                  {addedTemplatesList.map(template => (
+                    <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg p-5 hover:shadow-lg transition-all duration-200">
+                      <div className="flex items-start gap-4">
+                        {/* Template Preview */}
+                        <div className="relative w-20 h-24 bg-gradient-to-br from-green-50 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          <div className="w-16 h-20 bg-white rounded shadow-lg border border-gray-200 transform rotate-1">
+                            <div className="p-1.5 h-full flex flex-col space-y-0.5">
+                              {/* Name/Header Bar */}
+                              <div className={`h-1.5 rounded ${
+                                template.colorScheme === 'blue' ? 'bg-blue-600' :
+                                template.colorScheme === 'green' ? 'bg-green-600' :
+                                template.colorScheme === 'monochrome' ? 'bg-gray-700' :
+                                'bg-gradient-to-r from-purple-500 to-pink-500'
+                              }`}></div>
+                              
+                              {/* Contact Line */}
+                              <div className="h-0.5 bg-gray-200 rounded w-10/12"></div>
+                              
+                              {/* Summary Section */}
+                              <div className="space-y-0.5">
+                                <div className={`h-0.5 rounded w-6 ${
+                                  template.colorScheme === 'blue' ? 'bg-blue-500' :
+                                  template.colorScheme === 'green' ? 'bg-green-500' :
+                                  template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                                  'bg-purple-400'
+                                }`}></div>
+                                <div className="h-0.5 bg-gray-100 rounded w-full"></div>
+                              </div>
+                              
+                              {/* Experience Section */}
+                              <div className="space-y-0.5">
+                                <div className={`h-0.5 rounded w-5 ${
+                                  template.colorScheme === 'blue' ? 'bg-blue-500' :
+                                  template.colorScheme === 'green' ? 'bg-green-500' :
+                                  template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                                  'bg-purple-400'
+                                }`}></div>
+                                <div className="h-0.5 bg-gray-100 rounded w-full"></div>
+                              </div>
+                              
+                              {/* Bullet Point */}
+                              <div className="flex items-center gap-0.5">
+                                <div className="w-0.5 h-0.5 bg-gray-400 rounded-full"></div>
+                                <div className="h-0.5 bg-gray-100 rounded flex-1"></div>
+                              </div>
+                              
+                              {/* Skills Tags */}
+                              <div className="flex gap-0.5">
+                                <div className="h-0.5 bg-gray-100 rounded flex-1"></div>
+                                <div className="h-0.5 bg-gray-100 rounded flex-1"></div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="absolute -top-1 -right-1 z-10 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                            <CheckCircle size={12} />
+                            Added
+                          </div>
+                        </div>
+
+                        {/* Template Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-base mb-1 truncate">{template.name}</h3>
+                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.description}</p>
+                            </div>
+                            <div className="flex items-center gap-2 ml-4">
+                              <button
+                                onClick={() => toggleFavorite(template.id)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                  favorites.includes(template.id)
+                                    ? 'bg-red-50 text-red-600'
+                                    : 'text-gray-400 hover:bg-gray-100'
+                                }`}
+                              >
+                                <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
+                              </button>
+                              <button
+                                onClick={() => handlePreviewTemplate(template.id)}
+                                className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Preview"
+                              >
+                                <Eye size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 mb-3">
+                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                              <Star size={12} className="text-yellow-400 fill-current" />
+                              <span className="font-medium">{template.rating}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                              <Download size={12} />
+                              <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                              <Clock size={12} />
+                              <span>{template.createdAt}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
+                              {template.difficulty}
+                            </span>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                              {template.layout}
+                            </span>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                              {template.colorScheme}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {template.features.slice(0, 3).map(feature => (
+                                <span key={feature} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                                  {feature}
+                                </span>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handlePreviewTemplate(template.id)}
+                                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                              >
+                                Preview
+                              </button>
+                              {onRemoveTemplate && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemoveTemplate(template.id);
+                                  }}
+                                  className="px-3 py-2 bg-red-100 text-red-700 text-sm font-semibold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                                >
+                                  <X size={14} />
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Templates List View */}
+            <div className="space-y-4 pb-8">
             {currentTemplates.map(template => (
               <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
                 <div className="flex items-start gap-4">
-                  {/* Template Preview */}
-                  <div className="relative w-20 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <div className="w-8 h-10 bg-white border border-gray-300 rounded shadow-lg flex items-center justify-center">
-                      <Layout size={16} className="text-gray-400" />
+                  {/* Template Preview - Enhanced Mini Resume */}
+                  <div className="relative w-20 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-16 h-20 bg-white rounded shadow-lg border border-gray-200 transform rotate-1">
+                      <div className="p-1.5 h-full flex flex-col space-y-0.5">
+                        {/* Name/Header Bar */}
+                        <div className={`h-1.5 rounded ${
+                          template.colorScheme === 'blue' ? 'bg-blue-600' :
+                          template.colorScheme === 'green' ? 'bg-green-600' :
+                          template.colorScheme === 'monochrome' ? 'bg-gray-700' :
+                          'bg-gradient-to-r from-purple-500 to-pink-500'
+                        }`}></div>
+                        
+                        {/* Contact Line */}
+                        <div className="h-0.5 bg-gray-200 rounded w-10/12"></div>
+                        
+                        {/* Summary Section */}
+                        <div className="space-y-0.5">
+                          <div className={`h-0.5 rounded w-6 ${
+                            template.colorScheme === 'blue' ? 'bg-blue-500' :
+                            template.colorScheme === 'green' ? 'bg-green-500' :
+                            template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                            'bg-purple-400'
+                          }`}></div>
+                          <div className="h-0.5 bg-gray-100 rounded w-full"></div>
+                        </div>
+                        
+                        {/* Experience Section */}
+                        <div className="space-y-0.5">
+                          <div className={`h-0.5 rounded w-5 ${
+                            template.colorScheme === 'blue' ? 'bg-blue-500' :
+                            template.colorScheme === 'green' ? 'bg-green-500' :
+                            template.colorScheme === 'monochrome' ? 'bg-gray-600' :
+                            'bg-purple-400'
+                          }`}></div>
+                          <div className="h-0.5 bg-gray-100 rounded w-full"></div>
+                        </div>
+                        
+                        {/* Bullet Point */}
+                        <div className="flex items-center gap-0.5">
+                          <div className="w-0.5 h-0.5 bg-gray-400 rounded-full"></div>
+                          <div className="h-0.5 bg-gray-100 rounded flex-1"></div>
+                        </div>
+                        
+                        {/* Skills Tags */}
+                        <div className="flex gap-0.5">
+                          <div className="h-0.5 bg-gray-100 rounded flex-1"></div>
+                          <div className="h-0.5 bg-gray-100 rounded flex-1"></div>
+                        </div>
+                      </div>
                     </div>
                     {template.isPremium && (
                       <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -501,7 +1321,11 @@ export default function Templates({}: TemplatesProps) {
                         >
                           <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
                         </button>
-                        <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors">
+                        <button 
+                          onClick={() => handlePreviewTemplate(template.id)}
+                          className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Preview"
+                        >
                           <Eye size={14} />
                         </button>
                       </div>
@@ -542,18 +1366,53 @@ export default function Templates({}: TemplatesProps) {
                           </span>
                         ))}
                       </div>
-                      <button
-                        onClick={() => handleSelectTemplate(template.id)}
-                        className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        Use Template
-                      </button>
+                            <div className="flex items-center gap-2">
+                        {!addedTemplates.includes(template.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUseTemplate(template.id);
+                            }}
+                            className={`px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 relative overflow-hidden ${
+                              addedTemplateId === template.id
+                                ? 'bg-green-500 shadow-lg scale-105'
+                                : 'bg-purple-600 hover:bg-purple-700'
+                            }`}
+                          >
+                            {addedTemplateId === template.id ? (
+                              <>
+                                <CheckCircle size={14} className="animate-bounce" />
+                                <span>Added!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus size={14} />
+                                Add
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {addedTemplates.includes(template.id) && (
+                          <div className="px-3 py-2 bg-green-100 text-green-700 text-sm font-semibold rounded-lg flex items-center gap-1.5">
+                            <CheckCircle size={14} />
+                            <span>Already Added</span>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => handlePreviewTemplate(template.id)}
+                          className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                          title="Preview Template"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
@@ -615,6 +1474,279 @@ export default function Templates({}: TemplatesProps) {
           </div>
         )}
       </div>
+
+      {/* Template Preview Modal */}
+      {showPreviewModal && currentSelectedTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+                  <Layout size={24} className="text-gray-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{currentSelectedTemplate.name}</h2>
+                  <p className="text-sm text-gray-600">{currentSelectedTemplate.description}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPreviewModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Template Preview Image */}
+            <div className="mb-6 bg-gray-100 rounded-lg p-8">
+              <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-8 min-h-[600px] overflow-hidden">
+                <div className="transform scale-75 origin-top-left">
+                  {generateSampleResumePreview(currentSelectedTemplate)}
+                </div>
+              </div>
+            </div>
+
+            {/* Template Details */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Features</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentSelectedTemplate.features.map(feature => (
+                    <span key={feature} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Specifications</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Difficulty:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(currentSelectedTemplate.difficulty)}`}>
+                      {currentSelectedTemplate.difficulty}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Layout:</span>
+                    <span className="font-medium text-gray-900">{currentSelectedTemplate.layout}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Color Scheme:</span>
+                    <span className="font-medium text-gray-900 capitalize">{currentSelectedTemplate.colorScheme}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Rating:</span>
+                    <div className="flex items-center gap-1">
+                      <Star size={14} className="text-yellow-400 fill-current" />
+                      <span className="font-medium text-gray-900">{currentSelectedTemplate.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleFavorite(currentSelectedTemplate.id)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    favorites.includes(currentSelectedTemplate.id)
+                      ? 'bg-red-50 text-red-600'
+                      : 'text-gray-400 hover:bg-gray-100'
+                  }`}
+                >
+                  <Heart size={20} fill={favorites.includes(currentSelectedTemplate.id) ? 'currentColor' : 'none'} />
+                </button>
+                <button 
+                  onClick={handleShareTemplate}
+                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Share"
+                >
+                  <Share2 size={20} />
+                </button>
+                <button 
+                  onClick={handleDownloadTemplate}
+                  className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Download"
+                >
+                  <Download size={20} />
+                </button>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowPreviewModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center gap-2"
+                >
+                  <Upload size={18} />
+                  Upload & Apply
+                </button>
+                <button
+                  onClick={() => handleUseTemplate(currentSelectedTemplate.id)}
+                  className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 group relative overflow-hidden"
+                >
+                  {addedTemplateId === currentSelectedTemplate?.id ? (
+                    <span className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                      <CheckCircle size={18} className="text-green-200" />
+                      Added!
+                    </span>
+                  ) : (
+                    <>
+                      <Plus size={18} />
+                      Add to Editor
+                    </>
+                  )}
+                  {addedTemplateId === currentSelectedTemplate?.id && (
+                    <span className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-blue-500/20 animate-pulse"></span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload & Apply Template Modal */}
+      {showUploadModal && currentSelectedTemplate && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold">Upload & Apply Template</h2>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 120px)' }}>
+              {!uploadedFile ? (
+                /* Upload Area */
+                <>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Upload Your Resume</h3>
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8">
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploadedFile(file);
+                          }
+                        }}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="flex flex-col items-center cursor-pointer"
+                      >
+                        <Folder size={48} className="mb-4 text-gray-400" />
+                        <p className="text-gray-600 mb-2">Drop file here or click to browse</p>
+                        <span className="text-sm text-gray-500">Supports: PDF, DOC, DOCX</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowUploadModal(false);
+                        setUploadedFile(null);
+                      }}
+                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Preview Area */
+                <>
+                  <div className="mb-4 p-3 bg-green-50 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <File size={24} className="text-green-600" />
+                      <div>
+                        <p className="font-semibold">{uploadedFile.name}</p>
+                        <p className="text-sm text-gray-600">{(uploadedFile.size / 1024).toFixed(2)} KB</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setUploadedFile(null)}
+                      className="p-1 hover:bg-red-100 rounded"
+                    >
+                      <XCircle size={20} className="text-red-600" />
+                    </button>
+                  </div>
+
+                  {/* Preview of Resume with Template */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Preview with Template</h3>
+                    <div className="border-2 border-gray-200 rounded-xl p-6 bg-white shadow-lg">
+                      <div className="bg-gradient-to-br from-gray-50 to-white p-8 rounded-lg">
+                        {generateSampleResumePreview(currentSelectedTemplate)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Download Options */}
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold mb-3">Download Format</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => {
+                          logger.debug('Downloading as PDF with template:', currentSelectedTemplate.id);
+                          alert('PDF download will be generated with template applied!');
+                        }}
+                        className="p-4 border-2 border-gray-200 rounded-xl hover:border-purple-600 hover:bg-purple-50 transition-all flex flex-col items-center gap-2"
+                      >
+                        <FileText size={32} className="text-red-600" />
+                        <p className="font-semibold">Download as PDF</p>
+                        <p className="text-sm text-gray-600">Portable format</p>
+                      </button>
+                      <button
+                        onClick={() => {
+                          logger.debug('Downloading as DOC with template:', currentSelectedTemplate.id);
+                          alert('Word document will be generated with template applied!');
+                        }}
+                        className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-600 hover:bg-blue-50 transition-all flex flex-col items-center gap-2"
+                      >
+                        <FileText size={32} className="text-blue-600" />
+                        <p className="font-semibold">Download as Word</p>
+                        <p className="text-sm text-gray-600">Editable format</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      onClick={() => {
+                        setShowUploadModal(false);
+                        setUploadedFile(null);
+                      }}
+                      className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
