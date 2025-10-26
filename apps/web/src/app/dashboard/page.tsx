@@ -33,6 +33,10 @@ import * as exportHelpers from '../../utils/exportHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
+import ATSChecker from '../../components/features/ATSChecker';
+import ResumeSharing from '../../components/features/ResumeSharing';
+import CoverLetterAnalytics from '../../components/CoverLetterAnalytics';
+import EmailAnalytics from '../../components/email/EmailAnalytics';
 import {
   ExportModal,
   ImportModal,
@@ -70,6 +74,12 @@ export default function DashboardPage() {
   const [showSaveToCloudModal, setShowSaveToCloudModal] = useState(false);
   const [showImportFromCloudModal, setShowImportFromCloudModal] = useState(false);
   const [cloudResumes, setCloudResumes] = useState<ResumeFile[]>([]);
+
+  // New Features State
+  const [showATSChecker, setShowATSChecker] = useState(false);
+  const [showResumeSharing, setShowResumeSharing] = useState(false);
+  const [showCoverLetterAnalytics, setShowCoverLetterAnalytics] = useState(false);
+  const [showEmailAnalytics, setShowEmailAnalytics] = useState(false);
 
   // Cloud Storage Handlers
   const handleSaveToCloud = () => {
@@ -658,6 +668,8 @@ export default function DashboardPage() {
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onShowMobileMenu={() => setShowMobileMenu(true)}
+              onShowATSChecker={() => setShowATSChecker(true)}
+              onShowResumeSharing={() => setShowResumeSharing(true)}
               showRightPanel={showRightPanel}
               previousSidebarState={previousSidebarState}
               sidebarCollapsed={sidebarCollapsed}
@@ -858,6 +870,41 @@ export default function DashboardPage() {
           files={cloudResumes}
           onClose={() => setShowImportFromCloudModal(false)}
           onLoad={handleLoadFromCloud}
+        />
+      )}
+
+      {/* ATS Checker Modal */}
+      {showATSChecker && (
+        <ATSChecker
+          resumeData={resumeData}
+          isOpen={showATSChecker}
+          onClose={() => setShowATSChecker(false)}
+        />
+      )}
+
+      {/* Resume Sharing Modal */}
+      {showResumeSharing && (
+        <ResumeSharing
+          resumeId={`resume_${Date.now()}`}
+          resumeName={resumeFileName}
+          isOpen={showResumeSharing}
+          onClose={() => setShowResumeSharing(false)}
+        />
+      )}
+
+      {/* Cover Letter Analytics Modal */}
+      {showCoverLetterAnalytics && (
+        <CoverLetterAnalytics
+          isOpen={showCoverLetterAnalytics}
+          onClose={() => setShowCoverLetterAnalytics(false)}
+        />
+      )}
+
+      {/* Email Analytics Modal */}
+      {showEmailAnalytics && (
+        <EmailAnalytics
+          isOpen={showEmailAnalytics}
+          onClose={() => setShowEmailAnalytics(false)}
         />
       )}
     </>

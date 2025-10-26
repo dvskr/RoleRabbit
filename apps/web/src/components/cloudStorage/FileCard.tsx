@@ -435,23 +435,23 @@ export default function FileCard({
 
         {/* Comments Section */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="space-y-3">
+          <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-full overflow-hidden">
+            <div className="space-y-3 max-w-full">
               {/* Existing Comments */}
               {file.comments && file.comments.length > 0 ? (
                 file.comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                  <div key={comment.id} className="flex space-x-3 max-w-full">
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs text-white font-medium">
                         {comment.userName?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
                         <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
                       </div>
-                      <p className="text-sm text-gray-700">{comment.content}</p>
+                      <p className="text-sm text-gray-700 break-words">{comment.content}</p>
                     </div>
                   </div>
                 ))
@@ -462,23 +462,23 @@ export default function FileCard({
               )}
               
               {/* Add Comment */}
-              <div className="flex space-x-3">
-                <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
+              <div className="flex space-x-3 max-w-full">
+                <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-xs text-white font-medium">U</span>
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0 max-w-full">
                   <textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm box-border"
                     rows={2}
                   />
                   <div className="flex justify-end mt-2 space-x-2">
                     <button
                       onClick={handleCommentSubmit}
                       disabled={!newComment.trim()}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                     >
                       Comment
                     </button>
@@ -487,7 +487,7 @@ export default function FileCard({
                         setNewComment('');
                         setShowComments(false);
                       }}
-                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
                     >
                       Cancel
                     </button>
@@ -503,10 +503,11 @@ export default function FileCard({
 
   // List view - Enhanced version
   return (
-    <div className={`group flex items-center justify-between p-4 border rounded-xl hover:shadow-md transition-all duration-300 ${
+    <div className={`group flex flex-col p-4 border rounded-xl hover:shadow-md transition-all duration-300 overflow-hidden w-full ${
       isSelected ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'
     }`}>
-      <div className="flex items-center space-x-4 flex-1">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center space-x-4 flex-1 min-w-0">
         <input
           type="checkbox"
           checked={isSelected}
@@ -720,27 +721,28 @@ export default function FileCard({
             </div>
           )}
         </div>
+        </div>
       </div>
 
       {/* Comments Section - List View */}
       {showComments && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="space-y-3">
+        <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-full overflow-hidden">
+          <div className="space-y-3 max-w-full">
             {/* Existing Comments */}
             {file.comments && file.comments.length > 0 ? (
               file.comments.map((comment) => (
-                <div key={comment.id} className="flex space-x-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                <div key={comment.id} className="flex space-x-3 max-w-full">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-xs text-white font-medium">
                       {comment.userName?.charAt(0).toUpperCase() || 'U'}
                     </span>
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
                       <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-sm text-gray-700">{comment.content}</p>
+                    <p className="text-sm text-gray-700 break-words">{comment.content}</p>
                   </div>
                 </div>
               ))
@@ -751,23 +753,23 @@ export default function FileCard({
             )}
             
             {/* Add Comment */}
-            <div className="flex space-x-3">
-              <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
+            <div className="flex space-x-3 max-w-full">
+              <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-xs text-white font-medium">U</span>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0 max-w-full">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                  className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm box-border"
                   rows={2}
                 />
                 <div className="flex justify-end mt-2 space-x-2">
                   <button
                     onClick={handleCommentSubmit}
                     disabled={!newComment.trim()}
-                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                   >
                     Comment
                   </button>
@@ -776,7 +778,7 @@ export default function FileCard({
                       setNewComment('');
                       setShowComments(false);
                     }}
-                    className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                    className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
                   >
                     Cancel
                   </button>
