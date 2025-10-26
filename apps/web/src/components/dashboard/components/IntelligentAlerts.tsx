@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Clock, X, Bell, Zap } from 'lucide-react';
 import { DashboardAlert } from '../types/dashboard';
 
@@ -15,6 +15,7 @@ export function IntelligentAlerts({
   onDismissAlert,
   isLoading
 }: IntelligentAlertsProps) {
+  const [height, setHeight] = useState(600);
   const getAlertIcon = (type: DashboardAlert['type']) => {
     switch (type) {
       case 'follow_up':
@@ -64,19 +65,23 @@ export function IntelligentAlerts({
   const urgentAlerts = alerts.filter(alert => alert.priority === 'urgent');
 
   // Calculate dynamic height based on content
-  const getDynamicHeight = () => {
-    if (typeof window !== 'undefined') {
-      const baseHeight = 120; // Header height
-      const itemHeight = 80; // Approximate height per alert item
-      const maxHeight = window.innerHeight * 0.4; // Max 40% of viewport height
-      const calculatedHeight = baseHeight + (alerts.length * itemHeight);
-      return Math.min(calculatedHeight, maxHeight);
-    }
-    return 600;
-  };
+  useEffect(() => {
+    const calculateHeight = () => {
+      if (typeof window !== 'undefined') {
+        const baseHeight = 120; // Header height
+        const itemHeight = 80; // Approximate height per alert item
+        const maxHeight = window.innerHeight * 0.4; // Max 40% of viewport height
+        const calculatedHeight = baseHeight + (alerts.length * itemHeight);
+        setHeight(Math.min(calculatedHeight, maxHeight));
+      }
+    };
+    calculateHeight();
+    window.addEventListener('resize', calculateHeight);
+    return () => window.removeEventListener('resize', calculateHeight);
+  }, [alerts.length]);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 flex flex-col" style={{ height: `${getDynamicHeight()}px` }}>
+    <div className="bg-white rounded-lg border border-gray-200 flex flex-col" style={{ height: `${height}px` }}>
       {/* Header - Compact */}
       <div className="p-3 border-b border-gray-200">
         <div className="flex items-center justify-between mb-1">
