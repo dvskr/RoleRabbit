@@ -9,6 +9,7 @@ import {
   CustomTab,
   PreviewTab
 } from './coverletter/index';
+import { logger } from '../utils/logger';
 
 export default function CoverLetterGenerator() {
   const [activeTab, setActiveTab] = useState<'templates' | 'ai' | 'custom' | 'preview'>('templates');
@@ -19,16 +20,16 @@ export default function CoverLetterGenerator() {
     setIsSaving(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsSaving(false);
-    console.log('Cover letter saved');
+    logger.debug('Cover letter saved');
   };
 
   const handleExport = () => {
-    console.log('Exporting cover letter');
+    logger.debug('Exporting cover letter');
     // In real app, this would trigger export functionality
   };
 
   const handlePrint = () => {
-    console.log('Printing cover letter');
+    logger.debug('Printing cover letter');
     // In real app, this would open print dialog
   };
 

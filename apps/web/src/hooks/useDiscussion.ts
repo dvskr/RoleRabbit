@@ -3,7 +3,7 @@ import { Community, Post, Comment, DiscussionFilters, NewCommunity } from '../ty
 
 export const useDiscussion = () => {
   // Tab state
-  const [activeTab, setActiveTab] = useState<'hot' | 'new' | 'top' | 'ai' | 'communities'>('hot');
+  const [activeTab, setActiveTab] = useState<'all' | 'hot' | 'new' | 'top' | 'ai' | 'communities'>('all');
   
   // Filter state
   const [filters, setFilters] = useState<DiscussionFilters>({
@@ -289,8 +289,13 @@ export const useDiscussion = () => {
       filtered = filtered.filter(post => post.votes > 20);
     }
     
-    // Sort posts
+    // Sort posts - pinned posts always at top
     filtered.sort((a, b) => {
+      // Pinned posts always appear first
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      
+      // Then sort by selected criteria
       switch (filters.sortBy) {
         case 'time':
           return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
@@ -354,6 +359,18 @@ export const useDiscussion = () => {
     };
     setComments(prev => [...prev, newComment]);
   };
+
+  const updatePost = (postId: string, updates: Partial<Post>) => {
+    setPosts(prev => prev.map(post => 
+      post.id === postId ? { ...post, ...updates } : post
+    ));
+  };
+
+  const updateCommunity = (communityId: string, updates: Partial<Community>) => {
+    setCommunities(prev => prev.map(community => 
+      community.id === communityId ? { ...community, ...updates } : community
+    ));
+  };
   
   return {
     // State
@@ -393,12 +410,17 @@ export const useDiscussion = () => {
     setNewCommunity,
     setNewTag,
     setNewRule,
+    setPosts,
+    setCommunities,
+    setComments,
     
     // Actions
     updateFilters,
     resetFilters,
     addPost,
     addCommunity,
-    addComment
+    addComment,
+    updatePost,
+    updateCommunity
   };
 };

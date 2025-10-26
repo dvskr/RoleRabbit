@@ -30,6 +30,10 @@ interface PostCardProps {
   onBookmark: (postId: string) => void;
   onFlag: (postId: string) => void;
   onView: (postId: string) => void;
+  onPin: (postId: string) => void;
+  isBookmarked: boolean;
+  isFlagged: boolean;
+  animatingAction?: string;
 }
 
 export default function PostCard({
@@ -39,7 +43,11 @@ export default function PostCard({
   onShare,
   onBookmark,
   onFlag,
-  onView
+  onView,
+  onPin,
+  isBookmarked,
+  isFlagged,
+  animatingAction
 }: PostCardProps) {
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -83,7 +91,7 @@ export default function PostCard({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300">
       {/* Post Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -163,10 +171,16 @@ export default function PostCard({
           </div>
           
           <button
-            onClick={() => onComment(post.id)}
-            className="flex items-center gap-1 p-1 hover:bg-gray-100 rounded"
+            onClick={() => onView(post.id)}
+            className="flex items-center gap-2 p-1 hover:bg-gray-100 rounded"
+            title="View post and comments"
           >
-            <MessageSquare size={16} className="text-gray-500" />
+            <div className="flex items-center gap-1">
+              <Eye size={16} className="text-gray-500" />
+              <MessageSquare size={16} className="text-gray-500" />
+            </div>
+            <span className="text-sm text-gray-600">{post.views}</span>
+            <span className="text-sm text-gray-600">•</span>
             <span className="text-sm text-gray-600">{post.comments}</span>
           </button>
           
@@ -182,22 +196,45 @@ export default function PostCard({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onBookmark(post.id)}
-            className="p-1 hover:bg-gray-100 rounded"
+            className={`p-1 hover:bg-gray-100 rounded transition-all ${
+              isBookmarked ? 'bg-blue-50' : ''
+            } ${
+              animatingAction === 'bookmark' ? 'animate-bounce' : ''
+            }`}
+            title={isBookmarked ? 'Remove bookmark' : 'Bookmark this post'}
           >
-            <Bookmark size={16} className="text-gray-500" />
+            <Bookmark 
+              size={16} 
+              className={isBookmarked ? 'text-blue-600 fill-blue-600' : 'text-gray-500'}
+            />
           </button>
           <button
             onClick={() => onFlag(post.id)}
-            className="p-1 hover:bg-gray-100 rounded"
+            className={`p-1 hover:bg-gray-100 rounded transition-all ${
+              isFlagged ? 'bg-red-50' : ''
+            } ${
+              animatingAction === 'flag' ? 'animate-bounce' : ''
+            }`}
+            title={isFlagged ? 'Remove report' : 'Report this post'}
           >
-            <Flag size={16} className="text-gray-500" />
+            <Flag 
+              size={16} 
+              className={isFlagged ? 'text-red-600' : 'text-gray-500'}
+            />
           </button>
           <button
-            onClick={() => onView(post.id)}
-            className="flex items-center gap-1 p-1 hover:bg-gray-100 rounded"
+            onClick={() => onPin(post.id)}
+            className={`p-1 hover:bg-gray-100 rounded transition-all ${
+              post.isPinned ? 'bg-yellow-50' : ''
+            } ${
+              animatingAction === 'pin' ? 'animate-bounce' : ''
+            }`}
+            title={post.isPinned ? 'Unpin this post' : 'Pin this post'}
           >
-            <Eye size={16} className="text-gray-500" />
-            <span className="text-sm text-gray-600">{post.views}</span>
+            <Pin 
+              size={16} 
+              className={post.isPinned ? 'text-yellow-600' : 'text-gray-500'}
+            />
           </button>
         </div>
       </div>

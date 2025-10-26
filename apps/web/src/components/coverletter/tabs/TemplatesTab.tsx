@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Search, Filter, Plus, Code, Palette, Megaphone, TrendingUp, DollarSign, FileText } from 'lucide-react';
 import { CoverLetterTemplate } from '../types/coverletter';
 import TemplateCard from '../components/TemplateCard';
+import { logger } from '../../../utils/logger';
 
 export default function TemplatesTab() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,12 +109,12 @@ export default function TemplatesTab() {
   });
 
   const handleUseTemplate = (template: CoverLetterTemplate) => {
-    console.log('Using template:', template);
+    logger.debug('Using template:', template);
     // In real app, this would load the template into the editor
   };
 
   const handlePreviewTemplate = (template: CoverLetterTemplate) => {
-    console.log('Previewing template:', template);
+    logger.debug('Previewing template:', template);
     // In real app, this would show a preview modal
   };
 
