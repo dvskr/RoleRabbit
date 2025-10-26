@@ -12,9 +12,10 @@ import {
 import { logger } from '../utils/logger';
 import { CoverLetterTemplate } from './coverletter/types/coverletter';
 import { ResumeFile } from '../types/cloudStorage';
-import { Cloud, X, Download } from 'lucide-react';
+import { Cloud, X, Download, TrendingUp } from 'lucide-react';
 import ExportModal from './coverletter/ExportModal';
 import ImportModal from './coverletter/ImportModal';
+import CoverLetterAnalytics from './CoverLetterAnalytics';
 
 export default function CoverLetterGenerator() {
   const [activeTab, setActiveTab] = useState<'templates' | 'ai' | 'custom' | 'preview'>('templates');
@@ -26,6 +27,7 @@ export default function CoverLetterGenerator() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSaveToCloudModal, setShowSaveToCloudModal] = useState(false);
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [cloudFiles, setCloudFiles] = useState<ResumeFile[]>([]);
 
   // Load draft from localStorage on mount
@@ -399,6 +401,7 @@ export default function CoverLetterGenerator() {
         isSaving={isSaving}
         onImport={handleImportClick}
         onExportClick={handleExportClick}
+        onAnalytics={() => setShowAnalyticsModal(true)}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -443,6 +446,12 @@ export default function CoverLetterGenerator() {
           defaultTitle={title}
         />
       )}
+
+      {/* Analytics Modal */}
+      <CoverLetterAnalytics
+        isOpen={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+      />
     </div>
   );
 }
