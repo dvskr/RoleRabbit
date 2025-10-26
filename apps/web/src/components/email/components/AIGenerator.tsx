@@ -16,7 +16,9 @@ export default function AIGenerator({
   if (!isOpen) return null;
 
   const handleGenerate = () => {
-    onGenerate(prompt);
+    if (onGenerate && prompt) {
+      onGenerate(prompt);
+    }
   };
 
   return (
@@ -43,8 +45,8 @@ export default function AIGenerator({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Recipient Type</label>
               <select
-                value={context.recipientType}
-                onChange={(e) => onContextChange({ recipientType: e.target.value as any })}
+                value={context?.recipientType || ''}
+                onChange={(e) => onContextChange?.({ recipientType: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="hr">HR Manager</option>
@@ -57,8 +59,8 @@ export default function AIGenerator({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Industry</label>
               <select
-                value={context.industry}
-                onChange={(e) => onContextChange({ industry: e.target.value as any })}
+                value={context?.industry || ''}
+                onChange={(e) => onContextChange?.({ industry: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="tech">Technology</option>
@@ -74,8 +76,8 @@ export default function AIGenerator({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Position</label>
               <select
-                value={context.position}
-                onChange={(e) => onContextChange({ position: e.target.value as any })}
+                value={context?.position || ''}
+                onChange={(e) => onContextChange?.({ position: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="software-engineer">Software Engineer</option>
@@ -88,8 +90,8 @@ export default function AIGenerator({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Tone</label>
               <select
-                value={context.tone}
-                onChange={(e) => onContextChange({ tone: e.target.value as any })}
+                value={context?.tone || ''}
+                onChange={(e) => onContextChange?.({ tone: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="professional">Professional</option>
@@ -102,8 +104,8 @@ export default function AIGenerator({
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Length</label>
               <select
-                value={context.length}
-                onChange={(e) => onContextChange({ length: e.target.value as any })}
+                value={context?.length || ''}
+                onChange={(e) => onContextChange?.({ length: e.target.value as any })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="short">Short</option>
@@ -117,8 +119,8 @@ export default function AIGenerator({
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">What should the email be about?</label>
             <textarea
-              value={prompt}
-              onChange={(e) => onPromptChange(e.target.value)}
+              value={prompt || ''}
+              onChange={(e) => onPromptChange?.(e.target.value)}
               placeholder="Describe what you want to communicate in this email..."
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
