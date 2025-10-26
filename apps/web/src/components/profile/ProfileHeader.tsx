@@ -1,16 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Save, Edit } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
+
+interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
+  resumeImportButton?: ReactNode;
+}
 
 export default function ProfileHeader({
   isEditing,
   isSaving,
   onEdit,
   onCancel,
-  onSave
-}: ProfileHeaderProps) {
+  onSave,
+  resumeImportButton
+}: ExtendedProfileHeaderProps) {
   return (
     <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-6 py-4 flex-shrink-0 shadow-sm">
       <div className="flex items-center justify-between">
@@ -18,6 +23,8 @@ export default function ProfileHeader({
           <p className="text-gray-600 mt-1 text-sm">Manage your account settings and preferences</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Resume Import Button */}
+          {resumeImportButton && !isEditing && resumeImportButton}
           {isEditing && (
             <>
               <button

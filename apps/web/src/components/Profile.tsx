@@ -28,6 +28,7 @@ import {
   BillingTab,
   PreferencesTab,
   SupportTab,
+  ResumeImport,
   UserData,
   ProfileTabConfig
 } from './profile/index';
@@ -195,6 +196,40 @@ export default function Profile() {
     // Handle profile picture change
   };
 
+  const handleResumeImport = (parsedData: any) => {
+    // Auto-fill profile data from resume
+    const updates: Partial<UserData> = {};
+
+    if (parsedData.personalInfo) {
+      if (parsedData.personalInfo.firstName) updates.firstName = parsedData.personalInfo.firstName;
+      if (parsedData.personalInfo.lastName) updates.lastName = parsedData.personalInfo.lastName;
+      if (parsedData.personalInfo.email) updates.email = parsedData.personalInfo.email;
+      if (parsedData.personalInfo.phone) updates.phone = parsedData.personalInfo.phone;
+      if (parsedData.personalInfo.location) updates.location = parsedData.personalInfo.location;
+    }
+
+    if (parsedData.professionalSummary) {
+      updates.professionalSummary = parsedData.professionalSummary;
+    }
+
+    if (parsedData.skills && parsedData.skills.length > 0) {
+      updates.skills = parsedData.skills;
+    }
+
+    if (parsedData.education && parsedData.education.length > 0) {
+      updates.education = parsedData.education;
+    }
+
+    if (parsedData.certifications && parsedData.certifications.length > 0) {
+      updates.certifications = parsedData.certifications;
+    }
+
+    // Apply all updates
+    if (Object.keys(updates).length > 0) {
+      handleUserDataChange(updates);
+    }
+  };
+
   const renderTabContent = () => {
     const commonProps = {
       userData,
@@ -244,6 +279,7 @@ export default function Profile() {
         onEdit={() => setIsEditing(true)}
         onCancel={() => setIsEditing(false)}
         onSave={handleSave}
+        resumeImportButton={<ResumeImport onResumeImport={handleResumeImport} />}
       />
 
       <div className="flex-1 flex min-h-0 overflow-hidden">

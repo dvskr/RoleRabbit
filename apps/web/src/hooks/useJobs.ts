@@ -65,7 +65,7 @@ export function useJobs() {
     groupBy: 'status',
     showArchived: false
   });
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
