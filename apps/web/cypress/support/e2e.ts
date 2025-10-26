@@ -22,7 +22,7 @@ import './commands';
 // Hide fetch/XHR requests from command log
 Cypress.on('window:before:load', (win) => {
   // Remove fetch from window to avoid conflicts
-  delete win.fetch;
+  delete (win as any).fetch;
 });
 
 // Add custom commands

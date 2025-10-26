@@ -102,7 +102,7 @@ export default function AIPanel({
   ];
 
   return (
-    <div className={`fixed right-0 top-0 h-full bg-white shadow-2xl z-40 ${isMobile ? 'w-full' : 'w-80'} border-l border-gray-100`}>
+    <div className={`h-full bg-white shadow-2xl z-40 ${isMobile ? 'w-full' : 'w-80'} border-l border-gray-100`}>
       <div className="h-full flex flex-col">
         {/* Panel Header */}
         <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50">
@@ -270,7 +270,7 @@ export default function AIPanel({
                         Apply All
                       </button>
                       <button
-                        onClick={() => setAiRecommendations(null)}
+                        onClick={() => setAiRecommendations([])}
                         className="flex-1 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-all"
                       >
                         Cancel
