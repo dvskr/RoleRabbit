@@ -8,6 +8,7 @@ import DiscussionTabs from './discussion/DiscussionTabs';
 import PostCard from './discussion/PostCard';
 import CommunityCard from './discussion/CommunityCard';
 import DiscussionFilters from './discussion/DiscussionFilters';
+import { logger } from '../utils/logger';
 
 export default function Discussion() {
   const {
@@ -73,31 +74,31 @@ export default function Discussion() {
   };
 
   const handleBookmark = (postId: string) => {
-    console.log(`Bookmark post ${postId}`);
+    logger.debug(`Bookmark post ${postId}`);
     // TODO: Implement bookmark functionality
     // This would add/remove post from user's bookmarks
   };
 
   const handleFlag = (postId: string) => {
-    console.log(`Flag post ${postId}`);
+    logger.debug(`Flag post ${postId}`);
     // TODO: Implement flag functionality
     // This would report the post for moderation
   };
 
   const handleView = (postId: string) => {
-    console.log(`View post ${postId}`);
+    logger.debug(`View post ${postId}`);
     // TODO: Implement view functionality
     // This would increment view count and possibly open detailed view
   };
 
   const handleJoinCommunity = (communityId: string) => {
-    console.log(`Join community ${communityId}`);
+    logger.debug(`Join community ${communityId}`);
     // TODO: Implement join community functionality
     // This would add user to community members
   };
 
   const handleViewCommunity = (communityId: string) => {
-    console.log(`View community ${communityId}`);
+    logger.debug(`View community ${communityId}`);
     // TODO: Implement view community functionality
     // This would navigate to community details or filter posts by community
   };
@@ -108,7 +109,7 @@ export default function Discussion() {
   };
 
   const handleRefresh = () => {
-    console.log('Refresh discussions');
+    logger.debug('Refresh discussions');
     // TODO: Implement refresh functionality
     // This would refetch data from API
   };
@@ -381,8 +382,8 @@ export default function Discussion() {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowCreatePost(false)}
+            <button
+              onClick={() => setShowCreatePost(false)}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
@@ -390,7 +391,7 @@ export default function Discussion() {
               <button
                 onClick={() => {
                   // TODO: Implement actual post creation
-                  console.log('Creating post...');
+                  logger.debug('Creating post...');
                   setShowCreatePost(false);
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -591,8 +592,8 @@ export default function Discussion() {
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
-              <button
-                onClick={() => setShowCreateCommunity(false)}
+            <button
+              onClick={() => setShowCreateCommunity(false)}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
@@ -627,7 +628,7 @@ export default function Discussion() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 Create Community
-              </button>
+            </button>
             </div>
           </div>
         </div>
