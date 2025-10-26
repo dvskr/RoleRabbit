@@ -6,7 +6,7 @@ import { BillingInfo } from '../../types/userProfile';
 
 interface BillingTabProps {
   billingInfo: BillingInfo;
-  setBillingInfo: (billing: BillingInfo) => void;
+  setBillingInfo: (billing: BillingInfo | ((prev: BillingInfo) => BillingInfo)) => void;
   onUpdate: (billing: BillingInfo) => void;
 }
 

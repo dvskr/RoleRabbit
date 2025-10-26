@@ -10,7 +10,7 @@ interface JobMergedToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   selectedJobsCount: number;
-  onBulkUpdateStatus: (status: string) => void;
+  onBulkUpdateStatus: (status: 'applied' | 'interview' | 'offer' | 'rejected') => void;
   onBulkDelete: () => void;
   onClearSelection: () => void;
   onExport: () => void;
@@ -104,7 +104,7 @@ export default function JobMergedToolbar({
             </span>
             
             <select
-              onChange={(e) => onBulkUpdateStatus(e.target.value)}
+              onChange={(e) => onBulkUpdateStatus(e.target.value as 'applied' | 'interview' | 'offer' | 'rejected')}
               className="px-2 py-1 text-xs border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Update Status</option>

@@ -8,7 +8,7 @@ interface SupportTabProps {
   supportTickets: SupportTicket[];
   setSupportTickets: (tickets: SupportTicket[]) => void;
   feedbackForm: FeedbackForm;
-  setFeedbackForm: (feedback: FeedbackForm) => void;
+  setFeedbackForm: (feedback: FeedbackForm | ((prev: FeedbackForm) => FeedbackForm)) => void;
   onSubmitFeedback: (feedback: FeedbackForm) => void;
 }
 

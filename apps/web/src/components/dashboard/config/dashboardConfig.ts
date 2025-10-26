@@ -1,4 +1,4 @@
-import { DashboardConfig } from './types/dashboard';
+import { DashboardConfig } from '../types/dashboard';
 
 export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
   // Data source (easy to change later)

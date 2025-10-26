@@ -10,6 +10,12 @@ import FileCard from './cloudStorage/FileCard';
 import UploadModal from './cloudStorage/UploadModal';
 
 export default function CloudStorage({ onClose }: CloudStorageProps) {
+  const handleEditFileWrapper = (fileId: string) => {
+    // For now, just log the edit action
+    console.log('Editing file:', fileId);
+    // TODO: Implement actual edit logic
+  };
+
   const {
     // State
     files,
@@ -104,7 +110,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                 onShare={handleShareFile}
                 onDelete={handleDeleteFile}
                 onTogglePublic={handleTogglePublic}
-                onEdit={handleEditFile}
+                onEdit={handleEditFileWrapper}
                 onStar={handleStarFile}
                 onArchive={handleArchiveFile}
                 onAddComment={handleAddComment}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { DashboardConfig } from './types/dashboard';
+import { DashboardConfig, DashboardWidget } from './types/dashboard';
 import { useDashboard } from '../../hooks/useDashboard';
 import { DashboardHeader } from './components/DashboardHeader';
 import { DashboardGrid } from './components/DashboardGrid';
@@ -66,13 +66,13 @@ export default function MissionControlDashboard({
   });
 
   // Widget state management
-  const [widgets, setWidgets] = useState([
-    { id: 'activity-feed', type: 'activity' as const, title: 'Activity Feed', description: 'Track job search activities', isVisible: true, order: 0, size: 'large' as const },
-    { id: 'smart-todos', type: 'todos' as const, title: 'Smart To-Dos', description: 'AI-powered daily tasks', isVisible: true, order: 1, size: 'medium' as const },
-    { id: 'intelligent-alerts', type: 'alerts' as const, title: 'Intelligent Alerts', description: 'Proactive reminders', isVisible: true, order: 2, size: 'medium' as const },
-    { id: 'progress-metrics', type: 'metrics' as const, title: 'Progress Metrics', description: 'Track your progress', isVisible: true, order: 3, size: 'large' as const },
-    { id: 'quick-actions', type: 'actions' as const, title: 'Quick Actions', description: 'One-click actions', isVisible: true, order: 4, size: 'medium' as const },
-    { id: 'premium-features', type: 'premium' as const, title: 'Premium Features', description: 'RoleReady premium tools', isVisible: true, order: 5, size: 'large' as const }
+  const [widgets, setWidgets] = useState<DashboardWidget[]>([
+    { id: 'activity-feed', type: 'activity', title: 'Activity Feed', description: 'Track job search activities', isVisible: true, order: 0, size: 'large' },
+    { id: 'smart-todos', type: 'todos', title: 'Smart To-Dos', description: 'AI-powered daily tasks', isVisible: true, order: 1, size: 'medium' },
+    { id: 'intelligent-alerts', type: 'alerts', title: 'Intelligent Alerts', description: 'Proactive reminders', isVisible: true, order: 2, size: 'medium' },
+    { id: 'progress-metrics', type: 'metrics', title: 'Progress Metrics', description: 'Track your progress', isVisible: true, order: 3, size: 'large' },
+    { id: 'quick-actions', type: 'actions', title: 'Quick Actions', description: 'One-click actions', isVisible: true, order: 4, size: 'medium' },
+    { id: 'premium-features', type: 'premium', title: 'Premium Features', description: 'RoleReady premium tools', isVisible: true, order: 5, size: 'large' }
   ]);
 
   // Real-time notifications state
@@ -89,6 +89,11 @@ export default function MissionControlDashboard({
   // Dashboard tour state
   const [showTour, setShowTour] = useState(false);
   const [hasCompletedTour, setHasCompletedTour] = useState(false);
+
+  // Handle widget changes from customizer
+  const handleWidgetsChange = (newWidgets: DashboardWidget[]) => {
+    setWidgets(newWidgets);
+  };
 
   // Handle quick actions with external callback
   const handleQuickAction = (actionId: string) => {
@@ -338,6 +343,7 @@ export default function MissionControlDashboard({
             showCompletedTodos={showCompletedTodos}
             setShowCompletedTodos={setShowCompletedTodos}
             config={dashboardConfig}
+            widgets={widgets}
             onCompleteTodo={completeTodo}
             onDismissAlert={dismissAlert}
             onQuickAction={handleQuickAction}
@@ -349,7 +355,7 @@ export default function MissionControlDashboard({
         {showCustomizer && (
           <DashboardCustomizer
             widgets={widgets}
-            onWidgetsChange={setWidgets}
+            onWidgetsChange={handleWidgetsChange}
             onClose={() => setShowCustomizer(false)}
           />
         )}

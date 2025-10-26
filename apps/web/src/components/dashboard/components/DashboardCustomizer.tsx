@@ -3,16 +3,7 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Settings, Eye, EyeOff, GripVertical, Plus, X } from 'lucide-react';
-
-interface DashboardWidget {
-  id: string;
-  type: 'activity' | 'todos' | 'metrics' | 'alerts' | 'actions' | 'premium';
-  title: string;
-  description: string;
-  isVisible: boolean;
-  order: number;
-  size: 'small' | 'medium' | 'large';
-}
+import { DashboardWidget } from '../types/dashboard';
 
 interface DashboardCustomizerProps {
   widgets: DashboardWidget[];
@@ -152,7 +143,7 @@ export function DashboardCustomizer({ widgets, onWidgetsChange, onClose }: Dashb
 
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="widgets">
-              {(provided) => (
+              {(provided: any) => (
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
@@ -160,7 +151,7 @@ export function DashboardCustomizer({ widgets, onWidgetsChange, onClose }: Dashb
                 >
                   {widgets.map((widget, index) => (
                     <Draggable key={widget.id} draggableId={widget.id} index={index}>
-                      {(provided, snapshot) => (
+                      {(provided: any, snapshot: any) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}

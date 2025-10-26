@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ProfileSidebarProps } from '../types/profile';
+import { ProfileSidebarProps } from './types/profile';
 
 export default function ProfileSidebar({
   activeTab,

@@ -62,7 +62,8 @@ export const useResumeData = () => {
         name: 'AWS Certified Solutions Architect',
         issuer: 'Amazon Web Services',
         link: 'https://aws.amazon.com/certification/',
-        skills: ['AWS', 'Cloud Architecture']
+        skills: ['AWS', 'Cloud Architecture'],
+        customFields: []
       }
     ]
   });

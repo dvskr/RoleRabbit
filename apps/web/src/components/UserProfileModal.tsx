@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { UserProfileModalProps } from '../types/userProfile';
+import { UserProfileModalProps, BillingInfo } from '../types/userProfile';
 import {
   ProfileTab,
   SecurityTab,
@@ -85,8 +85,12 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     { id: 'support', label: 'Support', icon: HelpCircle },
   ];
 
+  const handleUpdateBilling = async (billing: BillingInfo) => {
+    console.log('Updating billing info:', billing);
+    // TODO: Implement actual billing update logic
+  };
+
   const handleLoginSubmit = async () => {
-    await handleLogin(loginForm.email, loginForm.password);
     setLoginForm({ email: '', password: '' });
   };
 
@@ -310,7 +314,7 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           <BillingTab
             billingInfo={billingInfo}
             setBillingInfo={setBillingInfo}
-            onUpdate={handleUpdatePreferences}
+            onUpdate={handleUpdateBilling}
           />
         );
       case 'support':
@@ -423,10 +427,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
           <div className="flex-1 overflow-y-auto">
             <div className="p-6">
               {activeTab === 'auth' ? renderAuthTab() : renderActiveTab()}
-                    </div>
-                  </div>
-                        </div>
-                        </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

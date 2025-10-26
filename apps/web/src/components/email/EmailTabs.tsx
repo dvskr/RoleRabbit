@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Mail, Send, FileText, Users, BarChart3 } from 'lucide-react';
-import { EmailTabsProps } from '../types/email';
+import { EmailTabsProps } from './types/email';
 
 export default function EmailTabs({ activeTab, onTabChange }: EmailTabsProps) {
   const tabs = [

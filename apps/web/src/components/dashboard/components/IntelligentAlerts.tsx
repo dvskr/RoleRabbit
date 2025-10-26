@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AlertCircle, CheckCircle, Clock, X, Bell, Zap } from 'lucide-react';
-import { DashboardAlert } from '../../types/dashboard';
+import { DashboardAlert } from '../types/dashboard';
 
 interface IntelligentAlertsProps {
   alerts: DashboardAlert[];

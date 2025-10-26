@@ -6,7 +6,7 @@ import { SecuritySettings } from '../../types/userProfile';
 
 interface SecurityTabProps {
   securityForm: SecuritySettings;
-  setSecurityForm: (security: SecuritySettings) => void;
+  setSecurityForm: (security: SecuritySettings | ((prev: SecuritySettings) => SecuritySettings)) => void;
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
   onUpdate: (security: SecuritySettings) => void;

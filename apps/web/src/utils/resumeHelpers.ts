@@ -18,7 +18,7 @@ export const resumeHelpers = {
     };
   },
 
-  addCustomSection: (newSectionName: string, newSectionContent: string, customSections: CustomSection[], setCustomSections: (sections: CustomSection[]) => void, setSectionOrder: (order: string[]) => void, setSectionVisibility: (visibility: SectionVisibility) => void, setNewSectionName: (name: string) => void, setNewSectionContent: (content: string) => void, setShowAddSectionModal: (show: boolean) => void) => {
+  addCustomSection: (newSectionName: string, newSectionContent: string, customSections: CustomSection[], setCustomSections: (sections: CustomSection[] | ((prev: CustomSection[]) => CustomSection[])) => void, setSectionOrder: (order: string[] | ((prev: string[]) => string[])) => void, setSectionVisibility: (visibility: SectionVisibility | ((prev: SectionVisibility) => SectionVisibility)) => void, setNewSectionName: (name: string) => void, setNewSectionContent: (content: string) => void, setShowAddSectionModal: (show: boolean) => void) => {
     if (!newSectionName.trim()) return;
     
     const newSection = {
@@ -36,7 +36,7 @@ export const resumeHelpers = {
     setShowAddSectionModal(false);
   },
 
-  deleteCustomSection: (id: string, customSections: CustomSection[], setCustomSections: (sections: CustomSection[]) => void, setSectionOrder: (order: string[]) => void, setSectionVisibility: (visibility: SectionVisibility) => void) => {
+  deleteCustomSection: (id: string, customSections: CustomSection[], setCustomSections: (sections: CustomSection[] | ((prev: CustomSection[]) => CustomSection[])) => void, setSectionOrder: (order: string[] | ((prev: string[]) => string[])) => void, setSectionVisibility: (visibility: SectionVisibility | ((prev: SectionVisibility) => SectionVisibility)) => void) => {
     setCustomSections(prev => prev.filter(s => s.id !== id));
     setSectionOrder(prev => prev.filter(s => s !== id));
     setSectionVisibility(prev => {
@@ -46,27 +46,27 @@ export const resumeHelpers = {
     });
   },
 
-  updateCustomSection: (id: string, content: string, customSections: CustomSection[], setCustomSections: (sections: CustomSection[]) => void) => {
+  updateCustomSection: (id: string, content: string, customSections: CustomSection[], setCustomSections: (sections: CustomSection[] | ((prev: CustomSection[]) => CustomSection[])) => void) => {
     setCustomSections(prev => 
       prev.map(s => s.id === id ? { ...s, content } : s)
     );
   },
 
   toggleSection: (section: string, sectionVisibility: SectionVisibility, setSectionVisibility: (visibility: SectionVisibility) => void) => {
-    setSectionVisibility(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
+    setSectionVisibility({
+      ...sectionVisibility,
+      [section]: !sectionVisibility[section]
+    });
   },
 
-  moveSection: (index: number, direction: 'up' | 'down', sectionOrder: string[], setSectionOrder: (order: string[]) => void) => {
+  moveSection: (index: number, direction: 'up' | 'down', sectionOrder: string[], setSectionOrder: (order: string[] | ((prev: string[]) => string[])) => void) => {
     const newOrder = [...sectionOrder];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
     setSectionOrder(newOrder);
   },
 
-  hideSection: (section: string, sectionVisibility: SectionVisibility, setSectionVisibility: (visibility: SectionVisibility) => void) => {
+  hideSection: (section: string, sectionVisibility: SectionVisibility, setSectionVisibility: (visibility: SectionVisibility | ((prev: SectionVisibility) => SectionVisibility)) => void) => {
     setSectionVisibility(prev => ({
       ...prev,
       [section]: !prev[section]

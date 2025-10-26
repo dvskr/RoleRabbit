@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Clock, CheckCircle, AlertCircle, ArrowRight, Filter } from 'lucide-react';
-import { DashboardActivity } from '../../types/dashboard';
+import { DashboardActivity } from '../types/dashboard';
 
 interface ActivityFeedProps {
   activities: DashboardActivity[];

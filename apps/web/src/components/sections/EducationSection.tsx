@@ -4,7 +4,7 @@ import { ResumeData, EducationItem, CustomField } from '../../types/resume';
 
 interface EducationSectionProps {
   resumeData: ResumeData;
-  setResumeData: (data: ResumeData) => void;
+  setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
   sectionVisibility: { [key: string]: boolean };
   onHideSection: (section: string) => void;
 }

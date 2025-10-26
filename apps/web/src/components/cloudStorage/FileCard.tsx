@@ -108,7 +108,7 @@ export default function FileCard({
     if (shareEmail.trim()) {
       onShareWithUser(file.id, shareEmail.trim(), sharePermission);
       setShareEmail('');
-      setShareModal(false);
+      setShowShareModal(false);
     }
   };
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Plus, Mail, FileText, Search, ArrowRight, Zap } from 'lucide-react';
-import { QuickAction } from '../../types/dashboard';
+import { QuickAction } from '../types/dashboard';
 
 interface QuickActionsPanelProps {
   actions: QuickAction[];

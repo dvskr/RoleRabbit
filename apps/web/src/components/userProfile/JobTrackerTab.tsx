@@ -8,7 +8,7 @@ interface JobTrackerTabProps {
   jobs: JobApplication[];
   setJobs: (jobs: JobApplication[]) => void;
   newJob: Partial<JobApplication>;
-  setNewJob: (job: Partial<JobApplication>) => void;
+  setNewJob: (job: Partial<JobApplication> | ((prev: Partial<JobApplication>) => Partial<JobApplication>)) => void;
   showAddJob: boolean;
   setShowAddJob: (show: boolean) => void;
   jobFilter: string;

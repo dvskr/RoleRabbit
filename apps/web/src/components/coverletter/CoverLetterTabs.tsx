@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FileText, Sparkles, Edit3, Eye } from 'lucide-react';
-import { CoverLetterTabsProps } from '../types/coverletter';
+import { CoverLetterTabsProps } from './types/coverletter';
 
 export default function CoverLetterTabs({ activeTab, onTabChange }: CoverLetterTabsProps) {
   const tabs = [
