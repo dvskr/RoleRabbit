@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Upload, FileText, Link } from 'lucide-react';
+import React, { useRef } from 'react';
+import { X, Upload, FileText, Link, Cloud } from 'lucide-react';
 
 interface ImportModalProps {
   showImportModal: boolean;
@@ -9,6 +9,8 @@ interface ImportModalProps {
   importJsonData: string;
   setImportJsonData: (data: string) => void;
   onImport: () => void;
+  onImportFromCloud?: () => void;
+  onFileSelected?: (file: File) => void;
 }
 
 export default function ImportModal({
@@ -18,14 +20,38 @@ export default function ImportModal({
   setImportMethod,
   importJsonData,
   setImportJsonData,
-  onImport
+  onImport,
+  onImportFromCloud,
+  onFileSelected
 }: ImportModalProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!showImportModal) return null;
 
   const importMethods = [
+    { value: 'cloud', label: 'From Cloud Storage', icon: Cloud, desc: 'Import resume from cloud storage' },
     { value: 'file', label: 'Upload File', icon: FileText, desc: 'Upload a resume file' },
     { value: 'linkedin', label: 'LinkedIn Profile', icon: Link, desc: 'Import from LinkedIn' }
   ];
+
+  const handleMethodClick = (method: string) => {
+    if (method === 'cloud' && onImportFromCloud) {
+      onImportFromCloud();
+      setShowImportModal(false);
+    } else if (method === 'file' && onFileSelected) {
+      fileInputRef.current?.click();
+    } else {
+      setImportMethod(method);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && onFileSelected) {
+      onFileSelected(file);
+      setShowImportModal(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50" style={{ 
@@ -71,7 +97,7 @@ export default function ImportModal({
                 return (
                   <button
                     key={method.value}
-                    onClick={() => setImportMethod(method.value)}
+                    onClick={() => handleMethodClick(method.value)}
                     className={`p-4 rounded-xl border-2  duration-200 text-left ${
                       importMethod === method.value
                         ? 'border-blue-500 bg-blue-50'
@@ -98,23 +124,33 @@ export default function ImportModal({
             </div>
           </div>
           
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={onImport}
-              className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-green-500/30  duration-200 flex items-center justify-center gap-2 font-semibold"
-            >
-              <Upload size={18} />
-              Import Resume
-            </button>
-            <button
-              onClick={() => setShowImportModal(false)}
-              className="flex-1 bg-gray-100/80 backdrop-blur-sm text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-200/80 hover:shadow-md  duration-200 font-semibold border border-gray-200"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Buttons - Cloud and File are handled automatically, only show buttons for LinkedIn or other non-auto methods */}
+          {importMethod === 'linkedin' && (
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={onImport}
+                className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-green-500/30  duration-200 flex items-center justify-center gap-2 font-semibold"
+              >
+                <Upload size={18} />
+                Import Resume
+              </button>
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="flex-1 bg-gray-100/80 backdrop-blur-sm text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-200/80 hover:shadow-md  duration-200 font-semibold border border-gray-200"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".json,.txt,.doc,.docx"
+        style={{ display: 'none' }}
+      />
     </div>
   );
 }
