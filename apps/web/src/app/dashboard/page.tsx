@@ -13,7 +13,7 @@ import JobTracker from '../../components/JobTracker';
 import Discussion from '../../components/Discussion';
 import Email from '../../components/Email';
 import CoverLetterGenerator from '../../components/CoverLetterGenerator';
-import { Eye, Sparkles, GripVertical, Trash2, Plus, X } from 'lucide-react';
+import { Eye, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download } from 'lucide-react';
 import { 
   CustomField, 
   ExperienceItem, 
@@ -42,6 +42,7 @@ import {
   MobileMenuModal,
   AIGenerateModal
 } from '../../components/modals';
+import { ResumeFile } from '../../types/cloudStorage';
 import {
   SummarySection,
   SkillsSection,
@@ -64,6 +65,127 @@ export default function DashboardPage() {
   const [previousSidebarState, setPreviousSidebarState] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>('ats-classic');
   const [addedTemplates, setAddedTemplates] = useState<string[]>(['ats-classic', 'ats-modern']);
+  
+  // Cloud Storage State
+  const [showSaveToCloudModal, setShowSaveToCloudModal] = useState(false);
+  const [showImportFromCloudModal, setShowImportFromCloudModal] = useState(false);
+  const [cloudResumes, setCloudResumes] = useState<ResumeFile[]>([]);
+
+  // Cloud Storage Handlers
+  const handleSaveToCloud = () => {
+    setShowSaveToCloudModal(true);
+  };
+
+  const handleImportFromCloud = () => {
+    // Load cloud resumes
+    const cloudStorage = localStorage.getItem('cloudStorage');
+    if (cloudStorage) {
+      try {
+        const storage = JSON.parse(cloudStorage);
+        const resumes = storage.files?.filter((f: ResumeFile) => f.type === 'resume') || [];
+        setCloudResumes(resumes);
+      } catch (e) {
+        logger.debug('Error loading cloud files:', e);
+      }
+    }
+    setShowImportFromCloudModal(true);
+  };
+
+  const handleConfirmSaveToCloud = (fileName: string, description: string, tags: string[]) => {
+    // Load current cloud storage
+    const cloudStorage = localStorage.getItem('cloudStorage');
+    let storage = cloudStorage ? JSON.parse(cloudStorage) : { files: [] };
+
+    // Create new file
+    const newFile: ResumeFile = {
+      id: `resume_${Date.now()}`,
+      name: fileName,
+      type: 'resume',
+      size: `${(JSON.stringify(resumeData).length / 1024).toFixed(2)} KB`,
+      lastModified: new Date().toISOString().split('T')[0],
+      isPublic: false,
+      tags: tags,
+      version: 1,
+      owner: 'current-user@example.com',
+      sharedWith: [],
+      comments: [],
+      downloadCount: 0,
+      viewCount: 0,
+      isStarred: false,
+      isArchived: false,
+      description: description
+    };
+
+    // Store the full resume data separately
+    localStorage.setItem(`cloudFileContent_${newFile.id}`, JSON.stringify({
+      resumeData,
+      customSections,
+      resumeFileName,
+      fontFamily,
+      fontSize,
+      lineSpacing,
+      sectionSpacing,
+      margins,
+      headingStyle,
+      bulletStyle
+    }));
+
+    // Add to storage
+    storage.files.push(newFile);
+    localStorage.setItem('cloudStorage', JSON.stringify(storage));
+    
+    logger.debug('Saved resume to cloud:', newFile);
+    setShowSaveToCloudModal(false);
+  };
+
+  const handleLoadFromCloud = (file: ResumeFile) => {
+    // Load the file content
+    const fileContent = localStorage.getItem(`cloudFileContent_${file.id}`);
+    if (fileContent) {
+      const data = JSON.parse(fileContent);
+      setResumeData(data.resumeData);
+      setCustomSections(data.customSections || []);
+      setResumeFileName(data.resumeFileName || file.name);
+      setFontFamily(data.fontFamily || 'Arial');
+      setFontSize(data.fontSize || '12pt');
+      setLineSpacing(data.lineSpacing || '1.5');
+      setSectionSpacing(data.sectionSpacing || 'normal');
+      setMargins(data.margins || 'medium');
+      setHeadingStyle(data.headingStyle || 'bold');
+      setBulletStyle(data.bulletStyle || 'disc');
+      logger.debug('Loaded resume from cloud:', file);
+    }
+    setShowImportFromCloudModal(false);
+  };
+
+  const handleFileSelected = (file: File) => {
+    logger.debug('File selected:', file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        // Try to parse as JSON
+        const data = JSON.parse(text);
+        if (data.resumeData) {
+          setResumeData(data.resumeData);
+          setCustomSections(data.customSections || []);
+          setResumeFileName(data.resumeFileName || file.name);
+          setFontFamily(data.fontFamily || 'Arial');
+          setFontSize(data.fontSize || '12pt');
+          setLineSpacing(data.lineSpacing || '1.5');
+          setSectionSpacing(data.sectionSpacing || 'normal');
+          setMargins(data.margins || 'medium');
+          setHeadingStyle(data.headingStyle || 'bold');
+          setBulletStyle(data.bulletStyle || 'disc');
+          logger.debug('Loaded resume from file:', data);
+        }
+      } catch (e) {
+        logger.debug('Error parsing file:', e);
+      }
+    };
+    reader.readAsText(file);
+    setShowImportModal(false);
+  };
 
   // Destructure hooks for easier access
   const {
@@ -589,6 +711,7 @@ export default function DashboardPage() {
           logger.debug('Export format:', format);
           // TODO: Implement export functionality
         }}
+        onSaveToCloud={handleSaveToCloud}
       />
 
       {/* Import Resume Modal */}
@@ -603,6 +726,8 @@ export default function DashboardPage() {
           logger.debug('Import triggered');
           // TODO: Implement import functionality
         }}
+        onImportFromCloud={handleImportFromCloud}
+        onFileSelected={handleFileSelected}
       />
 
       {/* Add Custom Section Modal */}
@@ -688,6 +813,255 @@ export default function DashboardPage() {
           setShowAIGenerateModal
         )}
       />
+
+      {/* Save to Cloud Modal */}
+      {showSaveToCloudModal && (
+        <ResumeSaveToCloudModal
+          onClose={() => setShowSaveToCloudModal(false)}
+          onConfirm={handleConfirmSaveToCloud}
+          defaultFileName={resumeFileName}
+        />
+      )}
+
+      {/* Import from Cloud Modal */}
+      {showImportFromCloudModal && (
+        <ResumeImportFromCloudModal
+          files={cloudResumes}
+          onClose={() => setShowImportFromCloudModal(false)}
+          onLoad={handleLoadFromCloud}
+        />
+      )}
     </>
+  );
+}
+
+// Resume Save to Cloud Modal Component
+function ResumeSaveToCloudModal({ 
+  onClose, 
+  onConfirm,
+  defaultFileName 
+}: { 
+  onClose: () => void; 
+  onConfirm: (fileName: string, description: string, tags: string[]) => void;
+  defaultFileName: string;
+}) {
+  const [fileName, setFileName] = useState(defaultFileName);
+  const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState('');
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(t => t !== tagToRemove));
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Cloud size={24} className="text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Save Resume to Cloud</h3>
+              <p className="text-sm text-gray-600">Store your resume securely</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Resume Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              placeholder="Resume name"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe your resume"
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tags
+            </label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                placeholder="Add tag"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                onClick={handleAddTag}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Add
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {tags.map(tag => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm flex items-center gap-2"
+                >
+                  {tag}
+                  <button
+                    onClick={() => handleRemoveTag(tag)}
+                    className="hover:text-indigo-600"
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm(fileName, description, tags)}
+            disabled={!fileName.trim()}
+            className={`flex-1 px-4 py-2 text-white rounded-lg ${
+              !fileName.trim()
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
+          >
+            Save to Cloud
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Resume Import from Cloud Modal Component
+function ResumeImportFromCloudModal({ 
+  files, 
+  onClose,
+  onLoad 
+}: { 
+  files: ResumeFile[];
+  onClose: () => void;
+  onLoad: (file: ResumeFile) => void;
+}) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredFiles = files.filter(file =>
+    file.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Upload size={24} className="text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">Import Resume from Cloud</h3>
+              <p className="text-sm text-gray-600">Select a resume to load</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search resumes..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        <div className="space-y-2">
+          {filteredFiles.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No resumes found</p>
+            </div>
+          ) : (
+            filteredFiles.map(file => (
+              <div
+                key={file.id}
+                onClick={() => onLoad(file)}
+                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{file.name}</h4>
+                    <p className="text-sm text-gray-600">{file.description}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                      <span>Modified: {file.lastModified}</span>
+                      <span>Size: {file.size}</span>
+                      <span>Version: {file.version}</span>
+                    </div>
+                  </div>
+                  <button className="p-2 hover:bg-gray-100 rounded-lg">
+                    <Download size={18} className="text-purple-600" />
+                  </button>
+                </div>
+                {file.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {file.tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
