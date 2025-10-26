@@ -1,20 +1,50 @@
-import React from 'react';
-import { Users, MessageSquare, Lock, Globe, Settings } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Users, MessageSquare, Lock, Globe, Settings, Plus, Edit, Trash2, UserCog, Shield } from 'lucide-react';
 import { Community } from '../../types/discussion';
 
 interface CommunityCardProps {
   community: Community;
   onJoin: (communityId: string) => void;
   onView: (communityId: string) => void;
-  onSettings: (community: Community) => void;
+  onPost: (communityId: string) => void;
+  onEditCommunity: (community: Community) => void;
+  onManageMembers: (community: Community) => void;
+  onModerationTools: (community: Community) => void;
+  onDeleteCommunity: (community: Community) => void;
+  isJoined: boolean;
+  isAnimating: boolean;
 }
 
 export default function CommunityCard({
   community,
   onJoin,
   onView,
-  onSettings
+  onPost,
+  onEditCommunity,
+  onManageMembers,
+  onModerationTools,
+  onDeleteCommunity,
+  isJoined,
+  isAnimating
 }: CommunityCardProps) {
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Close settings menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowSettingsMenu(!showSettingsMenu);
+  };
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'general': return <MessageSquare size={16} />;
@@ -58,12 +88,61 @@ export default function CommunityCard({
           </div>
         </div>
         
-        <button
-          onClick={() => onSettings(community)}
-          className="p-1 hover:bg-gray-100 rounded"
-        >
-          <Settings size={16} className="text-gray-400" />
-        </button>
+        <div className="relative" ref={settingsRef}>
+          <button
+            onClick={handleSettingsClick}
+            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          >
+            <Settings size={16} className="text-gray-400 hover:text-gray-600" />
+          </button>
+          
+          {/* Settings Dropdown */}
+          {showSettingsMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-2 z-50 min-w-[180px]">
+              <button
+                onClick={() => {
+                  onEditCommunity(community);
+                  setShowSettingsMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Edit size={14} />
+                Edit Community
+              </button>
+              <button
+                onClick={() => {
+                  onManageMembers(community);
+                  setShowSettingsMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <UserCog size={14} />
+                Manage Members
+              </button>
+              <button
+                onClick={() => {
+                  onModerationTools(community);
+                  setShowSettingsMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <Shield size={14} />
+                Moderation Tools
+              </button>
+              <div className="border-t border-gray-200 my-1"></div>
+              <button
+                onClick={() => {
+                  onDeleteCommunity(community);
+                  setShowSettingsMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+              >
+                <Trash2 size={14} />
+                Delete Community
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Community Description */}
@@ -104,9 +183,22 @@ export default function CommunityCard({
       <div className="flex items-center gap-2">
         <button
           onClick={() => onJoin(community.id)}
-          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+            isJoined 
+              ? 'bg-green-600 text-white hover:bg-green-700' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          } ${
+            isAnimating ? 'animate-bounce' : ''
+          }`}
         >
-          Join Community
+          {isJoined ? '✓ Joined' : 'Join Community'}
+        </button>
+        <button
+          onClick={() => onPost(community.id)}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center gap-1"
+        >
+          <Plus size={14} />
+          Post
         </button>
         <button
           onClick={() => onView(community.id)}

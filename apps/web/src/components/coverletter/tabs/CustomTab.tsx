@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Edit3, Save, FileText, Lightbulb } from 'lucide-react';
 import CoverLetterEditor from '../components/CoverLetterEditor';
+import { logger } from '../../../utils/logger';
 
 export default function CustomTab() {
   const [content, setContent] = useState('');
@@ -18,7 +19,7 @@ export default function CustomTab() {
   };
 
   const handleSave = () => {
-    console.log('Saving cover letter:', { title, content, wordCount });
+    logger.debug('Saving cover letter:', { title, content, wordCount });
     // In real app, this would save to backend
   };
 

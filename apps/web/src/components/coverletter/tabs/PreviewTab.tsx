@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Eye, Download, Printer, FileText, CheckCircle } from 'lucide-react';
 import PreviewPanel from '../components/PreviewPanel';
+import { logger } from '../../../utils/logger';
 
 export default function PreviewTab() {
   const [content, setContent] = useState(`Dear Hiring Manager,
@@ -24,12 +25,12 @@ Sincerely,
   const [wordCount, setWordCount] = useState(156);
 
   const handleExport = (format: 'pdf' | 'word') => {
-    console.log(`Exporting as ${format}:`, { title, content, wordCount });
+    logger.debug(`Exporting as ${format}:`, { title, content, wordCount });
     // In real app, this would trigger the export process
   };
 
   const handlePrint = () => {
-    console.log('Printing cover letter:', { title, content, wordCount });
+    logger.debug('Printing cover letter:', { title, content, wordCount });
     // In real app, this would open print dialog
   };
 
