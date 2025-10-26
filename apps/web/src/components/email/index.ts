@@ -1,30 +1,25 @@
-// Main components
-export { default as EmailHeader } from './EmailHeader';
-export { default as EmailTabs } from './EmailTabs';
+/**
+ * Email Hub - Central Export File
+ */
 
-// Tab components
+export { default as EmailHub } from './EmailHub';
+
+// Tabs
+export { default as ContactsTab } from './tabs/ContactsTab';
+export { default as ComposerTab } from './tabs/ComposerTab';
 export { default as InboxTab } from './tabs/InboxTab';
-export { default as ComposeTab } from './tabs/ComposeTab';
 export { default as TemplatesTab } from './tabs/TemplatesTab';
-export { default as CampaignsTab } from './tabs/CampaignsTab';
+export { default as SettingsTab } from './tabs/SettingsTab';
 export { default as AnalyticsTab } from './tabs/AnalyticsTab';
 
-// Sub-components
-export { default as EmailComposer } from './components/EmailComposer';
-export { default as TemplateCard } from './components/TemplateCard';
-export { default as CampaignCard } from './components/CampaignCard';
-export { default as AIGenerator } from './components/AIGenerator';
+// Components
+export { default as ContactList } from './components/ContactList';
+export { default as ContactCard } from './components/ContactCard';
+export { default as AddContactModal } from './components/AddContactModal';
+export { default as ContactDetailsModal } from './components/ContactDetailsModal';
 
 // Types
-export type {
-  EmailTemplate,
-  EmailDraft,
-  EmailCampaign,
-  AIContext,
-  EmailHeaderProps,
-  EmailTabsProps,
-  EmailComposerProps,
-  TemplateCardProps,
-  CampaignCardProps,
-  AIGeneratorProps
-} from './types/email';
+export * from './types';
+
+// Types for EmailHubTab
+export type { EmailHubTab } from './EmailHub';
