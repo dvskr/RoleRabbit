@@ -1,3 +1,13 @@
+export interface Folder {
+  id: string;
+  name: string;
+  parentId?: string;
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+  fileCount?: number;
+}
+
 export interface ResumeFile {
   id: string;
   name: string;
@@ -14,6 +24,7 @@ export interface ResumeFile {
   viewCount: number;
   isStarred: boolean;
   isArchived: boolean;
+  folderId?: string;
   thumbnail?: string;
   description?: string;
   // Credential Management (if applicable)

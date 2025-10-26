@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Cloud, Upload, Folder, GraduationCap } from 'lucide-react';
+import { Cloud, Upload, Folder, GraduationCap, FolderPlus, Pencil, Trash2, X } from 'lucide-react';
 import { CloudStorageProps, ResumeFile } from '../types/cloudStorage';
 import { useCloudStorage } from '../hooks/useCloudStorage';
 import StorageHeader from './cloudStorage/StorageHeader';
@@ -26,6 +26,8 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     storageInfo,
     credentials,
     credentialReminders,
+    folders,
+    selectedFolderId,
     
     // Computed
     filteredFiles,
@@ -36,6 +38,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     setSortBy,
     setViewMode,
     setShowUploadModal,
+    setSelectedFolderId,
     
     // Actions
     handleFileSelect,
@@ -61,8 +64,19 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleAddCredential,
     handleUpdateCredential,
     handleDeleteCredential,
-    handleGenerateQRCode
+    handleGenerateQRCode,
+    
+    // Folder Management
+    handleCreateFolder,
+    handleRenameFolder,
+    handleDeleteFolder,
+    handleMoveToFolder
   } = useCloudStorage();
+
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
+  const [folderToRename, setFolderToRename] = useState<{ id: string; name: string } | null>(null);
+  const [newFolderName, setNewFolderName] = useState('');
 
   const handleEditFileWrapper = (fileId: string) => {
     logger.debug('Editing file:', fileId);
@@ -248,8 +262,88 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
             />
           </div>
 
-          {/* Scrollable Content Area */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {/* Folder Sidebar & Files Grid */}
+          <div className="flex-1 overflow-hidden flex">
+            {/* Folder Sidebar */}
+            <div className="w-64 border-r border-gray-200 flex flex-col">
+              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700">Folders</h3>
+                <button
+                  onClick={() => setShowCreateFolderModal(true)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Create Folder"
+                >
+                  <FolderPlus size={16} className="text-gray-600" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-2 space-y-1">
+                  {/* All Files */}
+                  <button
+                    onClick={() => setSelectedFolderId(null)}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedFolderId === null
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Cloud size={16} />
+                    <span>All Files</span>
+                  </button>
+
+                  {/* Folders */}
+                  {folders.map(folder => (
+                    <div
+                      key={folder.id}
+                      className={`group flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        selectedFolderId === folder.id
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <button
+                        onClick={() => setSelectedFolderId(folder.id)}
+                        className="flex-1 flex items-center gap-2 text-left"
+                      >
+                        <Folder size={16} style={{ color: folder.color }} />
+                        <span className="truncate">{folder.name}</span>
+                        <span className="text-xs text-gray-500 ml-auto">
+                          {folder.fileCount || 0}
+                        </span>
+                      </button>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFolderToRename({ id: folder.id, name: folder.name });
+                            setNewFolderName(folder.name);
+                            setShowRenameFolderModal(true);
+                          }}
+                          className="p-1 hover:bg-gray-200 rounded"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete folder "${folder.name}"? Files will be moved to All Files.`)) {
+                              handleDeleteFolder(folder.id);
+                            }
+                          }}
+                          className="p-1 hover:bg-red-100 rounded"
+                        >
+                          <Trash2 size={12} className="text-red-600" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Files Grid Area */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
             {filteredFiles.length > 0 ? (
               <div className={viewMode === 'grid' 
                 ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' 
@@ -296,8 +390,156 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                 )}
               </div>
             )}
+            </div>
           </div>
         </>
+      )}
+
+      {/* Folder Management Modals */}
+      {/* Create Folder Modal */}
+      {showCreateFolderModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 rounded-lg">
+                  <FolderPlus size={24} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Create Folder</h3>
+                  <p className="text-sm text-gray-600">Organize your files</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateFolderModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="My Folder"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCreateFolderModal(false);
+                  setNewFolderName('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newFolderName.trim()) {
+                    handleCreateFolder(newFolderName.trim());
+                    setShowCreateFolderModal(false);
+                    setNewFolderName('');
+                  }
+                }}
+                disabled={!newFolderName.trim()}
+                className={`flex-1 px-4 py-2 text-white rounded-lg ${
+                  !newFolderName.trim()
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+              >
+                Create Folder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Folder Modal */}
+      {showRenameFolderModal && folderToRename && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Pencil size={24} className="text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">Rename Folder</h3>
+                  <p className="text-sm text-gray-600">Update folder name</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRenameFolderModal(false);
+                  setFolderToRename(null);
+                  setNewFolderName('');
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Folder name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowRenameFolderModal(false);
+                  setFolderToRename(null);
+                  setNewFolderName('');
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (newFolderName.trim() && folderToRename) {
+                    handleRenameFolder(folderToRename.id, newFolderName.trim());
+                    setShowRenameFolderModal(false);
+                    setFolderToRename(null);
+                    setNewFolderName('');
+                  }
+                }}
+                disabled={!newFolderName.trim()}
+                className={`flex-1 px-4 py-2 text-white rounded-lg ${
+                  !newFolderName.trim()
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Upload Modal */}
