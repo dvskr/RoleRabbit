@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
 import { useJobs } from '../hooks/useJobs';
 import { Job } from '../types/job';
+import { logger } from '../utils/logger';
 
 export default function JobTracker() {
   const {
@@ -73,7 +74,7 @@ export default function JobTracker() {
         reader.onload = (event) => {
           try {
             const importedJobs = JSON.parse(event.target?.result as string);
-            console.log('Imported jobs:', importedJobs);
+            logger.debug('Imported jobs:', importedJobs);
             // TODO: Add logic to import jobs into state
           } catch (error) {
             console.error('Error importing jobs:', error);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, 
   Download, 
@@ -31,7 +31,7 @@ interface FileCardProps {
   isSelected: boolean;
   viewMode: 'grid' | 'list';
   onSelect: (fileId: string) => void;
-  onDownload: (file: ResumeFile) => void;
+  onDownload: (file: ResumeFile, format?: 'pdf' | 'doc') => void;
   onShare: (file: ResumeFile) => void;
   onDelete: (fileId: string) => void;
   onTogglePublic: (fileId: string) => void;
@@ -62,6 +62,30 @@ export default function FileCard({
   const [newComment, setNewComment] = useState('');
   const [shareEmail, setShareEmail] = useState('');
   const [sharePermission, setSharePermission] = useState<'view' | 'comment' | 'edit' | 'admin'>('view');
+  const [shareExpiresAt, setShareExpiresAt] = useState('');
+  const [maxDownloads, setMaxDownloads] = useState('');
+  const [requirePassword, setRequirePassword] = useState(false);
+  const [sharePassword, setSharePassword] = useState('');
+  const [showDownloadFormat, setShowDownloadFormat] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setShowMoreMenu(false);
+      }
+    };
+
+    if (showMoreMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMoreMenu]);
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -106,8 +130,25 @@ export default function FileCard({
 
   const handleShareSubmit = () => {
     if (shareEmail.trim()) {
+      // Create share link with time limits
+      const shareOptions: any = {
+        email: shareEmail.trim(),
+        permission: sharePermission,
+        expiresAt: shareExpiresAt || undefined,
+        maxDownloads: maxDownloads ? parseInt(maxDownloads) : undefined,
+        password: requirePassword && sharePassword ? sharePassword : undefined
+      };
+      
+      // Store the share link data
+      console.log('Sharing with options:', shareOptions);
       onShareWithUser(file.id, shareEmail.trim(), sharePermission);
+      
+      // Reset form
       setShareEmail('');
+      setSharePassword('');
+      setShareExpiresAt('');
+      setMaxDownloads('');
+      setRequirePassword(false);
       setShowShareModal(false);
     }
   };
@@ -116,6 +157,7 @@ export default function FileCard({
     if (newComment.trim()) {
       onAddComment(file.id, newComment.trim());
       setNewComment('');
+      console.log('Comment submitted for file:', file.id);
     }
   };
 
@@ -149,9 +191,57 @@ export default function FileCard({
             >
               <Star size={16} className={file.isStarred ? 'fill-current' : ''} />
             </button>
-            <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-              <MoreVertical size={16} />
-            </button>
+            <div className="relative">
+              <button 
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                title="More options"
+              >
+                <MoreVertical size={16} />
+              </button>
+              {showMoreMenu && (
+                <div ref={moreMenuRef} className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(file.id);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg flex items-center space-x-2"
+                  >
+                    <Copy size={14} />
+                    <span>Copy ID</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+                  >
+                    <Calendar size={14} />
+                    <span>View History</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+                  >
+                    <Tag size={14} />
+                    <span>Manage Tags</span>
+                  </button>
+                  <div className="border-t border-gray-200"></div>
+                  <button
+                    onClick={() => {
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors rounded-b-lg flex items-center space-x-2"
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Permanently</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -264,13 +354,37 @@ export default function FileCard({
             >
               {file.isPublic ? <Eye size={14} /> : <EyeOff size={14} />}
             </button>
-            <button
-              onClick={() => onDownload(file)}
-              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-              title="Download"
-            >
-              <Download size={14} />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowDownloadFormat(!showDownloadFormat)}
+                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                title="Download"
+              >
+                <Download size={14} />
+              </button>
+              {showDownloadFormat && (
+                <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                  <button
+                    onClick={() => {
+                      onDownload(file, 'pdf');
+                      setShowDownloadFormat(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg"
+                  >
+                    📄 Download PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDownload(file, 'doc');
+                      setShowDownloadFormat(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-b-lg"
+                  >
+                    📝 Download DOC
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setShowShareModal(true)}
               className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
@@ -281,8 +395,15 @@ export default function FileCard({
           </div>
           <div className="flex items-center space-x-1">
             <button
-              onClick={() => setShowComments(!showComments)}
-              className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+              onClick={() => {
+                console.log('Comment button clicked! Current state:', showComments);
+                setShowComments(!showComments);
+              }}
+              className={`p-2 rounded-lg transition-colors ${
+                showComments 
+                  ? 'text-purple-600 bg-purple-100' 
+                  : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
+              }`}
               title="Comments"
             >
               <MessageCircle size={14} />
@@ -315,22 +436,29 @@ export default function FileCard({
         {showComments && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="space-y-3">
-              {file.comments.map((comment) => (
-                <div key={comment.id} className="flex space-x-3">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-white font-medium">
-                      {comment.userName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">{comment.userName}</span>
-                      <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+              {/* Existing Comments */}
+              {file.comments && file.comments.length > 0 ? (
+                file.comments.map((comment) => (
+                  <div key={comment.id} className="flex space-x-3">
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-xs text-white font-medium">
+                        {comment.userName?.charAt(0).toUpperCase() || 'U'}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-700">{comment.content}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
+                        <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-sm text-gray-700">{comment.content}</p>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  No comments yet. Be the first to comment!
                 </div>
-              ))}
+              )}
               
               {/* Add Comment */}
               <div className="flex space-x-3">
@@ -345,13 +473,22 @@ export default function FileCard({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
                     rows={2}
                   />
-                  <div className="flex justify-end mt-2">
+                  <div className="flex justify-end mt-2 space-x-2">
                     <button
                       onClick={handleCommentSubmit}
                       disabled={!newComment.trim()}
                       className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                     >
                       Comment
+                    </button>
+                    <button
+                      onClick={() => {
+                        setNewComment('');
+                        setShowComments(false);
+                      }}
+                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
                     </button>
                   </div>
                 </div>
@@ -458,13 +595,37 @@ export default function FileCard({
         >
           {file.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
         </button>
-        <button
-          onClick={() => onDownload(file)}
-          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-          title="Download"
-        >
-          <Download size={16} />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowDownloadFormat(!showDownloadFormat)}
+            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+            title="Download"
+          >
+            <Download size={16} />
+          </button>
+          {showDownloadFormat && (
+            <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+              <button
+                onClick={() => {
+                  onDownload(file, 'pdf');
+                  setShowDownloadFormat(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg"
+              >
+                📄 Download PDF
+              </button>
+              <button
+                onClick={() => {
+                  onDownload(file, 'doc');
+                  setShowDownloadFormat(false);
+                }}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-b-lg"
+              >
+                📝 Download DOC
+              </button>
+            </div>
+          )}
+        </div>
         <button
           onClick={() => setShowShareModal(true)}
           className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
@@ -473,8 +634,15 @@ export default function FileCard({
           <Share2 size={16} />
         </button>
         <button
-          onClick={() => setShowComments(!showComments)}
-          className="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
+          onClick={() => {
+            console.log('Comment button clicked (list view)! Current state:', showComments);
+            setShowComments(!showComments);
+          }}
+          className={`p-2 rounded-lg transition-colors ${
+            showComments 
+              ? 'text-purple-600 bg-purple-100' 
+              : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
+          }`}
           title="Comments"
         >
           <MessageCircle size={16} />
@@ -500,10 +668,123 @@ export default function FileCard({
         >
           <Trash2 size={16} />
         </button>
-        <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-          <MoreVertical size={16} />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="More options"
+          >
+            <MoreVertical size={16} />
+          </button>
+          {showMoreMenu && (
+            <div ref={moreMenuRef} className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(file.id);
+                  setShowMoreMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg flex items-center space-x-2"
+              >
+                <Copy size={14} />
+                <span>Copy ID</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+              >
+                <Calendar size={14} />
+                <span>View History</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+              >
+                <Tag size={14} />
+                <span>Manage Tags</span>
+              </button>
+              <div className="border-t border-gray-200"></div>
+              <button
+                onClick={() => {
+                  setShowMoreMenu(false);
+                }}
+                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors rounded-b-lg flex items-center space-x-2"
+              >
+                <Trash2 size={14} />
+                <span>Delete Permanently</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Comments Section - List View */}
+      {showComments && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="space-y-3">
+            {/* Existing Comments */}
+            {file.comments && file.comments.length > 0 ? (
+              file.comments.map((comment) => (
+                <div key={comment.id} className="flex space-x-3">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs text-white font-medium">
+                      {comment.userName?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
+                      <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-sm text-gray-700">{comment.content}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                No comments yet. Be the first to comment!
+              </div>
+            )}
+            
+            {/* Add Comment */}
+            <div className="flex space-x-3">
+              <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center">
+                <span className="text-xs text-white font-medium">U</span>
+              </div>
+              <div className="flex-1">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Add a comment..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                  rows={2}
+                />
+                <div className="flex justify-end mt-2 space-x-2">
+                  <button
+                    onClick={handleCommentSubmit}
+                    disabled={!newComment.trim()}
+                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Comment
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNewComment('');
+                      setShowComments(false);
+                    }}
+                    className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       {showShareModal && (
@@ -564,6 +845,67 @@ export default function FileCard({
                   <option value="edit">Can edit</option>
                   <option value="admin">Admin access</option>
                 </select>
+              </div>
+
+              {/* SharePoint-style Access Controls */}
+              <div className="border-t pt-4 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-900">Access Settings</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiration Date (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={shareExpiresAt}
+                    onChange={(e) => setShareExpiresAt(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Link will expire after this date</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Max Downloads (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    value={maxDownloads}
+                    onChange={(e) => setMaxDownloads(e.target.value)}
+                    placeholder="Unlimited"
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum number of downloads allowed</p>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="requirePassword"
+                    checked={requirePassword}
+                    onChange={(e) => setRequirePassword(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label htmlFor="requirePassword" className="text-sm font-medium text-gray-700">
+                    Require password to access
+                  </label>
+                </div>
+
+                {requirePassword && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={sharePassword}
+                      onChange={(e) => setSharePassword(e.target.value)}
+                      placeholder="Enter password"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Current Shares */}
