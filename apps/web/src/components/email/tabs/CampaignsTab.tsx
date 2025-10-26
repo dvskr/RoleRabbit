@@ -39,6 +39,9 @@ export default function CampaignsTab() {
     {
       id: '2',
       name: 'Follow-up Campaign - Applications',
+      subject: 'Following up on my application',
+      body: 'Dear [Name], I wanted to follow up...',
+      recipientCount: 75,
       template: {
         id: '2',
         name: 'Follow-up After Application',
@@ -61,6 +64,9 @@ export default function CampaignsTab() {
     {
       id: '3',
       name: 'Thank You Campaign - Interviews',
+      subject: 'Thank you for the interview',
+      body: 'Dear [Name], Thank you for taking the time...',
+      recipientCount: 25,
       template: {
         id: '3',
         name: 'Thank You After Interview',
@@ -92,10 +98,10 @@ export default function CampaignsTab() {
   });
 
   const totalStats = campaigns.reduce((acc, campaign) => ({
-    sent: acc.sent + campaign.sent,
-    opened: acc.opened + campaign.opened,
-    replied: acc.replied + campaign.replied,
-    clicked: acc.clicked + campaign.clicked
+    sent: acc.sent + (campaign.sent || 0),
+    opened: acc.opened + (campaign.opened || 0),
+    replied: acc.replied + (campaign.replied || 0),
+    clicked: acc.clicked + (campaign.clicked || 0)
   }), { sent: 0, opened: 0, replied: 0, clicked: 0 });
 
   const overallOpenRate = totalStats.sent > 0 ? ((totalStats.opened / totalStats.sent) * 100).toFixed(1) : '0';

@@ -118,6 +118,9 @@ export interface AIContext {
   tone: string;
   length: string;
   customPrompt?: string;
+  recipientType?: string;
+  industry?: string;
+  position?: string;
 }
 
 export interface EmailComposerProps {
