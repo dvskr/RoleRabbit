@@ -14,9 +14,9 @@ export default function AddJobModal({ onClose, onAdd }: AddJobModalProps) {
     company: '',
     location: '',
     salary: '',
-    jobUrl: '',
+    url: '',
     description: '',
-    dateApplied: new Date().toISOString().split('T')[0]
+    appliedDate: new Date().toISOString().split('T')[0]
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,7 +24,7 @@ export default function AddJobModal({ onClose, onAdd }: AddJobModalProps) {
     onAdd({
       ...formData,
       id: `job-${Date.now()}`,
-      status: 'applied'
+      status: 'applied' as 'applied' | 'interview' | 'offer' | 'rejected'
     });
     onClose();
   };
@@ -94,8 +94,8 @@ export default function AddJobModal({ onClose, onAdd }: AddJobModalProps) {
             <label className="text-sm font-medium text-gray-700 mb-1 block">Job URL</label>
             <input
               type="url"
-              value={formData.jobUrl}
-              onChange={(e) => setFormData({ ...formData, jobUrl: e.target.value })}
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="https://..."
             />
@@ -105,8 +105,8 @@ export default function AddJobModal({ onClose, onAdd }: AddJobModalProps) {
             <label className="text-sm font-medium text-gray-700 mb-1 block">Date Applied</label>
             <input
               type="date"
-              value={formData.dateApplied}
-              onChange={(e) => setFormData({ ...formData, dateApplied: e.target.value })}
+              value={formData.appliedDate}
+              onChange={(e) => setFormData({ ...formData, appliedDate: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />

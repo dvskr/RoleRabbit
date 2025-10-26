@@ -29,9 +29,8 @@ export default function NotesPanel({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddNote(jobId, {
-      ...formData,
-      id: `${Date.now()}`
-    });
+      ...formData
+    } as Omit<JobNote, 'id'>);
     setFormData({
       title: '',
       content: '',

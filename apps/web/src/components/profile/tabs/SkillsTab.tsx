@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Award, Globe, Trash2 } from 'lucide-react';
-import { UserData } from '../types/profile';
+import { UserData, Skill, Certification } from '../types/profile';
 
 interface SkillsTabProps {
   userData: UserData;
@@ -15,8 +15,13 @@ export default function SkillsTab({
   isEditing,
   onUserDataChange
 }: SkillsTabProps) {
-  const addSkill = (skill: string) => {
-    if (skill && !userData.skills.includes(skill)) {
+  const addSkill = (skillName: string) => {
+    const skill: Skill = {
+      name: skillName,
+      proficiency: 'Beginner',
+      verified: false
+    };
+    if (skillName && !userData.skills.some(s => s.name === skillName)) {
       onUserDataChange({ skills: [...userData.skills, skill] });
     }
   };
@@ -25,8 +30,14 @@ export default function SkillsTab({
     onUserDataChange({ skills: userData.skills.filter((_, i) => i !== index) });
   };
 
-  const addCertification = (cert: string) => {
-    if (cert && !userData.certifications.includes(cert)) {
+  const addCertification = (certName: string) => {
+    const cert: Certification = {
+      name: certName,
+      issuer: '',
+      date: new Date().toISOString().split('T')[0],
+      verified: false
+    };
+    if (certName && !userData.certifications.some(c => c.name === certName)) {
       onUserDataChange({ certifications: [...userData.certifications, cert] });
     }
   };
@@ -35,8 +46,12 @@ export default function SkillsTab({
     onUserDataChange({ certifications: userData.certifications.filter((_, i) => i !== index) });
   };
 
-  const addLanguage = (lang: string) => {
-    if (lang && !userData.languages.includes(lang)) {
+  const addLanguage = (langName: string) => {
+    const lang = {
+      name: langName,
+      proficiency: 'Native'
+    };
+    if (langName && !userData.languages.some(l => l.name === langName)) {
       onUserDataChange({ languages: [...userData.languages, lang] });
     }
   };

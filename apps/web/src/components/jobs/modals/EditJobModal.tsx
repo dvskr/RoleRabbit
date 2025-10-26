@@ -16,9 +16,9 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
     company: job.company,
     location: job.location || '',
     salary: job.salary || '',
-    jobUrl: job.jobUrl || '',
+    url: job.url || '',
     description: job.description || '',
-    dateApplied: job.dateApplied
+    appliedDate: job.appliedDate
   });
 
   useEffect(() => {
@@ -27,9 +27,9 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
       company: job.company,
       location: job.location || '',
       salary: job.salary || '',
-      jobUrl: job.jobUrl || '',
+      url: job.url || '',
       description: job.description || '',
-      dateApplied: job.dateApplied
+      appliedDate: job.appliedDate
     });
   }, [job]);
 
@@ -107,8 +107,8 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
             <label className="text-sm font-medium text-gray-700 mb-1 block">Job URL</label>
             <input
               type="url"
-              value={formData.jobUrl}
-              onChange={(e) => setFormData({ ...formData, jobUrl: e.target.value })}
+              value={formData.url}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="https://..."
             />
@@ -118,8 +118,8 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
             <label className="text-sm font-medium text-gray-700 mb-1 block">Date Applied</label>
             <input
               type="date"
-              value={formData.dateApplied}
-              onChange={(e) => setFormData({ ...formData, dateApplied: e.target.value })}
+              value={formData.appliedDate}
+              onChange={(e) => setFormData({ ...formData, appliedDate: e.target.value })}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />

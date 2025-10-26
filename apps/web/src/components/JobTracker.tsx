@@ -46,7 +46,7 @@ export default function JobTracker() {
   };
 
   const handleEditJobSubmit = (jobData: Job) => {
-    updateJob(jobData);
+    updateJob(jobData.id, jobData);
     setEditingJob(null);
   };
 

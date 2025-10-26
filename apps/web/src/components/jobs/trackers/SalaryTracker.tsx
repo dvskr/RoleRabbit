@@ -32,9 +32,8 @@ export default function SalaryTracker({
     e.preventDefault();
     onAddOffer(jobId, {
       ...formData,
-      amount: parseFloat(formData.amount),
-      id: `${Date.now()}`
-    });
+      amount: parseFloat(formData.amount)
+    } as Omit<SalaryOffer, 'id'>);
     setFormData({
       amount: '',
       currency: 'USD',

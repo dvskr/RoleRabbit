@@ -29,9 +29,8 @@ export default function CompanyInsights({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddInsight(jobId, {
-      ...formData,
-      id: `${Date.now()}`
-    });
+      ...formData
+    } as Omit<CompanyInsight, 'id'>);
     setFormData({
       type: 'culture',
       title: '',

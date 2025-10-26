@@ -14,6 +14,9 @@ export default function CampaignsTab() {
     {
       id: '1',
       name: 'Software Engineer Outreach Q4',
+      subject: 'Software Engineer Position Inquiry',
+      body: 'Hi [Name], I hope this email finds you well...',
+      recipientCount: 150,
       template: {
         id: '1',
         name: 'Cold Outreach - Software Engineer',
@@ -99,20 +102,26 @@ export default function CampaignsTab() {
   const overallReplyRate = totalStats.sent > 0 ? ((totalStats.replied / totalStats.sent) * 100).toFixed(1) : '0';
   const overallClickRate = totalStats.sent > 0 ? ((totalStats.clicked / totalStats.sent) * 100).toFixed(1) : '0';
 
-  const handleEditCampaign = (campaign: EmailCampaign) => {
+  const handleEditCampaign = (id: string) => {
+    const campaign = campaigns.find(c => c.id === id);
     console.log('Edit campaign:', campaign);
   };
 
-  const handleDeleteCampaign = (campaign: EmailCampaign) => {
+  const handleDeleteCampaign = (id: string) => {
+    const campaign = campaigns.find(c => c.id === id);
     console.log('Delete campaign:', campaign);
   };
 
-  const handlePauseCampaign = (campaign: EmailCampaign) => {
-    console.log('Pause campaign:', campaign);
+  const handlePauseCampaign = (id: string) => {
+    console.log('Pause campaign:', id);
   };
 
-  const handleResumeCampaign = (campaign: EmailCampaign) => {
-    console.log('Resume campaign:', campaign);
+  const handleResumeCampaign = (id: string) => {
+    console.log('Resume campaign:', id);
+  };
+
+  const handleSendCampaign = (id: string) => {
+    console.log('Send campaign:', id);
   };
 
   return (
@@ -202,6 +211,7 @@ export default function CampaignsTab() {
             campaign={campaign}
             onEdit={handleEditCampaign}
             onDelete={handleDeleteCampaign}
+            onSend={handleSendCampaign}
             onPause={handlePauseCampaign}
             onResume={handleResumeCampaign}
           />

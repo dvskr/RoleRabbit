@@ -31,98 +31,68 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
     { id: 'reminders' as TabType, label: 'Reminders', icon: Bell },
   ];
 
-  const handleAddInterviewNote = (note: any) => {
-    console.log('Add interview note:', note);
+  const handleAddInterviewNote = (jobId: string, note: any) => {
+    console.log('Add interview note:', jobId, note);
     // TODO: Implement actual state management
   };
 
-  const handleUpdateInterviewNote = (noteId: string, updates: any) => {
-    console.log('Update interview note:', noteId, updates);
+  const handleDeleteInterviewNote = (jobId: string, noteId: string) => {
+    console.log('Delete interview note:', jobId, noteId);
     // TODO: Implement actual state management
   };
 
-  const handleDeleteInterviewNote = (noteId: string) => {
-    console.log('Delete interview note:', noteId);
+  const handleAddSalaryOffer = (jobId: string, offer: any) => {
+    console.log('Add salary offer:', jobId, offer);
     // TODO: Implement actual state management
   };
 
-  const handleAddSalaryOffer = (offer: any) => {
-    console.log('Add salary offer:', offer);
+  const handleDeleteSalaryOffer = (jobId: string, offerId: string) => {
+    console.log('Delete salary offer:', jobId, offerId);
     // TODO: Implement actual state management
   };
 
-  const handleUpdateSalaryOffer = (offerId: string, updates: any) => {
-    console.log('Update salary offer:', offerId, updates);
+  const handleAddCompanyInsight = (jobId: string, insight: any) => {
+    console.log('Add company insight:', jobId, insight);
     // TODO: Implement actual state management
   };
 
-  const handleDeleteSalaryOffer = (offerId: string) => {
-    console.log('Delete salary offer:', offerId);
+  const handleDeleteCompanyInsight = (jobId: string, insightId: string) => {
+    console.log('Delete company insight:', jobId, insightId);
     // TODO: Implement actual state management
   };
 
-  const handleAddCompanyInsight = (insight: any) => {
-    console.log('Add company insight:', insight);
+  const handleAddReferral = (jobId: string, referral: any) => {
+    console.log('Add referral:', jobId, referral);
     // TODO: Implement actual state management
   };
 
-  const handleUpdateCompanyInsight = (insightId: string, updates: any) => {
-    console.log('Update company insight:', insightId, updates);
+  const handleDeleteReferral = (jobId: string, referralId: string) => {
+    console.log('Delete referral:', jobId, referralId);
     // TODO: Implement actual state management
   };
 
-  const handleDeleteCompanyInsight = (insightId: string) => {
-    console.log('Delete company insight:', insightId);
+  const handleAddNote = (jobId: string, note: any) => {
+    console.log('Add note:', jobId, note);
     // TODO: Implement actual state management
   };
 
-  const handleAddReferral = (referral: any) => {
-    console.log('Add referral:', referral);
+  const handleDeleteNote = (jobId: string, noteId: string) => {
+    console.log('Delete note:', jobId, noteId);
     // TODO: Implement actual state management
   };
 
-  const handleUpdateReferral = (referralId: string, updates: any) => {
-    console.log('Update referral:', referralId, updates);
+  const handleAddReminder = (jobId: string, reminder: any) => {
+    console.log('Add reminder:', jobId, reminder);
     // TODO: Implement actual state management
   };
 
-  const handleDeleteReferral = (referralId: string) => {
-    console.log('Delete referral:', referralId);
+  const handleDeleteReminder = (jobId: string, reminderId: string) => {
+    console.log('Delete reminder:', jobId, reminderId);
     // TODO: Implement actual state management
   };
 
-  const handleAddNote = (note: any) => {
-    console.log('Add note:', note);
-    // TODO: Implement actual state management
-  };
-
-  const handleUpdateNote = (noteId: string, updates: any) => {
-    console.log('Update note:', noteId, updates);
-    // TODO: Implement actual state management
-  };
-
-  const handleDeleteNote = (noteId: string) => {
-    console.log('Delete note:', noteId);
-    // TODO: Implement actual state management
-  };
-
-  const handleAddReminder = (reminder: any) => {
-    console.log('Add reminder:', reminder);
-    // TODO: Implement actual state management
-  };
-
-  const handleUpdateReminder = (reminderId: string, updates: any) => {
-    console.log('Update reminder:', reminderId, updates);
-    // TODO: Implement actual state management
-  };
-
-  const handleDeleteReminder = (reminderId: string) => {
-    console.log('Delete reminder:', reminderId);
-    // TODO: Implement actual state management
-  };
-
-  const handleToggleComplete = (reminderId: string, isCompleted: boolean) => {
-    console.log('Toggle reminder:', reminderId, isCompleted);
+  const handleToggleComplete = (jobId: string, reminderId: string) => {
+    console.log('Toggle reminder:', jobId, reminderId);
     // TODO: Implement actual state management
   };
 
@@ -174,20 +144,18 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
           {activeTab === 'interview' && (
             <InterviewTracker
               jobId={job.id}
-              interviewNotes={[]}
-              onAddNote={handleAddInterviewNote}
-              onUpdateNote={handleUpdateInterviewNote}
-              onDeleteNote={handleDeleteInterviewNote}
+              notes={[]}
+              onAddNote={(note) => handleAddInterviewNote(job.id, note)}
+              onDeleteNote={(noteId) => handleDeleteInterviewNote(job.id, noteId)}
             />
           )}
 
           {activeTab === 'salary' && (
             <SalaryTracker
               jobId={job.id}
-              salaryOffers={[]}
-              onAddOffer={handleAddSalaryOffer}
-              onUpdateOffer={handleUpdateSalaryOffer}
-              onDeleteOffer={handleDeleteSalaryOffer}
+              offers={[]}
+              onAddOffer={(offer) => handleAddSalaryOffer(job.id, offer)}
+              onDeleteOffer={(offerId) => handleDeleteSalaryOffer(job.id, offerId)}
             />
           )}
 
@@ -195,9 +163,8 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
             <CompanyInsights
               jobId={job.id}
               insights={[]}
-              onAddInsight={handleAddCompanyInsight}
-              onUpdateInsight={handleUpdateCompanyInsight}
-              onDeleteInsight={handleDeleteCompanyInsight}
+              onAddInsight={(insight) => handleAddCompanyInsight(job.id, insight)}
+              onDeleteInsight={(insightId) => handleDeleteCompanyInsight(job.id, insightId)}
             />
           )}
 
@@ -205,9 +172,8 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
             <ReferralTracker
               jobId={job.id}
               referrals={[]}
-              onAddReferral={handleAddReferral}
-              onUpdateReferral={handleUpdateReferral}
-              onDeleteReferral={handleDeleteReferral}
+              onAddReferral={(referral) => handleAddReferral(job.id, referral)}
+              onDeleteReferral={(referralId) => handleDeleteReferral(job.id, referralId)}
             />
           )}
 
@@ -215,9 +181,8 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
             <NotesPanel
               jobId={job.id}
               notes={[]}
-              onAddNote={handleAddNote}
-              onUpdateNote={handleUpdateNote}
-              onDeleteNote={handleDeleteNote}
+              onAddNote={(note) => handleAddNote(job.id, note)}
+              onDeleteNote={(noteId) => handleDeleteNote(job.id, noteId)}
             />
           )}
 
@@ -225,10 +190,9 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
             <RemindersPanel
               jobId={job.id}
               reminders={[]}
-              onAddReminder={handleAddReminder}
-              onUpdateReminder={handleUpdateReminder}
-              onDeleteReminder={handleDeleteReminder}
-              onToggleComplete={handleToggleComplete}
+              onAddReminder={(reminder) => handleAddReminder(job.id, reminder)}
+              onDeleteReminder={(reminderId) => handleDeleteReminder(job.id, reminderId)}
+              onToggleReminder={(reminderId) => handleToggleComplete(job.id, reminderId)}
             />
           )}
         </div>
