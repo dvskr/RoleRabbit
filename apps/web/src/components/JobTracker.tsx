@@ -29,17 +29,20 @@ export default function JobTracker() {
   } = useJobs();
 
   const [showAddJob, setShowAddJob] = useState(false);
+  const [preSelectedStatus, setPreSelectedStatus] = useState<Job['status'] | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
 
   const handleAddJob = () => {
+    setPreSelectedStatus(null);
     setShowAddJob(true);
   };
 
   const handleAddJobSubmit = (jobData: any) => {
     addJob(jobData);
     setShowAddJob(false);
+    setPreSelectedStatus(null);
   };
 
   const handleEditJob = (job: Job) => {
@@ -56,7 +59,9 @@ export default function JobTracker() {
   };
 
   const handleAddJobToColumn = (status: Job['status']) => {
-    // TODO: Implement add job to specific column
+    // Open add job modal with pre-selected status
+    setPreSelectedStatus(status);
+    setShowAddJob(true);
   };
 
   const handleExportJobs = () => {
@@ -75,9 +80,39 @@ export default function JobTracker() {
           try {
             const importedJobs = JSON.parse(event.target?.result as string);
             logger.debug('Imported jobs:', importedJobs);
-            // TODO: Add logic to import jobs into state
+            
+            // Validate and import jobs
+            if (Array.isArray(importedJobs)) {
+              // Process each job and add to state
+              const jobsToAdd = importedJobs.map((job: any) => {
+                // Create a new job with ensured ID
+                const newJob: Omit<Job, 'id'> = {
+                  title: job.title || 'Untitled Job',
+                  company: job.company || '',
+                  location: job.location || '',
+                  status: job.status || 'applied',
+                  appliedDate: job.appliedDate || new Date().toISOString().split('T')[0],
+                  salary: job.salary || '',
+                  description: job.description || '',
+                  url: job.url || '',
+                  notes: job.notes || '',
+                  priority: job.priority || 'medium',
+                  remote: job.remote || false,
+                  companySize: job.companySize || '',
+                  industry: job.industry || ''
+                };
+                return newJob;
+              });
+              
+              // Add all jobs
+              jobsToAdd.forEach(job => addJob(job));
+              
+              alert(`Successfully imported ${importedJobs.length} job(s)`);
+            } else {
+              alert('Invalid file format. Expected an array of jobs.');
+            }
           } catch (error) {
-            console.error('Error importing jobs:', error);
+            logger.error('Error importing jobs:', error);
             alert('Failed to import jobs. Please check the file format.');
           }
         };
@@ -220,8 +255,12 @@ export default function JobTracker() {
       {/* Add Job Modal */}
       {showAddJob && (
         <AddJobModal
-          onClose={() => setShowAddJob(false)}
+          onClose={() => {
+            setShowAddJob(false);
+            setPreSelectedStatus(null);
+          }}
           onAdd={handleAddJobSubmit}
+          initialStatus={preSelectedStatus || undefined}
         />
       )}
 

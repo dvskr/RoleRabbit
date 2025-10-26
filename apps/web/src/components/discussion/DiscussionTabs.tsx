@@ -1,18 +1,24 @@
 import React from 'react';
-import { Flame, Clock, TrendingUp, Bot, Users } from 'lucide-react';
-import { DiscussionTab } from '../../types/discussion';
+import { Home, Flame, TrendingUp, Clock, Bot, Users } from 'lucide-react';
 
 interface DiscussionTabsProps {
   activeTab: string;
-  onTabChange: (tab: 'hot' | 'new' | 'top' | 'ai' | 'communities') => void;
+  onTabChange: (tab: 'all' | 'hot' | 'top' | 'new' | 'ai' | 'communities') => void;
 }
 
-const tabs: DiscussionTab[] = [
+interface Tab {
+  id: 'all' | 'hot' | 'top' | 'new' | 'ai' | 'communities';
+  label: string;
+  icon: React.ComponentType<any>;
+  color: string;
+}
+
+const tabs: Tab[] = [
   {
-    id: 'hot',
-    label: 'Hot',
-    icon: Flame,
-    color: 'orange'
+    id: 'all',
+    label: 'All',
+    icon: Home,
+    color: 'gray'
   },
   {
     id: 'new',
@@ -21,22 +27,28 @@ const tabs: DiscussionTab[] = [
     color: 'blue'
   },
   {
+    id: 'hot',
+    label: 'Hot',
+    icon: Flame,
+    color: 'orange'
+  },
+  {
     id: 'top',
     label: 'Top',
     icon: TrendingUp,
     color: 'green'
   },
   {
+    id: 'communities',
+    label: 'Communities',
+    icon: Users,
+    color: 'indigo'
+  },
+  {
     id: 'ai',
     label: 'AI',
     icon: Bot,
     color: 'purple'
-  },
-  {
-    id: 'communities',
-    label: 'Communities',
-    icon: Users,
-    color: 'blue'
   }
 ];
 

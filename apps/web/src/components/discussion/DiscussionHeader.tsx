@@ -1,9 +1,10 @@
 import React from 'react';
 import { Search, Filter, RefreshCw } from 'lucide-react';
-import { DiscussionFilters } from '../../types/discussion';
+import { DiscussionFilters, Community } from '../../types/discussion';
 
 interface DiscussionHeaderProps {
   filters: DiscussionFilters;
+  communities: Community[];
   onUpdateFilters: (filters: Partial<DiscussionFilters>) => void;
   onShowFilters: () => void;
   onRefresh: () => void;
@@ -11,6 +12,7 @@ interface DiscussionHeaderProps {
 
 export default function DiscussionHeader({
   filters,
+  communities,
   onUpdateFilters,
   onShowFilters,
   onRefresh
@@ -44,6 +46,20 @@ export default function DiscussionHeader({
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+        
+        {/* Community Filter */}
+        <select
+          value={filters.selectedCommunity || ''}
+          onChange={(e) => onUpdateFilters({ selectedCommunity: e.target.value || null })}
+          className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Communities</option>
+          {communities.map(community => (
+            <option key={community.id} value={community.name}>
+              {community.name}
+            </option>
+          ))}
+        </select>
         
         <button
           onClick={onShowFilters}
