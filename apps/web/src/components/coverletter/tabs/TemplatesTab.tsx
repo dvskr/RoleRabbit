@@ -1,15 +1,20 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Filter, Plus, Code, Palette, Megaphone, TrendingUp, DollarSign, FileText } from 'lucide-react';
+import { Search, Filter, Plus, Code, Palette, Megaphone, TrendingUp, DollarSign, FileText, X, Eye } from 'lucide-react';
 import { CoverLetterTemplate } from '../types/coverletter';
 import TemplateCard from '../components/TemplateCard';
 import { logger } from '../../../utils/logger';
 
-export default function TemplatesTab() {
+interface TemplatesTabProps {
+  onLoadTemplate?: (template: CoverLetterTemplate) => void;
+}
+
+export default function TemplatesTab({ onLoadTemplate }: TemplatesTabProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showAITemplates, setShowAITemplates] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<CoverLetterTemplate | null>(null);
 
   // Mock data - in real app, this would come from props or API
   const templates: CoverLetterTemplate[] = [
@@ -110,12 +115,14 @@ export default function TemplatesTab() {
 
   const handleUseTemplate = (template: CoverLetterTemplate) => {
     logger.debug('Using template:', template);
-    // In real app, this would load the template into the editor
+    if (onLoadTemplate) {
+      onLoadTemplate(template);
+    }
   };
 
   const handlePreviewTemplate = (template: CoverLetterTemplate) => {
     logger.debug('Previewing template:', template);
-    // In real app, this would show a preview modal
+    setPreviewTemplate(template);
   };
 
   return (
@@ -213,6 +220,121 @@ export default function TemplatesTab() {
           <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             Create New Template
           </button>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">{previewTemplate.name}</h3>
+                <p className="text-sm text-gray-600">{previewTemplate.description}</p>
+              </div>
+              <button
+                onClick={() => setPreviewTemplate(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Full Cover Letter Preview */}
+            <div className="bg-white rounded-lg border border-gray-300 overflow-hidden shadow-lg">
+              <div className="bg-gray-50 px-8 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900">Cover Letter Preview</h4>
+                    <p className="text-sm text-gray-600">{previewTemplate.category} • {previewTemplate.wordCount} words</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {previewTemplate.aiGenerated && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">AI Generated</span>
+                    )}
+                    <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">{previewTemplate.successRate}% Success</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="px-8 py-8">
+                {/* Cover Letter Format */}
+                <div className="max-w-3xl mx-auto">
+                  {/* Date and Contact Info Placeholder */}
+                  <div className="mb-8 text-right text-sm text-gray-600 mb-12">
+                    <div>[Current Date]</div>
+                    <div className="mt-4 text-left">
+                      <div>[Your Name]</div>
+                      <div>[Your Address]</div>
+                      <div>[Your Phone]</div>
+                      <div>[Your Email]</div>
+                    </div>
+                  </div>
+
+                  {/* Recipient Info */}
+                  <div className="mb-6 text-sm text-gray-600">
+                    <div>Hiring Manager</div>
+                    <div>[Company Name]</div>
+                    <div>[Company Address]</div>
+                  </div>
+
+                  {/* Salutation */}
+                  <div className="mb-4">
+                    Dear Hiring Manager,
+                  </div>
+
+                  {/* Letter Content */}
+                  <div 
+                    className="whitespace-pre-wrap text-gray-900 leading-relaxed mb-6"
+                    style={{ 
+                      fontFamily: 'Georgia, serif',
+                      lineHeight: '1.8',
+                      fontSize: '14px'
+                    }}
+                  >
+                    {previewTemplate.content}
+                  </div>
+
+                  {/* Closing */}
+                  <div className="mt-8">
+                    <div>Thank you for your consideration.</div>
+                    <div className="mt-8">Sincerely,</div>
+                    <div className="mt-4">[Your Name]</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span>{previewTemplate.wordCount} words</span>
+                <span>•</span>
+                <span>{previewTemplate.successRate}% success rate</span>
+                <span>•</span>
+                <span>{previewTemplate.usageCount} uses</span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPreviewTemplate(null)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (onLoadTemplate) {
+                      onLoadTemplate(previewTemplate);
+                      setPreviewTemplate(null);
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Eye size={16} />
+                  Use This Template
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
