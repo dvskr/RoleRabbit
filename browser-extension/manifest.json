@@ -1,0 +1,83 @@
+{
+  "manifest_version": 3,
+  "name": "RoleReady - Job Search Copilot",
+  "version": "1.0.0",
+  "description": "Capture jobs from any board, auto-fill applications, and sync with RoleReady platform",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:3001/*",
+    "http://localhost:3000/*",
+    "https://*.roleready.io/*",
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://*.ziprecruiter.com/*",
+    "https://*.monster.com/*",
+    "https://*.angel.co/*",
+    "https://remoters.net/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    },
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/*",
+        "https://www.linkedin.com/company/*/jobs/*"
+      ],
+      "js": ["linkedin-content.js"]
+    },
+    {
+      "matches": [
+        "https://www.indeed.com/*",
+        "https://www.indeed.com/jobs/*"
+      ],
+      "js": ["indeed-content.js"]
+    },
+    {
+      "matches": [
+        "https://www.glassdoor.com/job-listing/*",
+        "https://www.glassdoor.com/Job/*"
+      ],
+      "js": ["glassdoor-content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "inject.js",
+        "toolbar.html",
+        "styles.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "options_page": "options.html"
+}
+

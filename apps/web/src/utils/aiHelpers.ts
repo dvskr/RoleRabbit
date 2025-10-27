@@ -1,27 +1,57 @@
 import { ResumeData, AIMessage } from '../types/resume';
+import { aiService } from '../services/aiService';
 
 // AI helper functions
 export const aiHelpers = {
-  generateAIContent: (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void, setShowAIGenerateModal: (show: boolean) => void) => {
+  generateAIContent: async (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void, setShowAIGenerateModal: (show: boolean) => void) => {
     if (!aiPrompt.trim()) return;
     
     try {
+      // Prepare system prompt based on section and tone
+      const systemPrompt = `You are a professional resume writer. Create ${writingTone} content for a ${aiGenerateSection} section. Keep it ${contentLength}.`;
+      
+      const response = await aiService.generateContent({
+        prompt: `Generate professional resume content for ${aiGenerateSection} based on: ${aiPrompt}`,
+        systemPrompt,
+        maxTokens: contentLength === 'comprehensive' ? 500 : contentLength === 'detailed' ? 300 : 150
+      });
+      
       switch (aiGenerateSection) {
         case 'summary':
-          const summaryContent = aiHelpers.generateSummaryContent(aiPrompt, writingTone, contentLength);
-          setResumeData(prev => ({ ...prev, summary: summaryContent }));
+          setResumeData(prev => ({ ...prev, summary: response.content }));
           break;
         case 'skills':
-          const suggestedSkills = aiHelpers.generateSkillsContent(aiPrompt, writingTone);
-          const newSkills = [...resumeData.skills, ...suggestedSkills.filter(skill => !resumeData.skills.includes(skill))];
+          const skillsList = response.content.split(',').map(s => s.trim()).filter(Boolean);
+          const newSkills = [...resumeData.skills, ...skillsList.filter(skill => !resumeData.skills.includes(skill))];
           setResumeData(prev => ({ ...prev, skills: newSkills }));
           break;
         case 'experience':
-          const newExperience = aiHelpers.generateExperienceContent(aiPrompt, writingTone, contentLength);
+          // Parse the AI response into experience format
+          const experienceBullets = response.content.split('\n').map(line => line.replace(/^[•\-]\s*/, '').trim()).filter(Boolean);
+          const newExperience = {
+            id: Date.now(),
+            company: 'AI-Generated Company',
+            position: 'AI-Generated Position',
+            period: '2023',
+            endPeriod: 'Present',
+            location: 'Remote',
+            bullets: experienceBullets,
+            environment: ['React', 'Node.js', 'AWS', 'TypeScript'],
+            customFields: []
+          };
           setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
           break;
         case 'projects':
-          const newProject = aiHelpers.generateProjectContent(aiPrompt, writingTone, contentLength);
+          const projectBullets = response.content.split('\n').map(line => line.replace(/^[•\-]\s*/, '').trim()).filter(Boolean);
+          const newProject = {
+            id: Date.now(),
+            name: `AI-Generated ${aiPrompt}`,
+            description: projectBullets[0] || response.content,
+            link: 'https://github.com/username/project',
+            bullets: projectBullets.slice(1),
+            skills: ['React', 'Node.js', 'MongoDB', 'AWS', 'Docker'],
+            customFields: []
+          };
           setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
           break;
       }
@@ -158,29 +188,53 @@ export const aiHelpers = {
     setShowAIGenerateModal(true);
   },
 
-  analyzeJobDescription: (jobDescription: string, setIsAnalyzing: (analyzing: boolean) => void, setMatchScore: (score: number) => void, setMatchedKeywords: (keywords: string[]) => void, setMissingKeywords: (keywords: string[]) => void, setAiRecommendations: (recommendations: string[]) => void) => {
+  analyzeJobDescription: async (jobDescription: string, setIsAnalyzing: (analyzing: boolean) => void, setMatchScore: (score: number) => void, setMatchedKeywords: (keywords: string[]) => void, setMissingKeywords: (keywords: string[]) => void, setAiRecommendations: (recommendations: string[]) => void) => {
     if (!jobDescription.trim()) return;
     
     setIsAnalyzing(true);
     
-    // Simulate analysis
-    setTimeout(() => {
-      const mockMatchScore = Math.floor(Math.random() * 40) + 60; // 60-100%
-      const mockMatchedKeywords = ['JavaScript', 'React', 'Node.js', 'Python'];
-      const mockMissingKeywords = ['TypeScript', 'AWS', 'Docker', 'Kubernetes'];
-      const mockRecommendations = [
-        'Add TypeScript to your skills section',
-        'Include AWS experience in your projects',
-        'Highlight Docker and Kubernetes experience',
-        'Add more specific technical achievements'
-      ];
+    try {
+      // Use real AI service to analyze job description
+      const response = await aiService.generateContent({
+        prompt: `Analyze this job description and provide:\n1. Key skills and technologies mentioned\n2. Missing skills that would strengthen an application\n3. Recommendations for improving a resume to match this job\n\nJob Description:\n${jobDescription}`,
+        systemPrompt: 'You are an ATS (Applicant Tracking System) expert and career advisor. Analyze job descriptions and provide actionable recommendations.',
+        maxTokens: 800
+      });
       
-      setMatchScore(mockMatchScore);
-      setMatchedKeywords(mockMatchedKeywords);
-      setMissingKeywords(mockMissingKeywords);
-      setAiRecommendations(mockRecommendations);
+      // Extract information from the response
+      const content = response.content;
+      
+      // Calculate match score based on keyword matching
+      const keywords = ['JavaScript', 'React', 'TypeScript', 'Python', 'AWS', 'Docker', 'Kubernetes', 'Node.js'];
+      const matchedKeywords = keywords.filter(keyword => content.includes(keyword));
+      const missingKeywords = keywords.filter(keyword => !content.includes(keyword));
+      
+      // Extract recommendations (lines starting with - or numbered)
+      const recommendations = content
+        .split('\n')
+        .filter(line => line.trim().startsWith('-') || line.trim().match(/^\d+\./))
+        .map(line => line.replace(/^[-\d.]\s*/, '').trim())
+        .slice(0, 5);
+      
+      // Calculate match score
+      const matchScore = Math.min(95, Math.max(60, matchedKeywords.length * 10 + 50));
+      
+      setMatchScore(matchScore);
+      setMatchedKeywords(matchedKeywords);
+      setMissingKeywords(missingKeywords);
+      setAiRecommendations(recommendations.length > 0 ? recommendations : [
+        'Add more relevant technical skills to your resume',
+        'Include specific achievements with metrics',
+        'Highlight relevant project experience',
+        'Tailor your summary to match the job requirements'
+      ]);
+      
       setIsAnalyzing(false);
-    }, 2000);
+    } catch (error) {
+      console.error('Error analyzing job description:', error);
+      // Fallback to basic analysis
+      setIsAnalyzing(false);
+    }
   },
 
   applyAIRecommendations: (aiRecommendations: string[], setAiRecommendations: (recommendations: string[]) => void) => {
@@ -188,16 +242,35 @@ export const aiHelpers = {
     setAiRecommendations([]);
   },
 
-  sendAIMessage: (aiPrompt: string, setAiPrompt: (prompt: string) => void, aiConversation: AIMessage[], setAiConversation: (conversation: AIMessage[] | ((prev: AIMessage[]) => AIMessage[])) => void) => {
+  sendAIMessage: async (aiPrompt: string, setAiPrompt: (prompt: string) => void, aiConversation: AIMessage[], setAiConversation: (conversation: AIMessage[] | ((prev: AIMessage[]) => AIMessage[])) => void) => {
     if (!aiPrompt.trim()) return;
     
     const newMessage = { role: 'user', text: aiPrompt };
     setAiConversation(prev => [...prev, newMessage]);
     setAiPrompt('');
     
-    setTimeout(() => {
+    try {
+      // Build context from previous conversation
+      const context = aiConversation
+        .slice(-5) // Last 5 messages for context
+        .map(msg => `${msg.role}: ${msg.text}`)
+        .join('\n');
+      
+      const response = await aiService.generateContent({
+        prompt: aiPrompt,
+        context,
+        systemPrompt: 'You are a helpful AI assistant specializing in resume writing and career advice. Provide clear, actionable feedback.',
+        maxTokens: 500,
+        temperature: 0.7
+      });
+      
+      const aiResponse = { role: 'assistant', text: response.content };
+      setAiConversation(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error sending AI message:', error);
+      // Fallback response
       const aiResponse = { role: 'assistant', text: 'I can help you improve your resume. What specific section would you like to work on?' };
       setAiConversation(prev => [...prev, aiResponse]);
-    }, 1000);
+    }
   }
 };

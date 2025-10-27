@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Globe, Server, Cloud, Upload, CheckCircle, ExternalLink, Copy } from 'lucide-react';
 import { WebsiteConfig } from '../../../types/portfolio';
-import { downloadPortfolio } from '../../utils/portfolioExporter';
+// Import will be done dynamically when needed
 
 interface HostingConfigProps {
   onNext: () => void;
@@ -29,14 +29,24 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
     ? `https://${customDomain}`
     : null;
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     setIsDeploying(true);
     
-    // Simulate deployment
-    setTimeout(() => {
+    try {
+      // Call the downloadPortfolio function to generate the ZIP
+      const { downloadPortfolio } = await import('../../../utils/portfolioExporter');
+      await downloadPortfolio(config, portfolioData);
+      
+      // Simulate deployment success
+      setTimeout(() => {
+        setIsDeploying(false);
+        setIsDeployed(true);
+      }, 1000);
+    } catch (error) {
+      console.error('Deployment error:', error);
       setIsDeploying(false);
-      setIsDeployed(true);
-    }, 2000);
+      alert('Failed to deploy portfolio. Please try again.');
+    }
   };
 
   const handleCopyUrl = () => {
@@ -159,6 +169,7 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
                         onChange={(e) => setSubdomain(e.target.value)}
                         className="flex-1 px-2 py-1 outline-none text-gray-900"
                         placeholder="your-name"
+                        aria-label="Subdomain input"
                       />
                       <span className="text-gray-500">.roleready.portfolio</span>
                     </div>
@@ -182,6 +193,7 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
                     onChange={(e) => setCustomDomain(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900"
                     placeholder="yourdomain.com"
+                    aria-label="Custom domain input"
                   />
                   <p className="text-xs text-gray-500 mt-2">
                     You'll need to update your domain's DNS records
@@ -240,6 +252,7 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
                     value={portfolioUrl}
                     readOnly
                     className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 bg-gray-50 text-gray-600"
+                    aria-label="Portfolio URL"
                   />
                   <button
                     onClick={handleCopyUrl}
