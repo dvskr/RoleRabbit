@@ -41,8 +41,8 @@ const queryClient = new QueryClient({
   },
 });
 
-// Custom hooks for common query patterns
-export const useResumeQuery = (resumeId: string) => {
+// Query config functions (not hooks, despite the "query" naming)
+export const getResumeQueryConfig = (resumeId: string) => {
   return {
     queryKey: ['resume', resumeId],
     queryFn: async () => {
@@ -56,7 +56,7 @@ export const useResumeQuery = (resumeId: string) => {
   };
 };
 
-export const useTemplatesQuery = (filters?: any) => {
+export const getTemplatesQueryConfig = (filters?: any) => {
   return {
     queryKey: ['templates', filters],
     queryFn: async () => {
@@ -70,7 +70,7 @@ export const useTemplatesQuery = (filters?: any) => {
   };
 };
 
-export const useJobsQuery = (userId: string) => {
+export const getJobsQueryConfig = (userId: string) => {
   return {
     queryKey: ['jobs', userId],
     queryFn: async () => {
@@ -84,7 +84,7 @@ export const useJobsQuery = (userId: string) => {
   };
 };
 
-export const useUserQuery = (userId: string) => {
+export const getUserQueryConfig = (userId: string) => {
   return {
     queryKey: ['user', userId],
     queryFn: async () => {
@@ -186,8 +186,9 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
 // Utility functions for cache management
 export const resumeCacheUtils = {
   // Prefetch resume data
-  prefetchResume: (resumeId: string) => {
-    queryClient.prefetchQuery(useResumeQuery(resumeId));
+  prefetchResume: async (resumeId: string) => {
+    const queryConfig = getResumeQueryConfig(resumeId);
+    await queryClient.prefetchQuery(queryConfig);
   },
   
   // Update resume in cache
@@ -203,8 +204,9 @@ export const resumeCacheUtils = {
 
 export const templateCacheUtils = {
   // Prefetch templates
-  prefetchTemplates: (filters?: any) => {
-    queryClient.prefetchQuery(useTemplatesQuery(filters));
+  prefetchTemplates: async (filters?: any) => {
+    const queryConfig = getTemplatesQueryConfig(filters);
+    await queryClient.prefetchQuery(queryConfig);
   },
   
   // Update templates cache
@@ -215,8 +217,9 @@ export const templateCacheUtils = {
 
 export const jobCacheUtils = {
   // Prefetch jobs
-  prefetchJobs: (userId: string) => {
-    queryClient.prefetchQuery(useJobsQuery(userId));
+  prefetchJobs: async (userId: string) => {
+    const queryConfig = getJobsQueryConfig(userId);
+    await queryClient.prefetchQuery(queryConfig);
   },
   
   // Update jobs cache

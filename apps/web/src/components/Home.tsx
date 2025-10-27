@@ -27,13 +27,15 @@ interface HomeProps {
   dashboardConfig?: Partial<DashboardConfig>;
   onQuickAction?: (actionId: string) => void;
   onNavigateToTab?: (tab: string) => void;
+  onOpenApplicationAnalytics?: () => void;
 }
 
 export default function Home({ 
   enableMissionControl = false,
   dashboardConfig,
   onQuickAction,
-  onNavigateToTab
+  onNavigateToTab,
+  onOpenApplicationAnalytics
 }: HomeProps) {
   // If Mission Control is enabled, render the dashboard
   if (enableMissionControl) {
@@ -42,6 +44,7 @@ export default function Home({
         config={dashboardConfig}
         onQuickAction={onQuickAction}
         onNavigateToTab={onNavigateToTab}
+        onOpenApplicationAnalytics={onOpenApplicationAnalytics}
       />
     );
   }

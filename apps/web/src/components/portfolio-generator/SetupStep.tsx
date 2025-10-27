@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Upload, Camera, User, Mail, Briefcase, Linkedin, Github, Globe, X, Check, CheckCircle, FileText } from 'lucide-react';
+import { resumeParser } from '../../services/resumeParser';
 
 interface SetupStepProps {
   profileData?: any;
@@ -59,17 +60,36 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
     }
   };
 
-  const handleResumeUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setIsUploadingResume(true);
       setUploadedResume(file.name);
       
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const text = event.target?.result as string;
         setResumeContent(text); // Store full resume content for LLM
-        parseResumeText(text);
+        
+        // Use AI-powered parsing
+        try {
+          const parsed = await resumeParser.parseResumeText(text);
+          
+          // Auto-fill form fields
+          if (parsed.name && !name) setName(parsed.name);
+          if (parsed.email && !email) setEmail(parsed.email);
+          if (parsed.title && !role) setRole(parsed.title);
+          if (parsed.summary && !bio) setBio(parsed.summary);
+          if (parsed.links.linkedin && !linkedin) setLinkedin(parsed.links.linkedin);
+          if (parsed.links.github && !github) setGithub(parsed.links.github);
+          if (parsed.links.website && !website) setWebsite(parsed.links.website);
+          if (parsed.location && !company) setCompany(parsed.location);
+        } catch (error) {
+          console.error('Error parsing resume with AI:', error);
+          // Fallback to basic parsing
+          parseResumeText(text);
+        }
+        
         setIsUploadingResume(false);
       };
       reader.readAsText(file);

@@ -220,6 +220,11 @@ export const useAppStore = create<AppStore>()(
         partialize: (state) => ({
           user: state.user,
           resumeData: state.resumeData,
+          aiState: {
+            conversation: state.aiState.conversation,
+            selectedModel: state.aiState.selectedModel,
+            mode: state.aiState.mode
+          },
           uiState: {
             theme: state.uiState.theme,
             sidebarCollapsed: state.uiState.sidebarCollapsed
