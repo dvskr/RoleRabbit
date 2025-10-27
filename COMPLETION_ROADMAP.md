@@ -415,7 +415,260 @@ __tests__/
 
 ---
 
-## 📊 SUMMARY TABLE
+## 🎯 PHASE 5: MONETIZATION & BUSINESS (Week 6-7)
+
+### 5.1 Payment System Integration ⚠️
+**Priority:** Critical  
+**Effort:** 12 hours  
+
+**Steps:**
+1. Set up Stripe account
+2. Add Stripe SDK to backend
+3. Create checkout sessions
+4. Add webhook handling
+5. Process payments
+6. Handle refunds
+7. Generate invoices
+
+**Backend API:**
+```typescript
+POST /api/payments/create-checkout
+POST /api/payments/webhook
+GET /api/payments/invoices
+```
+
+**Definition of Done:** Users can pay for Pro plan
+
+---
+
+### 5.2 Subscription Management ⚠️
+**Priority:** Critical  
+**Effort:** 12 hours  
+
+**Steps:**
+1. Create plans (Free, Pro, Enterprise)
+2. Add plan comparison page
+3. Add upgrade/downgrade flows
+4. Handle cancellations
+5. Add trial periods
+6. Implement auto-renewal
+7. Add proration logic
+
+**Database Schema:**
+```prisma
+model Subscription {
+  id String @id
+  userId String
+  plan String // free, pro, enterprise
+  status String // active, cancelled, trial
+  startDate DateTime
+  endDate DateTime
+  canceledAt DateTime?
+}
+```
+
+**Definition of Done:** Users can subscribe and manage plans
+
+---
+
+### 5.3 Usage Limits & Feature Gating ⚠️
+**Priority:** High  
+**Effort:** 8 hours  
+
+**Steps:**
+1. Define free tier limits
+2. Add quota tracking to database
+3. Implement feature gating logic
+4. Add "Upgrade to Pro" CTAs
+5. Lock premium features
+6. Show usage meters
+7. Enforce limits on backend
+
+**Limits:**
+- **Free:** 3 resumes, 10 jobs, basic AI
+- **Pro:** Unlimited, advanced AI, priority support
+- **Enterprise:** Everything + custom features
+
+**Definition of Done:** Free users hit limits, Pro users get everything
+
+---
+
+### 5.4 Upgrade Flows & CTAs ⚠️
+**Priority:** High  
+**Effort:** 8 hours  
+
+**Steps:**
+1. Add upgrade buttons throughout app
+2. Create limit reached modals
+3. Add in-app upgrade prompts
+4. Show plan comparison
+5. Add trial invitations
+6. Implement discount campaigns
+7. Add exit intent popups
+
+**Components:**
+```
+components/payments/UpgradeButton.tsx
+components/payments/UpgradeModal.tsx
+components/payments/PlanComparison.tsx
+components/payments/LimitReachedModal.tsx
+```
+
+**Definition of Done:** Users see upgrade prompts when hitting limits
+
+---
+
+### 5.5 Revenue Analytics Dashboard ⚠️
+**Priority:** High  
+**Effort:** 8 hours  
+
+**Steps:**
+1. Track MRR (Monthly Recurring Revenue)
+2. Track churn rate
+3. Calculate LTV (Lifetime Value)
+4. Track conversion by plan
+5. Show revenue charts
+6. Add cohort analysis
+7. Track upgrade/downgrade flows
+
+**Dashboard:**
+```
+/admin/analytics
+  - MRR over time
+  - Active subscriptions
+  - Churn rate
+  - Revenue by plan
+  - Conversion funnel
+```
+
+**Definition of Done:** Admin can see revenue metrics
+
+---
+
+### 5.6 Customer Analytics ⚠️
+**Priority:** Medium  
+**Effort:** 8 hours  
+
+**Steps:**
+1. User segmentation
+2. Feature usage tracking
+3. Engagement metrics
+4. Retention analytics
+5. A/B testing support
+6. Conversion tracking
+7. Heatmaps and session recordings
+
+**Features:**
+- Active users by plan
+- Feature adoption rates
+- User journey mapping
+- Retention cohorts
+- Churn prediction
+
+**Definition of Done:** Understand user behavior and optimize
+
+---
+
+## 🎯 PHASE 6: DOCUMENTATION & SUPPORT (Week 8)
+
+### 6.1 User Documentation 📚
+**Priority:** High  
+**Effort:** 12 hours  
+
+**Steps:**
+1. Create getting started guide
+2. Add feature tutorials
+3. Write FAQ section
+4. Create video tutorials
+5. Add troubleshooting guides
+6. Build searchable knowledge base
+
+**Pages:**
+```
+/docs/getting-started
+/docs/resume-builder
+/docs/job-tracker
+/docs/ai-features
+/faq
+/docs/tutorials
+```
+
+**Definition of Done:** Users can find help for everything
+
+---
+
+### 6.2 Onboarding Flow 🎓
+**Priority:** High  
+**Effort:** 12 hours  
+
+**Steps:**
+1. Create welcome screen
+2. Add interactive product tour
+3. Build first-time user experience
+4. Add progress tracking
+5. Show quick tips
+6. Implement skip options
+7. A/B test different flows
+
+**Components:**
+```
+components/onboarding/WelcomeScreen.tsx
+components/onboarding/ProductTour.tsx
+components/onboarding/Tooltips.tsx
+```
+
+**Definition of Done:** New users get guided experience
+
+---
+
+### 6.3 Support System 💬
+**Priority:** High  
+**Effort:** 10 hours  
+
+**Steps:**
+1. Add help center (Zendesk/Intercom)
+2. Implement live chat
+3. Add support ticket system
+4. Create contact forms
+5. Add feedback collection
+6. Track support metrics
+
+**Tools:**
+- Intercom for live chat
+- Zendesk for tickets
+- Feedback widget
+- Contact forms
+
+**Definition of Done:** Users can get help when needed
+
+---
+
+### 6.4 Marketing Enhancements 📢
+**Priority:** Medium  
+**Effort:** 8 hours  
+
+**Steps:**
+1. Create pricing page
+2. Add testimonials page
+3. Build blog section
+4. Add resource center
+5. Create case studies
+6. Add social proof
+
+**Pages:**
+```
+/pricing
+/testimonials
+/blog
+/resources
+/case-studies
+```
+
+**Definition of Done:** Marketing site is complete
+
+---
+
+## 📊 UPDATED SUMMARY TABLE
 
 | Phase | Task | Priority | Effort | Blocking |
 |-------|------|----------|--------|----------|
@@ -435,8 +688,18 @@ __tests__/
 | 4.3 | Tests | High | 24h | No |
 | 4.4 | Security | Critical | 16h | No |
 | 4.5 | Deployment | High | 12h | No |
+| 5.1 | Payment System | Critical | 12h | No |
+| 5.2 | Subscription Management | Critical | 12h | No |
+| 5.3 | Usage Limits | High | 8h | No |
+| 5.4 | Upgrade Flows | High | 8h | No |
+| 5.5 | Revenue Analytics | High | 8h | No |
+| 5.6 | Customer Analytics | Medium | 8h | No |
+| 6.1 | User Documentation | High | 12h | No |
+| 6.2 | Onboarding Flow | High | 12h | No |
+| 6.3 | Support System | High | 10h | No |
+| 6.4 | Marketing Enhancements | Medium | 8h | No |
 
-**Total Effort:** ~185 hours (~23 working days / ~5 weeks)
+**Total Effort:** ~335 hours (~42 working days / ~8.5 weeks)
 
 ---
 

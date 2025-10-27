@@ -17,6 +17,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   const {
     // State
     files,
+    isLoading,
     selectedFiles,
     searchTerm,
     filterType,
@@ -77,6 +78,18 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
   const [folderToRename, setFolderToRename] = useState<{ id: string; name: string } | null>(null);
   const [newFolderName, setNewFolderName] = useState('');
+
+  // Show loading state while fetching from API
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading files...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleEditFileWrapper = (fileId: string) => {
     logger.debug('Editing file:', fileId);
@@ -321,6 +334,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                             setShowRenameFolderModal(true);
                           }}
                           className="p-1 hover:bg-gray-200 rounded"
+                          aria-label="Rename folder"
                         >
                           <Pencil size={12} />
                         </button>
@@ -332,6 +346,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                             }
                           }}
                           className="p-1 hover:bg-red-100 rounded"
+                          aria-label="Delete folder"
                         >
                           <Trash2 size={12} className="text-red-600" />
                         </button>
@@ -384,6 +399,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   <button
                     onClick={() => setShowUploadModal(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    aria-label="Upload files"
                   >
                     Upload Your First File
                   </button>
@@ -413,6 +429,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               <button
                 onClick={() => setShowCreateFolderModal(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close create folder modal"
               >
                 <X size={20} />
               </button>
@@ -487,6 +504,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   setNewFolderName('');
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close rename folder modal"
               >
                 <X size={20} />
               </button>

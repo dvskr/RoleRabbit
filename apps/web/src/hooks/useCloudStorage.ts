@@ -1,12 +1,31 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { ResumeFile, FileType, SortBy, ViewMode, StorageInfo, SharePermission, FileComment, ShareLink, User, CredentialInfo, CredentialReminder, AccessLog, CloudIntegration } from '../types/cloudStorage';
 import { logger } from '../utils/logger';
+import apiService from '../services/apiService';
 
 export const useCloudStorage = () => {
   // File management
-  const [files, setFiles] = useState<ResumeFile[]>([
+  const [files, setFiles] = useState<ResumeFile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load files from API on mount
+  useEffect(() => {
+    loadFilesFromAPI();
+  }, []);
+
+  const loadFilesFromAPI = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiService.listCloudResumes();
+      if (response && response.savedResumes) {
+        setFiles(response.savedResumes as ResumeFile[]);
+      }
+    } catch (error) {
+      logger.error('Failed to load files from API:', error);
+      // Fallback to demo data
+      setFiles([
     {
       id: '1',
       name: 'Software Engineer Resume',
@@ -235,6 +254,10 @@ export const useCloudStorage = () => {
       description: 'Collection of web development projects and demos'
     }
   ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // UI state
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -407,28 +430,39 @@ export const useCloudStorage = () => {
     // TODO: Implement actual share logic
   }, []);
 
-  const handleUploadFile = useCallback((fileData: Partial<ResumeFile>) => {
-    const newFile: ResumeFile = {
-      id: `file_${Date.now()}`,
-      name: fileData.name || 'Untitled',
-      type: fileData.type || 'resume',
-      size: fileData.size || '0 MB',
-      lastModified: new Date().toISOString().split('T')[0],
-      isPublic: fileData.isPublic || false,
-      tags: fileData.tags || [],
-      version: 1,
-      owner: 'current-user',
-      sharedWith: [],
-      comments: [],
-      downloadCount: 0,
-      isStarred: false,
-      isArchived: false,
-      description: '',
-      viewCount: 0
-    };
-    
-    setFiles(prev => [newFile, ...prev]);
-    setShowUploadModal(false);
+  const handleUploadFile = useCallback(async (fileData: Partial<ResumeFile>) => {
+    try {
+      // Save to API
+      const response = await apiService.saveToCloud(fileData.data || fileData, fileData.name || 'Untitled');
+      if (response && response.savedResume) {
+        const newFile: ResumeFile = response.savedResume as ResumeFile;
+        setFiles(prev => [newFile, ...prev]);
+      }
+    } catch (error) {
+      logger.error('Failed to save file to API:', error);
+      // Fallback to local
+      const newFile: ResumeFile = {
+        id: `file_${Date.now()}`,
+        name: fileData.name || 'Untitled',
+        type: fileData.type || 'resume',
+        size: fileData.size || '0 MB',
+        lastModified: new Date().toISOString().split('T')[0],
+        isPublic: fileData.isPublic || false,
+        tags: fileData.tags || [],
+        version: 1,
+        owner: 'current-user',
+        sharedWith: [],
+        comments: [],
+        downloadCount: 0,
+        isStarred: false,
+        isArchived: false,
+        description: '',
+        viewCount: 0
+      };
+      setFiles(prev => [newFile, ...prev]);
+    } finally {
+      setShowUploadModal(false);
+    }
   }, []);
 
   const handleEditFile = useCallback((fileId: string, updates: Partial<ResumeFile>) => {
@@ -644,6 +678,7 @@ export const useCloudStorage = () => {
   return {
     // State
     files,
+    isLoading,
     selectedFiles,
     searchTerm,
     filterType,
