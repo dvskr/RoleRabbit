@@ -185,7 +185,6 @@ export const aiHelpers = {
 
   applyAIRecommendations: (aiRecommendations: string[], setAiRecommendations: (recommendations: string[]) => void) => {
     // In a real app, this would apply the recommendations to the resume
-    alert('AI recommendations applied successfully!');
     setAiRecommendations([]);
   },
 

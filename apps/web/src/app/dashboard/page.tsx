@@ -13,7 +13,8 @@ import JobTracker from '../../components/JobTracker';
 import Discussion from '../../components/Discussion';
 import Email from '../../components/Email';
 import CoverLetterGenerator from '../../components/CoverLetterGenerator';
-import { Eye, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download } from 'lucide-react';
+import PortfolioGenerator from '../../components/portfolio-generator/PortfolioGeneratorV2';
+import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download } from 'lucide-react';
 import { 
   CustomField, 
   ExperienceItem, 
@@ -33,7 +34,6 @@ import * as exportHelpers from '../../utils/exportHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
-import ATSChecker from '../../components/features/ATSChecker';
 import ResumeSharing from '../../components/features/ResumeSharing';
 import CoverLetterAnalytics from '../../components/CoverLetterAnalytics';
 import EmailAnalytics from '../../components/email/EmailAnalytics';
@@ -67,6 +67,7 @@ export default function DashboardPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [previousSidebarState, setPreviousSidebarState] = useState(false);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>('ats-classic');
   const [addedTemplates, setAddedTemplates] = useState<string[]>(['ats-classic', 'ats-modern']);
   
@@ -76,7 +77,6 @@ export default function DashboardPage() {
   const [cloudResumes, setCloudResumes] = useState<ResumeFile[]>([]);
 
   // New Features State
-  const [showATSChecker, setShowATSChecker] = useState(false);
   const [showResumeSharing, setShowResumeSharing] = useState(false);
   const [showCoverLetterAnalytics, setShowCoverLetterAnalytics] = useState(false);
   const [showEmailAnalytics, setShowEmailAnalytics] = useState(false);
@@ -526,7 +526,275 @@ export default function DashboardPage() {
       case 'storage':
         return <CloudStorage />;
       case 'editor':
-        return (
+        // Helper function to get template-specific classes
+        const getTemplateClasses = () => {
+          const template = resumeTemplates.find(t => t.id === selectedTemplateId);
+          if (!template) {
+            return {
+              container: 'bg-white border-gray-300',
+              header: 'border-b border-gray-300',
+              nameColor: 'text-gray-900',
+              titleColor: 'text-gray-700',
+              sectionColor: 'text-gray-900',
+              accentColor: 'text-gray-700'
+            };
+          }
+
+          // Apply template styles
+          const colorScheme = template.colorScheme;
+          const layout = template.layout;
+
+          let containerClass = '';
+          let headerClass = '';
+          let nameColor = 'text-gray-900';
+          let titleColor = 'text-gray-700';
+          let sectionColor = 'text-gray-900';
+          let accentColor = 'text-gray-700';
+
+          // Apply color scheme
+          switch (colorScheme) {
+            case 'blue':
+              containerClass = 'bg-white';
+              headerClass = 'border-b-2 border-blue-500';
+              nameColor = 'text-gray-900';
+              titleColor = 'text-blue-600';
+              sectionColor = 'text-blue-600';
+              accentColor = 'text-blue-600';
+              break;
+            case 'green':
+              containerClass = 'bg-white';
+              headerClass = 'border-b-2 border-green-500';
+              nameColor = 'text-gray-900';
+              titleColor = 'text-green-600';
+              sectionColor = 'text-green-600';
+              accentColor = 'text-green-600';
+              break;
+            case 'purple':
+              containerClass = 'bg-white';
+              headerClass = 'border-b-2 border-purple-500';
+              nameColor = 'text-gray-900';
+              titleColor = 'text-purple-600';
+              sectionColor = 'text-purple-600';
+              accentColor = 'text-purple-600';
+              break;
+            case 'red':
+              containerClass = 'bg-white';
+              headerClass = 'border-b-2 border-red-500';
+              nameColor = 'text-gray-900';
+              titleColor = 'text-red-600';
+              sectionColor = 'text-red-600';
+              accentColor = 'text-red-600';
+              break;
+            case 'orange':
+              containerClass = 'bg-white';
+              headerClass = 'border-b-2 border-orange-500';
+              nameColor = 'text-gray-900';
+              titleColor = 'text-orange-600';
+              sectionColor = 'text-orange-600';
+              accentColor = 'text-orange-600';
+              break;
+            default: // monochrome
+              containerClass = 'bg-white';
+              headerClass = 'border-b border-gray-300';
+              break;
+          }
+
+          // Apply layout (could affect padding, margins, etc.)
+          if (layout === 'two-column') {
+            containerClass += ' p-12';
+          }
+
+          return {
+            container: containerClass,
+            header: headerClass,
+            nameColor,
+            titleColor,
+            sectionColor,
+            accentColor
+          };
+        };
+
+        return isPreviewMode ? (
+          // Preview Mode - Document-style resume
+          <div className="h-full bg-gray-100 overflow-auto">
+            {/* Sticky Preview Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-300 px-6 py-3 z-10 flex items-center justify-between shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900">Preview: {resumeFileName}</h2>
+              <button
+                onClick={() => setIsPreviewMode(false)}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <EyeOff size={16} />
+                Exit Preview
+              </button>
+            </div>
+            
+            {/* Document Preview */}
+            <div 
+              className={`max-w-[8.5in] mx-auto mt-8 mb-12 shadow-2xl p-[1in] print:p-0 ${getTemplateClasses().container}`} 
+              style={{ minHeight: '11in' }}
+            >
+              {/* Document Header */}
+              <div className={`mb-6 pb-4 ${getTemplateClasses().header}`}>
+                <h1 className={`text-3xl font-bold mb-1 ${getTemplateClasses().nameColor}`} style={{ fontFamily: fontFamily === 'arial' ? 'Arial' : fontFamily === 'times' ? 'Times New Roman' : fontFamily === 'verdana' ? 'Verdana' : 'Arial' }}>
+                  {resumeData.name}
+                </h1>
+                <p className={`text-lg font-medium ${getTemplateClasses().titleColor}`}>{resumeData.title}</p>
+                <div className="flex gap-3 mt-2 text-sm text-gray-600">
+                  <span>{resumeData.email}</span>
+                  <span>•</span>
+                  <span>{resumeData.phone}</span>
+                  <span>•</span>
+                  <span>{resumeData.location}</span>
+                </div>
+              </div>
+
+              {/* Render sections based on sectionOrder */}
+              {sectionOrder.map((sectionId) => {
+                if (!sectionVisibility[sectionId]) return null;
+                
+                const sectionMap: any = {
+                  summary: (
+                    <div className="mb-4">
+                      <h2 className={`text-xl font-bold uppercase mb-1 ${getTemplateClasses().sectionColor}`} style={{ fontSize: fontSize }}>
+                        {resumeData.summary ? 'Professional Summary' : 'Summary'}
+                      </h2>
+                      <p className="text-gray-800" style={{ lineHeight: lineSpacing, fontSize: fontSize }}>
+                        {resumeData.summary}
+                      </p>
+                    </div>
+                  ),
+                  skills: (
+                    <div className="mb-4">
+                      <h2 className={`text-xl font-bold uppercase mb-2 ${getTemplateClasses().sectionColor}`} style={{ fontSize: fontSize }}>
+                        Skills
+                      </h2>
+                      <div className="flex flex-wrap gap-2">
+                        {resumeData.skills?.map((skill: string, idx: number) => (
+                          <span key={idx} className="px-3 py-1 bg-gray-100 rounded text-sm text-gray-800">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                  experience: (
+                    <div className="mb-4">
+                      <h2 className={`text-xl font-bold uppercase mb-2 ${getTemplateClasses().sectionColor}`} style={{ fontSize: fontSize }}>
+                        Professional Experience
+                      </h2>
+                      <div className="space-y-3">
+                        {resumeData.experience?.map((exp: any, idx: number) => (
+                          <div key={idx} className="mb-3">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
+                                {exp.position}
+                              </span>
+                              <span className="text-sm text-gray-600">{exp.period} - {exp.endPeriod}</span>
+                            </div>
+                            <p className="text-gray-700 mb-1" style={{ fontSize: fontSize }}>
+                              {exp.company} {exp.location && `• ${exp.location}`}
+                            </p>
+                            {exp.bullets && exp.bullets.length > 0 && (
+                              <ul className="list-disc list-inside ml-2 text-gray-700" style={{ fontSize: fontSize }}>
+                                {exp.bullets.map((bullet: string, i: number) => (
+                                  <li key={i} className="mb-1">{bullet}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                  education: (
+                    <div className="mb-4">
+                      <h2 className={`text-xl font-bold uppercase mb-2 ${getTemplateClasses().sectionColor}`} style={{ fontSize: fontSize }}>
+                        Education
+                      </h2>
+                      <div className="space-y-2">
+                        {resumeData.education?.map((edu: any, idx: number) => (
+                          <div key={idx}>
+                            <div className="flex justify-between">
+                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
+                                {edu.degree}
+                              </span>
+                              <span className="text-sm text-gray-600">{edu.startDate} - {edu.endDate}</span>
+                            </div>
+                            <p className="text-gray-700" style={{ fontSize: fontSize }}>
+                              {edu.school}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                  projects: (
+                    <div className="mb-4">
+                      <h2 className={`text-xl font-bold uppercase mb-2 ${getTemplateClasses().sectionColor}`} style={{ fontSize: fontSize }}>
+                        Projects
+                      </h2>
+                      <div className="space-y-3">
+                        {resumeData.projects?.map((project: any, idx: number) => (
+                          <div key={idx}>
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
+                                {project.name}
+                              </span>
+                              {project.link && (
+                                <a href={project.link} className="text-sm text-blue-600 hover:underline">
+                                  View Project
+                                </a>
+                              )}
+                            </div>
+                            <p className="text-gray-700 mb-1" style={{ fontSize: fontSize }}>
+                              {project.description}
+                            </p>
+                            {project.bullets && project.bullets.length > 0 && (
+                              <ul className="list-disc list-inside ml-2 text-gray-700" style={{ fontSize: fontSize }}>
+                                {project.bullets.map((bullet: string, i: number) => (
+                                  <li key={i} className="mb-1">{bullet}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                  certifications: (
+                    <div className="mb-4">
+                      <h2 className={`text-xl font-bold uppercase mb-2 ${getTemplateClasses().sectionColor}`} style={{ fontSize: fontSize }}>
+                        Certifications
+                      </h2>
+                      <div className="space-y-2">
+                        {resumeData.certifications?.map((cert: any, idx: number) => (
+                          <div key={idx}>
+                            <div className="flex justify-between">
+                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
+                                {cert.name}
+                              </span>
+                              {cert.link && (
+                                <a href={cert.link} className="text-sm text-blue-600 hover:underline">
+                                  Verify
+                                </a>
+                              )}
+                            </div>
+                            <p className="text-gray-700" style={{ fontSize: fontSize }}>
+                              {cert.issuer}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                };
+                
+                return sectionMap[sectionId] || null;
+              })}
+            </div>
+          </div>
+        ) : (
           <ResumeEditor
             resumeFileName={resumeFileName}
             setResumeFileName={setResumeFileName}
@@ -636,6 +904,8 @@ export default function DashboardPage() {
         return <Email />;
       case 'cover-letter':
         return <CoverLetterGenerator />;
+      case 'portfolio':
+        return <PortfolioGenerator />;
       default:
         return <Home />;
     }
@@ -667,12 +937,13 @@ export default function DashboardPage() {
               onDuplicate={handleDuplicateResume}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
+              onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
               onShowMobileMenu={() => setShowMobileMenu(true)}
-              onShowATSChecker={() => setShowATSChecker(true)}
               onShowResumeSharing={() => setShowResumeSharing(true)}
               showRightPanel={showRightPanel}
               previousSidebarState={previousSidebarState}
               sidebarCollapsed={sidebarCollapsed}
+              isPreviewMode={isPreviewMode}
               setPreviousSidebarState={setPreviousSidebarState}
               setSidebarCollapsed={setSidebarCollapsed}
               setShowRightPanel={setShowRightPanel}
@@ -685,6 +956,7 @@ export default function DashboardPage() {
                  activeTab === 'discussion' ? 'Discussion' :
                  activeTab === 'email' ? 'Email' :
                  activeTab === 'cover-letter' ? 'Cover Letter' :
+                 activeTab === 'portfolio' ? 'Portfolio' :
                  activeTab === 'templates' ? 'Templates' :
                  activeTab === 'profile' ? 'Profile' : ''}
               </h1>
@@ -725,9 +997,17 @@ export default function DashboardPage() {
                 selectedModel={selectedModel}
                 setSelectedModel={setSelectedModel}
                 isMobile={false}
+                resumeData={resumeData}
                 onAnalyzeJobDescription={analyzeJobDescription}
                 onApplyAIRecommendations={applyAIRecommendations}
                 onSendAIMessage={sendAIMessage}
+                onResumeUpdate={(updatedData) => {
+                  setResumeData(updatedData);
+                  // Add to history for undo/redo
+                  const newHistory = [...history.slice(0, historyIndex + 1), updatedData];
+                  setHistory(newHistory);
+                  setHistoryIndex(newHistory.length - 1);
+                }}
               />
             )}
           </div>
@@ -870,15 +1150,6 @@ export default function DashboardPage() {
           files={cloudResumes}
           onClose={() => setShowImportFromCloudModal(false)}
           onLoad={handleLoadFromCloud}
-        />
-      )}
-
-      {/* ATS Checker Modal */}
-      {showATSChecker && (
-        <ATSChecker
-          resumeData={resumeData}
-          isOpen={showATSChecker}
-          onClose={() => setShowATSChecker(false)}
         />
       )}
 

@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Sparkles, X, Send, Bot, Target, Zap, CheckCircle, AlertCircle, Briefcase, Settings, Palette, Crown, BarChart3, FileText, Lightbulb, Shield, Star, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, X, Send, Bot, Target, Zap, CheckCircle, AlertCircle, Briefcase, Settings, Palette, Crown, BarChart3, FileText, Lightbulb, Shield, Star, TrendingUp, RefreshCw } from 'lucide-react';
 
 interface AIPanelProps {
   showRightPanel: boolean;
@@ -30,9 +30,11 @@ interface AIPanelProps {
   selectedModel: string;
   setSelectedModel: (model: string) => void;
   isMobile: boolean;
+  resumeData: any;
   onAnalyzeJobDescription: () => void;
   onApplyAIRecommendations: () => void;
   onSendAIMessage: () => void;
+  onResumeUpdate?: (updatedData: any) => void;
 }
 
 export default function AIPanel({
@@ -62,10 +64,84 @@ export default function AIPanel({
   selectedModel,
   setSelectedModel,
   isMobile,
+  resumeData,
   onAnalyzeJobDescription,
   onApplyAIRecommendations,
-  onSendAIMessage
+  onSendAIMessage,
+  onResumeUpdate
 }: AIPanelProps) {
+  
+  const [atsAnalysis, setAtsAnalysis] = useState<any>(null);
+  const [beforeScore, setBeforeScore] = useState<number | null>(null);
+  const [afterScore, setAfterScore] = useState<number | null>(null);
+  const [showApplyButton, setShowApplyButton] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
+  const [improvedResumeData, setImprovedResumeData] = useState<any>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  
+  const handleClearAnalysis = () => {
+    setAtsAnalysis(null);
+    setBeforeScore(null);
+    setAfterScore(null);
+    setShowApplyButton(false);
+    setIsApplied(false);
+    setImprovedResumeData(null);
+    setJobDescription('');
+    setShowATSScore(false);
+  };
+  
+  const handleATSAnalysis = () => {
+    if (!jobDescription.trim() || !resumeData) return;
+    
+    const result = calculateATSScore(resumeData, jobDescription);
+    setAtsAnalysis(result);
+    setBeforeScore(result.overall);
+    setShowATSScore(true);
+    setShowApplyButton(true);
+  };
+  
+  const handleApplyImprovements = () => {
+    if (!resumeData || isApplying) return;
+    
+    setIsApplying(true);
+    
+    // Mock AI improvements - in real implementation, this would call an AI API
+    setTimeout(() => {
+      const improvedData = generateImprovedResume(resumeData, jobDescription, atsAnalysis);
+      setImprovedResumeData(improvedData);
+      
+      // Calculate after score
+      const afterResult = calculateATSScore(improvedData, jobDescription);
+      setAfterScore(afterResult.overall);
+      setIsApplying(false);
+      setIsApplied(true);
+      
+      // Apply the improvements to the resume
+      onApplyAIRecommendations();
+      onResumeUpdate?.(improvedData);
+    }, 1500);
+  };
+  
+  const generateImprovedResume = (data: any, jobDesc: string, analysis: any): any => {
+    const improved = JSON.parse(JSON.stringify(data));
+    
+    // Add missing keywords to summary
+    if (analysis.missingKeywords && analysis.missingKeywords.length > 0) {
+      const missingKeywordsText = analysis.missingKeywords.join(', ');
+      improved.summary = `${improved.summary}\n\nKey skills: ${missingKeywordsText}`;
+    }
+    
+    // Enhance experience with keywords
+    if (improved.experience && improved.experience.length > 0) {
+      improved.experience = improved.experience.map((exp: any) => {
+        const enhancedDescription = `${exp.description}\n\n${analysis.improvements?.join('. ')}`;
+        return { ...exp, description: enhancedDescription };
+      });
+    }
+    
+    return improved;
+  };
+  
   if (!showRightPanel) return null;
 
   const toneOptions = [
@@ -93,6 +169,89 @@ export default function AIPanel({
     { name: 'Check for Errors', icon: AlertCircle }
   ];
 
+  const calculateATSScore = (data: any, jobDesc: string): any => {
+    let score = 0;
+    let totalChecks = 0;
+
+    // Check keywords
+    const keywords = extractKeywords(jobDesc);
+    const resumeText = JSON.stringify(data).toLowerCase();
+    const matchedKeywords = keywords.filter(keyword => 
+      resumeText.includes(keyword.toLowerCase())
+    );
+    const keywordScore = (matchedKeywords.length / Math.max(keywords.length, 1)) * 30;
+    score += keywordScore;
+    totalChecks += 30;
+
+    // Check format (sections present)
+    const requiredSections = ['summary', 'experience', 'education', 'skills'];
+    const presentSections = requiredSections.filter(section => {
+      if (section === 'summary' && data.summary) return true;
+      if (section === 'experience' && data.experience?.length > 0) return true;
+      if (section === 'education' && data.education?.length > 0) return true;
+      if (section === 'skills' && data.skills?.length > 0) return true;
+      return false;
+    });
+    const formatScore = (presentSections.length / requiredSections.length) * 25;
+    score += formatScore;
+    totalChecks += 25;
+
+    // Check content quality (quantifiable achievements)
+    const hasQuantifiableAchievements = data.experience?.some((exp: any) => 
+      exp.description?.match(/\d+%|\d+\+|\$\d+|saved|increased|decreased|managed/i)
+    ) || false;
+    const contentScore = hasQuantifiableAchievements ? 25 : 15;
+    score += contentScore;
+    totalChecks += 25;
+
+    // Check experience depth
+    const hasExperience = data.experience && data.experience.length > 0;
+    const expScore = hasExperience ? 20 : 10;
+    score += expScore;
+    totalChecks += 20;
+
+    return {
+      overall: Math.round(score),
+      keywords: Math.round((matchedKeywords.length / Math.max(keywords.length, 1)) * 100),
+      format: Math.round((presentSections.length / requiredSections.length) * 100),
+      content: Math.round((hasQuantifiableAchievements ? 100 : 60)),
+      experience: Math.round(hasExperience ? 100 : 50),
+      strengths: generateStrengths(data),
+      improvements: generateImprovements(data, keywords),
+      missingKeywords: extractMissingKeywords(jobDesc, data)
+    };
+  };
+
+  const extractKeywords = (jobDesc: string): string[] => {
+    const commonKeywords = ['experience', 'skills', 'years', 'work', 'project', 'team', 'leadership', 'communication', 'technical', 'development', 'management', 'strategy'];
+    const text = jobDesc.toLowerCase();
+    return commonKeywords.filter(keyword => text.includes(keyword));
+  };
+
+  const extractMissingKeywords = (jobDesc: string, data: any): string[] => {
+    const keywords = extractKeywords(jobDesc);
+    const resumeText = JSON.stringify(data).toLowerCase();
+    return keywords.filter(keyword => !resumeText.includes(keyword.toLowerCase())).slice(0, 5);
+  };
+
+  const generateStrengths = (data: any): string[] => {
+    const strengths = [];
+    if (data.summary) strengths.push('Professional summary present');
+    if (data.experience?.length > 0) strengths.push('Experience section well-documented');
+    if (data.skills?.length > 0) strengths.push('Technical skills listed');
+    if (data.education?.length > 0) strengths.push('Education credentials included');
+    return strengths;
+  };
+
+  const generateImprovements = (data: any, keywords: string[]): string[] => {
+    const improvements = [];
+    improvements.push('Add more industry-specific keywords from job description');
+    improvements.push('Include more quantifiable achievements with numbers');
+    improvements.push('Expand technical skills section');
+    improvements.push('Add metrics to experience descriptions');
+    return improvements;
+  };
+
   const aiModels = [
     { id: 'gpt-5', name: 'GPT-5', description: 'Latest OpenAI model with advanced reasoning', capabilities: ['multimodal', 'code-generation', 'creative-writing'] },
     { id: 'sonnet-4.5', name: 'Sonnet 4.5', description: 'Anthropic\'s latest model with enhanced safety', capabilities: ['safety', 'long-context', 'creative-writing'] },
@@ -116,12 +275,22 @@ export default function AIPanel({
                 <p className="text-xs text-gray-500">Resume Optimization</p>
               </div>
             </div>
-            <button 
-              onClick={() => setShowRightPanel(false)} 
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleClearAnalysis} 
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Clear analysis"
+              >
+                <RefreshCw size={18} className="text-gray-600" />
+              </button>
+              <button 
+                onClick={() => setShowRightPanel(false)} 
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Close panel"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -196,29 +365,183 @@ export default function AIPanel({
                       {jobDescription.length} characters
                     </span>
                     <button
-                      onClick={onAnalyzeJobDescription}
-                      disabled={!jobDescription.trim() || isAnalyzing}
-                      className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md text-sm font-medium hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      onClick={showApplyButton && !isApplied ? handleApplyImprovements : handleATSAnalysis}
+                      disabled={(!jobDescription.trim() || isAnalyzing || !resumeData || isApplying) && !isApplied}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
+                        isApplied 
+                          ? 'bg-green-600 text-white cursor-default' 
+                          : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
                     >
-                      <Target size={14} />
-                      {isAnalyzing ? 'Analyzing...' : 'Analyze Job'}
+                      <Shield size={14} />
+                      {isApplied ? 'Applied' : isApplying ? 'Applying...' : isAnalyzing ? 'Analyzing...' : showApplyButton ? 'Apply Improvements' : 'Run ATS Check'}
                     </button>
                   </div>
                 </div>
 
-                {/* ATS Score Display */}
-                {showATSScore && (
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-100">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-medium text-gray-900">ATS Match Score</h4>
-                      <span className="text-xl font-bold text-blue-600">{matchScore}%</span>
+                {/* Detailed ATS Analysis */}
+                {atsAnalysis && (
+                  <div className="space-y-4">
+                    {/* Overall Score */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">Overall ATS Score</h4>
+                          <p className="text-xs text-gray-600">Your resume compatibility</p>
+                        </div>
+                        <div className="flex gap-3">
+                          {/* Before Score */}
+                          {beforeScore !== null && (
+                            <div className="text-right">
+                              <div className="text-xs text-gray-600 mb-0.5">Before</div>
+                              <div className={`text-2xl font-bold ${
+                                beforeScore >= 90 ? 'text-green-600' :
+                                beforeScore >= 75 ? 'text-blue-600' :
+                                beforeScore >= 60 ? 'text-yellow-600' :
+                                'text-red-600'
+                              }`}>
+                                {beforeScore}
+                              </div>
+                            </div>
+                          )}
+                          {/* After Score */}
+                          {afterScore !== null && (
+                            <div className="text-right">
+                              <div className="text-xs text-gray-600 mb-0.5">After</div>
+                              <div className={`text-2xl font-bold ${
+                                afterScore >= 90 ? 'text-green-600' :
+                                afterScore >= 75 ? 'text-blue-600' :
+                                afterScore >= 60 ? 'text-yellow-600' :
+                                'text-red-600'
+                              }`}>
+                                {afterScore}
+                              </div>
+                            </div>
+                          )}
+                          {/* Current Score (when no after score) */}
+                          {afterScore === null && (
+                            <div className={`text-3xl font-bold px-4 py-2 rounded-lg ${
+                              atsAnalysis.overall >= 90 ? 'bg-green-100 text-green-600' :
+                              atsAnalysis.overall >= 75 ? 'bg-blue-100 text-blue-600' :
+                              atsAnalysis.overall >= 60 ? 'bg-yellow-100 text-yellow-600' :
+                              'bg-red-100 text-red-600'
+                            }`}>
+                              {atsAnalysis.overall}/100
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            atsAnalysis.overall >= 90 ? 'bg-green-500' :
+                            atsAnalysis.overall >= 75 ? 'bg-blue-500' :
+                            atsAnalysis.overall >= 60 ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${atsAnalysis.overall}%` }}
+                        ></div>
+                      </div>
+                      {/* Show improvement if after score exists */}
+                      {afterScore !== null && beforeScore !== null && (
+                        <div className="mt-2 text-center">
+                          <span className={`text-xs font-medium ${
+                            afterScore > beforeScore ? 'text-green-600' : 
+                            afterScore < beforeScore ? 'text-red-600' : 
+                            'text-gray-600'
+                          }`}>
+                            {afterScore > beforeScore ? `↑ +${afterScore - beforeScore} points` : 
+                             afterScore < beforeScore ? `↓ ${afterScore - beforeScore} points` : 
+                             'No change'}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-1.5 rounded-full transition-all duration-500"
-                        style={{ width: `${matchScore}%` }}
-                      ></div>
+
+                    {/* Category Breakdown */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FileText size={14} className="text-blue-600" />
+                          <span className="text-xs font-medium text-gray-700">Keywords</span>
+                        </div>
+                        <div className="text-xl font-bold text-blue-600">{atsAnalysis.keywords}</div>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <CheckCircle size={14} className="text-green-600" />
+                          <span className="text-xs font-medium text-gray-700">Format</span>
+                        </div>
+                        <div className="text-xl font-bold text-green-600">{atsAnalysis.format}</div>
+                      </div>
+                      <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <TrendingUp size={14} className="text-purple-600" />
+                          <span className="text-xs font-medium text-gray-700">Content</span>
+                        </div>
+                        <div className="text-xl font-bold text-purple-600">{atsAnalysis.content}</div>
+                      </div>
+                      <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Target size={14} className="text-orange-600" />
+                          <span className="text-xs font-medium text-gray-700">Experience</span>
+                        </div>
+                        <div className="text-xl font-bold text-orange-600">{atsAnalysis.experience}</div>
+                      </div>
                     </div>
+
+                    {/* Strengths */}
+                    {atsAnalysis.strengths && atsAnalysis.strengths.length > 0 && (
+                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle size={16} className="text-green-600" />
+                          <h5 className="text-sm font-medium text-gray-900">Strengths</h5>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {atsAnalysis.strengths.slice(0, 3).map((strength: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-1.5 text-xs text-gray-700">
+                              <CheckCircle size={10} className="text-green-600 flex-shrink-0 mt-0.5" />
+                              <span>{strength}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Improvements */}
+                    {atsAnalysis.improvements && atsAnalysis.improvements.length > 0 && (
+                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle size={16} className="text-yellow-600" />
+                          <h5 className="text-sm font-medium text-gray-900">Improvements</h5>
+                        </div>
+                        <ul className="space-y-1.5">
+                          {atsAnalysis.improvements.slice(0, 3).map((improvement: string, idx: number) => (
+                            <li key={idx} className="flex items-start gap-1.5 text-xs text-gray-700">
+                              <AlertCircle size={10} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                              <span>{improvement}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Missing Keywords */}
+                    {atsAnalysis.missingKeywords && atsAnalysis.missingKeywords.length > 0 && (
+                      <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle size={16} className="text-red-600" />
+                          <h5 className="text-sm font-medium text-gray-900">Missing Keywords</h5>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {atsAnalysis.missingKeywords.slice(0, 6).map((keyword: string, idx: number) => (
+                            <span key={idx} className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
