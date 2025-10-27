@@ -1037,7 +1037,7 @@ export default function Discussion() {
                       title: '',
                       content: '',
                       community: '',
-                      type: 'text' as 'text',
+                      type: 'text' as const,
                       tags: []
                     });
                     

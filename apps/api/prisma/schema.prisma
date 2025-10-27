@@ -1,0 +1,199 @@
+// Prisma schema for RoleReady Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // Use SQLite for simplicity, can switch to PostgreSQL/MySQL later
+  url      = env("DATABASE_URL") || "file:./dev.db"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String?  // Optional for OAuth users
+  provider      String   @default("local") // local, google, github
+  providerId    String?  @unique
+  profilePicture String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  resumes       Resume[]
+  jobs          Job[]
+  coverLetters  CoverLetter[]
+  emails        Email[]
+  portfolios    Portfolio[]
+  cloudFiles    CloudFile[]
+  analytics     Analytics[]
+
+  @@map("users")
+}
+
+model Resume {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  data        String   @db.Text // JSON string of resume data
+  templateId  String?
+  fileName    String?
+  isPublic    Boolean  @default(false)
+  version     Int      @default(1)
+  lastUpdated DateTime @default(now()) @updatedAt
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("resumes")
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  company     String
+  location    String?
+  status      String   // applied, screening, interview, offer, rejected
+  salaryRange String?
+  notes       String?  @db.Text
+  source      String?  // linkedin, indeed, etc.
+  appliedDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("jobs")
+  @@index([userId])
+  @@index([status])
+}
+
+model CoverLetter {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  content     String   @db.Text
+  jobId       String?  // Link to job application
+  templateId  String?
+  wordCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cover_letters")
+}
+
+model Email {
+  id          String   @id @default(cuid())
+  userId      String
+  to          String
+  subject     String
+  body        String   @db.Text
+  type        String   // followup, thank_you, inquiry, etc.
+  status      String   // sent, draft, failed
+  sentDate    DateTime?
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emails")
+  @@index([userId])
+}
+
+model Portfolio {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  data        String   @db.Text // JSON string of portfolio data
+  templateId  String   @default("modern")
+  isPublished Boolean  @default(false)
+  customDomain String?
+  subdomain   String?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("portfolios")
+}
+
+model CloudFile {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String   // resume, cover_letter, document, portfolio
+  size        Int
+  contentType String
+  data        String   @db.Text // Base64 or file path
+  folder      String?
+  tags        String?  // Comma-separated tags
+  description String?  @db.Text
+  isPublic    Boolean  @default(false)
+  isStarred   Boolean  @default(false)
+  downloadCount Int    @default(0)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("cloud_files")
+  @@index([userId])
+  @@index([type])
+}
+
+model Analytics {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // application_analytics, email_analytics, cover_letter_analytics
+  data        String   @db.Text // JSON string of analytics data
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("analytics")
+  @@index([userId])
+  @@index([type])
+}
+
+model DiscussionPost {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  author      String?
+  community   String?
+  tags        String?  // Comma-separated tags
+  views       Int      @default(0)
+  upvotes     Int      @default(0)
+  downvotes   Int      @default(0)
+  isPinned    Boolean  @default(false)
+  isLocked    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("discussion_posts")
+  @@index([community])
+  @@index([createdAt])
+}
+
+model DiscussionComment {
+  id          String   @id @default(cuid())
+  postId      String
+  content     String   @db.Text
+  author      String?
+  parentId    String?  // For nested comments
+  upvotes     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("discussion_comments")
+  @@index([postId])
+  @@index([parentId])
+}
+
