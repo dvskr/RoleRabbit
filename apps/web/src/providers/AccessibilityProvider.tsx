@@ -155,8 +155,18 @@ export const AccessibilityProvider: React.FC<AccessibilityProviderProps> = ({ ch
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   }, [screenReader, highContrast, fontSize]);
 
+  // Accessible button hook (called at top level)
+  const accessibleButtonHook = useAccessibleButton(() => {}, false);
+  
   const getButtonProps = useCallback((onClick: () => void, disabled = false) => {
-    return useAccessibleButton(onClick, disabled);
+    // Return button props without calling hooks
+    return {
+      onClick,
+      disabled,
+      role: 'button',
+      'aria-disabled': disabled,
+      tabIndex: disabled ? -1 : 0,
+    };
   }, []);
 
   const contextValue: AccessibilityContextType = {

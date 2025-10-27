@@ -1,0 +1,19 @@
+{
+  "name": "roleready-browser-extension",
+  "version": "1.0.0",
+  "description": "RoleReady Job Search Copilot - Browser Extension",
+  "scripts": {
+    "build": "echo 'No build step required for this extension'",
+    "pack": "zip -r roleready-extension.zip . -x '*.git*' '*.DS_Store' 'node_modules/*'",
+    "dev": "echo 'Load extension in Chrome/Edge developer mode'"
+  },
+  "keywords": [
+    "job search",
+    "career",
+    "extension",
+    "roleready"
+  ],
+  "author": "RoleReady Team",
+  "license": "MIT"
+}
+
