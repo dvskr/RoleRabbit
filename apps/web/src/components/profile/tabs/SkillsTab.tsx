@@ -134,7 +134,7 @@ export default function SkillsTab({
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Certifications</h3>
           <div className="space-y-4">
-            {userData.certifications.map((cert, index) => (
+            {(userData.certifications || []).map((cert, index) => (
               <div key={index} className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200/50 hover:shadow-md transition-all">
                 <div className="flex items-start gap-4">
                   <div className="p-2 bg-yellow-100 rounded-lg">
@@ -197,7 +197,7 @@ export default function SkillsTab({
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Languages</h3>
           <div className="space-y-4">
-            {userData.languages.map((lang, index) => (
+            {(userData.languages || []).map((lang, index) => (
               <div key={index} className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200/50 hover:shadow-md transition-all">
                 <div className="p-2 bg-green-100 rounded-lg">
                   <Globe size={20} className="text-green-600" />

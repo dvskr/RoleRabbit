@@ -31,12 +31,12 @@ export default function Sidebar({
       
       <nav className={`flex-1 ${sidebarCollapsed ? 'p-2' : 'p-3'} space-y-1 overflow-y-auto`}>
         <button 
-          onClick={() => onTabChange('home')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'home' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
-          title={sidebarCollapsed ? 'Home' : ''}
+          onClick={() => onTabChange('dashboard')} 
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          title={sidebarCollapsed ? 'Dashboard' : ''}
         >
           <HomeIcon size={20} />
-          {!sidebarCollapsed && <span className="font-semibold">Home</span>}
+          {!sidebarCollapsed && <span className="font-semibold">Dashboard</span>}
         </button>
         <button 
           onClick={() => onTabChange('profile')} 

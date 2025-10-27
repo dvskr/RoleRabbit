@@ -283,19 +283,8 @@ export default function LearningHub() {
   return (
     <div className="h-full bg-gray-50 overflow-y-auto">
       <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <BookOpen className="text-white" size={24} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Learning Hub</h1>
-              <p className="text-gray-600">Build skills, advance your career</p>
-            </div>
-          </div>
-
-          {/* Search Bar */}
+        {/* Search Bar */}
+        <div className="mb-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input

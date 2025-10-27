@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
+import PageHeader from '../../components/layout/PageHeader';
 import Home from '../../components/Home';
 import Profile from '../../components/Profile';
 import CloudStorage from '../../components/CloudStorage';
@@ -16,7 +17,7 @@ import CoverLetterGenerator from '../../components/CoverLetterGenerator';
 import PortfolioGenerator from '../../components/portfolio-generator/PortfolioGeneratorV2';
 import LearningHub from '../../components/LearningHub';
 import AIAgents from '../../components/AIAgents';
-import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Users, Home as HomeIcon } from 'lucide-react';
 import { 
   CustomField, 
   ExperienceItem, 
@@ -66,7 +67,7 @@ export default function DashboardPage() {
   const aiHook = useAI();
   
   // Dashboard-specific state
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [previousSidebarState, setPreviousSidebarState] = useState(false);
@@ -578,7 +579,7 @@ export default function DashboardPage() {
 
   const renderActiveComponent = () => {
     switch (activeTab) {
-      case 'home':
+      case 'dashboard':
         return (
           <Home 
             enableMissionControl={true}
@@ -1039,18 +1040,70 @@ export default function DashboardPage() {
               setShowRightPanel={setShowRightPanel}
             />
           ) : (
-            <div className="bg-white border-b border-gray-200 px-6 py-2">
-              <h1 className="text-xl font-bold text-gray-900 capitalize">
-                {activeTab === 'storage' ? 'Storage' : 
-                 activeTab === 'tracker' ? 'Tracker' : 
-                 activeTab === 'discussion' ? 'Discussion' :
-                 activeTab === 'email' ? 'Email' :
-                 activeTab === 'cover-letter' ? 'Cover Letter' :
-                 activeTab === 'portfolio' ? 'Portfolio' :
-                 activeTab === 'templates' ? 'Templates' :
-                 activeTab === 'profile' ? 'Profile' : ''}
-              </h1>
-            </div>
+            <PageHeader
+              title={
+                activeTab === 'storage' ? 'Storage' :
+                activeTab === 'tracker' ? 'Job Tracker' :
+                activeTab === 'discussion' ? 'Community' :
+                activeTab === 'email' ? 'Email Hub' :
+                activeTab === 'cover-letter' ? 'Cover Letter' :
+                activeTab === 'portfolio' ? 'Portfolio' :
+                activeTab === 'templates' ? 'Templates' :
+                activeTab === 'profile' ? 'Profile' :
+                activeTab === 'agents' ? 'AI Agents' :
+                 activeTab === 'learning' ? 'Learning Hub' :
+                 activeTab === 'dashboard' ? 'Dashboard' : undefined
+              }
+              icon={
+                activeTab === 'dashboard' ? HomeIcon : undefined
+              }
+              iconColor={
+                activeTab === 'dashboard' ? 'text-blue-600' : undefined
+              }
+              subtitle={
+                activeTab === 'dashboard' ? 'Overview of your job search journey' :
+                activeTab === 'storage' ? 'Manage your files and documents' :
+                activeTab === 'tracker' ? 'Track your job applications' :
+                activeTab === 'discussion' ? 'Connect with the community' :
+                activeTab === 'email' ? 'Manage your emails and contacts' :
+                activeTab === 'cover-letter' ? 'Create professional cover letters' :
+                activeTab === 'portfolio' ? 'Build your online portfolio' :
+                activeTab === 'templates' ? 'Browse resume templates' :
+                activeTab === 'profile' ? 'Manage your profile settings' :
+                activeTab === 'agents' ? 'Automate your job search' :
+                activeTab === 'learning' ? 'Learn new skills' : undefined
+              }
+              icon={(() => {
+                switch(activeTab) {
+                  case 'storage': return FolderOpen;
+                  case 'tracker': return Briefcase;
+                  case 'discussion': return MessageSquare;
+                  case 'email': return Mail;
+                  case 'cover-letter': return FileText;
+                  case 'portfolio': return Globe;
+                  case 'templates': return LayoutTemplate;
+                  case 'profile': return UserIcon;
+                  case 'agents': return Sparkles;
+                  case 'learning': return GraduationCap;
+                  default: return undefined;
+                }
+              })()}
+              iconColor={(() => {
+                switch(activeTab) {
+                  case 'storage': return 'text-blue-600';
+                  case 'tracker': return 'text-green-600';
+                  case 'discussion': return 'text-indigo-600';
+                  case 'email': return 'text-purple-600';
+                  case 'cover-letter': return 'text-orange-600';
+                  case 'portfolio': return 'text-rose-600';
+                  case 'templates': return 'text-violet-600';
+                  case 'profile': return 'text-slate-600';
+                  case 'agents': return 'text-purple-600';
+                  case 'learning': return 'text-sky-600';
+                  default: return 'text-blue-600';
+                }
+              })()}
+            />
           )}
 
           {/* Main Content */}

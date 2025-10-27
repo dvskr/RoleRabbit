@@ -17,11 +17,9 @@ export default function ProfileHeader({
   resumeImportButton
 }: ExtendedProfileHeaderProps) {
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-6 py-4 flex-shrink-0 shadow-sm">
+    <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-4 py-2 flex-shrink-0 shadow-sm">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-600 mt-1 text-sm">Manage your account settings and preferences</p>
-        </div>
+        <div></div>
         <div className="flex items-center gap-3">
           {/* Resume Import Button */}
           {resumeImportButton && !isEditing && resumeImportButton}
