@@ -156,7 +156,7 @@ export default function JobTracker() {
       
       case 'grid':
     return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {jobs.map(job => (
               <JobCard
                 key={job.id}
@@ -175,7 +175,7 @@ export default function JobTracker() {
 
       case 'table':
     return (
-          <div className="p-6">
+          <div className="p-4">
             <EditableJobTable
               jobs={jobs}
               onEdit={handleEditJob}
@@ -189,7 +189,7 @@ export default function JobTracker() {
       case 'list':
       default:
     return (
-          <div className="space-y-4 p-6">
+          <div className="space-y-3 p-4">
             {jobs.map(job => (
               <JobCard
                 key={job.id}

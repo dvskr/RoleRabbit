@@ -405,7 +405,7 @@ export default function CoverLetterGenerator() {
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="px-6 py-4 flex-shrink-0">
+        <div className="px-4 py-3 flex-shrink-0">
           <CoverLetterTabs
             activeTab={activeTab}
             onTabChange={handleTabChange}
@@ -413,7 +413,7 @@ export default function CoverLetterGenerator() {
             </div>
 
         <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="p-6">
+          <div className="p-4">
             <div className="max-w-7xl mx-auto">
               {renderTabContent()}
             </div>
