@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Shield, AlertCircle, CheckCircle, TrendingUp, FileText, Sparkles, Target } from 'lucide-react';
+import { Shield, AlertCircle, CheckCircle, TrendingUp, FileText, Sparkles, Target, X } from 'lucide-react';
 import { ResumeData } from '../../types/resume';
 import { logger } from '../../utils/logger';
 

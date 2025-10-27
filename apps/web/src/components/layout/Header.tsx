@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Shield, Share2 } from 'lucide-react';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Share2, Eye, EyeOff } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -11,6 +11,7 @@ interface HeaderProps {
   showRightPanel: boolean;
   previousSidebarState: boolean;
   sidebarCollapsed: boolean;
+  isPreviewMode?: boolean;
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -18,8 +19,8 @@ interface HeaderProps {
   onDuplicate?: () => void;
   onSave: () => void;
   onToggleAIPanel: () => void;
+  onTogglePreview?: () => void;
   onShowMobileMenu: () => void;
-  onShowATSChecker?: () => void;
   onShowResumeSharing?: () => void;
   setPreviousSidebarState: (state: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -34,6 +35,7 @@ export default function Header({
   showRightPanel,
   previousSidebarState,
   sidebarCollapsed,
+  isPreviewMode,
   onExport,
   onUndo,
   onRedo,
@@ -41,8 +43,8 @@ export default function Header({
   onDuplicate,
   onSave,
   onToggleAIPanel,
+  onTogglePreview,
   onShowMobileMenu,
-  onShowATSChecker,
   onShowResumeSharing,
   setPreviousSidebarState,
   setSidebarCollapsed,
@@ -118,15 +120,6 @@ export default function Header({
           <Download size={16} className="text-gray-600 group-hover:text-green-600" />
           <span className="font-medium">Export</span>
         </button>
-        {onShowATSChecker && (
-          <button 
-            onClick={onShowATSChecker}
-            className="px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:border-indigo-400 hover:bg-indigo-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-2 group"
-          >
-            <Shield size={16} className="text-gray-600 group-hover:text-indigo-600" />
-            <span className="font-medium">ATS Check</span>
-          </button>
-        )}
         {onShowResumeSharing && (
           <button 
             onClick={onShowResumeSharing}
@@ -134,6 +127,19 @@ export default function Header({
           >
             <Share2 size={16} className="text-gray-600 group-hover:text-purple-600" />
             <span className="font-medium">Share</span>
+          </button>
+        )}
+        {onTogglePreview && (
+          <button 
+            onClick={onTogglePreview}
+            className={`px-4 py-2.5 border-2 rounded-xl text-sm font-semibold flex items-center gap-2 transition-all duration-200 shadow-sm ${
+              isPreviewMode 
+                ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:shadow-lg' 
+                : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg'
+            }`}
+          >
+            {isPreviewMode ? <EyeOff size={16} /> : <Eye size={16} />}
+            <span className="font-medium">{isPreviewMode ? 'Hide Preview' : 'Preview'}</span>
           </button>
         )}
         <button 
