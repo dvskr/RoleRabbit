@@ -229,6 +229,88 @@ export default function DashboardPage() {
     logger.debug('Resume duplicated successfully');
   };
 
+  const handleRemoveDuplicates = () => {
+    logger.debug('Removing duplicates from resume');
+    
+    const cleanedResumeData = { ...resumeData };
+    let removedCount = 0;
+    
+    // Remove duplicate experiences
+    if (cleanedResumeData.experience && cleanedResumeData.experience.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.experience.filter((exp: any) => {
+        const key = `${exp.company}-${exp.position}-${exp.period}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.experience = unique;
+    }
+    
+    // Remove duplicate skills
+    if (cleanedResumeData.skills && cleanedResumeData.skills.length > 0) {
+      const uniqueSkills = Array.from(new Set(cleanedResumeData.skills));
+      removedCount += cleanedResumeData.skills.length - uniqueSkills.length;
+      cleanedResumeData.skills = uniqueSkills;
+    }
+    
+    // Remove duplicate education
+    if (cleanedResumeData.education && cleanedResumeData.education.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.education.filter((edu: any) => {
+        const key = `${edu.school}-${edu.degree}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.education = unique;
+    }
+    
+    // Remove duplicate projects
+    if (cleanedResumeData.projects && cleanedResumeData.projects.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.projects.filter((proj: any) => {
+        const key = `${proj.name}-${proj.description}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.projects = unique;
+    }
+    
+    // Remove duplicate certifications
+    if (cleanedResumeData.certifications && cleanedResumeData.certifications.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.certifications.filter((cert: any) => {
+        const key = `${cert.name}-${cert.issuer}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.certifications = unique;
+    }
+    
+    if (removedCount > 0) {
+      setResumeData(cleanedResumeData);
+      alert(`Removed ${removedCount} duplicate ${removedCount === 1 ? 'entry' : 'entries'}`);
+      logger.debug(`Removed ${removedCount} duplicates`);
+    } else {
+      alert('No duplicates found!');
+    }
+  };
+
   // Destructure hooks for easier access
   const {
     resumeFileName, setResumeFileName,
@@ -943,7 +1025,6 @@ export default function DashboardPage() {
               onUndo={undo}
               onRedo={redo}
               onImport={() => setShowImportModal(true)}
-              onDuplicate={handleDuplicateResume}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
@@ -958,8 +1039,8 @@ export default function DashboardPage() {
               setShowRightPanel={setShowRightPanel}
             />
           ) : (
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-              <h1 className="text-2xl font-bold text-gray-900 capitalize">
+            <div className="bg-white border-b border-gray-200 px-6 py-2">
+              <h1 className="text-xl font-bold text-gray-900 capitalize">
                 {activeTab === 'storage' ? 'Storage' : 
                  activeTab === 'tracker' ? 'Tracker' : 
                  activeTab === 'discussion' ? 'Discussion' :

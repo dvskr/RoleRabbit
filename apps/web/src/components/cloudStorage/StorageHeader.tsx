@@ -28,56 +28,56 @@ export default function StorageHeader({
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-2">
       {/* Compact Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Cloud size={16} className="text-white" />
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <Cloud size={14} className="text-white" />
           </div>
           <div>
-            <p className="text-sm text-gray-600">Manage your resumes and files with advanced sharing</p>
+            <p className="text-xs text-gray-600">Manage your resumes and files with advanced sharing</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1.5">
           <button
             onClick={onRefresh}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
             title="Refresh"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
           </button>
           <button
             onClick={onUpload}
-            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg flex items-center space-x-2"
+            className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg flex items-center space-x-1.5"
           >
-            <Upload size={14} />
-            <span className="text-sm font-medium">Upload</span>
+            <Upload size={12} />
+            <span className="text-xs font-medium">Upload</span>
           </button>
         </div>
       </div>
 
       {/* Compact Stats */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-1.5">
         {/* Storage Usage */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
-              <HardDrive size={14} className="text-blue-600" />
+        <div className="bg-white rounded-lg p-1.5 border border-gray-200">
+          <div className="flex items-center justify-between mb-1">
+            <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+              <HardDrive size={12} className="text-blue-600" />
             </div>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${getStorageColor(storageInfo.percentage)}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${getStorageColor(storageInfo.percentage)}`}>
               {storageInfo.percentage.toFixed(1)}%
             </span>
           </div>
           <div>
-            <h3 className="text-sm font-bold text-gray-900 mb-1">
+            <h3 className="text-sm font-bold text-gray-900 mb-0.5">
               {storageInfo.used} GB
             </h3>
-            <p className="text-xs text-gray-600 mb-2">of {storageInfo.limit} GB</p>
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
+            <p className="text-[10px] text-gray-600 mb-1">of {storageInfo.limit} GB</p>
+            <div className="w-full bg-gray-200 rounded-full h-1">
               <div 
-                className={`h-1.5 rounded-full ${getStorageBarColor(storageInfo.percentage)}`}
+                className={`h-1 rounded-full ${getStorageBarColor(storageInfo.percentage)}`}
                 style={{ width: `${Math.min(storageInfo.percentage, 100)}%` }}
               />
             </div>
@@ -85,50 +85,50 @@ export default function StorageHeader({
         </div>
 
         {/* Files Count */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
-              <Cloud size={14} className="text-green-600" />
+        <div className="bg-white rounded-lg p-1.5 border border-gray-200">
+          <div className="flex items-center justify-between mb-1">
+            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+              <Cloud size={12} className="text-green-600" />
             </div>
             <span className="text-sm font-bold text-gray-900">24</span>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-gray-900 mb-1">Total Files</h3>
-            <p className="text-xs text-gray-600">6 resumes, 12 templates</p>
+            <h3 className="text-[10px] font-semibold text-gray-900 mb-0.5">Total Files</h3>
+            <p className="text-[10px] text-gray-600">6 resumes, 12 templates</p>
           </div>
         </div>
 
         {/* Shared Files */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 bg-purple-100 rounded-md flex items-center justify-center">
-              <Users size={14} className="text-purple-600" />
+        <div className="bg-white rounded-lg p-1.5 border border-gray-200">
+          <div className="flex items-center justify-between mb-1">
+            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+              <Users size={12} className="text-purple-600" />
             </div>
             <span className="text-sm font-bold text-gray-900">8</span>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-gray-900 mb-1">Shared</h3>
-            <p className="text-xs text-gray-600">12 collaborators</p>
+            <h3 className="text-[10px] font-semibold text-gray-900 mb-0.5">Shared</h3>
+            <p className="text-[10px] text-gray-600">12 collaborators</p>
           </div>
         </div>
 
         {/* Starred Files */}
-        <div className="bg-white rounded-lg p-3 border border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <div className="w-6 h-6 bg-yellow-100 rounded-md flex items-center justify-center">
-              <Star size={14} className="text-yellow-600" />
+        <div className="bg-white rounded-lg p-1.5 border border-gray-200">
+          <div className="flex items-center justify-between mb-1">
+            <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center">
+              <Star size={12} className="text-yellow-600" />
             </div>
             <span className="text-sm font-bold text-gray-900">5</span>
           </div>
           <div>
-            <h3 className="text-xs font-semibold text-gray-900 mb-1">Starred</h3>
-            <p className="text-xs text-gray-600">Your favorites</p>
+            <h3 className="text-[10px] font-semibold text-gray-900 mb-0.5">Starred</h3>
+            <p className="text-[10px] text-gray-600">Your favorites</p>
           </div>
         </div>
       </div>
 
       {/* Compact Quick Actions */}
-      <div className="mt-3 flex items-center space-x-4 text-xs text-gray-600">
+      <div className="mt-1 flex items-center space-x-2 text-[10px] text-gray-600">
         <div className="flex items-center space-x-1">
           <TrendingUp size={12} />
           <span>156 downloads</span>

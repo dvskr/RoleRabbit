@@ -74,7 +74,7 @@ export default function SkillsTab({
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Technical Skills</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {userData.skills.map((skill, index) => (
+            {(userData.skills || []).map((skill, index) => (
               <div key={index} className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200/50 hover:shadow-md transition-all">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-semibold text-gray-900">{skill.name}</span>
