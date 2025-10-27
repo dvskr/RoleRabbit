@@ -29,51 +29,77 @@ interface AIAgent {
 }
 
 export default function AIAgents() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [agents] = useState<AIAgent[]>([
-    {
-      id: '1',
-      name: 'Job Discovery Bot',
-      description: 'Automatically finds matching job postings and adds them to your tracker',
-      type: 'automatic',
-      status: 'active',
-      tasks: { total: 45, completed: 38, inProgress: 7 },
-      lastRun: '2 hours ago',
-      config: { keywords: ['React', 'Next.js', 'TypeScript'], frequency: 'daily' }
-    },
-    {
-      id: '2',
-      name: 'Application Follow-up',
-      description: 'Sends automated follow-up emails after application deadlines',
-      type: 'automatic',
-      status: 'active',
-      tasks: { total: 12, completed: 10, inProgress: 2 },
-      lastRun: '5 hours ago',
-      config: { followUpDays: 7, enabled: true }
-    },
-    {
-      id: '3',
-      name: 'Resume Optimizer',
-      description: 'Continuously optimizes your resume for better ATS scores',
-      type: 'manual',
-      status: 'paused',
-      tasks: { total: 3, completed: 2, inProgress: 1 },
-      lastRun: '2 days ago',
-      config: { targetScore: 90, mode: 'aggressive' }
-    },
-    {
-      id: '4',
-      name: 'Interview Prep Assistant',
-      description: 'Generates practice questions based on job descriptions',
-      type: 'manual',
-      status: 'stopped',
-      tasks: { total: 0, completed: 0, inProgress: 0 },
-      lastRun: 'Never',
-      config: { questionTypes: ['technical', 'behavioral'], count: 10 }
-    }
-  ]);
+  const [agents, setAgents] = useState<AIAgent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Load agents from API
+  React.useEffect(() => {
+    loadAgents();
+  }, []);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const loadAgents = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:3001/api/agents', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAgents(data.agents || []);
+      } else {
+        // Fallback to mock data if API fails
+        setAgents([
+          {
+            id: '1',
+            name: 'Job Discovery Bot',
+            description: 'Automatically finds matching job postings and adds them to your tracker',
+            type: 'automatic',
+            status: 'active',
+            tasks: { total: 45, completed: 38, inProgress: 7 },
+            lastRun: '2 hours ago',
+            config: { keywords: ['React', 'Next.js', 'TypeScript'], frequency: 'daily' }
+          },
+          {
+            id: '2',
+            name: 'Application Follow-up',
+            description: 'Sends automated follow-up emails after application deadlines',
+            type: 'automatic',
+            status: 'active',
+            tasks: { total: 12, completed: 10, inProgress: 2 },
+            lastRun: '5 hours ago',
+            config: { followUpDays: 7, enabled: true }
+          },
+          {
+            id: '3',
+            name: 'Resume Optimizer',
+            description: 'Continuously optimizes your resume for better ATS scores',
+            type: 'manual',
+            status: 'paused',
+            tasks: { total: 3, completed: 2, inProgress: 1 },
+            lastRun: '2 days ago',
+            config: { targetScore: 90, mode: 'aggressive' }
+          },
+          {
+            id: '4',
+            name: 'Interview Prep Assistant',
+            description: 'Generates practice questions based on job descriptions',
+            type: 'manual',
+            status: 'stopped',
+            tasks: { total: 0, completed: 0, inProgress: 0 },
+            lastRun: 'Never',
+            config: { questionTypes: ['technical', 'behavioral'], count: 10 }
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to load agents:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   const handleToggleAgent = async (agentId: string, currentStatus: string) => {
@@ -81,14 +107,23 @@ export default function AIAgents() {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active';
     
     try {
-      // In production, this would call backend API to update agent status
-      // For now, show a console message
-      console.log(`Agent ${agentId} status changed to: ${newStatus}`);
-      
-      // You would update the agents state here:
-      // setAgents(prev => prev.map(agent => 
-      //   agent.id === agentId ? { ...agent, status: newStatus } : agent
-      // ));
+      const response = await fetch(`http://localhost:3001/api/agents/${agentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setAgents(prev => prev.map(agent => 
+          agent.id === agentId ? { ...agent, status: newStatus } : agent
+        ));
+      } else {
+        console.error('Failed to toggle agent status');
+      }
     } catch (error) {
       console.error('Failed to toggle agent:', error);
     }
@@ -100,11 +135,19 @@ export default function AIAgents() {
     }
 
     try {
-      // In production, this would call backend API to delete agent
-      console.log(`Deleting agent: ${agentId}`);
-      
-      // You would update the agents state here:
-      // setAgents(prev => prev.filter(agent => agent.id !== agentId));
+      const response = await fetch(`http://localhost:3001/api/agents/${agentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+        },
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setAgents(prev => prev.filter(agent => agent.id !== agentId));
+      } else {
+        console.error('Failed to delete agent');
+      }
     } catch (error) {
       console.error('Failed to delete agent:', error);
     }

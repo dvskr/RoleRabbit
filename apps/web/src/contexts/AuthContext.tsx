@@ -36,8 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     
     try {
-      // Call Python backend for authentication
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      // Call Node.js API for authentication
+      const response = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,25 +46,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
-        throw new Error('Login failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Login failed');
       }
       
       const data = await response.json();
       
       // Store token and user data
-      localStorage.setItem('roleready_token', data.access_token);
-      localStorage.setItem('roleready_user', JSON.stringify(data.user));
-      setUser(data.user);
+      if (data.token) {
+        localStorage.setItem('roleready_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('roleready_user', JSON.stringify(data.user));
+        setUser(data.user);
+      }
     } catch (error) {
       console.error('Login error:', error);
-      // Fallback to local storage for demo
-      const userData = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-      };
-      localStorage.setItem('roleready_user', JSON.stringify(userData));
-      setUser(userData);
+      throw error; // Re-throw to let UI handle it
     }
     
     setIsLoading(false);
@@ -74,8 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     
     try {
-      // Call Python backend for registration
-      const response = await fetch('http://localhost:8000/api/auth/register', {
+      // Call Node.js API for registration
+      const response = await fetch('http://localhost:3001/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,31 +82,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
-        throw new Error('Registration failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Registration failed');
       }
       
       const data = await response.json();
       
       // Store token and user data
-      localStorage.setItem('roleready_token', data.access_token);
-      localStorage.setItem('roleready_user', JSON.stringify(data.user));
-      setUser(data.user);
+      if (data.token) {
+        localStorage.setItem('roleready_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('roleready_user', JSON.stringify(data.user));
+        setUser(data.user);
+      }
     } catch (error) {
       console.error('Signup error:', error);
-      // Fallback to local storage for demo
-      const userData = {
-        id: '1',
-        email,
-        name,
-      };
-      localStorage.setItem('roleready_user', JSON.stringify(userData));
-      setUser(userData);
+      throw error; // Re-throw to let UI handle it
     }
     
     setIsLoading(false);
   };
 
   const logout = () => {
+    localStorage.removeItem('roleready_token');
     localStorage.removeItem('roleready_user');
     setUser(null);
   };
