@@ -76,19 +76,51 @@ export default function AIAgents() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
-  const handleToggleAgent = (agentId: string, currentStatus: string) => {
-    // Toggle agent status - in production, this would update agent status
-    // Implementation coming
+  const handleToggleAgent = async (agentId: string, currentStatus: string) => {
+    // Toggle agent status
+    const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+    
+    try {
+      // In production, this would call backend API to update agent status
+      // For now, show a console message
+      console.log(`Agent ${agentId} status changed to: ${newStatus}`);
+      
+      // You would update the agents state here:
+      // setAgents(prev => prev.map(agent => 
+      //   agent.id === agentId ? { ...agent, status: newStatus } : agent
+      // ));
+    } catch (error) {
+      console.error('Failed to toggle agent:', error);
+    }
   };
 
-  const handleDeleteAgent = (agentId: string) => {
-    // Delete agent - in production, this would remove the agent
-    // Implementation coming
+  const handleDeleteAgent = async (agentId: string) => {
+    if (!confirm('Are you sure you want to delete this agent?')) {
+      return;
+    }
+
+    try {
+      // In production, this would call backend API to delete agent
+      console.log(`Deleting agent: ${agentId}`);
+      
+      // You would update the agents state here:
+      // setAgents(prev => prev.filter(agent => agent.id !== agentId));
+    } catch (error) {
+      console.error('Failed to delete agent:', error);
+    }
   };
 
   const handleConfigureAgent = (agentId: string) => {
-    // Configure agent - in production, this would open configuration modal
     setSelectedAgent(agentId);
+    
+    // In production, this would open a configuration modal
+    console.log(`Opening configuration for agent: ${agentId}`);
+    
+    // Example of what would happen:
+    // <AgentConfigModal 
+    //   agent={agents.find(a => a.id === agentId)}
+    //   onSave={(config) => updateAgentConfig(agentId, config)}
+    // />
   };
 
   return (

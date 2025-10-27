@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RoleReady Copilot</title>
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    .header h1 {
+      margin: 0 0 5px 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .header p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 20px;
+    }
+    .quick-action {
+      background: rgba(255,255,255,0.15);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(10px);
+    }
+    .quick-action:hover {
+      background: rgba(255,255,255,0.25);
+      transform: translateY(-2px);
+    }
+    .quick-action h3 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .quick-action p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 3px;
+    }
+    .footer {
+      padding: 15px 20px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.2);
+    }
+    .footer a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    .footer a:hover {
+      opacity: 1;
+    }
+    .badge {
+      background: #10b981;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🎯 RoleReady Copilot</h1>
+    <p>Your AI-powered job search assistant</p>
+  </div>
+
+  <div class="content">
+    <div class="quick-action" id="saveCurrentJob">
+      <h3>💾 Save Current Job<span class="badge">Ctrl+J</span></h3>
+      <p>Capture this job posting to your tracker</p>
+    </div>
+
+    <div class="quick-action" id="tailorResume">
+      <h3>✨ Tailor Resume</h3>
+      <p>Optimize your resume for this position</p>
+    </div>
+
+    <div class="quick-action" id="checkATS">
+      <h3>📊 Check ATS Score</h3>
+      <p>See how your resume matches this job</p>
+    </div>
+
+    <div class="quick-action" id="openDashboard">
+      <h3>📋 Open Dashboard</h3>
+      <p>View your job tracker and analytics</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="activeJobs">--</div>
+        <div class="stat-label">Active Jobs</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="applications">--</div>
+        <div class="stat-label">Applications</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="http://localhost:3000" target="_blank">Open RoleReady Platform →</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+
