@@ -342,8 +342,8 @@ export default function FileCard({
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
-          <div className="flex items-center space-x-1">
+        <div className="pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-center flex-wrap gap-1 max-w-full">
             <button
               onClick={() => onTogglePublic(file.id)}
               className={`p-1.5 rounded-lg transition-colors ${
@@ -393,42 +393,40 @@ export default function FileCard({
             >
               <Share2 size={12} />
             </button>
-          </div>
-          <div className="flex items-center space-x-0.5">
             <button
               onClick={() => {
                 logger.debug('Comment button clicked! Current state:', showComments);
                 setShowComments(!showComments);
               }}
-              className={`p-1 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-lg transition-colors ${
                 showComments 
                   ? 'text-purple-600 bg-purple-100' 
                   : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
               }`}
               title="Comments"
             >
-              <MessageCircle size={11} />
+              <MessageCircle size={12} />
             </button>
             <button
               onClick={() => onEdit(file.id)}
-              className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               title="Edit"
             >
-              <Edit size={11} />
+              <Edit size={12} />
             </button>
             <button
               onClick={() => onArchive(file.id)}
-              className="p-1 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
               title={file.isArchived ? 'Unarchive' : 'Archive'}
             >
-              <Archive size={11} />
+              <Archive size={12} />
             </button>
             <button
               onClick={() => onDelete(file.id)}
-              className="p-1 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
               title="Delete"
             >
-              <Trash2 size={11} />
+              <Trash2 size={12} />
             </button>
           </div>
         </div>
