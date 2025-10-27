@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Home as HomeIcon,
   FileText,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { MissionControlDashboard } from './dashboard';
 import { DashboardConfig } from './dashboard/types/dashboard';
+import OnboardingWizard from './OnboardingWizard';
 
 interface HomeProps {
   // NEW OPTIONAL PROPS (backward compatible)
@@ -37,15 +38,35 @@ export default function Home({
   onNavigateToTab,
   onOpenApplicationAnalytics
 }: HomeProps) {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if this is first-time user
+  useEffect(() => {
+    if (enableMissionControl) {
+      const hasSeenOnboarding = localStorage.getItem('roleready-onboarding-completed');
+      if (!hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [enableMissionControl]);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('roleready-onboarding-completed', 'true');
+    setShowOnboarding(false);
+  };
+
   // If Mission Control is enabled, render the dashboard
   if (enableMissionControl) {
     return (
-      <MissionControlDashboard
-        config={dashboardConfig}
-        onQuickAction={onQuickAction}
-        onNavigateToTab={onNavigateToTab}
-        onOpenApplicationAnalytics={onOpenApplicationAnalytics}
-      />
+      <>
+        {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+        <MissionControlDashboard
+          config={dashboardConfig}
+          onQuickAction={onQuickAction}
+          onNavigateToTab={onNavigateToTab}
+          onOpenApplicationAnalytics={onOpenApplicationAnalytics}
+        />
+      </>
     );
   }
 

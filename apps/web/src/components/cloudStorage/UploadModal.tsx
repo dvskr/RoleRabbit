@@ -53,31 +53,31 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Upload size={20} className="text-blue-600" />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg p-4 w-full max-w-lg my-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Upload size={16} className="text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Upload File</h2>
-              <p className="text-sm text-gray-600">Add a new file to your storage</p>
+              <h2 className="text-lg font-semibold text-gray-900">Upload File</h2>
+              <p className="text-xs text-gray-600">Add a new file to your storage</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X size={24} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
           {/* File Upload Area */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
-            <Upload size={48} className="text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-4">Drag and drop your file here, or click to browse</p>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+            <Upload size={24} className="text-gray-400 mx-auto mb-1.5" />
+            <p className="text-xs text-gray-600 mb-1.5">Drag and drop your file here, or click to browse</p>
             <input
               type="file"
               onChange={handleFileSelect}
@@ -87,39 +87,39 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
             />
             <label
               htmlFor="file-upload"
-              className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+              className="inline-block bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer text-sm"
             >
               Choose File
             </label>
-            <p className="text-xs text-gray-500 mt-2">Supports PDF, DOC, DOCX, TXT files</p>
+            <p className="text-[10px] text-gray-500 mt-1.5">Supports PDF, DOC, DOCX, TXT</p>
           </div>
 
           {/* File Details */}
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 File Name *
               </label>
               <div className="relative">
-                <FileText size={16} className="absolute left-3 top-3 text-gray-400" />
+                <FileText size={14} className="absolute left-2 top-2 text-gray-400" />
                 <input
                   type="text"
                   value={fileName}
                   onChange={(e) => setFileName(e.target.value)}
                   placeholder="Enter file name"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 File Type
               </label>
               <select
                 value={fileType}
                 onChange={(e) => setFileType(e.target.value as 'resume' | 'template' | 'backup')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="resume">Resume</option>
                 <option value="template">Template</option>
@@ -128,31 +128,31 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Tags
               </label>
               <div className="relative">
-                <Tag size={16} className="absolute left-3 top-3 text-gray-400" />
+                <Tag size={14} className="absolute left-2 top-2 text-gray-400" />
                 <input
                   type="text"
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                   placeholder="e.g., software, engineer, react"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Separate tags with commas</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Separate tags with commas</p>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 id="isPublic"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <label htmlFor="isPublic" className="text-sm text-gray-700">
+              <label htmlFor="isPublic" className="text-xs text-gray-700">
                 Make this file public (visible to others)
               </label>
             </div>
@@ -160,27 +160,27 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+        <div className="flex justify-end space-x-2 mt-4 pt-4 border-t border-gray-200">
           <button
             onClick={onClose}
             disabled={isUploading}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleUpload}
             disabled={!fileName.trim() || isUploading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+            className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-1.5"
           >
             {isUploading ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 <span>Uploading...</span>
               </>
             ) : (
               <>
-                <Upload size={16} />
+                <Upload size={14} />
                 <span>Upload File</span>
               </>
             )}
