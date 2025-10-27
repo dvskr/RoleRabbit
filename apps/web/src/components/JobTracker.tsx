@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
-import { useJobs } from '../hooks/useJobs';
+import { useJobsApi } from '../hooks/useJobsApi';
 import { Job } from '../types/job';
 import { logger } from '../utils/logger';
 
 export default function JobTracker() {
   const {
     jobs,
+    isLoading,
     filters,
     viewMode,
     selectedJobs,
@@ -25,14 +26,27 @@ export default function JobTracker() {
     toggleJobSelection,
     selectAllJobs,
     clearSelection,
-    toggleFavorite
-  } = useJobs();
+    toggleFavorite,
+    loadJobs
+  } = useJobsApi();
 
   const [showAddJob, setShowAddJob] = useState(false);
   const [preSelectedStatus, setPreSelectedStatus] = useState<Job['status'] | null>(null);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Show loading state when fetching from API
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading jobs...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAddJob = () => {
     setPreSelectedStatus(null);
