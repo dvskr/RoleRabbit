@@ -250,7 +250,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
       ) : (
         <>
           {/* Fixed Header Section */}
-          <div className="flex-shrink-0 p-4 pb-0">
+          <div className="flex-shrink-0 p-3 pb-1">
             <StorageHeader
               storageInfo={storageInfo}
               onUpload={() => setShowUploadModal(true)}
@@ -259,7 +259,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           </div>
 
           {/* Fixed Filters Section */}
-          <div className="flex-shrink-0 px-4 py-3">
+          <div className="flex-shrink-0 px-3 py-2">
             <StorageFilters
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
@@ -358,11 +358,11 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
             </div>
 
             {/* Files Grid Area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4 w-full min-w-0">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3 w-full min-w-0">
             {filteredFiles.length > 0 ? (
               <div className={viewMode === 'grid' 
-                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' 
-                : 'space-y-2 w-full max-w-full'
+                ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3' 
+                : 'space-y-1.5 w-full max-w-full'
               }>
                 {filteredFiles.map((file) => (
                   <FileCard

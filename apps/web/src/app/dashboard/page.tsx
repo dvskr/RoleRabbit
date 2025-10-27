@@ -1054,12 +1054,6 @@ export default function DashboardPage() {
                  activeTab === 'learning' ? 'Learning Hub' :
                  activeTab === 'dashboard' ? 'Dashboard' : undefined
               }
-              icon={
-                activeTab === 'dashboard' ? HomeIcon : undefined
-              }
-              iconColor={
-                activeTab === 'dashboard' ? 'text-blue-600' : undefined
-              }
               subtitle={
                 activeTab === 'dashboard' ? 'Overview of your job search journey' :
                 activeTab === 'storage' ? 'Manage your files and documents' :
@@ -1075,6 +1069,7 @@ export default function DashboardPage() {
               }
               icon={(() => {
                 switch(activeTab) {
+                  case 'dashboard': return HomeIcon;
                   case 'storage': return FolderOpen;
                   case 'tracker': return Briefcase;
                   case 'discussion': return MessageSquare;
@@ -1090,6 +1085,7 @@ export default function DashboardPage() {
               })()}
               iconColor={(() => {
                 switch(activeTab) {
+                  case 'dashboard': return 'text-blue-600';
                   case 'storage': return 'text-blue-600';
                   case 'tracker': return 'text-green-600';
                   case 'discussion': return 'text-indigo-600';
@@ -1107,9 +1103,60 @@ export default function DashboardPage() {
           )}
 
           {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 h-full overflow-hidden">
-              {renderActiveComponent()}
+          <div className="flex-1 flex overflow-hidden relative">
+            <div className="absolute inset-0 h-full w-full overflow-hidden">
+              {/* Render all tabs but hide inactive ones - mounted but hidden */}
+              <div className={`absolute inset-0 h-full ${activeTab === 'dashboard' ? '' : 'hidden'}`}>
+                <Home 
+                  enableMissionControl={true}
+                  onQuickAction={(actionId) => {
+                    logger.debug('Quick action:', actionId);
+                    switch (actionId) {
+                      case '1': handleTabChange('tracker'); break;
+                      case '2': handleTabChange('email'); break;
+                      case '3': handleTabChange('editor'); break;
+                      case '4': handleTabChange('discussion'); break;
+                      default: break;
+                    }
+                  }}
+                  onNavigateToTab={(tab) => handleTabChange(tab)}
+                  onOpenApplicationAnalytics={() => setShowApplicationAnalytics(true)}
+                />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'profile' ? '' : 'hidden'}`}>
+                <Profile />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'storage' ? '' : 'hidden'}`}>
+                <CloudStorage />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'tracker' ? '' : 'hidden'}`}>
+                <JobTracker />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'templates' ? '' : 'hidden'}`}>
+                <Templates />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'cover-letter' ? '' : 'hidden'}`}>
+                <CoverLetterGenerator />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'portfolio' ? '' : 'hidden'}`}>
+                <PortfolioGenerator />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'discussion' ? '' : 'hidden'}`}>
+                <Discussion />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'email' ? '' : 'hidden'}`}>
+                <Email />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'learning' ? '' : 'hidden'}`}>
+                <LearningHub />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'agents' ? '' : 'hidden'}`}>
+                <AIAgents />
+              </div>
+              {/* Editor is special and handles its own rendering */}
+              <div className={`absolute inset-0 h-full ${activeTab === 'editor' ? '' : 'hidden'}`}>
+                {renderActiveComponent()}
+              </div>
             </div>
             {/* AI Panel */}
             {activeTab === 'editor' && (

@@ -658,7 +658,7 @@ export default function Discussion() {
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {filteredCommunities.map(community => (
                         <CommunityCard
                           key={community.id}
@@ -1607,7 +1607,7 @@ export default function Discussion() {
               {/* Quick Actions */}
               <div className="mt-8 border-t border-gray-200 pt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-2">
                   <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
                     <Shield size={24} className="mx-auto text-blue-600 mb-2" />
                     <p className="text-sm font-medium text-gray-900">Automod Settings</p>

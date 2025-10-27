@@ -776,8 +776,8 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                   {/* Template Preview */}
                   <div className="relative h-32 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center overflow-hidden">
                     {/* Mini Resume Preview */}
-                    <div className="w-24 h-32 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
-                      <div className="p-2 h-full flex flex-col space-y-1">
+                    <div className="w-20 h-28 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                      <div className="p-1.5 h-full flex flex-col space-y-0.5">
                         {/* Name/Header Bar */}
                         <div className={`h-2 rounded ${
                           template.colorScheme === 'blue' ? 'bg-blue-600' :
@@ -915,15 +915,15 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
 
         {/* All Templates Section */}
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
             {currentTemplates.map(template => (
               <div key={template.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all duration-200 group flex flex-col h-full">
                 {/* Template Preview */}
                 <div className="relative h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden group cursor-pointer"
                      onClick={() => handlePreviewTemplate(template.id)}>
                   {/* Mini Resume Preview - Enhanced */}
-                  <div className="w-24 h-32 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
-                    <div className="p-2 h-full flex flex-col space-y-1">
+                  <div className="w-20 h-28 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                    <div className="p-1.5 h-full flex flex-col space-y-0.5">
                       {/* Name/Header Bar */}
                       <div className={`h-2 rounded ${
                         template.colorScheme === 'blue' ? 'bg-blue-600' :
@@ -1087,7 +1087,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                 </div>
                 <div className="space-y-4">
                   {addedTemplatesList.map(template => (
-                    <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg p-5 hover:shadow-lg transition-all duration-200">
+                    <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg p-4 hover:shadow-lg transition-all duration-200">
                       <div className="flex items-start gap-4">
                         {/* Template Preview */}
                         <div className="relative w-20 h-24 bg-gradient-to-br from-green-50 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -1240,7 +1240,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             {/* All Templates List View */}
             <div className="space-y-4 pb-8">
             {currentTemplates.map(template => (
-              <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
+              <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
                 <div className="flex items-start gap-4">
                   {/* Template Preview - Enhanced Mini Resume */}
                   <div className="relative w-20 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">

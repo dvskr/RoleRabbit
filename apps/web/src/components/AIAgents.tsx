@@ -47,9 +47,57 @@ export default function AIAgents() {
       });
       if (response.ok) {
         const data = await response.json();
-        setAgents(data.agents || []);
+        const apiAgents = data.agents || [];
+        
+        // If API returns empty array, use mock data for demonstration
+        if (apiAgents.length === 0) {
+          setAgents([
+            {
+              id: '1',
+              name: 'Job Discovery Bot',
+              description: 'Automatically finds matching job postings and adds them to your tracker',
+              type: 'automatic',
+              status: 'active',
+              tasks: { total: 45, completed: 38, inProgress: 7 },
+              lastRun: '2 hours ago',
+              config: { agentType: 'job_discovery', keywords: ['React', 'Next.js', 'TypeScript'], frequency: 'daily' }
+            },
+            {
+              id: '2',
+              name: 'Application Follow-up',
+              description: 'Sends automated follow-up emails after application deadlines',
+              type: 'automatic',
+              status: 'active',
+              tasks: { total: 12, completed: 10, inProgress: 2 },
+              lastRun: '5 hours ago',
+              config: { agentType: 'application_followup', followUpDays: 7, enabled: true }
+            },
+            {
+              id: '3',
+              name: 'Resume Optimizer',
+              description: 'Continuously optimizes your resume for better ATS scores',
+              type: 'manual',
+              status: 'paused',
+              tasks: { total: 3, completed: 2, inProgress: 1 },
+              lastRun: '2 days ago',
+              config: { agentType: 'resume_optimization', targetScore: 90, mode: 'aggressive' }
+            },
+            {
+              id: '4',
+              name: 'Interview Prep Assistant',
+              description: 'Generates practice questions based on job descriptions',
+              type: 'manual',
+              status: 'stopped',
+              tasks: { total: 0, completed: 0, inProgress: 0 },
+              lastRun: 'Never',
+              config: { agentType: 'interview_prep', questionTypes: ['technical', 'behavioral'], count: 10 }
+            }
+          ]);
+        } else {
+          setAgents(apiAgents);
+        }
       } else {
-        // Fallback to mock data if API fails
+        // API call failed, use fallback mock data
         setAgents([
           {
             id: '1',
@@ -59,7 +107,7 @@ export default function AIAgents() {
             status: 'active',
             tasks: { total: 45, completed: 38, inProgress: 7 },
             lastRun: '2 hours ago',
-            config: { keywords: ['React', 'Next.js', 'TypeScript'], frequency: 'daily' }
+            config: { agentType: 'job_discovery', keywords: ['React', 'Next.js', 'TypeScript'], frequency: 'daily' }
           },
           {
             id: '2',
@@ -69,7 +117,7 @@ export default function AIAgents() {
             status: 'active',
             tasks: { total: 12, completed: 10, inProgress: 2 },
             lastRun: '5 hours ago',
-            config: { followUpDays: 7, enabled: true }
+            config: { agentType: 'application_followup', followUpDays: 7, enabled: true }
           },
           {
             id: '3',
@@ -79,7 +127,7 @@ export default function AIAgents() {
             status: 'paused',
             tasks: { total: 3, completed: 2, inProgress: 1 },
             lastRun: '2 days ago',
-            config: { targetScore: 90, mode: 'aggressive' }
+            config: { agentType: 'resume_optimization', targetScore: 90, mode: 'aggressive' }
           },
           {
             id: '4',
@@ -89,12 +137,55 @@ export default function AIAgents() {
             status: 'stopped',
             tasks: { total: 0, completed: 0, inProgress: 0 },
             lastRun: 'Never',
-            config: { questionTypes: ['technical', 'behavioral'], count: 10 }
+            config: { agentType: 'interview_prep', questionTypes: ['technical', 'behavioral'], count: 10 }
           }
         ]);
       }
     } catch (error) {
       console.error('Failed to load agents:', error);
+      // Show mock data on error
+      setAgents([
+        {
+          id: '1',
+          name: 'Job Discovery Bot',
+          description: 'Automatically finds matching job postings and adds them to your tracker',
+          type: 'automatic',
+          status: 'active',
+          tasks: { total: 45, completed: 38, inProgress: 7 },
+          lastRun: '2 hours ago',
+          config: { agentType: 'job_discovery', keywords: ['React', 'Next.js', 'TypeScript'], frequency: 'daily' }
+        },
+        {
+          id: '2',
+          name: 'Application Follow-up',
+          description: 'Sends automated follow-up emails after application deadlines',
+          type: 'automatic',
+          status: 'active',
+          tasks: { total: 12, completed: 10, inProgress: 2 },
+          lastRun: '5 hours ago',
+          config: { agentType: 'application_followup', followUpDays: 7, enabled: true }
+        },
+        {
+          id: '3',
+          name: 'Resume Optimizer',
+          description: 'Continuously optimizes your resume for better ATS scores',
+          type: 'manual',
+          status: 'paused',
+          tasks: { total: 3, completed: 2, inProgress: 1 },
+          lastRun: '2 days ago',
+          config: { agentType: 'resume_optimization', targetScore: 90, mode: 'aggressive' }
+        },
+        {
+          id: '4',
+          name: 'Interview Prep Assistant',
+          description: 'Generates practice questions based on job descriptions',
+          type: 'manual',
+          status: 'stopped',
+          tasks: { total: 0, completed: 0, inProgress: 0 },
+          lastRun: 'Never',
+          config: { agentType: 'interview_prep', questionTypes: ['technical', 'behavioral'], count: 10 }
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +255,58 @@ export default function AIAgents() {
     //   agent={agents.find(a => a.id === agentId)}
     //   onSave={(config) => updateAgentConfig(agentId, config)}
     // />
+  };
+
+  const handleExecuteAgent = async (agentId: string) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/agents/${agentId}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Agent executed successfully! Task ID: ${result.taskId}`);
+        // Reload agents to show updated task count
+        loadAgents();
+      } else {
+        alert('Failed to execute agent');
+      }
+    } catch (error) {
+      console.error('Failed to execute agent:', error);
+      alert('Failed to execute agent');
+    }
+  };
+
+  const handleRunAllAgents = async () => {
+    if (!confirm('Are you sure you want to run all active agents?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:3001/api/agents/run-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Ran ${result.total} agents: ${result.successful} successful, ${result.failed} failed`);
+        // Reload agents
+        loadAgents();
+      } else {
+        alert('Failed to run all agents');
+      }
+    } catch (error) {
+      console.error('Failed to run all agents:', error);
+      alert('Failed to run all agents');
+    }
   };
 
   return (
@@ -275,7 +418,14 @@ export default function AIAgents() {
                     <Clock size={12} />
                     <span>Last run: {agent.lastRun}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleExecuteAgent(agent.id)}
+                      className="px-2.5 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1.5 text-xs font-medium"
+                    >
+                      <PlayCircle size={12} />
+                      Run
+                    </button>
                     <button
                       onClick={() => handleToggleAgent(agent.id, agent.status)}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
@@ -316,6 +466,19 @@ export default function AIAgents() {
             </div>
           ))}
         </div>
+
+        {/* Run All Button */}
+        {agents.filter(a => a.status === 'active').length > 0 && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={handleRunAllAgents}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 text-sm font-medium"
+            >
+              <Zap size={16} />
+              Run All Active Agents ({agents.filter(a => a.status === 'active').length})
+            </button>
+          </div>
+        )}
 
         {/* Empty State */}
         {agents.length === 0 && !isLoading && (

@@ -1667,6 +1667,53 @@ fastify.put('/api/tasks/:taskId', {
   }
 });
 
+// Execute agent endpoint
+const { executeAgent, runActiveAgentsForUser } = require('./utils/agentExecutor');
+
+fastify.post('/api/agents/:id/execute', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const userId = request.user.userId;
+    
+    const agent = await getAgentById(id, userId);
+    if (!agent) {
+      return reply.status(404).send({ error: 'Agent not found' });
+    }
+    
+    const result = await executeAgent(agent, userId);
+    return result;
+  } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
+});
+
+// Run all active agents for user
+fastify.post('/api/agents/run-all', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const userId = request.user.userId;
+    const result = await runActiveAgentsForUser(userId);
+    return result;
+  } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
+});
+
 // Error handler
 fastify.setErrorHandler((error, request, reply) => {
   fastify.log.error(error);
