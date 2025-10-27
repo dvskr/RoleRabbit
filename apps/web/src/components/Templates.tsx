@@ -534,21 +534,9 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
   return (
     <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-sm text-gray-600">50+ professionally designed templates</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm">
-              <RefreshCw size={14} className="inline mr-1" />
-              Refresh
-            </button>
-          </div>
-        </div>
-
+      <div className="bg-white border-b border-gray-200 px-4 py-2 flex-shrink-0">
         {/* Search and Filters */}
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
             <Search size={16} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -605,13 +593,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             <Filter size={16} className="inline mr-1" />
             Filters
           </button>
+          
+          {/* Refresh Button */}
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm border border-gray-300"
+          >
+            <RefreshCw size={14} className="inline mr-1" />
+            Refresh
+          </button>
         </div>
 
         {/* Category Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors text-sm ${
+            className={`px-2 py-1 rounded-lg whitespace-nowrap transition-colors text-xs ${
               selectedCategory === 'all' 
                 ? 'bg-blue-100 text-blue-700 border border-blue-200' 
                 : 'text-gray-600 hover:bg-gray-100'
@@ -623,7 +620,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+              className={`px-2 py-1 rounded-lg whitespace-nowrap transition-colors flex items-center gap-1 text-xs ${
                 selectedCategory === category.id 
                   ? 'bg-blue-100 text-blue-700 border border-blue-200' 
                   : 'text-gray-600 hover:bg-gray-100'
@@ -637,8 +634,8 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Difficulty</label>
                 <select
@@ -711,24 +708,24 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 force-scrollbar" style={{ 
+      <div className="flex-1 overflow-y-auto p-2 force-scrollbar" style={{ 
         scrollbarWidth: 'thin',
         scrollbarColor: '#d1d5db #f3f4f6'
       }}>
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-600">Total</p>
-                <p className="text-lg font-bold text-gray-900">{resumeTemplates.length}</p>
+                <p className="text-[10px] font-medium text-gray-600">Total</p>
+                <p className="text-sm font-bold text-gray-900">{resumeTemplates.length}</p>
               </div>
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText size={16} className="text-blue-600" />
+              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FileText size={12} className="text-blue-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-600">Free</p>
@@ -739,7 +736,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-600">Premium</p>
@@ -750,7 +747,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-600">Downloads</p>
@@ -767,19 +764,19 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
 
         {/* Added Templates Section */}
         {addedTemplatesList.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckCircle size={20} className="text-green-600" />
-              <h2 className="text-lg font-bold text-gray-900">Added Templates ({addedTemplatesList.length}/10)</h2>
+          <div className="mb-3">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle size={16} className="text-green-600" />
+              <h2 className="text-base font-bold text-gray-900">Added Templates ({addedTemplatesList.length}/10)</h2>
               <div className="h-1 flex-1 bg-gray-200 rounded"></div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {addedTemplatesList.map(template => (
                 <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg overflow-hidden shadow-md group flex flex-col h-full">
                   {/* Template Preview */}
-                  <div className="relative h-40 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center overflow-hidden">
+                  <div className="relative h-32 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center overflow-hidden">
                     {/* Mini Resume Preview */}
-                    <div className="w-28 h-40 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                    <div className="w-24 h-32 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
                       <div className="p-2 h-full flex flex-col space-y-1">
                         {/* Name/Header Bar */}
                         <div className={`h-2 rounded ${
@@ -861,37 +858,37 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                   </div>
 
                   {/* Template Info */}
-                  <div className="p-4 flex flex-col flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900 text-sm leading-tight">{template.name}</h3>
-                      <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
-                        <Star size={12} className="text-yellow-400 fill-current" />
+                  <div className="p-3 flex flex-col flex-1">
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className="font-semibold text-gray-900 text-xs leading-tight">{template.name}</h3>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 ml-2">
+                        <Star size={10} className="text-yellow-400 fill-current" />
                         <span className="font-medium">{template.rating}</span>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">{template.description}</p>
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2 flex-1">{template.description}</p>
                     
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
+                    <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${getDifficultyColor(template.difficulty)}`}>
                         {template.difficulty}
                       </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold">
                         {template.layout}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Download size={12} />
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Download size={10} />
                         <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handlePreviewTemplate(template.id);
                           }}
-                          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
                         >
                           Preview
                         </button>
@@ -901,9 +898,9 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                               e.stopPropagation();
                               onRemoveTemplate(template.id);
                             }}
-                            className="px-3 py-2 bg-red-100 text-red-700 text-sm font-semibold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1.5 bg-red-100 text-red-700 text-xs font-semibold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
                           >
-                            <X size={14} />
+                            <X size={12} />
                             Remove
                           </button>
                         )}
@@ -922,10 +919,10 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             {currentTemplates.map(template => (
               <div key={template.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all duration-200 group flex flex-col h-full">
                 {/* Template Preview */}
-                <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden group cursor-pointer"
+                <div className="relative h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden group cursor-pointer"
                      onClick={() => handlePreviewTemplate(template.id)}>
                   {/* Mini Resume Preview - Enhanced */}
-                  <div className="w-28 h-40 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
+                  <div className="w-24 h-32 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
                     <div className="p-2 h-full flex flex-col space-y-1">
                       {/* Name/Header Bar */}
                       <div className={`h-2 rounded ${

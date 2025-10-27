@@ -19,15 +19,15 @@ export default function ProfileTab({
   onChangePhoto
 }: ProfileTabProps) {
   return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-2">
+    <div className="max-w-5xl">
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-1">
           Personal Information
         </h2>
-        <p className="text-gray-600">Update your personal details and profile information</p>
+        <p className="text-sm text-gray-600">Update your personal details and profile information</p>
       </div>
       
-      <div className="space-y-8">
+      <div className="space-y-4">
         {/* Enhanced Profile Picture */}
         <ProfilePicture
           firstName={userData.firstName}
@@ -37,9 +37,9 @@ export default function ProfileTab({
         />
 
         {/* Enhanced Basic Information */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Basic Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-gray-200/50">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               label="First Name"
               value={userData.firstName}
@@ -56,7 +56,7 @@ export default function ProfileTab({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <FormField
               label="Email Address"
               type="email"
