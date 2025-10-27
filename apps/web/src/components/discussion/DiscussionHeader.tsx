@@ -18,24 +18,16 @@ export default function DiscussionHeader({
   onRefresh
 }: DiscussionHeaderProps) {
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4 flex-shrink-0">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-sm text-gray-600">Connect, learn, and get AI-powered career advice</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={onRefresh}
-            className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm"
-          >
-            <RefreshCw size={14} className="inline mr-1" />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex items-center gap-4">
+    <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex-shrink-0">
+      {/* Consolidated Layout: Search bar with everything inline */}
+      <div className="flex items-center gap-3">
+        {/* Tagline - compact inline */}
+        <p className="text-xs text-gray-600 whitespace-nowrap">Connect & learn</p>
+        
+        {/* Divider */}
+        <div className="h-6 w-px bg-gray-300" />
+        
+        {/* Search Input */}
         <div className="flex-1 relative">
           <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
@@ -43,15 +35,15 @@ export default function DiscussionHeader({
             placeholder="Search discussions..."
             value={filters.searchQuery}
             onChange={(e) => onUpdateFilters({ searchQuery: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
           />
         </div>
         
-        {/* Community Filter */}
+        {/* Community Filter - inline */}
         <select
           value={filters.selectedCommunity || ''}
           onChange={(e) => onUpdateFilters({ selectedCommunity: e.target.value || null })}
-          className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">All Communities</option>
           {communities.map(community => (
@@ -61,12 +53,22 @@ export default function DiscussionHeader({
           ))}
         </select>
         
+        {/* Filters Button */}
         <button
           onClick={onShowFilters}
-          className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+          className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
         >
           <Filter size={16} />
           <span className="text-sm">Filters</span>
+        </button>
+        
+        {/* Refresh Button - inline */}
+        <button 
+          onClick={onRefresh}
+          className="px-2.5 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          title="Refresh"
+        >
+          <RefreshCw size={16} className="inline" />
         </button>
       </div>
     </div>

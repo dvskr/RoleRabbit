@@ -196,50 +196,10 @@ export default function MissionControlDashboard({
 
   return (
     <div className="w-full h-full bg-gray-50 flex flex-col overflow-hidden">
-      {/* Compact Header with Efficient Spacing */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2.5" data-tour="mission-control-header">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <Sparkles size={16} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Mission Control</h1>
-              <p className="text-[10px] text-gray-600">Your job search command center</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setShowSearch(true)}
-              className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors text-xs"
-            >
-              <Search size={12} />
-              Search
-            </button>
-            <button
-              onClick={() => setShowNotifications(!showNotifications)}
-              className="relative flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors text-xs"
-            >
-              <Bell size={12} />
-              {notifications.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                  {notifications.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={refreshDashboard}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors disabled:opacity-50 text-xs"
-            >
-              <TrendingUp size={12} className={isLoading ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-          </div>
-        </div>
-
+      {/* Stats and Actions Bar */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3" data-tour="mission-control-header">
         {/* Compact Stats - More Efficient Layout */}
-        <div className="mt-2.5 grid grid-cols-2 md:grid-cols-4 gap-2" data-tour="quick-stats">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-tour="quick-stats">
           {[
             {
               label: 'Applications',
@@ -290,11 +250,9 @@ export default function MissionControlDashboard({
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Compact Action Bar */}
-      <div className="px-4 py-2 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-1.5">
+        {/* Compact Action Bar */}
+        <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-gray-200">
           <button
             onClick={() => setShowCustomizer(true)}
             className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs"
