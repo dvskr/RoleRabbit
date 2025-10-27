@@ -13,7 +13,7 @@ import JobTracker from '../../components/JobTracker';
 import Discussion from '../../components/Discussion';
 import Email from '../../components/Email';
 import CoverLetterGenerator from '../../components/CoverLetterGenerator';
-import PortfolioGenerator from '../../components/portfolio-generator/PortfolioGenerator';
+import PortfolioGenerator from '../../components/portfolio-generator/PortfolioGeneratorV2';
 import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download } from 'lucide-react';
 import { 
   CustomField, 
