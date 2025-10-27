@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   Shield, 
@@ -14,6 +14,8 @@ import {
   BarChart3,
   LucideIcon
 } from 'lucide-react';
+import apiService from '@/services/apiService';
+import { logger } from '@/utils/logger';
 
 import {
   ProfileHeader,
@@ -37,11 +39,30 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Comprehensive user data for career platform
-  const [userData, setUserData] = useState<UserData>({
-    // Basic Info
-    firstName: 'John',
+  const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Load user profile from API on mount
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiService.getUserProfile();
+      if (response && response.user) {
+        // Map API response to UserData format
+        setUserData(response.user as UserData);
+      }
+    } catch (error) {
+      logger.error('Failed to load user profile:', error);
+      // Fallback to default demo data
+      setUserData({
+        // Basic Info
+        firstName: 'John',
     lastName: 'Doe',
     email: 'john.doe@example.com',
     phone: '+1 (555) 123-4567',
@@ -165,7 +186,11 @@ export default function Profile() {
     profileCompleteness: 85,
     skillMatchRate: 92,
     avgResponseTime: 2.5
-  });
+      } as UserData);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const tabs: ProfileTabConfig[] = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -182,19 +207,39 @@ export default function Profile() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    setIsEditing(false);
+    try {
+      // Save user profile via API
+      await apiService.updateUserProfile(userData);
+      logger.debug('Profile saved via API:', userData);
+      setIsSaving(false);
+      setIsEditing(false);
+    } catch (error) {
+      logger.error('Failed to save profile:', error);
+      setIsSaving(false);
+      // Still exit edit mode on error
+      setIsEditing(false);
+    }
   };
 
   const handleUserDataChange = (data: Partial<UserData>) => {
-    setUserData((prev: UserData) => ({ ...prev, ...data }));
+    setUserData((prev: UserData | null) => prev ? ({ ...prev, ...data }) : null);
   };
 
   const handleChangePhoto = () => {
     // Handle profile picture change
   };
+
+  // Show loading state while fetching
+  if (isLoading || !userData) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleResumeImport = (parsedData: any) => {
     // Auto-fill profile data from resume
@@ -232,7 +277,7 @@ export default function Profile() {
 
   const renderTabContent = () => {
     const commonProps = {
-      userData,
+      userData: userData!, // Safe because we check for null above
       isEditing,
       onUserDataChange: handleUserDataChange
     };
@@ -249,7 +294,7 @@ export default function Profile() {
       case 'portfolio':
         return <PortfolioTab {...commonProps} />;
       case 'analytics':
-        return <AnalyticsTab userData={userData} />;
+        return <AnalyticsTab userData={userData!} />;
       case 'security':
         return <SecurityTab />;
       case 'billing':
