@@ -30,6 +30,12 @@ interface Resource {
   link: string;
   tags: string[];
   free: boolean;
+  provider?: string;
+  videoEmbedId?: string;
+  lessons?: number;
+  completed?: boolean;
+  progress?: number;
+  instructor?: string;
 }
 
 export default function LearningHub() {
@@ -53,9 +59,12 @@ export default function LearningHub() {
       duration: '2h 30m',
       rating: 4.8,
       views: 15420,
-      link: '#',
+      link: 'https://www.youtube.com/watch?v=qJWJQNmxqv0',
       tags: ['resume', 'ATS', 'applications'],
-      free: true
+      free: true,
+      lessons: 12,
+      instructor: 'Sarah Chen',
+      progress: 65
     },
     {
       id: '2',
@@ -67,9 +76,11 @@ export default function LearningHub() {
       duration: '3h 15m',
       rating: 4.9,
       views: 28450,
-      link: '#',
+      link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       tags: ['interview', 'technical', 'coding'],
-      free: false
+      free: false,
+      provider: 'Tech Interview Mastery',
+      videoEmbedId: 'dQw4w9WgXcQ'
     },
     {
       id: '3',
@@ -81,9 +92,10 @@ export default function LearningHub() {
       duration: '45m',
       rating: 4.7,
       views: 12340,
-      link: '#',
+      link: 'https://hbr.org/topic/subject/negotiation',
       tags: ['salary', 'negotiation', 'career'],
-      free: true
+      free: true,
+      provider: 'Harvard Business Review'
     },
     {
       id: '4',
@@ -95,9 +107,11 @@ export default function LearningHub() {
       duration: '1h 20m',
       rating: 4.6,
       views: 18900,
-      link: '#',
+      link: 'https://www.linkedin.com/learning',
       tags: ['linkedin', 'networking', 'profile'],
-      free: true
+      free: true,
+      lessons: 8,
+      instructor: 'LinkedIn Learning Team'
     },
     {
       id: '5',
@@ -109,9 +123,12 @@ export default function LearningHub() {
       duration: '2h',
       rating: 4.8,
       views: 16780,
-      link: '#',
+      link: 'https://www.coursera.org/courses?query=behavioral%20interview',
       tags: ['interview', 'behavioral', 'STAR'],
-      free: true
+      free: true,
+      lessons: 10,
+      instructor: 'Dr. Emily Thompson',
+      completed: true
     },
     {
       id: '6',
@@ -123,9 +140,11 @@ export default function LearningHub() {
       duration: '8h',
       rating: 4.9,
       views: 34500,
-      link: '#',
+      link: 'https://www.udemy.com/courses/search/?q=react%20nextjs',
       tags: ['react', 'nextjs', 'web development'],
-      free: false
+      free: false,
+      provider: 'Udemy',
+      lessons: 45
     },
     {
       id: '7',
@@ -137,7 +156,7 @@ export default function LearningHub() {
       duration: '30m',
       rating: 4.7,
       views: 11560,
-      link: '#',
+      link: 'https://zety.com/blog/cover-letter-tips',
       tags: ['cover letter', 'applications'],
       free: true
     },
@@ -151,9 +170,73 @@ export default function LearningHub() {
       duration: '1h 45m',
       rating: 4.5,
       views: 9800,
-      link: '#',
+      link: 'https://www.skillshare.com/en/browse/professional-development',
       tags: ['networking', 'professional', 'career'],
+      free: true,
+      lessons: 6,
+      instructor: 'Michael Rodriguez'
+    },
+    {
+      id: '9',
+      title: 'Mock Interview Practice',
+      description: 'Practice interviews with AI-powered feedback on your responses, body language, and communication skills.',
+      type: 'tutorial',
+      category: 'Interview Prep',
+      difficulty: 'beginner',
+      duration: '1h',
+      rating: 4.9,
+      views: 22000,
+      link: '#',
+      tags: ['mock interview', 'practice', 'feedback'],
+      free: true,
+      provider: 'RoleReady AI',
+      progress: 40
+    },
+    {
+      id: '10',
+      title: 'Career Pivot Success Stories',
+      description: 'Real stories from professionals who successfully changed careers. Learn their strategies and lessons.',
+      type: 'article',
+      category: 'Career Development',
+      difficulty: 'beginner',
+      duration: '1h 15m',
+      rating: 4.6,
+      views: 15600,
+      link: 'https://www.themuse.com/advice/career-change',
+      tags: ['career change', 'pivot', 'success'],
       free: true
+    },
+    {
+      id: '11',
+      title: 'ATS Optimization Fundamentals',
+      description: 'Deep dive into ATS (Applicant Tracking System) optimization. Keywords, formatting, and best practices.',
+      type: 'course',
+      category: 'Resume Writing',
+      difficulty: 'advanced',
+      duration: '3h',
+      rating: 4.9,
+      views: 18900,
+      link: 'https://www.topresume.com/ats-optimization',
+      tags: ['ATS', 'resume', 'optimization'],
+      free: false,
+      lessons: 18,
+      instructor: 'Lisa Johnson'
+    },
+    {
+      id: '12',
+      title: 'Building Your Personal Brand',
+      description: 'Create a consistent personal brand across LinkedIn, portfolio, and resume. Stand out in your industry.',
+      type: 'course',
+      category: 'Career Development',
+      difficulty: 'intermediate',
+      duration: '2h 30m',
+      rating: 4.7,
+      views: 12400,
+      link: '#',
+      tags: ['personal brand', 'branding', 'online presence'],
+      free: true,
+      lessons: 9,
+      instructor: 'Alex Martinez'
     }
   ]);
 
@@ -234,6 +317,7 @@ export default function LearningHub() {
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              aria-label="Category filter"
             >
               {categories.map(cat => (
                 <option key={cat} value={cat.toLowerCase()}>{cat}</option>
@@ -248,6 +332,7 @@ export default function LearningHub() {
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              aria-label="Difficulty filter"
             >
               {difficulties.map(diff => (
                 <option key={diff} value={diff.toLowerCase()}>{diff}</option>
@@ -262,6 +347,7 @@ export default function LearningHub() {
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              aria-label="Type filter"
             >
               {types.map(type => (
                 <option key={type} value={type.toLowerCase()}>{type}</option>
@@ -336,8 +422,52 @@ export default function LearningHub() {
                   <span className="text-xs text-gray-500">{resource.category}</span>
                 </div>
 
+                {/* Progress Indicator */}
+                {resource.progress !== undefined && resource.progress > 0 && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-gray-600">Progress</span>
+                      <span className="text-gray-900 font-medium">{resource.progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all"
+                        style={{ width: `${resource.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Completed Badge */}
+                {resource.completed && (
+                  <div className="mb-3 flex items-center gap-2 text-green-600">
+                    <Award size={16} />
+                    <span className="text-sm font-medium">Completed</span>
+                  </div>
+                )}
+
+                {/* Instructor or Provider */}
+                {(resource.instructor || resource.provider) && (
+                  <div className="mb-3 text-xs text-gray-600">
+                    {resource.instructor && <span>Instructor: {resource.instructor}</span>}
+                    {resource.provider && !resource.instructor && <span>Provider: {resource.provider}</span>}
+                  </div>
+                )}
+
                 {/* Action Button */}
-                <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all font-medium">
+                <button 
+                  onClick={() => {
+                    if (resource.link && resource.link !== '#') {
+                      if (resource.link.startsWith('http')) {
+                        window.open(resource.link, '_blank');
+                      }
+                    } else {
+                      // Open in-place for internal resources
+                      console.log('Opening resource:', resource.title);
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all font-medium"
+                >
                   {resource.type === 'video' ? (
                     <>
                       <PlayCircle size={18} />
@@ -346,7 +476,7 @@ export default function LearningHub() {
                   ) : (
                     <>
                       <ExternalLink size={18} />
-                      Start Learning
+                      {resource.completed ? 'Review' : 'Start Learning'}
                     </>
                   )}
                 </button>
