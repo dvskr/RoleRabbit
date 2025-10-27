@@ -93,7 +93,7 @@ export default function ProfileTab({
             <FormField
               label="Tell us about yourself"
               type="textarea"
-              value={userData.bio}
+              value={userData.bio || ''}
               onChange={(value) => onUserDataChange({ bio: value })}
               disabled={!isEditing}
               rows={4}
@@ -101,7 +101,7 @@ export default function ProfileTab({
             />
             <div className="flex justify-between items-center text-sm text-gray-500">
               <span>This will be visible to recruiters and potential employers</span>
-              <span>{userData.bio.length}/500 characters</span>
+              <span>{(userData.bio || '').length}/500 characters</span>
             </div>
           </div>
         </div>

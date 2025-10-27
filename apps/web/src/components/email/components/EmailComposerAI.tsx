@@ -129,7 +129,7 @@ Best regards,
     const subjectVars = template.subject.match(/{{(\w+)}}/g) || [];
     const bodyVars = template.body.match(/{{(\w+)}}/g) || [];
     
-    [...new Set([...subjectVars, ...bodyVars])].forEach(v => {
+    Array.from(new Set([...subjectVars, ...bodyVars])).forEach(v => {
       const varName = v.replace(/{{|}}/g, '');
       if (!vars.includes(varName)) vars.push(varName);
     });

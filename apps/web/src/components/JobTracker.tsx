@@ -35,6 +35,7 @@ export default function JobTracker() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Show loading state when fetching from API
   if (isLoading) {
@@ -135,8 +136,6 @@ export default function JobTracker() {
     };
     input.click();
   };
-
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const handleShowSettings = () => {
     setShowSettingsModal(true);

@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "sqlite" // Use SQLite for simplicity, can switch to PostgreSQL/MySQL later
-  url      = env("DATABASE_URL") || "file:./dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -28,6 +28,7 @@ model User {
   portfolios    Portfolio[]
   cloudFiles    CloudFile[]
   analytics     Analytics[]
+  aiAgents      AIAgent[]
 
   @@map("users")
 }
@@ -36,7 +37,7 @@ model Resume {
   id          String   @id @default(cuid())
   userId      String
   name        String
-  data        String   @db.Text // JSON string of resume data
+  data        String    // JSON string of resume data
   templateId  String?
   fileName    String?
   isPublic    Boolean  @default(false)
@@ -57,7 +58,7 @@ model Job {
   location    String?
   status      String   // applied, screening, interview, offer, rejected
   salaryRange String?
-  notes       String?  @db.Text
+  notes       String?  
   source      String?  // linkedin, indeed, etc.
   appliedDate DateTime @default(now())
   createdAt   DateTime @default(now())
@@ -74,7 +75,7 @@ model CoverLetter {
   id          String   @id @default(cuid())
   userId      String
   title       String
-  content     String   @db.Text
+  content     String   
   jobId       String?  // Link to job application
   templateId  String?
   wordCount   Int      @default(0)
@@ -91,7 +92,7 @@ model Email {
   userId      String
   to          String
   subject     String
-  body        String   @db.Text
+  body        String   
   type        String   // followup, thank_you, inquiry, etc.
   status      String   // sent, draft, failed
   sentDate    DateTime?
@@ -107,8 +108,8 @@ model Portfolio {
   id          String   @id @default(cuid())
   userId      String
   name        String
-  description String?  @db.Text
-  data        String   @db.Text // JSON string of portfolio data
+  description String?  
+  data        String    // JSON string of portfolio data
   templateId  String   @default("modern")
   isPublished Boolean  @default(false)
   customDomain String?
@@ -129,10 +130,10 @@ model CloudFile {
   type        String   // resume, cover_letter, document, portfolio
   size        Int
   contentType String
-  data        String   @db.Text // Base64 or file path
+  data        String    // Base64 or file path
   folder      String?
   tags        String?  // Comma-separated tags
-  description String?  @db.Text
+  description String?  
   isPublic    Boolean  @default(false)
   isStarred   Boolean  @default(false)
   downloadCount Int    @default(0)
@@ -151,7 +152,7 @@ model Analytics {
   id          String   @id @default(cuid())
   userId      String
   type        String   // application_analytics, email_analytics, cover_letter_analytics
-  data        String   @db.Text // JSON string of analytics data
+  data        String    // JSON string of analytics data
   date        DateTime @default(now())
   createdAt   DateTime @default(now())
 
@@ -165,7 +166,7 @@ model Analytics {
 model DiscussionPost {
   id          String   @id @default(cuid())
   title       String
-  content     String   @db.Text
+  content     String   
   author      String?
   community   String?
   tags        String?  // Comma-separated tags
@@ -185,7 +186,7 @@ model DiscussionPost {
 model DiscussionComment {
   id          String   @id @default(cuid())
   postId      String
-  content     String   @db.Text
+  content     String   
   author      String?
   parentId    String?  // For nested comments
   upvotes     Int      @default(0)
@@ -195,5 +196,47 @@ model DiscussionComment {
   @@map("discussion_comments")
   @@index([postId])
   @@index([parentId])
+}
+
+model AIAgent {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  type        String   // automatic, manual
+  status      String   // active, paused, stopped
+  config      String   // JSON config
+  enabled     Boolean  @default(true)
+  lastRun     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       AIAgentTask[]
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_agents")
+  @@index([userId])
+  @@index([status])
+}
+
+model AIAgentTask {
+  id          String   @id @default(cuid())
+  userId      String
+  agentId     String
+  type        String   // job_discovery, resume_optimization, interview_prep, etc.
+  status      String   // pending, in_progress, completed, failed
+  description String
+  result      String?  // JSON result
+  error       String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  agent       AIAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("ai_agent_tasks")
+  @@index([agentId])
+  @@index([userId])
+  @@index([status])
 }
 

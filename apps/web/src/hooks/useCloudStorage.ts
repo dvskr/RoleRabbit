@@ -430,10 +430,10 @@ export const useCloudStorage = () => {
     // TODO: Implement actual share logic
   }, []);
 
-  const handleUploadFile = useCallback(async (fileData: Partial<ResumeFile>) => {
+  const handleUploadFile = useCallback(async (fileData: Partial<ResumeFile> | { data: any; name?: string }) => {
     try {
       // Save to API
-      const response = await apiService.saveToCloud(fileData.data || fileData, fileData.name || 'Untitled');
+      const response = await apiService.saveToCloud('data' in fileData ? fileData.data : fileData, fileData.name || 'Untitled');
       if (response && response.savedResume) {
         const newFile: ResumeFile = response.savedResume as ResumeFile;
         setFiles(prev => [newFile, ...prev]);
@@ -656,7 +656,7 @@ export const useCloudStorage = () => {
 
   const handleMoveToFolder = useCallback((fileId: string, folderId: string | null) => {
     setFiles(prev => prev.map(file => 
-      file.id === fileId ? { ...file, folderId } : file
+      file.id === fileId ? { ...file, folderId: folderId ?? undefined } : file
     ));
     
     // Update folder file counts

@@ -4,9 +4,9 @@ import React, { useRef } from 'react';
 import { Camera, CheckCircle } from 'lucide-react';
 
 interface ProfilePictureProps {
-  firstName: string;
-  lastName: string;
-  profilePicture: string | null;
+  firstName?: string;
+  lastName?: string;
+  profilePicture?: string | null;
   onChangePhoto: () => void;
 }
 
@@ -43,11 +43,11 @@ export default function ProfilePicture({
         <div className="relative">
           {profilePicture ? (
             <div className="w-32 h-32 rounded-2xl overflow-hidden shadow-xl">
-              <img src={profilePicture} alt={`${firstName} ${lastName}`} className="w-full h-full object-cover" />
+              <img src={profilePicture} alt={`${firstName || 'User'} ${lastName || ''}`} className="w-full h-full object-cover" />
             </div>
           ) : (
             <div className="w-32 h-32 bg-gradient-to-br from-blue-500 via-purple-600 to-indigo-700 rounded-2xl flex items-center justify-center text-white text-4xl font-bold shadow-xl">
-              {firstName[0]}{lastName[0]}
+              {(firstName || 'U')[0]}{(lastName || 'S')[0]}
             </div>
           )}
           <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
