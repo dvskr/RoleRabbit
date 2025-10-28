@@ -116,6 +116,22 @@ const {
 // WebSocket Server
 const WebSocketServer = require('./utils/websocketServer');
 
+// Health Check utilities
+const {
+  getHealthStatus,
+  isHealthy
+} = require('./utils/healthCheck');
+
+// API Versioning utilities
+const {
+  getVersion,
+  validateVersion,
+  getVersionInfo
+} = require('./utils/versioning');
+
+// Sanitization utilities
+const { sanitizationMiddleware } = require('./utils/sanitizer');
+
 // Analytics utilities
 const { 
   getAnalyticsByUserId,
@@ -216,19 +232,31 @@ fastify.addHook('preValidation', async (request, reply) => {
   if (request.query && typeof request.query === 'object') {
     request.query = sanitizeInput(request.query);
   }
+  
+  // Apply additional sanitization
+  sanitizationMiddleware()(request, reply);
 });
 
 // Health check
-fastify.get('/health', async () => ({
-  status: 'ok',
-  service: 'node-api',
-  version: '1.0.0',
-  timestamp: new Date().toISOString()
-}));
+// Health check endpoint with detailed status
+fastify.get('/health', async (request, reply) => {
+  try {
+    const healthStatus = await getHealthStatus();
+    const statusCode = healthStatus.status === 'healthy' ? 200 : 503;
+    reply.status(statusCode).send(healthStatus);
+  } catch (error) {
+    reply.status(503).send({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
 
-// API status
-fastify.get('/api/status', async () => ({
+// API status with versioning info
+fastify.get('/api/status', async (request) => ({
   message: 'RoleReady Node.js API is running',
+  version: getVersionInfo(),
   endpoints: {
     auth: '/api/auth/*',
     users: '/api/users/*',

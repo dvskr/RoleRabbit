@@ -7,7 +7,9 @@
     "dev": "node simple-server.js",
     "start": "node simple-server.js",
     "lint": "eslint . --ext .js",
-    "type-check": "echo 'TypeScript check skipped for JS version'"
+    "type-check": "echo 'TypeScript check skipped for JS version'",
+    "seed": "node utils/seeder.js",
+    "db:seed": "node utils/seeder.js"
   },
   "dependencies": {
     "@fastify/compress": "^8.1.0",
