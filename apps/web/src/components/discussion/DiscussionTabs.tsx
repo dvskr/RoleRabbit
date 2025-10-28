@@ -54,7 +54,7 @@ const tabs: Tab[] = [
 
 export default function DiscussionTabs({ activeTab, onTabChange }: DiscussionTabsProps) {
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-3">
+    <div className="bg-white border-b border-gray-200 px-4 py-2">
       <div className="flex items-center gap-1">
         {tabs.map((tab) => {
           const IconComponent = tab.icon;
@@ -64,13 +64,13 @@ export default function DiscussionTabs({ activeTab, onTabChange }: DiscussionTab
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
                 isActive 
                   ? `bg-${tab.color}-100 text-${tab.color}-700 border border-${tab.color}-200` 
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              <IconComponent size={14} className="inline" />
+              <IconComponent size={16} className="inline" />
               {tab.label}
             </button>
           );

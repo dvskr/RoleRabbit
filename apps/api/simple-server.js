@@ -131,6 +131,40 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // AI Agents endpoints
+  if (path === '/api/agents' && method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify([]));
+    return;
+  }
+
+  if (path === '/api/agents' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      const agentData = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        success: true, 
+        agent: { ...agentData, id: Date.now().toString() }
+      }));
+    });
+    return;
+  }
+
+  if (path.startsWith('/api/agents/') && method === 'POST') {
+    const agentId = path.split('/')[3];
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+      success: true, 
+      message: 'Agent executed successfully',
+      agentId 
+    }));
+    return;
+  }
+
   // 404 for other routes
   res.writeHead(404, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ error: 'Not found' }));

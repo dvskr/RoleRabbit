@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
+import PageHeader from '../../components/layout/PageHeader';
 import Home from '../../components/Home';
 import Profile from '../../components/Profile';
 import CloudStorage from '../../components/CloudStorage';
@@ -16,7 +17,7 @@ import CoverLetterGenerator from '../../components/CoverLetterGenerator';
 import PortfolioGenerator from '../../components/portfolio-generator/PortfolioGeneratorV2';
 import LearningHub from '../../components/LearningHub';
 import AIAgents from '../../components/AIAgents';
-import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Users, Home as HomeIcon } from 'lucide-react';
 import { 
   CustomField, 
   ExperienceItem, 
@@ -66,10 +67,12 @@ export default function DashboardPage() {
   const aiHook = useAI();
   
   // Dashboard-specific state
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [resumePanelCollapsed, setResumePanelCollapsed] = useState(false); // Separate state for Resume Editor panel
   const [showRightPanel, setShowRightPanel] = useState(false);
-  const [previousSidebarState, setPreviousSidebarState] = useState(false);
+  const [previousSidebarState, setPreviousSidebarState] = useState(false); // For Resume Editor panel
+  const [previousMainSidebarState, setPreviousMainSidebarState] = useState(false); // For main navigation sidebar
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>('ats-classic');
   const [addedTemplates, setAddedTemplates] = useState<string[]>(['ats-classic', 'ats-modern']);
@@ -227,6 +230,88 @@ export default function DashboardPage() {
     setHistoryIndex(0);
     
     logger.debug('Resume duplicated successfully');
+  };
+
+  const handleRemoveDuplicates = () => {
+    logger.debug('Removing duplicates from resume');
+    
+    const cleanedResumeData = { ...resumeData };
+    let removedCount = 0;
+    
+    // Remove duplicate experiences
+    if (cleanedResumeData.experience && cleanedResumeData.experience.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.experience.filter((exp: any) => {
+        const key = `${exp.company}-${exp.position}-${exp.period}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.experience = unique;
+    }
+    
+    // Remove duplicate skills
+    if (cleanedResumeData.skills && cleanedResumeData.skills.length > 0) {
+      const uniqueSkills = Array.from(new Set(cleanedResumeData.skills));
+      removedCount += cleanedResumeData.skills.length - uniqueSkills.length;
+      cleanedResumeData.skills = uniqueSkills;
+    }
+    
+    // Remove duplicate education
+    if (cleanedResumeData.education && cleanedResumeData.education.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.education.filter((edu: any) => {
+        const key = `${edu.school}-${edu.degree}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.education = unique;
+    }
+    
+    // Remove duplicate projects
+    if (cleanedResumeData.projects && cleanedResumeData.projects.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.projects.filter((proj: any) => {
+        const key = `${proj.name}-${proj.description}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.projects = unique;
+    }
+    
+    // Remove duplicate certifications
+    if (cleanedResumeData.certifications && cleanedResumeData.certifications.length > 0) {
+      const seen = new Set();
+      const unique = cleanedResumeData.certifications.filter((cert: any) => {
+        const key = `${cert.name}-${cert.issuer}`;
+        if (seen.has(key)) {
+          removedCount++;
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+      cleanedResumeData.certifications = unique;
+    }
+    
+    if (removedCount > 0) {
+      setResumeData(cleanedResumeData);
+      alert(`Removed ${removedCount} duplicate ${removedCount === 1 ? 'entry' : 'entries'}`);
+      logger.debug(`Removed ${removedCount} duplicates`);
+    } else {
+      alert('No duplicates found!');
+    }
   };
 
   // Destructure hooks for easier access
@@ -496,7 +581,7 @@ export default function DashboardPage() {
 
   const renderActiveComponent = () => {
     switch (activeTab) {
-      case 'home':
+      case 'dashboard':
         return (
           <Home 
             enableMissionControl={true}
@@ -884,6 +969,8 @@ export default function DashboardPage() {
             onNavigateToTemplates={() => {
               handleTabChange('templates');
             }}
+            isSidebarCollapsed={resumePanelCollapsed}
+            onToggleSidebar={() => setResumePanelCollapsed(!resumePanelCollapsed)}
           />
         );
       case 'templates':
@@ -943,7 +1030,6 @@ export default function DashboardPage() {
               onUndo={undo}
               onRedo={redo}
               onImport={() => setShowImportModal(true)}
-              onDuplicate={handleDuplicateResume}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
@@ -951,37 +1037,148 @@ export default function DashboardPage() {
               onShowResumeSharing={() => setShowResumeSharing(true)}
               showRightPanel={showRightPanel}
               previousSidebarState={previousSidebarState}
-              sidebarCollapsed={sidebarCollapsed}
+              sidebarCollapsed={resumePanelCollapsed}
               isPreviewMode={isPreviewMode}
               setPreviousSidebarState={setPreviousSidebarState}
-              setSidebarCollapsed={setSidebarCollapsed}
+              setSidebarCollapsed={setResumePanelCollapsed}
               setShowRightPanel={setShowRightPanel}
+              onToggleSidebar={() => setResumePanelCollapsed(!resumePanelCollapsed)}
+              mainSidebarCollapsed={sidebarCollapsed}
+              setMainSidebarCollapsed={setSidebarCollapsed}
+              previousMainSidebarState={previousMainSidebarState}
+              setPreviousMainSidebarState={setPreviousMainSidebarState}
             />
           ) : (
-            <div className="bg-white border-b border-gray-200 px-6 py-4">
-              <h1 className="text-2xl font-bold text-gray-900 capitalize">
-                {activeTab === 'storage' ? 'Storage' : 
-                 activeTab === 'tracker' ? 'Tracker' : 
-                 activeTab === 'discussion' ? 'Discussion' :
-                 activeTab === 'email' ? 'Email' :
-                 activeTab === 'cover-letter' ? 'Cover Letter' :
-                 activeTab === 'portfolio' ? 'Portfolio' :
-                 activeTab === 'templates' ? 'Templates' :
-                 activeTab === 'profile' ? 'Profile' : ''}
-              </h1>
-            </div>
+            <PageHeader
+              title={
+                activeTab === 'storage' ? 'Storage' :
+                activeTab === 'tracker' ? 'Job Tracker' :
+                activeTab === 'discussion' ? 'Community' :
+                activeTab === 'email' ? 'Email Hub' :
+                activeTab === 'cover-letter' ? 'Cover Letter' :
+                activeTab === 'portfolio' ? 'Portfolio' :
+                activeTab === 'templates' ? 'Templates' :
+                activeTab === 'profile' ? 'Profile' :
+                activeTab === 'agents' ? 'AI Agents' :
+                 activeTab === 'learning' ? 'Learning Hub' :
+                 activeTab === 'dashboard' ? 'Dashboard' : 'RoleReady'
+              }
+              subtitle={
+                activeTab === 'dashboard' ? 'Overview of your job search journey' :
+                activeTab === 'storage' ? 'Manage your files and documents' :
+                activeTab === 'tracker' ? 'Track your job applications' :
+                activeTab === 'discussion' ? 'Connect with the community' :
+                activeTab === 'email' ? 'Manage your emails and contacts' :
+                activeTab === 'cover-letter' ? 'Create professional cover letters' :
+                activeTab === 'portfolio' ? 'Build your online portfolio' :
+                activeTab === 'templates' ? 'Browse resume templates' :
+                activeTab === 'profile' ? 'Manage your profile settings' :
+                activeTab === 'agents' ? 'Automate your job search' :
+                activeTab === 'learning' ? 'Learn new skills' : undefined
+              }
+              icon={(() => {
+                switch(activeTab) {
+                  case 'dashboard': return HomeIcon;
+                  case 'storage': return FolderOpen;
+                  case 'tracker': return Briefcase;
+                  case 'discussion': return MessageSquare;
+                  case 'email': return Mail;
+                  case 'cover-letter': return FileText;
+                  case 'portfolio': return Globe;
+                  case 'templates': return LayoutTemplate;
+                  case 'profile': return UserIcon;
+                  case 'agents': return Sparkles;
+                  case 'learning': return GraduationCap;
+                  default: return undefined;
+                }
+              })()}
+              iconColor={(() => {
+                switch(activeTab) {
+                  case 'dashboard': return 'text-blue-600';
+                  case 'storage': return 'text-blue-600';
+                  case 'tracker': return 'text-green-600';
+                  case 'discussion': return 'text-indigo-600';
+                  case 'email': return 'text-purple-600';
+                  case 'cover-letter': return 'text-orange-600';
+                  case 'portfolio': return 'text-rose-600';
+                  case 'templates': return 'text-violet-600';
+                  case 'profile': return 'text-slate-600';
+                  case 'agents': return 'text-purple-600';
+                  case 'learning': return 'text-sky-600';
+                  default: return 'text-blue-600';
+                }
+              })()}
+            />
           )}
 
           {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 h-full overflow-hidden">
-              {renderActiveComponent()}
+          <div className="flex-1 flex overflow-hidden relative">
+            <div className="absolute inset-0 h-full w-full overflow-y-auto">
+              {/* Render all tabs but hide inactive ones - mounted but hidden */}
+              <div className={`absolute inset-0 h-full ${activeTab === 'dashboard' ? '' : 'hidden'}`}>
+                <Home 
+                  enableMissionControl={true}
+                  onQuickAction={(actionId) => {
+                    logger.debug('Quick action:', actionId);
+                    switch (actionId) {
+                      case '1': handleTabChange('tracker'); break;
+                      case '2': handleTabChange('email'); break;
+                      case '3': handleTabChange('editor'); break;
+                      case '4': handleTabChange('discussion'); break;
+                      default: break;
+                    }
+                  }}
+                  onNavigateToTab={(tab) => handleTabChange(tab)}
+                  onOpenApplicationAnalytics={() => setShowApplicationAnalytics(true)}
+                />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'profile' ? '' : 'hidden'}`}>
+                <Profile />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'storage' ? '' : 'hidden'}`}>
+                <CloudStorage />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'tracker' ? '' : 'hidden'}`}>
+                <JobTracker />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'templates' ? '' : 'hidden'}`}>
+                <Templates />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'cover-letter' ? '' : 'hidden'}`}>
+                <CoverLetterGenerator />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'portfolio' ? '' : 'hidden'}`}>
+                <PortfolioGenerator />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'discussion' ? '' : 'hidden'}`}>
+                <Discussion />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'email' ? '' : 'hidden'}`}>
+                <Email />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'learning' ? '' : 'hidden'}`}>
+                <LearningHub />
+              </div>
+              <div className={`absolute inset-0 h-full ${activeTab === 'agents' ? '' : 'hidden'}`}>
+                <AIAgents />
+              </div>
+              {/* Editor is special and handles its own rendering */}
+              <div className={`absolute inset-0 h-full ${activeTab === 'editor' ? '' : 'hidden'} ${showRightPanel && activeTab === 'editor' ? 'right-80' : ''}`}>
+                {renderActiveComponent()}
+              </div>
             </div>
             {/* AI Panel */}
-            {activeTab === 'editor' && (
-              <AIPanel
+            {activeTab === 'editor' && showRightPanel && (
+              <div className="absolute top-0 right-0 bottom-0 w-80 z-50">
+                <AIPanel
                 showRightPanel={showRightPanel}
-                setShowRightPanel={setShowRightPanel}
+                setShowRightPanel={(show) => {
+                  setShowRightPanel(show);
+                  if (!show) {
+                    // When closing AI panel, always open the main sidebar
+                    setSidebarCollapsed(false);
+                  }
+                }}
                 aiMode={aiMode}
                 setAiMode={setAiMode}
                 jobDescription={jobDescription}
@@ -1017,7 +1214,8 @@ export default function DashboardPage() {
                   setHistory(newHistory);
                   setHistoryIndex(newHistory.length - 1);
                 }}
-              />
+                />
+                </div>
             )}
           </div>
         </div>

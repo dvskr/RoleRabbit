@@ -164,41 +164,41 @@ export default function FileCard({
 
   if (viewMode === 'grid') {
     return (
-      <div className={`group border rounded-xl p-4 hover:shadow-lg transition-all duration-300 cursor-pointer ${
+      <div className={`group border rounded-lg p-3 hover:shadow-lg transition-all duration-300 cursor-pointer ${
         isSelected ? 'border-blue-500 bg-blue-50 shadow-lg' : 'border-gray-200 bg-white hover:border-gray-300'
       }`}>
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-center space-x-2">
             <input
               type="checkbox"
               checked={isSelected}
               onChange={() => onSelect(file.id)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
               {getFileIcon(file.type)}
             </div>
           </div>
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onStar(file.id)}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-lg transition-colors ${
                 file.isStarred 
                   ? 'text-yellow-500 bg-yellow-100' 
                   : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-100'
               }`}
               title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
             >
-              <Star size={16} className={file.isStarred ? 'fill-current' : ''} />
+              <Star size={14} className={file.isStarred ? 'fill-current' : ''} />
             </button>
             <div className="relative">
               <button 
                 onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                 title="More options"
               >
-                <MoreVertical size={16} />
+                <MoreVertical size={14} />
               </button>
               {showMoreMenu && (
                 <div ref={moreMenuRef} className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
@@ -247,15 +247,15 @@ export default function FileCard({
         </div>
 
         {/* File Info */}
-        <div className="mb-4">
-          <h3 className="font-semibold text-gray-900 mb-2 truncate group-hover:text-blue-600 transition-colors">
+        <div className="mb-2">
+          <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate group-hover:text-blue-600 transition-colors">
             {file.name}
           </h3>
           {file.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{file.description}</p>
+            <p className="text-xs text-gray-600 mb-1.5 line-clamp-2">{file.description}</p>
           )}
           
-          <div className="flex items-center space-x-2 mb-2">
+          <div className="flex items-center space-x-1.5 mb-1.5">
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(file.type)}`}>
               {file.type}
             </span>
@@ -269,22 +269,22 @@ export default function FileCard({
             )}
           </div>
 
-          <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
-            <div className="flex items-center space-x-1">
-              <Calendar size={12} />
+          <div className="flex items-center space-x-3 text-[10px] text-gray-500 mb-1">
+            <div className="flex items-center space-x-0.5">
+              <Calendar size={10} />
               <span>{file.lastModified}</span>
             </div>
             <span>{file.size}</span>
           </div>
 
           {/* Stats */}
-          <div className="flex items-center space-x-4 text-xs text-gray-500">
-            <div className="flex items-center space-x-1">
-              <TrendingUp size={12} />
+          <div className="flex items-center space-x-3 text-[10px] text-gray-500">
+            <div className="flex items-center space-x-0.5">
+              <TrendingUp size={10} />
               <span>{file.viewCount} views</span>
             </div>
-            <div className="flex items-center space-x-1">
-              <Download size={12} />
+            <div className="flex items-center space-x-0.5">
+              <Download size={10} />
               <span>{file.downloadCount} downloads</span>
             </div>
           </div>
@@ -292,8 +292,8 @@ export default function FileCard({
 
         {/* Tags */}
         {file.tags.length > 0 && (
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-1">
+          <div className="mb-2">
+            <div className="flex flex-wrap gap-0.5">
               {file.tags.slice(0, 3).map((tag, index) => (
                 <span key={index} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg">
                   <Tag size={10} className="mr-1" />
@@ -309,9 +309,9 @@ export default function FileCard({
 
         {/* Shared Users */}
         {file.sharedWith.length > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center space-x-2">
-              <Users size={14} className="text-gray-400" />
+          <div className="mb-2">
+            <div className="flex items-center space-x-1.5">
+              <Users size={12} className="text-gray-400" />
               <div className="flex -space-x-2">
                 {file.sharedWith.slice(0, 3).map((share) => (
                   <div key={share.id} className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full border-2 border-white flex items-center justify-center">
@@ -333,35 +333,35 @@ export default function FileCard({
 
         {/* Comments */}
         {file.comments.length > 0 && (
-          <div className="mb-4">
-            <div className="flex items-center space-x-2">
-              <MessageCircle size={14} className="text-gray-400" />
+          <div className="mb-2">
+            <div className="flex items-center space-x-1.5">
+              <MessageCircle size={12} className="text-gray-400" />
               <span className="text-xs text-gray-500">{file.comments.length} comment{file.comments.length > 1 ? 's' : ''}</span>
             </div>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="pt-2 border-t border-gray-100">
+          <div className="flex items-center justify-center flex-wrap gap-1 max-w-full">
             <button
               onClick={() => onTogglePublic(file.id)}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-lg transition-colors ${
                 file.isPublic 
                   ? 'text-green-600 bg-green-100' 
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
               }`}
               title={file.isPublic ? 'Make private' : 'Make public'}
             >
-              {file.isPublic ? <Eye size={14} /> : <EyeOff size={14} />}
+              {file.isPublic ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
             <div className="relative">
               <button
                 onClick={() => setShowDownloadFormat(!showDownloadFormat)}
-                className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                 title="Download"
               >
-                <Download size={14} />
+                <Download size={12} />
               </button>
               {showDownloadFormat && (
                 <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
@@ -388,47 +388,45 @@ export default function FileCard({
             </div>
             <button
               onClick={() => setShowShareModal(true)}
-              className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
               title="Share"
             >
-              <Share2 size={14} />
+              <Share2 size={12} />
             </button>
-          </div>
-          <div className="flex items-center space-x-1">
             <button
               onClick={() => {
                 logger.debug('Comment button clicked! Current state:', showComments);
                 setShowComments(!showComments);
               }}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-1.5 rounded-lg transition-colors ${
                 showComments 
                   ? 'text-purple-600 bg-purple-100' 
                   : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
               }`}
               title="Comments"
             >
-              <MessageCircle size={14} />
+              <MessageCircle size={12} />
             </button>
             <button
               onClick={() => onEdit(file.id)}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               title="Edit"
             >
-              <Edit size={14} />
+              <Edit size={12} />
             </button>
             <button
               onClick={() => onArchive(file.id)}
-              className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
               title={file.isArchived ? 'Unarchive' : 'Archive'}
             >
-              <Archive size={14} />
+              <Archive size={12} />
             </button>
             <button
               onClick={() => onDelete(file.id)}
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
               title="Delete"
             >
-              <Trash2 size={14} />
+              <Trash2 size={12} />
             </button>
           </div>
         </div>
@@ -503,7 +501,7 @@ export default function FileCard({
 
   // List view - Enhanced version
   return (
-    <div className={`group flex flex-col p-4 border rounded-xl hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full ${
+    <div className={`group flex flex-col p-3 border rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full ${
       isSelected ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'
     }`}>
       <div className="flex items-center justify-between w-full min-w-0">

@@ -107,7 +107,7 @@ export default function CareerTab({
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Target Roles</h3>
           <div className="flex flex-wrap gap-3 mb-6">
-            {userData.targetRoles.map((role, index) => (
+            {(userData.targetRoles || []).map((role, index) => (
               <span key={index} className="px-4 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm border border-green-200/50">
                 {role}
                 {isEditing && (
@@ -147,7 +147,7 @@ export default function CareerTab({
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Target Companies</h3>
           <div className="flex flex-wrap gap-3 mb-6">
-            {userData.targetCompanies.map((company, index) => (
+            {(userData.targetCompanies || []).map((company, index) => (
               <span key={index} className="px-4 py-2 bg-gradient-to-r from-purple-100 to-violet-100 text-purple-800 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm border border-purple-200/50">
                 {company}
                 {isEditing && (

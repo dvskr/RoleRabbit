@@ -26,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>
+      <body style={{ margin: 0, padding: 0 }}>
         <AuthProvider>
           <div id="root">
             {children}

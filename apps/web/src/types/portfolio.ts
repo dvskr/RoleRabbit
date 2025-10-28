@@ -1,5 +1,39 @@
 // Portfolio Generator Types
 
+// Website Configuration for portfolio generator
+export interface WebsiteConfig {
+  id: string;
+  name: string;
+  templateId: string;
+  sections: Section[];
+  theme: {
+    templateId?: string;
+    primaryColor?: string;
+    colors?: string[];
+  };
+  seo?: {
+    title?: string;
+    description?: string;
+    keywords?: string[];
+  };
+  metadata?: Record<string, any>;
+}
+
+// Section configuration for portfolio
+export interface Section {
+  id: string;
+  type: string;
+  enabled: boolean;
+  config: {
+    headline?: string;
+    subheading?: string;
+    ctaText?: string;
+    secondaryCta?: string;
+    [key: string]: any;
+  };
+  data?: any;
+}
+
 export interface PortfolioWebsite {
   id: string;
   name: string;
