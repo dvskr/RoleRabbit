@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { FileText, Sparkles, Layers, Plus, GripVertical, Trash2, Type, Palette, Eye, EyeOff, Mail, Phone, MapPin, Linkedin, Github, Globe, CheckCircle, X, Layout } from 'lucide-react';
 import MultiResumeManager from './MultiResumeManager';
 import { resumeTemplates } from '../../data/templates';
@@ -111,6 +111,15 @@ export default function ResumeEditor({
       onTemplateApply(selectedTemplateId);
     }
   }, [selectedTemplateId, onTemplateApply]);
+
+  // Memoize sections to prevent unnecessary re-renders
+  const renderedSections = useMemo(() => {
+    return sectionOrder.map((section) => (
+      <div key={section}>
+        {renderSection(section)}
+      </div>
+    ));
+  }, [sectionOrder, renderSection, sectionVisibility, customSections, resumeData]);
 
   const getFieldIcon = (iconType: string) => {
     const iconClass = "w-4 h-4 text-gray-400";
@@ -543,7 +552,7 @@ export default function ResumeEditor({
           </div>
 
       {/* Main Resume Editing Area */}
-      <div className={`flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 ${
+      <div className={`flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 will-change-scroll ${
         selectedTemplate?.colorScheme === 'blue' 
           ? 'bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100'
           : selectedTemplate?.colorScheme === 'green'
@@ -552,7 +561,7 @@ export default function ResumeEditor({
           ? 'bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100'
           : 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50'
       }`} style={{ height: '100%', maxHeight: '100%' }}>
-        <div className={`w-full bg-white rounded-2xl shadow-2xl border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full ${
+        <div className={`w-full bg-white rounded-2xl shadow-lg border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full ${
           selectedTemplate?.colorScheme === 'blue'
             ? 'border-blue-200'
             : selectedTemplate?.colorScheme === 'green'
@@ -620,11 +629,7 @@ export default function ResumeEditor({
       </div>
 
           {/* Render All Sections */}
-            {sectionOrder.map((section) => (
-              <div key={section}>
-                {renderSection(section)}
-              </div>
-            ))}
+            {renderedSections}
           
         </div>
       </div>
