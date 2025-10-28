@@ -1,80 +1,139 @@
 /**
  * Search Utilities
- * Provides search functionality across different resources
+ * Provides search functionality across the platform
  */
 
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 /**
- * Search in text content
+ * Global search across all resources
  */
-function searchInText(query, text) {
-  if (!query || !text) return false;
+async function globalSearch(userId, query, options = {}) {
+  const { types = ['resumes', 'jobs', 'emails', 'portfolios'], limit = 20 } = options;
   
-  const lowerQuery = query.toLowerCase();
-  const lowerText = text.toLowerCase();
-  
-  return lowerText.includes(lowerQuery);
+  const results = {
+    resumes: [],
+    jobs: [],
+    emails: [],
+    portfolios: [],
+    total: 0
+  };
+
+  // Search resumes
+  if (types.includes('resumes')) {
+    const resumes = await prisma.resume.findMany({
+      where: {
+        userId,
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { data: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: limit
+    });
+    results.resumes = resumes;
+  }
+
+  // Search jobs
+  if (types.includes('jobs')) {
+    const jobs = await prisma.job.findMany({
+      where: {
+        userId,
+        OR: [
+          { title: { contains: query, mode: 'insensitive' } },
+          { company: { contains: query, mode: 'insensitive' } },
+          { location: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: limit
+    });
+    results.jobs = jobs;
+  }
+
+  // Search emails
+  if (types.includes('emails')) {
+    const emails = await prisma.email.findMany({
+      where: {
+        userId,
+        OR: [
+          { subject: { contains: query, mode: 'insensitive' } },
+          { body: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: limit
+    });
+    results.emails = emails;
+  }
+
+  // Search portfolios
+  if (types.includes('portfolios')) {
+    const portfolios = await prisma.portfolio.findMany({
+      where: {
+        userId,
+        OR: [
+          { name: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } }
+        ]
+      },
+      take: limit
+    });
+    results.portfolios = portfolios;
+  }
+
+  // Calculate total
+  results.total = results.resumes.length + results.jobs.length + results.emails.length + results.portfolios.length;
+
+  return results;
 }
 
 /**
- * Search in array of objects
+ * Search resumes with filters
  */
-function searchInObjects(query, objects, fields = []) {
-  if (!query || !objects || objects.length === 0) return objects;
-  
-  const lowerQuery = query.toLowerCase();
-  
-  return objects.filter(obj => {
-    if (fields.length === 0) {
-      // Search in all string fields
-      return Object.values(obj).some(value => 
-        typeof value === 'string' && value.toLowerCase().includes(lowerQuery)
-      );
-    }
-    
-    // Search in specified fields
-    return fields.some(field => 
-      obj[field] && 
-      typeof obj[field] === 'string' && 
-      obj[field].toLowerCase().includes(lowerQuery)
-    );
+async function searchResumes(userId, query, filters = {}) {
+  const where = {
+    userId,
+    OR: [
+      { name: { contains: query, mode: 'insensitive' } },
+      { data: { contains: query, mode: 'insensitive' } }
+    ]
+  };
+
+  // Add filters
+  if (filters.templateId) {
+    where.templateId = filters.templateId;
+  }
+
+  return await prisma.resume.findMany({
+    where,
+    take: filters.limit || 20
   });
 }
 
 /**
- * Highlight search terms in text
+ * Search jobs with filters
  */
-function highlightSearchTerms(query, text) {
-  if (!query || !text) return text;
-  
-  const regex = new RegExp(`(${query})`, 'gi');
-  return text.replace(regex, '<mark>$1</mark>');
-}
+async function searchJobs(userId, query, filters = {}) {
+  const where = {
+    userId,
+    OR: [
+      { title: { contains: query, mode: 'insensitive' } },
+      { company: { contains: query, mode: 'insensitive' } }
+    ]
+  };
 
-/**
- * Extract keywords from text
- */
-function extractKeywords(text, maxKeywords = 10) {
-  if (!text) return [];
-  
-  const words = text.toLowerCase().match(/\b\w+\b/g) || [];
-  const wordCount = {};
-  
-  words.forEach(word => {
-    if (word.length > 3) { // Ignore short words
-      wordCount[word] = (wordCount[word] || 0) + 1;
-    }
+  if (filters.status) {
+    where.status = filters.status;
+  }
+
+  return await prisma.job.findMany({
+    where,
+    take: filters.limit || 20
   });
-  
-  return Object.entries(wordCount)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, maxKeywords)
-    .map(([word]) => word);
 }
 
 module.exports = {
-  searchInText,
-  searchInObjects,
-  highlightSearchTerms,
-  extractKeywords
+  globalSearch,
+  searchResumes,
+  searchJobs
 };
-
