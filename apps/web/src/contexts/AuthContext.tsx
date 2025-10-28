@@ -40,8 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Auth check failed:', error);
       }
+      // Don't wait for auth check - set loading to false immediately
       setIsLoading(false);
     };
+    // Set loading false immediately to prevent blocking
+    setIsLoading(false);
     checkAuth();
   }, []);
 
