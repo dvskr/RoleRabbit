@@ -47,7 +47,7 @@ export default function SignupPage() {
 
       // Store token
       if (response.token) {
-        localStorage.setItem('auth_token', response.token);
+        // Token is now stored in httpOnly cookie automatically
       }
 
       // Redirect to dashboard

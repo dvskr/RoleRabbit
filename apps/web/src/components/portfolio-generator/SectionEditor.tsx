@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, Save, Image, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
-import { Section } from '../../../types/portfolio';
+import { Section } from '../../types/portfolio';
 
 interface SectionEditorProps {
   section: Section;

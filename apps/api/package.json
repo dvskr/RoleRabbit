@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^8.4.0",
+    "@fastify/csrf-protection": "^7.1.0",
     "@fastify/error": "^4.2.0",
     "@fastify/jwt": "^7.2.4",
     "@fastify/multipart": "^7.6.0",

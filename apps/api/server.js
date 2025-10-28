@@ -14,7 +14,10 @@ const { sanitizeInput, getRateLimitConfig } = require('./utils/security');
 const { connectDB, disconnectDB } = require('./utils/db');
 
 // Authentication
-const { registerUser, authenticateUser, getUserById } = require('./auth');
+const { registerUser, authenticateUser, getUserById, resetUserPassword } = require('./auth');
+const { createRefreshToken, verifyRefreshToken, deleteAllUserRefreshTokens } = require('./utils/refreshToken');
+const { createSession, getUserSessions, deactivateAllUserSessions, deactivateSession } = require('./utils/sessionManager');
+const { createPasswordResetToken, verifyPasswordResetToken } = require('./utils/passwordReset');
 
 // Jobs utilities
 const { 
@@ -114,7 +117,7 @@ fastify.register(require('@fastify/cors'), {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 });
 
 // Register rate limiting globally
@@ -196,15 +199,49 @@ fastify.post('/api/auth/register', async (request, reply) => {
     
     const user = await registerUser(email, password, name);
     
-    // Generate JWT token
-    const token = fastify.jwt.sign({ 
+    // Generate JWT access token (short-lived: 15 minutes)
+    const accessToken = fastify.jwt.sign({ 
       userId: user.id, 
       email: user.email 
+    }, { expiresIn: '15m' });
+    
+    // Create refresh token (long-lived: 7 days)
+    const refreshToken = await createRefreshToken(user.id, 7);
+    
+    // Create session
+    const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
+    const userAgent = request.headers['user-agent'];
+    const sessionId = await createSession(user.id, ipAddress, userAgent, 30);
+    
+    // Set access token in httpOnly cookie
+    reply.setCookie('auth_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/'
+    });
+    
+    // Set refresh token in httpOnly cookie
+    reply.setCookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
+    });
+    
+    // Set session ID in httpOnly cookie
+    reply.setCookie('session_id', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/'
     });
     
     reply.send({
       success: true,
-      token,
       user
     });
   } catch (error) {
@@ -229,15 +266,49 @@ fastify.post('/api/auth/login', async (request, reply) => {
     
     const user = await authenticateUser(email, password);
     
-    // Generate JWT token
-    const token = fastify.jwt.sign({ 
+    // Generate JWT access token (short-lived: 15 minutes)
+    const accessToken = fastify.jwt.sign({ 
       userId: user.id, 
       email: user.email 
+    }, { expiresIn: '15m' });
+    
+    // Create refresh token (long-lived: 7 days)
+    const refreshToken = await createRefreshToken(user.id, 7);
+    
+    // Create session
+    const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
+    const userAgent = request.headers['user-agent'];
+    const sessionId = await createSession(user.id, ipAddress, userAgent, 30);
+    
+    // Set access token in httpOnly cookie
+    reply.setCookie('auth_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/'
+    });
+    
+    // Set refresh token in httpOnly cookie
+    reply.setCookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/'
+    });
+    
+    // Set session ID in httpOnly cookie
+    reply.setCookie('session_id', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      path: '/'
     });
     
     reply.send({
       success: true,
-      token,
       user
     });
   } catch (error) {
@@ -246,6 +317,105 @@ fastify.post('/api/auth/login', async (request, reply) => {
       error: error.message
     });
   }
+});
+
+// Refresh token endpoint - get new access token
+fastify.post('/api/auth/refresh', async (request, reply) => {
+  try {
+    // Get refresh token from cookies
+    const refreshToken = request.cookies.refresh_token;
+    
+    if (!refreshToken) {
+      return reply.status(401).send({
+        success: false,
+        error: 'No refresh token provided'
+      });
+    }
+    
+    // Verify refresh token
+    const result = await verifyRefreshToken(refreshToken);
+    
+    if (!result || !result.user) {
+      return reply.status(401).send({
+        success: false,
+        error: 'Invalid or expired refresh token'
+      });
+    }
+    
+    // Generate new access token
+    const accessToken = fastify.jwt.sign({ 
+      userId: result.user.id, 
+      email: result.user.email 
+    }, { expiresIn: '15m' });
+    
+    // Set new access token in httpOnly cookie
+    reply.setCookie('auth_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+      path: '/'
+    });
+    
+    reply.send({
+      success: true,
+      message: 'Token refreshed successfully'
+    });
+  } catch (error) {
+    reply.status(401).send({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Logout endpoint - clears httpOnly cookies and refresh tokens
+fastify.post('/api/auth/logout', async (request, reply) => {
+  try {
+    // Get tokens and session from cookies before clearing
+    const refreshToken = request.cookies.refresh_token;
+    const sessionId = request.cookies.session_id;
+    
+    // Delete the refresh tokens from database
+    if (refreshToken) {
+      const result = await verifyRefreshToken(refreshToken);
+      if (result && result.userId) {
+        await deleteAllUserRefreshTokens(result.userId);
+      }
+    }
+    
+    // Deactivate the session
+    if (sessionId) {
+      await deactivateSession(sessionId);
+    }
+  } catch (error) {
+    console.error('Error during logout cleanup:', error);
+  }
+  
+  // Clear all auth-related cookies
+  reply.clearCookie('auth_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  reply.clearCookie('refresh_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  reply.clearCookie('session_id', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/'
+  });
+  
+  reply.send({
+    success: true,
+    message: 'Logged out successfully'
+  });
 });
 
 // Verify token endpoint
@@ -265,6 +435,102 @@ fastify.get('/api/auth/verify', {
     success: true,
     user
   });
+});
+
+// Get user sessions endpoint
+fastify.get('/api/auth/sessions', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ success: false, error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  const userId = request.user.userId;
+  const sessions = await getUserSessions(userId);
+  
+  reply.send({
+    success: true,
+    sessions
+  });
+});
+
+// Forgot password endpoint
+fastify.post('/api/auth/forgot-password', async (request, reply) => {
+  try {
+    const { email } = request.body;
+    
+    if (!email) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+    
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    if (!user) {
+      // Don't reveal if user exists or not (security best practice)
+      return reply.send({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
+    
+    // Create password reset token
+    const resetToken = await createPasswordResetToken(user.id, 1); // 1 hour expiration
+    
+    // TODO: Send email with reset link
+    // For now, return the token in development mode
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    
+    console.log('Password reset link:', resetLink); // Remove in production
+    
+    reply.send({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent.',
+      // Only include resetLink in development mode
+      ...(process.env.NODE_ENV !== 'production' && { resetLink })
+    });
+  } catch (error) {
+    console.error('Error in forgot password:', error);
+    reply.status(500).send({
+      success: false,
+      error: 'An error occurred while processing your request'
+    });
+  }
+});
+
+// Reset password endpoint
+fastify.post('/api/auth/reset-password', async (request, reply) => {
+  try {
+    const { token, newPassword } = request.body;
+    
+    if (!token || !newPassword) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Token and new password are required'
+      });
+    }
+    
+    // Reset the password
+    await resetUserPassword(token, newPassword);
+    
+    reply.send({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (error) {
+    console.error('Error in reset password:', error);
+    reply.status(400).send({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 // User profile endpoint

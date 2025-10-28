@@ -20,10 +20,8 @@ export default function LoginPage() {
     try {
       const response = await apiService.login(email, password);
       
-      // Store token (in production, use httpOnly cookies)
-      if (response.token) {
-        localStorage.setItem('auth_token', response.token);
-      }
+      // Token is now stored in httpOnly cookie automatically
+      // No need to manually store token
 
       // Redirect to dashboard
       router.push('/dashboard');

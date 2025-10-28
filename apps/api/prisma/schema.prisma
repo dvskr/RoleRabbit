@@ -29,8 +29,57 @@ model User {
   cloudFiles    CloudFile[]
   analytics     Analytics[]
   aiAgents      AIAgent[]
+  refreshTokens RefreshToken[]
+  sessions      Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([userId])
+  @@index([token])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  device    String?  // Device info (desktop, mobile, tablet)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastActivity DateTime @default(now())
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
 }
 
 model Resume {

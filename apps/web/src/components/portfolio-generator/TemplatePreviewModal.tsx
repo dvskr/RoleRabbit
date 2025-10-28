@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X, Monitor, Smartphone, Tablet } from 'lucide-react';
-import { WebsiteConfig, Section } from '../../../types/portfolio';
+import { WebsiteConfig, Section } from '../../types/portfolio';
 
 interface TemplatePreviewModalProps {
   template: any;
