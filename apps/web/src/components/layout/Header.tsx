@@ -10,7 +10,7 @@ interface HeaderProps {
   canRedo: boolean;
   showRightPanel: boolean;
   previousSidebarState: boolean;
-  sidebarCollapsed: boolean;
+  sidebarCollapsed: boolean; // Resume Editor panel state
   isPreviewMode?: boolean;
   onExport: () => void;
   onUndo: () => void;
@@ -25,6 +25,11 @@ interface HeaderProps {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowRightPanel: (show: boolean) => void;
   onToggleSidebar?: () => void;
+  // Main navigation sidebar props (for AI panel collapse behavior)
+  mainSidebarCollapsed?: boolean;
+  setMainSidebarCollapsed?: (collapsed: boolean) => void;
+  previousMainSidebarState?: boolean;
+  setPreviousMainSidebarState?: (state: boolean) => void;
 }
 
 export default function Header({
@@ -48,23 +53,32 @@ export default function Header({
   setPreviousSidebarState,
   setSidebarCollapsed,
   setShowRightPanel,
-  onToggleSidebar
+  onToggleSidebar,
+  mainSidebarCollapsed,
+  setMainSidebarCollapsed,
+  previousMainSidebarState,
+  setPreviousMainSidebarState
 }: HeaderProps) {
   const handleToggleAIPanel = () => {
     if (!showRightPanel) {
-      // Opening AI panel - save current sidebar state and collapse it
-      setPreviousSidebarState(sidebarCollapsed);
-      setSidebarCollapsed(true);
+      // Opening AI panel - save current MAIN sidebar state and collapse it
+      if (setPreviousMainSidebarState && mainSidebarCollapsed !== undefined) {
+        setPreviousMainSidebarState(mainSidebarCollapsed);
+        setMainSidebarCollapsed?.(true);
+      }
     } else {
-      // Closing AI panel - restore previous sidebar state
-      setSidebarCollapsed(previousSidebarState);
+      // Closing AI panel - always open the main sidebar
+      if (setMainSidebarCollapsed) {
+        setMainSidebarCollapsed(false);
+      }
     }
     setShowRightPanel(!showRightPanel);
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-6 py-2 flex justify-between items-center shadow-sm relative z-50">
-      <div className="flex items-center gap-3">
+    <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 px-6 py-2 flex items-center shadow-sm relative z-50">
+      {/* Left section with mobile menu and collapse button */}
+      <div className="flex items-center gap-3 flex-1">
         {isMobile && (
           <button 
             onClick={onShowMobileMenu}
@@ -79,8 +93,6 @@ export default function Header({
             Saving...
           </div>
         )}
-      </div>
-      <div className="flex gap-2">
         {onToggleSidebar && (
           <button 
             onClick={onToggleSidebar}
@@ -95,6 +107,9 @@ export default function Header({
             <span className="font-medium">{sidebarCollapsed ? 'Expand' : 'Collapse'}</span>
           </button>
         )}
+      </div>
+      {/* Right section with action buttons */}
+      <div className="flex gap-2 items-center">
         <button 
           onClick={onUndo}
           disabled={!canUndo}

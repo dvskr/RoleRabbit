@@ -69,8 +69,10 @@ export default function DashboardPage() {
   // Dashboard-specific state
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [resumePanelCollapsed, setResumePanelCollapsed] = useState(false); // Separate state for Resume Editor panel
   const [showRightPanel, setShowRightPanel] = useState(false);
-  const [previousSidebarState, setPreviousSidebarState] = useState(false);
+  const [previousSidebarState, setPreviousSidebarState] = useState(false); // For Resume Editor panel
+  const [previousMainSidebarState, setPreviousMainSidebarState] = useState(false); // For main navigation sidebar
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>('ats-classic');
   const [addedTemplates, setAddedTemplates] = useState<string[]>(['ats-classic', 'ats-modern']);
@@ -967,8 +969,8 @@ export default function DashboardPage() {
             onNavigateToTemplates={() => {
               handleTabChange('templates');
             }}
-            isSidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+            isSidebarCollapsed={resumePanelCollapsed}
+            onToggleSidebar={() => setResumePanelCollapsed(!resumePanelCollapsed)}
           />
         );
       case 'templates':
@@ -1035,12 +1037,16 @@ export default function DashboardPage() {
               onShowResumeSharing={() => setShowResumeSharing(true)}
               showRightPanel={showRightPanel}
               previousSidebarState={previousSidebarState}
-              sidebarCollapsed={sidebarCollapsed}
+              sidebarCollapsed={resumePanelCollapsed}
               isPreviewMode={isPreviewMode}
               setPreviousSidebarState={setPreviousSidebarState}
-              setSidebarCollapsed={setSidebarCollapsed}
+              setSidebarCollapsed={setResumePanelCollapsed}
               setShowRightPanel={setShowRightPanel}
-              onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+              onToggleSidebar={() => setResumePanelCollapsed(!resumePanelCollapsed)}
+              mainSidebarCollapsed={sidebarCollapsed}
+              setMainSidebarCollapsed={setSidebarCollapsed}
+              previousMainSidebarState={previousMainSidebarState}
+              setPreviousMainSidebarState={setPreviousMainSidebarState}
             />
           ) : (
             <PageHeader
@@ -1166,7 +1172,13 @@ export default function DashboardPage() {
               <div className="absolute top-0 right-0 bottom-0 w-80 z-50">
                 <AIPanel
                 showRightPanel={showRightPanel}
-                setShowRightPanel={setShowRightPanel}
+                setShowRightPanel={(show) => {
+                  setShowRightPanel(show);
+                  if (!show) {
+                    // When closing AI panel, always open the main sidebar
+                    setSidebarCollapsed(false);
+                  }
+                }}
                 aiMode={aiMode}
                 setAiMode={setAiMode}
                 jobDescription={jobDescription}
