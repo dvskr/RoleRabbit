@@ -6,7 +6,7 @@ import { WebsiteConfig } from '../../types/portfolio';
 import TemplateSelector from './TemplateSelector';
 import WebsiteBuilder from './WebsiteBuilder';
 import PreviewPanel from './PreviewPanel';
-import HostingConfig from './HostingConfig';
+// import HostingConfig from './HostingConfig';
 import ResumeUploadModal from './ResumeUploadModal';
 import { generateSectionsFromProfile, generateDefaultSections } from '../../utils/portfolioDataMapper';
 
@@ -314,13 +314,14 @@ export default function PortfolioGenerator({ userData, onClose }: PortfolioGener
         )}
 
         {activeStep === 'publish' && (
-          <HostingConfig
+          <div className="p-8">Publish step (HostingConfig temporarily disabled)</div>
+          {/* <HostingConfig
             onNext={() => {}}
             onBack={() => setActiveStep('preview')}
             config={portfolioConfig as WebsiteConfig}
             onUpdate={handleConfigUpdate}
             portfolioData={effectiveUserData}
-          />
+          /> */}
         )}
       </div>
 

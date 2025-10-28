@@ -76,6 +76,9 @@ const {
   getCloudFilesByFolder
 } = require('./utils/cloudFiles');
 
+// File Upload utilities
+const { uploadSingle, uploadMultiple, deleteFile, getFilePath, fileExists } = require('./utils/fileUpload');
+
 // Analytics utilities
 const { 
   getAnalyticsByUserId,
@@ -148,7 +151,11 @@ fastify.decorate('authenticate', async (request, reply) => {
 });
 
 // Register multipart
-fastify.register(require('@fastify/multipart'));
+fastify.register(require('@fastify/multipart'), {
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Add request body sanitization hook
 fastify.addHook('preValidation', async (request, reply) => {
@@ -1991,6 +1998,68 @@ fastify.setErrorHandler((error, request, reply) => {
       timestamp: new Date().toISOString()
     }
   });
+});
+
+// File upload endpoints
+fastify.post('/api/files/upload', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const userId = request.user.userId;
+    const data = await request.file();
+    
+    if (!data) {
+      return reply.status(400).send({ error: 'No file uploaded' });
+    }
+    
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg', 'image/png', 'image/gif', 'text/plain'];
+    
+    if (!allowedTypes.includes(data.mimetype)) {
+      return reply.status(400).send({ error: 'Invalid file type' });
+    }
+    
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (data.file.bytesRead > maxSize) {
+      return reply.status(400).send({ error: 'File too large (max 10MB)' });
+    }
+    
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = `file-${uniqueSuffix}-${data.filename}`;
+    
+    // Save file data to cloud file
+    const buffer = await data.toBuffer();
+    const fileData = {
+      name: filename,
+      fileName: data.filename,
+      type: data.fieldname || 'document',
+      size: buffer.length,
+      contentType: data.mimetype,
+      data: buffer.toString('base64'),
+      folder: request.body?.folder,
+      tags: request.body?.tags,
+      description: request.body?.description
+    };
+    
+    const cloudFile = await createCloudFile(userId, fileData);
+    
+    return {
+      success: true,
+      file: cloudFile
+    };
+  } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
 });
 
 // Start server
