@@ -20,32 +20,26 @@ export default function AuthMiddleware({ children }: AuthMiddlewareProps) {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('auth_token');
+      // httpOnly cookies are handled automatically by browser
+      // No need to check localStorage anymore
 
-      // If no token and trying to access protected route, redirect to login
-      if (!token) {
-        if (!isPublicRoute) {
-          router.push('/login');
-          return;
-        }
+      // For public routes, no auth check needed
+      if (isPublicRoute) {
         setIsAuthenticated(false);
         setIsLoading(false);
         return;
       }
 
-      // Verify token is valid
+      // Verify auth via API (httpOnly cookie sent automatically)
       try {
         await apiService.getUserProfile();
         setIsAuthenticated(true);
       } catch (error) {
-        // Token is invalid, remove it
-        localStorage.removeItem('auth_token');
-        
-        if (!isPublicRoute) {
-          router.push('/login');
-          return;
-        }
+        // Auth failed - user not authenticated or token invalid
+        // httpOnly cookie will handle cleanup automatically
         setIsAuthenticated(false);
+        // Redirect to login
+        router.push('/login');
       } finally {
         setIsLoading(false);
       }

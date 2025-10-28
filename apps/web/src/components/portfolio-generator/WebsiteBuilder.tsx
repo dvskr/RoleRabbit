@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Building2, GripVertical, Eye, Settings, Palette, Trash2, Plus, Edit, PlusCircle, Home, User, Briefcase, FileText, Award, Mail, Sparkles, X } from 'lucide-react';
-import { WebsiteConfig, Theme, Section } from '../../../types/portfolio';
+import { WebsiteConfig, Theme, Section } from '../../types/portfolio';
 import SectionEditor from './SectionEditor';
 import AIPromptPanel from './AIPromptPanel';
 

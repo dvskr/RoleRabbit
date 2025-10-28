@@ -13,12 +13,11 @@ class ApiService {
   }
 
   /**
-   * Get authentication token from storage
+   * Authentication token is now managed via httpOnly cookies
+   * No need to get/manage token in JavaScript
    */
   private getAuthToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('roleready_token');
-    }
+    // Token is in httpOnly cookie, automatically sent by browser
     return null;
   }
 
@@ -27,24 +26,42 @@ class ApiService {
    */
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    retryCount = 0
   ): Promise<T> {
     try {
-      // Get auth token and add to headers if exists
-      const token = this.getAuthToken();
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...options.headers,
       };
       
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // httpOnly cookie is automatically sent by browser
+      // No need to manually add Authorization header
 
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
         headers,
+        credentials: 'include', // Important: Include cookies in all requests
       });
+
+      // If unauthorized (401), try to refresh token
+      if (response.status === 401 && retryCount === 0 && endpoint !== '/api/auth/refresh') {
+        try {
+          // Attempt to refresh access token
+          const refreshResponse = await fetch(`${this.baseUrl}/api/auth/refresh`, {
+            method: 'POST',
+            credentials: 'include',
+          });
+
+          // If refresh successful, retry original request
+          if (refreshResponse.ok) {
+            return this.request<T>(endpoint, options, retryCount + 1);
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Token refresh failed, let it fall through to error handling
+        }
+      }
 
       if (!response.ok) {
         throw new Error(`API error: ${response.statusText}`);

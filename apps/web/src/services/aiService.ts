@@ -100,7 +100,7 @@ class AIService {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: this.provider?.model || 'gpt-4',
+        model: this.provider?.model || 'gpt-4o-mini',
         messages: [
           ...(request.systemPrompt ? [{ role: 'system', content: request.systemPrompt }] : []),
           { role: 'user', content: request.context ? `${request.context}\n\n${request.prompt}` : request.prompt }

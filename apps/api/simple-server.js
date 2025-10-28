@@ -47,6 +47,49 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Auth endpoints
+  if (path === '/api/auth/verify' && method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ user: null })); // Not authenticated in simple server
+    return;
+  }
+
+  if (path === '/api/auth/login' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      const { email, password } = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        user: { id: '1', name: 'Test User', email }
+      }));
+    });
+    return;
+  }
+
+  if (path === '/api/auth/register' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      const { name, email, password } = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        user: { id: '1', name, email }
+      }));
+    });
+    return;
+  }
+
+  if (path === '/api/auth/logout' && method === 'POST') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
   // User profile endpoint
   if (path === '/api/users/profile' && method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });

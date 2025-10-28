@@ -41,9 +41,7 @@ export default function AIAgents() {
     try {
       setIsLoading(true);
       const response = await fetch('http://localhost:3001/api/agents', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
-        },
+        credentials: 'include', // httpOnly cookie is sent automatically
       });
       if (response.ok) {
         const data = await response.json();
@@ -202,7 +200,7 @@ export default function AIAgents() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+          credentials: 'include', // httpOnly cookie is sent automatically
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -229,7 +227,7 @@ export default function AIAgents() {
       const response = await fetch(`http://localhost:3001/api/agents/${agentId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+          credentials: 'include', // httpOnly cookie is sent automatically
         },
       });
 
@@ -263,7 +261,7 @@ export default function AIAgents() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+          credentials: 'include', // httpOnly cookie is sent automatically
         },
       });
 
@@ -291,7 +289,7 @@ export default function AIAgents() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('roleready_token')}`,
+          credentials: 'include', // httpOnly cookie is sent automatically
         },
       });
 
