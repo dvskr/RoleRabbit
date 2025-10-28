@@ -1104,7 +1104,7 @@ export default function DashboardPage() {
 
           {/* Main Content */}
           <div className="flex-1 flex overflow-hidden relative">
-            <div className="absolute inset-0 h-full w-full overflow-hidden">
+            <div className="absolute inset-0 h-full w-full overflow-y-auto">
               {/* Render all tabs but hide inactive ones - mounted but hidden */}
               <div className={`absolute inset-0 h-full ${activeTab === 'dashboard' ? '' : 'hidden'}`}>
                 <Home 
@@ -1154,13 +1154,14 @@ export default function DashboardPage() {
                 <AIAgents />
               </div>
               {/* Editor is special and handles its own rendering */}
-              <div className={`absolute inset-0 h-full ${activeTab === 'editor' ? '' : 'hidden'}`}>
+              <div className={`absolute inset-0 h-full ${activeTab === 'editor' ? '' : 'hidden'} ${showRightPanel && activeTab === 'editor' ? 'right-80' : ''}`}>
                 {renderActiveComponent()}
               </div>
             </div>
             {/* AI Panel */}
-            {activeTab === 'editor' && (
-              <AIPanel
+            {activeTab === 'editor' && showRightPanel && (
+              <div className="absolute top-0 right-0 bottom-0 w-80 z-50">
+                <AIPanel
                 showRightPanel={showRightPanel}
                 setShowRightPanel={setShowRightPanel}
                 aiMode={aiMode}
@@ -1198,7 +1199,8 @@ export default function DashboardPage() {
                   setHistory(newHistory);
                   setHistoryIndex(newHistory.length - 1);
                 }}
-              />
+                />
+                </div>
             )}
           </div>
         </div>

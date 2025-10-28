@@ -552,7 +552,7 @@ export default function ResumeEditor({
           ? 'bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100'
           : 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50'
       }`} style={{ height: '100%', maxHeight: '100%' }}>
-        <div className={`w-full bg-white rounded-2xl shadow-2xl border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full overflow-hidden ${
+        <div className={`w-full bg-white rounded-2xl shadow-2xl border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full ${
           selectedTemplate?.colorScheme === 'blue'
             ? 'border-blue-200'
             : selectedTemplate?.colorScheme === 'green'
@@ -564,7 +564,7 @@ export default function ResumeEditor({
           
           {/* Name Input */}
           <input 
-            className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 w-full border-none outline-none focus:ring-4 focus:ring-blue-300/50 rounded-xl px-3 py-2 mb-4 transition-all break-words overflow-wrap-anywhere" 
+            className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 w-full border-none outline-none focus:ring-4 focus:ring-blue-300/50 rounded-xl px-3 py-2 mb-4 break-words overflow-wrap-anywhere" 
             value={resumeData.name || ''} 
             onChange={(e) => setResumeData({...resumeData, name: e.target.value})}
             placeholder="Your Name" 
@@ -574,14 +574,14 @@ export default function ResumeEditor({
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 text-sm mb-6 lg:mb-10">
             {['email', 'phone', 'location', 'linkedin', 'github', 'website'].map((field, idx) => (
               <div key={field} className="flex items-center gap-2 group">
-                {idx === 0 && <Mail size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
-                {idx === 1 && <Phone size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
-                {idx === 2 && <MapPin size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
-                {idx === 3 && <Linkedin size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
-                {idx === 4 && <Github size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
-                {idx === 5 && <Globe size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />}
+                {idx === 0 && <Mail size={16} className="text-gray-400" />}
+                {idx === 1 && <Phone size={16} className="text-gray-400" />}
+                {idx === 2 && <MapPin size={16} className="text-gray-400" />}
+                {idx === 3 && <Linkedin size={16} className="text-gray-400" />}
+                {idx === 4 && <Github size={16} className="text-gray-400" />}
+                {idx === 5 && <Globe size={16} className="text-gray-400" />}
                 <input 
-                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
+                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
                   value={resumeData[field] || ''} 
                   onChange={(e) => setResumeData({...resumeData, [field]: e.target.value})}
                   placeholder={field.charAt(0).toUpperCase() + field.slice(1)} 
@@ -594,7 +594,7 @@ export default function ResumeEditor({
               <div key={field.id} className="flex items-center gap-2 group">
                 {getFieldIcon(field.icon || 'default')}
                 <input 
-                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 transition-all min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
+                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
                   value={field.value} 
                   onChange={(e) => {
                     const updatedFields = customFields.map(f => 
@@ -609,10 +609,10 @@ export default function ResumeEditor({
             
             {/* Add Custom Field Button */}
             <div className="flex items-center gap-2 group">
-              <Plus size={16} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+              <Plus size={16} className="text-gray-400" />
               <button
                 onClick={() => setShowAddFieldModal(true)}
-                className="flex-1 border-2 border-dashed border-gray-300 rounded-lg px-2 sm:px-3 py-2 hover:border-blue-400 hover:bg-blue-50 transition-all text-gray-600 hover:text-blue-600 text-left min-w-0 max-w-full"
+                className="flex-1 border-2 border-dashed border-gray-300 rounded-lg px-2 sm:px-3 py-2 hover:border-blue-400 hover:bg-blue-50 text-gray-600 hover:text-blue-600 text-left min-w-0 max-w-full"
               >
                 <span className="text-xs sm:text-sm font-medium break-words overflow-wrap-anywhere">Add Field</span>
               </button>
