@@ -125,9 +125,9 @@ export default function AITab({ content, setContent, title, setTitle, setWordCou
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* AI Assistant Banner */}
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-2.5">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-purple-100 rounded-lg">
             <Bot size={20} className="text-purple-600" />
@@ -142,7 +142,7 @@ export default function AITab({ content, setContent, title, setTitle, setWordCou
       </div>
 
       {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left Column - AI Context Form */}
         <div className="space-y-6">
           <AIContextForm

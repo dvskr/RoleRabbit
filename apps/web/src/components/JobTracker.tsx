@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Briefcase } from 'lucide-react';
+import EmptyState from './EmptyState';
 import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
 import { useJobsApi } from '../hooks/useJobsApi';
 import { Job } from '../types/job';
@@ -35,6 +36,7 @@ export default function JobTracker() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Show loading state when fetching from API
   if (isLoading) {
@@ -136,8 +138,6 @@ export default function JobTracker() {
     input.click();
   };
 
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-
   const handleShowSettings = () => {
     setShowSettingsModal(true);
   };
@@ -156,7 +156,7 @@ export default function JobTracker() {
       
       case 'grid':
     return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {jobs.map(job => (
               <JobCard
                 key={job.id}
@@ -175,7 +175,7 @@ export default function JobTracker() {
 
       case 'table':
     return (
-          <div className="p-6">
+          <div className="p-4">
             <EditableJobTable
               jobs={jobs}
               onEdit={handleEditJob}
@@ -189,7 +189,7 @@ export default function JobTracker() {
       case 'list':
       default:
     return (
-          <div className="space-y-4 p-6">
+          <div className="space-y-3 p-4">
             {jobs.map(job => (
               <JobCard
                 key={job.id}
@@ -251,14 +251,15 @@ export default function JobTracker() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
-              <p className="text-gray-500 mb-4">Get started by adding your first job application</p>
-              <button
-                onClick={handleAddJob}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Add Your First Job
-              </button>
+              <EmptyState
+                icon={Briefcase}
+                title="No jobs yet"
+                description="Start tracking your job applications to never miss an opportunity. Add jobs as you apply and watch your pipeline grow."
+                actionLabel="Add Your First Job"
+                onAction={handleAddJob}
+                secondaryActionLabel="Import Jobs"
+                onSecondaryAction={() => alert('Import feature coming soon!')}
+              />
             </div>
           </div>
         ) : (

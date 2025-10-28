@@ -13,6 +13,16 @@ class ApiService {
   }
 
   /**
+   * Get authentication token from storage
+   */
+  private getAuthToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('roleready_token');
+    }
+    return null;
+  }
+
+  /**
    * Generic fetch wrapper with error handling
    */
   private async request<T>(
@@ -20,12 +30,20 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     try {
+      // Get auth token and add to headers if exists
+      const token = this.getAuthToken();
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -244,6 +262,59 @@ class ApiService {
   // ===== EMAIL ENDPOINTS =====
 
   /**
+   * Get all emails
+   */
+  async getEmails(jobId?: string): Promise<any> {
+    const url = jobId ? `/api/emails?jobId=${jobId}` : '/api/emails';
+    return this.request(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get a specific email
+   */
+  async getEmail(id: string): Promise<any> {
+    return this.request(`/api/emails/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Save/create an email
+   */
+  async saveEmail(emailData: any): Promise<any> {
+    return this.request('/api/emails', {
+      method: 'POST',
+      body: JSON.stringify(emailData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update an email
+   */
+  async updateEmail(id: string, emailData: any): Promise<any> {
+    return this.request(`/api/emails/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(emailData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete an email
+   */
+  async deleteEmail(id: string): Promise<any> {
+    return this.request(`/api/emails/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
    * Send email
    */
   async sendEmail(emailData: any): Promise<any> {
@@ -260,6 +331,115 @@ class ApiService {
   async getCampaigns(): Promise<any> {
     return this.request('/api/email/campaigns', {
       method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  // ===== COVER LETTER ENDPOINTS =====
+
+  /**
+   * Get all cover letters
+   */
+  async getCoverLetters(jobId?: string): Promise<any> {
+    const url = jobId ? `/api/cover-letters?jobId=${jobId}` : '/api/cover-letters';
+    return this.request(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get a specific cover letter
+   */
+  async getCoverLetter(id: string): Promise<any> {
+    return this.request(`/api/cover-letters/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Save/create a cover letter
+   */
+  async saveCoverLetter(coverLetterData: any): Promise<any> {
+    return this.request('/api/cover-letters', {
+      method: 'POST',
+      body: JSON.stringify(coverLetterData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update a cover letter
+   */
+  async updateCoverLetter(id: string, coverLetterData: any): Promise<any> {
+    return this.request(`/api/cover-letters/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(coverLetterData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete a cover letter
+   */
+  async deleteCoverLetter(id: string): Promise<any> {
+    return this.request(`/api/cover-letters/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  // ===== PORTFOLIO ENDPOINTS =====
+
+  /**
+   * Get all portfolios
+   */
+  async getPortfolios(): Promise<any> {
+    return this.request('/api/portfolios', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get a specific portfolio
+   */
+  async getPortfolio(id: string): Promise<any> {
+    return this.request(`/api/portfolios/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Save/create a portfolio
+   */
+  async savePortfolio(portfolioData: any): Promise<any> {
+    return this.request('/api/portfolios', {
+      method: 'POST',
+      body: JSON.stringify(portfolioData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update a portfolio
+   */
+  async updatePortfolio(id: string, portfolioData: any): Promise<any> {
+    return this.request(`/api/portfolios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(portfolioData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete a portfolio
+   */
+  async deletePortfolio(id: string): Promise<any> {
+    return this.request(`/api/portfolios/${id}`, {
+      method: 'DELETE',
       credentials: 'include',
     });
   }
@@ -285,6 +465,85 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ resume, jobDescription }),
       credentials: 'include',
+    });
+  }
+
+  // ===== AI AGENTS ENDPOINTS =====
+
+  /**
+   * Get all AI agents
+   */
+  async getAgents(): Promise<any> {
+    return this.request('/api/agents');
+  }
+
+  /**
+   * Get agent stats
+   */
+  async getAgentStats(): Promise<any> {
+    return this.request('/api/agents/stats');
+  }
+
+  /**
+   * Get agent by ID
+   */
+  async getAgent(agentId: string): Promise<any> {
+    return this.request(`/api/agents/${agentId}`);
+  }
+
+  /**
+   * Create a new AI agent
+   */
+  async createAgent(agentData: any): Promise<any> {
+    return this.request('/api/agents', {
+      method: 'POST',
+      body: JSON.stringify(agentData),
+    });
+  }
+
+  /**
+   * Update an AI agent
+   */
+  async updateAgent(agentId: string, updates: any): Promise<any> {
+    return this.request(`/api/agents/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  /**
+   * Delete an AI agent
+   */
+  async deleteAgent(agentId: string): Promise<any> {
+    return this.request(`/api/agents/${agentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Get agent tasks
+   */
+  async getAgentTasks(agentId: string): Promise<any> {
+    return this.request(`/api/agents/${agentId}/tasks`);
+  }
+
+  /**
+   * Create an agent task
+   */
+  async createAgentTask(agentId: string, taskData: any): Promise<any> {
+    return this.request(`/api/agents/${agentId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify(taskData),
+    });
+  }
+
+  /**
+   * Update an agent task
+   */
+  async updateAgentTask(taskId: string, updates: any): Promise<any> {
+    return this.request(`/api/tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
     });
   }
 }

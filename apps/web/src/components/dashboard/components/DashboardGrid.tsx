@@ -43,12 +43,12 @@ export function DashboardGrid({
   onNavigateToTab
 }: DashboardGridProps) {
   return (
-    <div className="h-full p-4">
+    <div className="h-full p-3">
       <div className="h-full max-w-7xl mx-auto">
         {/* Complete Dashboard Layout with All Components */}
-        <div className="h-full flex flex-col gap-4">
+        <div className="h-full flex flex-col gap-3">
           {/* Top Row - Activity Feed, Smart Todos, and Intelligent Alerts */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-[400px]">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-3 min-h-[400px]">
             {/* Activity Feed - Takes 2 columns */}
             {config.showActivityFeed && widgets.find(w => w.id === 'activity-feed')?.isVisible !== false && (
               <div className="lg:col-span-2 min-h-0" data-tour="activity-feed">
@@ -96,7 +96,7 @@ export function DashboardGrid({
           </div>
 
           {/* Middle Row - Progress Metrics and Quick Actions */}
-          <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-2 gap-3">
             {/* Progress Metrics */}
             {widgets.find(w => w.id === 'progress-metrics')?.isVisible !== false && (
               <div>
@@ -125,7 +125,7 @@ export function DashboardGrid({
 
           {/* Bottom Row - Premium Features */}
           {widgets.find(w => w.id === 'premium-features')?.isVisible !== false && (
-            <div className="flex-shrink-0 grid grid-cols-1 gap-4">
+            <div className="flex-shrink-0 grid grid-cols-1 gap-3">
               {/* RoleReady Premium Features */}
               <div>
                 <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-sm border border-purple-200 hover:shadow-md transition-shadow duration-200 h-[400px] overflow-hidden">

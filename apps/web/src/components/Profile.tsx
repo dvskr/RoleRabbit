@@ -337,8 +337,8 @@ export default function Profile() {
 
         {/* Enhanced Main Content */}
         <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="p-8">
-            <div className="max-w-5xl mx-auto">
+          <div className="p-4">
+            <div className="max-w-6xl mx-auto">
               {renderTabContent()}
                       </div>
           </div>
