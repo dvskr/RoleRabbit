@@ -967,6 +967,8 @@ export default function DashboardPage() {
             onNavigateToTemplates={() => {
               handleTabChange('templates');
             }}
+            isSidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         );
       case 'templates':
@@ -1038,6 +1040,7 @@ export default function DashboardPage() {
               setPreviousSidebarState={setPreviousSidebarState}
               setSidebarCollapsed={setSidebarCollapsed}
               setShowRightPanel={setShowRightPanel}
+              onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             />
           ) : (
             <PageHeader
@@ -1052,7 +1055,7 @@ export default function DashboardPage() {
                 activeTab === 'profile' ? 'Profile' :
                 activeTab === 'agents' ? 'AI Agents' :
                  activeTab === 'learning' ? 'Learning Hub' :
-                 activeTab === 'dashboard' ? 'Dashboard' : undefined
+                 activeTab === 'dashboard' ? 'Dashboard' : 'RoleReady'
               }
               subtitle={
                 activeTab === 'dashboard' ? 'Overview of your job search journey' :

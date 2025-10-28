@@ -50,6 +50,8 @@ interface ResumeEditorProps {
   onRemoveTemplate?: (templateId: string) => void;
   onAddTemplates?: (templateIds: string[]) => void;
   onNavigateToTemplates?: () => void;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export default function ResumeEditor({
@@ -96,8 +98,11 @@ export default function ResumeEditor({
   addedTemplates = [],
   onRemoveTemplate,
   onAddTemplates,
-  onNavigateToTemplates
+  onNavigateToTemplates,
+  isSidebarCollapsed = false,
+  onToggleSidebar
 }: ResumeEditorProps) {
+
   // Get the selected template data
   const selectedTemplate = selectedTemplateId 
     ? resumeTemplates.find(t => t.id === selectedTemplateId) 
@@ -182,12 +187,34 @@ export default function ResumeEditor({
     }
   };
 
+  // Calculate sidebar width and padding based on collapse state
+  const sidebarWidth = isSidebarCollapsed ? '48px' : '288px';
+  const sidebarPadding = isSidebarCollapsed ? '8px' : '24px';
+  const sidebarClasses = isSidebarCollapsed 
+    ? 'bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto flex-shrink-0'
+    : 'bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto flex-shrink-0';
+
   return (
     <div className="flex flex-1 h-full overflow-hidden" style={{ height: '100%', maxHeight: '100%' }}>
       {/* Left Sidebar - Section Controls */}
-      <div className="w-64 lg:w-72 bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto p-4 lg:p-6 flex-shrink-0">
-        {/* File Name Configuration */}
-        <div className="mb-6">
+      <div className={sidebarClasses} style={{ width: sidebarWidth, padding: sidebarPadding }}>
+        {/* Collapsed View - Just Icons */}
+        {isSidebarCollapsed ? (
+          <div className="flex flex-col gap-2">
+            <button className="p-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all" title="File Name">
+              <FileText size={16} className="text-blue-600 mx-auto" />
+            </button>
+            <button className="p-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all" title="Sections">
+              <Layers size={16} className="text-purple-600 mx-auto" />
+            </button>
+            <button className="p-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all" title="Formatting">
+              <Palette size={16} className="text-purple-600 mx-auto" />
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* File Name Configuration */}
+            <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
               <FileText size={16} className="text-blue-600" />
@@ -549,7 +576,9 @@ export default function ResumeEditor({
                 Reset to Default
               </button>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
       {/* Main Resume Editing Area */}
       <div className={`flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 will-change-scroll ${
