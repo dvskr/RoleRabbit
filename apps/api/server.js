@@ -7,8 +7,21 @@ const fastify = require('fastify')({
 // Load environment variables
 require('dotenv').config();
 
+// Custom logger
+const logger = require('./utils/logger');
+
 // Security utilities
 const { sanitizeInput, getRateLimitConfig } = require('./utils/security');
+
+// Validation utilities
+const { 
+  validateEmail, 
+  validatePassword, 
+  validateRequired, 
+  validateLength,
+  validateResumeData,
+  validateJobApplication 
+} = require('./utils/validation');
 
 // Database connection
 const { connectDB, disconnectDB } = require('./utils/db');
@@ -79,6 +92,30 @@ const {
 // File Upload utilities
 const { uploadSingle, uploadMultiple, deleteFile, getFilePath, fileExists } = require('./utils/fileUpload');
 
+// Email service
+const { sendEmail, sendWelcomeEmail, sendPasswordResetEmail, sendJobReminderEmail } = require('./utils/emailService');
+
+// Resume export utilities
+const { exportResume } = require('./utils/resumeExport');
+
+// AI Agents utilities
+const { 
+  executeAgentTask, 
+  AGENT_TYPES, 
+  getAgentTaskHistory, 
+  getAgentStats 
+} = require('./utils/agentExecutor');
+
+// Job Analytics utilities
+const {
+  getJobAnalytics,
+  getApplicationTrends,
+  getSuccessMetrics
+} = require('./utils/jobAnalytics');
+
+// WebSocket Server
+const WebSocketServer = require('./utils/websocketServer');
+
 // Analytics utilities
 const { 
   getAnalyticsByUserId,
@@ -114,6 +151,17 @@ const {
   updateAgentTask,
   getAgentStats
 } = require('./utils/aiAgents');
+
+// Register compression
+fastify.register(require('@fastify/compress'), {
+  global: true,
+  encodings: ['gzip', 'deflate']
+});
+
+// Register security headers (helmet)
+fastify.register(require('@fastify/helmet'), {
+  contentSecurityPolicy: false // Can be configured per app needs
+});
 
 // Register CORS
 fastify.register(require('@fastify/cors'), {
@@ -197,14 +245,48 @@ fastify.post('/api/auth/register', async (request, reply) => {
     const { email, password, name } = request.body;
     
     // Validate required fields
-    if (!email || !password || !name) {
+    const requiredValidation = validateRequired(['email', 'password', 'name'], request.body);
+    if (!requiredValidation.isValid) {
       return reply.status(400).send({
         success: false,
-        error: 'Email, password, and name are required'
+        error: `Missing required fields: ${requiredValidation.missing.join(', ')}`
+      });
+    }
+    
+    // Validate email format
+    if (!validateEmail(email)) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Invalid email format'
+      });
+    }
+    
+    // Validate password strength
+    if (!validatePassword(password)) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Password must be at least 8 characters with uppercase, lowercase, and number'
+      });
+    }
+    
+    // Validate name length
+    const nameValidation = validateLength('Name', name, 1, 100);
+    if (!nameValidation.isValid) {
+      return reply.status(400).send({
+        success: false,
+        error: nameValidation.message
       });
     }
     
     const user = await registerUser(email, password, name);
+    
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(user);
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+      // Don't fail registration if email fails
+    }
     
     // Generate JWT access token (short-lived: 15 minutes)
     const accessToken = fastify.jwt.sign({ 
@@ -491,11 +573,23 @@ fastify.post('/api/auth/forgot-password', async (request, reply) => {
     // Create password reset token
     const resetToken = await createPasswordResetToken(user.id, 1); // 1 hour expiration
     
-    // TODO: Send email with reset link
-    // For now, return the token in development mode
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    // Send password reset email
+    try {
+      await sendPasswordResetEmail(email, resetToken);
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      // In production, don't reveal this error
+      return reply.send({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent.'
+      });
+    }
     
-    console.log('Password reset link:', resetLink); // Remove in production
+    // For development mode only - log the reset link
+    if (process.env.NODE_ENV !== 'production') {
+      const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+      console.log('Password reset link:', resetLink);
+    }
     
     reply.send({
       success: true,
@@ -599,6 +693,16 @@ fastify.post('/api/resumes', {
     const userId = request.user.userId;
     const resumeData = request.body;
     
+    // Validate resume data
+    const validation = validateResumeData(resumeData);
+    if (!validation.isValid) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Invalid resume data',
+        details: validation.errors
+      });
+    }
+    
     const resume = await createResume(userId, resumeData);
     return { 
       success: true, 
@@ -635,6 +739,53 @@ fastify.get('/api/resumes/:id', {
     
     return { resume };
   } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
+});
+
+// Export resume endpoint
+fastify.post('/api/resumes/:id/export', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const { format = 'pdf' } = request.body;
+    
+    // Get resume
+    const resume = await getResumeById(id);
+    
+    if (!resume) {
+      reply.status(404).send({ error: 'Resume not found' });
+      return;
+    }
+    
+    // Verify resume belongs to user
+    if (resume.userId !== request.user.userId) {
+      reply.status(403).send({ error: 'Forbidden' });
+      return;
+    }
+    
+    // Generate export
+    const fileBuffer = await exportResume(resume.data, format);
+    
+    // Set response headers
+    const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const extension = format === 'pdf' ? 'pdf' : 'docx';
+    const filename = `${resume.name || 'resume'}.${extension}`;
+    
+    reply
+      .header('Content-Type', contentType)
+      .header('Content-Disposition', `attachment; filename="${filename}"`)
+      .send(fileBuffer);
+      
+  } catch (error) {
+    console.error('Export error:', error);
     reply.status(500).send({ error: error.message });
   }
 });
@@ -735,6 +886,16 @@ fastify.post('/api/jobs', {
     const userId = request.user.userId;
     const jobData = request.body;
     
+    // Validate job application data
+    const validation = validateJobApplication(jobData);
+    if (!validation.isValid) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Invalid job application data',
+        details: validation.errors
+      });
+    }
+    
     const job = await createJob(userId, jobData);
     return { 
       success: true, 
@@ -770,6 +931,62 @@ fastify.get('/api/jobs/:id', {
     }
     
     return { job };
+  } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
+});
+
+// Job Analytics endpoint
+fastify.post('/api/jobs/:id/analytics', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const { dateRange = 30 } = request.body;
+    
+    const job = await getJobById(id);
+    
+    if (!job || job.userId !== request.user.userId) {
+      return reply.status(403).send({ error: 'Job not found or access denied' });
+    }
+    
+    // Get analytics for this job
+    const analytics = await getJobAnalytics(request.user.userId, parseInt(dateRange));
+    
+    reply.send({
+      success: true,
+      analytics
+    });
+  } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
+});
+
+// General job analytics endpoint
+fastify.get('/api/jobs/analytics/summary', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const { days = 30 } = request.query;
+    
+    const metrics = await getSuccessMetrics(request.user.userId);
+    
+    reply.send({
+      success: true,
+      metrics
+    });
   } catch (error) {
     reply.status(500).send({ error: error.message });
   }
@@ -1968,6 +2185,67 @@ fastify.post('/api/agents/:id/execute', {
   }
 });
 
+// AI Agent Task Execution endpoints
+fastify.post('/api/agents/:id/execute', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const { taskType, parameters } = request.body;
+    
+    const agent = await prisma.agent.findUnique({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!agent || agent.userId !== request.user.userId) {
+      return reply.status(403).send({ error: 'Agent not found or access denied' });
+    }
+    
+    const result = await executeAgentTask(id, taskType, request.user.userId, parameters);
+    
+    reply.send({
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error('Agent execution error:', error);
+    reply.status(500).send({ error: error.message });
+  }
+});
+
+fastify.get('/api/agents/:id/tasks', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, async (request, reply) => {
+  try {
+    const { id } = request.params;
+    
+    const agent = await prisma.agent.findUnique({
+      where: { id: parseInt(id) }
+    });
+    
+    if (!agent || agent.userId !== request.user.userId) {
+      return reply.status(403).send({ error: 'Agent not found or access denied' });
+    }
+    
+    const tasks = await getAgentTaskHistory(id, parseInt(request.query.limit || 50));
+    reply.send({ success: true, tasks });
+  } catch (error) {
+    reply.status(500).send({ error: error.message });
+  }
+});
+
 // Run all active agents for user
 fastify.post('/api/agents/run-all', {
   preHandler: async (request, reply) => {
@@ -1987,18 +2265,9 @@ fastify.post('/api/agents/run-all', {
   }
 });
 
-// Error handler
-fastify.setErrorHandler((error, request, reply) => {
-  fastify.log.error(error);
-  reply.status(500).send({
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'Internal server error',
-      timestamp: new Date().toISOString()
-    }
-  });
-});
+// Global error handler
+const { globalErrorHandler } = require('./utils/errorHandler');
+fastify.setErrorHandler(globalErrorHandler);
 
 // File upload endpoints
 fastify.post('/api/files/upload', {

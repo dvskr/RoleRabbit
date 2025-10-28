@@ -271,13 +271,15 @@ model AIAgent {
 
 model AIAgentTask {
   id          String   @id @default(cuid())
-  userId      String
   agentId     String
-  type        String   // job_discovery, resume_optimization, interview_prep, etc.
+  userId      String
+  taskType    String   // job_discovery, resume_optimization, interview_prep, etc.
   status      String   // pending, in_progress, completed, failed
-  description String
+  parameters  String?  // JSON parameters
+  description String?
   result      String?  // JSON result
   error       String?
+  startedAt   DateTime?
   createdAt   DateTime @default(now())
   completedAt DateTime?
 
@@ -287,5 +289,52 @@ model AIAgentTask {
   @@index([agentId])
   @@index([userId])
   @@index([status])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // USER_LOGIN, RESUME_CREATE, etc.
+  resource    String?  // resume, job, email
+  resourceId  String?
+  details     String?  // JSON details
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model JobDescription {
+  id          String   @id @default(cuid())
+  userId      String
+  jobId       String
+  text        String
+  company     String?
+  position    String?
+  source      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("job_descriptions")
+  @@index([userId])
+  @@index([jobId])
+}
+
+model AnalyticsSnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // daily, weekly, monthly
+  period      String   // 2024-01-01
+  data        String   // JSON snapshot data
+  createdAt   DateTime @default(now())
+
+  @@map("analytics_snapshots")
+  @@index([userId])
+  @@index([type])
+  @@index([period])
 }
 
