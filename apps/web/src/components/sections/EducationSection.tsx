@@ -60,7 +60,7 @@ export default function EducationSection({
   };
 
   return (
-    <div className="mb-8 p-1 sm:p-2 lg:p-4">
+    <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
       <div className="bg-white/95 border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">

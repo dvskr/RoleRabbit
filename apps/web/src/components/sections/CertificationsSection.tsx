@@ -78,8 +78,8 @@ export default function CertificationsSection({
   };
 
   return (
-    <div className="mb-8 p-1 sm:p-2 lg:p-4">
-      <div className="bg-white/80 backdrop-blur-lg border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl">
+    <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
+      <div className="bg-white/95 border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -122,10 +122,10 @@ export default function CertificationsSection({
       )}
 
       {resumeData.certifications.map((cert) => (
-        <div key={cert.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10  duration-300 bg-white max-w-full overflow-hidden">
+        <div key={cert.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 bg-white">
           <div className="flex items-start gap-3 mb-4">
-            <GripVertical size={18} className="text-gray-400 cursor-move mt-2" />
-            <div className="flex-1 space-y-3">
+            <GripVertical size={18} className="text-gray-400 cursor-move mt-2 flex-shrink-0" />
+            <div className="flex-1 space-y-3 min-w-0">
               <input
                 className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
                 value={cert.name}
