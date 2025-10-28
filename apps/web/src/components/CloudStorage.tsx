@@ -197,37 +197,37 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   return (
     <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Tab Navigation */}
-      <div className="flex-shrink-0 border-b border-gray-200 px-4">
-        <div className="flex space-x-4">
+      <div className="flex-shrink-0 border-b border-gray-200 px-4 py-1">
+        <div className="flex gap-1">
           <button
             onClick={() => setActiveTab('files')}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors ${
               activeTab === 'files'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            <Folder size={18} />
-            <span className="font-medium">My Files</span>
-            <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs font-medium">
+            <Folder size={14} />
+            <span className="font-medium text-sm">My Files</span>
+            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium">
               {files.length}
             </span>
           </button>
           <button
             onClick={() => setActiveTab('credentials')}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors ${
               activeTab === 'credentials'
                 ? 'border-blue-600 text-blue-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            <GraduationCap size={18} />
-            <span className="font-medium">Credentials</span>
-            <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs font-medium">
+            <GraduationCap size={14} />
+            <span className="font-medium text-sm">Credentials</span>
+            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium">
               {credentials.length}
             </span>
             {credentialReminders.length > 0 && (
-              <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+              <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px] font-medium">
                 {credentialReminders.length} expiring
               </span>
             )}

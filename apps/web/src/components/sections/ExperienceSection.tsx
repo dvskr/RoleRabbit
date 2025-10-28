@@ -101,7 +101,7 @@ export default function ExperienceSection({
 
   return (
     <div className="mb-8 p-1 sm:p-2 lg:p-4">
-      <div className="bg-white/80 backdrop-blur-lg border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl  duration-300">
+        <div className="bg-white/95 border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl">
         <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <GripVertical size={18} className="text-gray-400 cursor-move" />
@@ -144,39 +144,39 @@ export default function ExperienceSection({
       )}
 
       {resumeData.experience.map((exp) => (
-        <div key={exp.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10  duration-300 bg-white max-w-full overflow-hidden">
+        <div key={exp.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 bg-white">
           <div className="flex items-start gap-3 mb-4">
-            <GripVertical size={18} className="text-gray-400 cursor-move mt-2" />
-            <div className="flex-1 space-y-3">
+            <GripVertical size={18} className="text-gray-400 cursor-move mt-2 flex-shrink-0" />
+            <div className="flex-1 space-y-3 min-w-0">
               <input
-                className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="font-bold text-xs text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 w-full"
                 value={exp.company}
                 onChange={(e) => updateExperience(exp.id, { company: e.target.value })}
                 placeholder="Company Name"
               />
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-sm text-gray-600 min-w-0">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
                 <input 
-                  className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2  font-medium w-full sm:w-auto min-w-0 max-w-full break-words overflow-wrap-anywhere" 
+                  className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 text-xs font-medium flex-1 min-w-0"
                   value={exp.period}
                   onChange={(e) => updateExperience(exp.id, { period: e.target.value })}
                   placeholder="Start Date"
                 />
-                <span className="font-bold text-gray-400 hidden sm:inline flex-shrink-0">→</span>
+                <span className="font-bold text-gray-400 flex-shrink-0">→</span>
                 <input 
-                  className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2  font-medium w-full sm:w-auto min-w-0 max-w-full break-words overflow-wrap-anywhere" 
+                  className="border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 text-xs font-medium flex-1 min-w-0"
                   value={exp.endPeriod}
                   onChange={(e) => updateExperience(exp.id, { endPeriod: e.target.value })}
                   placeholder="End Date"
                 />
               </div>
               <input
-                className="text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 w-full"
                 value={exp.location}
                 onChange={(e) => updateExperience(exp.id, { location: e.target.value })}
                 placeholder="Location"
               />
               <input
-                className="font-semibold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="font-semibold text-xs text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 w-full"
                 value={exp.position}
                 onChange={(e) => updateExperience(exp.id, { position: e.target.value })}
                 placeholder="Job Title"
@@ -186,7 +186,7 @@ export default function ExperienceSection({
               {(exp.customFields || []).map((field) => (
                 <div key={field.id} className="flex items-center gap-2">
                   <input
-                    className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                    className="flex-1 text-xs text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 min-w-0"
                     value={field.value || ''}
                     onChange={(e) => updateCustomFieldInExperience(exp.id, field.id, e.target.value)}
                     placeholder={field.name}
@@ -242,16 +242,16 @@ export default function ExperienceSection({
             </div>
             {exp.bullets.map((bullet, bulletIndex) => (
               <div key={bulletIndex} className="flex items-start gap-2">
-                <span className="text-gray-400 mt-1">•</span>
+                <span className="text-gray-400 mt-1 flex-shrink-0 text-xs">•</span>
                 <input
-                  className="flex-1 text-sm text-gray-700 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                  className="flex-1 text-xs text-gray-700 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 py-1.5 min-w-0"
                   value={bullet}
                   onChange={(e) => updateBullet(exp.id, bulletIndex, e.target.value)}
                   placeholder="Describe your responsibility..."
                 />
                 <button
                   onClick={() => deleteBullet(exp.id, bulletIndex)}
-                  className="p-1 hover:bg-red-100 rounded-lg transition-colors"
+                  className="p-1 hover:bg-red-100 rounded-lg transition-colors flex-shrink-0"
                   title="Delete bullet"
                 >
                   <X size={14} className="text-red-600" />
@@ -274,16 +274,28 @@ export default function ExperienceSection({
             </div>
             <div className="flex flex-wrap gap-2">
               {exp.environment.map((tech, techIndex) => (
-                <div key={techIndex} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-lg">
+                <div key={techIndex} className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-lg" style={{ width: 'fit-content' }}>
                   <input
-                    className="text-xs text-gray-700 bg-transparent border-none outline-none min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                    type="text"
+                    className="text-xs text-gray-700 bg-transparent border-none outline-none"
                     value={tech}
-                    onChange={(e) => updateEnvironment(exp.id, techIndex, e.target.value)}
+                    onChange={(e) => {
+                      updateEnvironment(exp.id, techIndex, e.target.value);
+                      // Auto-resize the input
+                      const input = e.target;
+                      input.style.width = `${Math.max(e.target.value.length * 7 + 16, 60)}px`;
+                    }}
                     placeholder="Technology"
+                    autoComplete="off"
+                    style={{ 
+                      width: `${Math.max(tech.length * 7 + 16, 60)}px`,
+                      maxWidth: '300px',
+                      minWidth: '60px'
+                    }}
                   />
                   <button
                     onClick={() => deleteEnvironment(exp.id, techIndex)}
-                    className="hover:text-red-600 transition-colors"
+                    className="hover:text-red-600 transition-colors flex-shrink-0"
                   >
                     <X size={12} />
                   </button>

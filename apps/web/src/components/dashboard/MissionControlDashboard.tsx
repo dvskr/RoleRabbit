@@ -197,9 +197,9 @@ export default function MissionControlDashboard({
   return (
     <div className="w-full h-full bg-gray-50 flex flex-col overflow-hidden">
       {/* Stats and Actions Bar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3" data-tour="mission-control-header">
+      <div className="bg-white border-b border-gray-200 px-4 py-2" data-tour="mission-control-header">
         {/* Compact Stats - More Efficient Layout */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-tour="quick-stats">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5" data-tour="quick-stats">
           {[
             {
               label: 'Applications',
@@ -236,15 +236,15 @@ export default function MissionControlDashboard({
           ].map((stat, index) => (
             <div
               key={index}
-              className={`${stat.bgColor} ${stat.borderColor} border rounded-lg p-2 hover:shadow-sm transition-shadow`}
+              className={`${stat.bgColor} ${stat.borderColor} border rounded-lg p-1.5 hover:shadow-sm transition-shadow`}
             >
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <div className={`p-1 rounded-md ${stat.bgColor}`}>
-                  <stat.icon size={14} className={stat.color} />
+                  <stat.icon size={12} className={stat.color} />
                 </div>
                 <div>
-                  <div className={`text-base font-bold ${stat.color}`}>{stat.value}</div>
-                  <div className="text-[10px] text-gray-600">{stat.label}</div>
+                  <div className={`text-sm font-bold ${stat.color}`}>{stat.value}</div>
+                  <div className="text-[9px] text-gray-600">{stat.label}</div>
                 </div>
               </div>
             </div>
@@ -252,40 +252,40 @@ export default function MissionControlDashboard({
         </div>
 
         {/* Compact Action Bar */}
-        <div className="flex items-center gap-1.5 mt-2.5 pt-2.5 border-t border-gray-200">
+        <div className="flex items-center gap-1 mt-1.5 pt-1.5 border-t border-gray-200">
           <button
             onClick={() => setShowCustomizer(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs"
+            className="flex items-center gap-0.5 px-2 py-0.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-[10px]"
           >
-            <Settings size={12} />
+            <Settings size={11} />
             Customize
           </button>
           <button
             onClick={() => setShowDataExport(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-xs"
+            className="flex items-center gap-0.5 px-2 py-0.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-[10px]"
           >
-            <Download size={12} />
+            <Download size={11} />
             Export
           </button>
           <button
             onClick={() => onOpenApplicationAnalytics ? onOpenApplicationAnalytics() : setShowAnalytics(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-xs"
+            className="flex items-center gap-0.5 px-2 py-0.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-[10px]"
           >
-            <BarChart3 size={12} />
+            <BarChart3 size={11} />
             Analytics
           </button>
           <button
             onClick={() => setShowGoalSetting(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-xs"
+            className="flex items-center gap-0.5 px-2 py-0.5 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-[10px]"
           >
-            <Target size={12} />
+            <Target size={11} />
             Goals
           </button>
           <button
             onClick={() => setShowThemeCustomizer(true)}
-            className="flex items-center gap-1 px-2.5 py-1 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors text-xs"
+            className="flex items-center gap-0.5 px-2 py-0.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors text-[10px]"
           >
-            <Palette size={12} />
+            <Palette size={11} />
             Themes
           </button>
         </div>
