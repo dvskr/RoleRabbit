@@ -1,292 +1,467 @@
 /**
- * Agent Executor - Runs AI agents and executes their tasks
+ * AI Agents Execution System
+ * Handles autonomous execution of AI agents for job search automation
  */
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 /**
- * Execute an agent based on its type
+ * Agent Types Enum
  */
-async function executeAgent(agent, userId) {
-  try {
-    console.log(`Executing agent: ${agent.name} (${agent.type})`);
+const AGENT_TYPES = {
+  JOB_DISCOVERY: 'job_discovery',
+  RESUME_OPTIMIZATION: 'resume_optimization',
+  APPLICATION_TRACKING: 'application_tracking',
+  INTERVIEW_PREP: 'interview_prep',
+  NETWORK_DISCOVERY: 'network_discovery',
+  SALARY_NEGOTIATION: 'salary_negotiation'
+};
 
-    // Create a task record
-    const task = await prisma.aIAgentTask.create({
+/**
+ * Agent Status Enum
+ */
+const AGENT_STATUS = {
+  IDLE: 'idle',
+  RUNNING: 'running',
+  PAUSED: 'paused',
+  ERROR: 'error',
+  COMPLETED: 'completed'
+};
+
+/**
+ * Task Status Enum
+ */
+const TASK_STATUS = {
+  PENDING: 'pending',
+  IN_PROGRESS: 'in_progress',
+  COMPLETED: 'completed',
+  FAILED: 'failed'
+};
+
+/**
+ * Execute a single agent task
+ */
+async function executeAgentTask(agentId, taskType, userId, parameters = {}) {
+  try {
+    console.log(`Executing agent task: ${taskType} for user: ${userId}`);
+    
+    // Create task record
+    const task = await prisma.agentTask.create({
       data: {
+        agentId,
         userId,
-        agentId: agent.id,
-        type: agent.config?.type || 'general',
-        status: 'in_progress',
-        description: `Executing ${agent.name}`,
-        result: null,
-        error: null
+        taskType,
+        parameters: JSON.stringify(parameters),
+        status: TASK_STATUS.IN_PROGRESS,
+        startedAt: new Date()
       }
     });
-
-    let result = null;
-    let error = null;
-
-    // Execute based on agent type
-    switch (agent.config?.agentType || agent.type) {
-      case 'job_discovery':
-        result = await executeJobDiscoveryAgent(agent);
+    
+    let result;
+    
+    // Execute based on task type
+    switch (taskType) {
+      case AGENT_TYPES.JOB_DISCOVERY:
+        result = await executeJobDiscovery(userId, parameters);
         break;
-      case 'resume_optimization':
-        result = await executeResumeOptimizationAgent(agent);
+      
+      case AGENT_TYPES.RESUME_OPTIMIZATION:
+        result = await executeResumeOptimization(userId, parameters);
         break;
-      case 'interview_prep':
-        result = await executeInterviewPrepAgent(agent);
+      
+      case AGENT_TYPES.APPLICATION_TRACKING:
+        result = await executeApplicationTracking(userId, parameters);
         break;
-      case 'network_discovery':
-        result = await executeNetworkDiscoveryAgent(agent);
+      
+      case AGENT_TYPES.INTERVIEW_PREP:
+        result = await executeInterviewPrep(userId, parameters);
         break;
-      case 'application_followup':
-        result = await executeApplicationFollowupAgent(agent);
+      
+      case AGENT_TYPES.NETWORK_DISCOVERY:
+        result = await executeNetworkDiscovery(userId, parameters);
         break;
+      
+      case AGENT_TYPES.SALARY_NEGOTIATION:
+        result = await executeSalaryNegotiation(userId, parameters);
+        break;
+      
       default:
-        result = { message: 'Agent executed successfully', agentName: agent.name };
+        throw new Error(`Unknown task type: ${taskType}`);
     }
-
+    
     // Update task as completed
-    await prisma.aIAgentTask.update({
+    await prisma.agentTask.update({
       where: { id: task.id },
       data: {
-        status: 'completed',
+        status: TASK_STATUS.COMPLETED,
         result: JSON.stringify(result),
         completedAt: new Date()
       }
     });
-
-    // Update agent last run time
-    await prisma.aIAgent.update({
-      where: { id: agent.id },
-      data: {
-        lastRun: new Date()
-      }
-    });
-
-    console.log(`Agent ${agent.name} completed successfully`);
-    return { success: true, result, taskId: task.id };
-
-  } catch (err) {
-    console.error(`Agent execution error: ${err.message}`);
+    
+    return result;
+    
+  } catch (error) {
+    console.error(`Agent task execution error: ${error.message}`);
     
     // Update task as failed
-    if (task) {
-      await prisma.aIAgentTask.update({
+    if (task && task.id) {
+      await prisma.agentTask.update({
         where: { id: task.id },
         data: {
-          status: 'failed',
-          error: err.message
+          status: TASK_STATUS.FAILED,
+          error: error.message,
+          completedAt: new Date()
         }
       });
     }
-
-    return { success: false, error: err.message };
-  }
-}
-
-/**
- * Execute Job Discovery Agent
- */
-async function executeJobDiscoveryAgent(agent) {
-  const keywords = agent.config?.keywords || ['software engineer', 'developer'];
-  
-  // Mock job discovery (in production, this would call actual job APIs)
-  const discoveredJobs = [
-    {
-      title: 'Senior Frontend Developer',
-      company: 'Tech Corp',
-      location: 'Remote',
-      url: 'https://example.com/job/1',
-      postedAt: new Date().toISOString(),
-      matches: keywords
-    },
-    {
-      title: 'Full Stack Engineer',
-      company: 'Startup Inc',
-      location: 'Hybrid',
-      url: 'https://example.com/job/2',
-      postedAt: new Date().toISOString(),
-      matches: keywords
-    }
-  ];
-
-  return {
-    jobsFound: discoveredJobs.length,
-    jobs: discoveredJobs,
-    keywords,
-    executedAt: new Date().toISOString()
-  };
-}
-
-/**
- * Execute Resume Optimization Agent
- */
-async function executeResumeOptimizationAgent(agent) {
-  const targetScore = agent.config?.targetScore || 90;
-  
-  // Mock optimization (in production, this would analyze resume with AI)
-  const optimizations = [
-    'Added keywords from job descriptions',
-    'Improved action verbs in work experience',
-    'Enhanced summary with quantifiable metrics',
-    'Optimized for ATS compatibility'
-  ];
-
-  return {
-    currentScore: 75,
-    targetScore,
-    optimizationsApplied: optimizations,
-    newScore: 88,
-    executedAt: new Date().toISOString()
-  };
-}
-
-/**
- * Execute Interview Prep Agent
- */
-async function executeInterviewPrepAgent(agent) {
-  const questionTypes = agent.config?.questionTypes || ['technical', 'behavioral'];
-  const count = agent.config?.count || 10;
-  
-  // Mock interview questions (in production, this would use AI to generate)
-  const questions = [
-    { type: 'technical', question: 'Explain how React hooks work', difficulty: 'medium' },
-    { type: 'behavioral', question: 'Tell me about a time you worked in a team', difficulty: 'easy' }
-  ];
-
-  return {
-    questionsGenerated: count,
-    questions,
-    questionTypes,
-    executedAt: new Date().toISOString()
-  };
-}
-
-/**
- * Execute Network Discovery Agent
- */
-async function executeNetworkDiscoveryAgent(agent) {
-  // Mock network discovery (in production, would search LinkedIn, etc.)
-  const contacts = [
-    {
-      name: 'John Doe',
-      title: 'Software Engineer at Google',
-      connection: '2nd degree',
-      mutuals: 5
-    }
-  ];
-
-  return {
-    contactsFound: contacts.length,
-    contacts,
-    executedAt: new Date().toISOString()
-  };
-}
-
-/**
- * Execute Application Follow-up Agent
- */
-async function executeApplicationFollowupAgent(agent) {
-  const followUpDays = agent.config?.followUpDays || 7;
-  
-  // Mock follow-up emails (in production, would check dates and send emails)
-  const followUps = [
-    {
-      jobTitle: 'Frontend Developer',
-      company: 'Tech Corp',
-      appliedDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-      emailSent: true
-    }
-  ];
-
-  return {
-    followUpsNeeded: followUps.length,
-    followUps,
-    followUpDays,
-    executedAt: new Date().toISOString()
-  };
-}
-
-/**
- * Run all active agents for a user
- */
-async function runActiveAgentsForUser(userId) {
-  try {
-    const agents = await prisma.aIAgent.findMany({
-      where: {
-        userId,
-        status: 'active',
-        enabled: true
-      }
-    });
-
-    console.log(`Found ${agents.length} active agents for user ${userId}`);
-
-    const results = await Promise.allSettled(
-      agents.map(agent => executeAgent(agent, userId))
-    );
-
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
-    const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)).length;
-
-    return {
-      total: agents.length,
-      successful,
-      failed,
-      results: results.map(r => r.status === 'fulfilled' ? r.value : { success: false, error: 'Execution failed' })
-    };
-  } catch (error) {
-    console.error('Error running active agents:', error);
+    
     throw error;
   }
 }
 
 /**
- * Schedule automatic agent execution
+ * Job Discovery Agent
  */
-function scheduleAgentExecution() {
-  // Run every hour
-  setInterval(async () => {
-    try {
-      console.log('Running scheduled agent execution...');
-      
-      // Get all users with active agents
-      const users = await prisma.aIAgent.findMany({
-        where: {
-          status: 'active',
-          enabled: true
-        },
-        select: {
-          userId: true
-        },
-        distinct: ['userId']
-      });
-
-      const userIds = [...new Set(users.map(u => u.userId))];
-      
-      for (const userId of userIds) {
-        await runActiveAgentsForUser(userId);
+async function executeJobDiscovery(userId, parameters) {
+  try {
+    // Get user preferences
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { profile: true }
+    });
+    
+    // Get preferences from agent config
+    const preferences = parameters.preferences || {};
+    const keywords = preferences.keywords || [];
+    const location = preferences.location;
+    const remote = preferences.remote || false;
+    
+    // Mock job discovery (would integrate with job boards in production)
+    const discoveredJobs = [
+      {
+        title: "Senior Software Engineer",
+        company: "Tech Corp",
+        location: location || "Remote",
+        description: "Looking for an experienced engineer...",
+        url: "https://example.com/job1",
+        discoveredAt: new Date()
       }
-
-      console.log('Scheduled agent execution completed');
-    } catch (error) {
-      console.error('Error in scheduled execution:', error);
+    ];
+    
+    // Store discovered jobs
+    for (const job of discoveredJobs) {
+      await prisma.job.create({
+        data: {
+          userId,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          jobDescription: job.description,
+          applicationUrl: job.url,
+          status: 'discovered',
+          discoveredAt: job.discoveredAt
+        }
+      });
     }
-  }, 60 * 60 * 1000); // Run every hour
+    
+    return {
+      success: true,
+      jobsDiscovered: discoveredJobs.length,
+      jobs: discoveredJobs
+    };
+    
+  } catch (error) {
+    console.error('Job discovery error:', error);
+    throw error;
+  }
 }
 
-// Start scheduling on module load if enabled
-if (process.env.ENABLE_AGENT_SCHEDULER !== 'false') {
-  scheduleAgentExecution();
+/**
+ * Resume Optimization Agent
+ */
+async function executeResumeOptimization(userId, parameters) {
+  try {
+    const { resumeId, jobId } = parameters;
+    
+    if (!resumeId) {
+      throw new Error('Resume ID is required for optimization');
+    }
+    
+    // Get resume
+    const resume = await prisma.resume.findUnique({
+      where: { id: parseInt(resumeId) }
+    });
+    
+    if (!resume || resume.userId !== userId) {
+      throw new Error('Resume not found or access denied');
+    }
+    
+    // Get job description if provided
+    let jobDescription = null;
+    if (jobId) {
+      const job = await prisma.job.findUnique({
+        where: { id: parseInt(jobId) }
+      });
+      jobDescription = job?.jobDescription;
+    }
+    
+    // Call Python AI API for optimization suggestions
+    const optimizationResponse = await fetch('http://localhost:8000/api/ai/analyze-resume', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${generateInternalToken()}`
+      },
+      body: JSON.stringify({
+        resume_data: resume.data,
+        job_description: jobDescription
+      })
+    });
+    
+    const analysis = await optimizationResponse.json();
+    
+    // Store optimization results
+    const result = {
+      resumeId,
+      jobId,
+      suggestions: analysis.suggestions || [],
+      missingKeywords: analysis.missing_keywords || [],
+      strengths: analysis.strengths || [],
+      score: analysis.score || 0,
+      timestamp: new Date()
+    };
+    
+    return {
+      success: true,
+      optimization: result
+    };
+    
+  } catch (error) {
+    console.error('Resume optimization error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Application Tracking Agent
+ */
+async function executeApplicationTracking(userId, parameters) {
+  try {
+    // Get user's job applications
+    const applications = await prisma.job.findMany({
+      where: {
+        userId,
+        status: {
+          in: ['applied', 'interview']
+        }
+      }
+    });
+    
+    // Check for follow-up reminders
+    const now = new Date();
+    const reminders = [];
+    
+    for (const app of applications) {
+      if (!app.appliedDate) continue;
+      
+      const daysSinceApplied = Math.floor(
+        (now - new Date(app.appliedDate)) / (1000 * 60 * 60 * 24)
+      );
+      
+      // Suggest follow-up after 7 days
+      if (daysSinceApplied >= 7 && !app.followUpDate) {
+        reminders.push({
+          jobId: app.id,
+          title: app.title,
+          company: app.company,
+          appliedDate: app.appliedDate,
+          daysSinceApplied,
+          suggestion: 'Consider sending a follow-up email'
+        });
+      }
+    }
+    
+    return {
+      success: true,
+      applicationsTracked: applications.length,
+      reminders: reminders.length,
+      reminderDetails: reminders
+    };
+    
+  } catch (error) {
+    console.error('Application tracking error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Interview Preparation Agent
+ */
+async function executeInterviewPrep(userId, parameters) {
+  try {
+    const { jobId } = parameters;
+    
+    if (!jobId) {
+      throw new Error('Job ID is required for interview prep');
+    }
+    
+    const job = await prisma.job.findUnique({
+      where: { id: parseInt(jobId) }
+    });
+    
+    if (!job || job.userId !== userId) {
+      throw new Error('Job not found or access denied');
+    }
+    
+    // Mock interview prep (would use AI in production)
+    const prepMaterials = {
+      potentialQuestions: [
+        'Tell me about yourself',
+        'Why are you interested in this role?',
+        'What are your strengths?'
+      ],
+      companyResearch: {
+        industry: 'Technology',
+        size: 'Large',
+        mission: 'Innovation'
+      },
+      keyPoints: [
+        'Highlight relevant experience',
+        'Show enthusiasm for the role',
+        'Ask thoughtful questions'
+      ]
+    };
+    
+    return {
+      success: true,
+      prepMaterials
+    };
+    
+  } catch (error) {
+    console.error('Interview prep error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Network Discovery Agent
+ */
+async function executeNetworkDiscovery(userId, parameters) {
+  try {
+    const { company, role } = parameters;
+    
+    // Mock network suggestions (would integrate with LinkedIn API in production)
+    const suggestions = [
+      {
+        name: 'John Doe',
+        role: 'Engineering Manager',
+        company: company,
+        mutualConnections: 3,
+        suggestion: 'Request connection with personalized message'
+      }
+    ];
+    
+    return {
+      success: true,
+      suggestionsCount: suggestions.length,
+      suggestions
+    };
+    
+  } catch (error) {
+    console.error('Network discovery error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Salary Negotiation Agent
+ */
+async function executeSalaryNegotiation(userId, parameters) {
+  try {
+    const { offer, role, location, experience } = parameters;
+    
+    // Mock salary analysis (would use real market data in production)
+    const analysis = {
+      marketRange: {
+        min: 80000,
+        max: 120000,
+        median: 100000
+      },
+      offerAssessment: 'at market',
+      recommendations: [
+        'The offer is competitive for this role',
+        'Consider negotiating for additional benefits',
+        'Request clarification on bonus structure'
+      ]
+    };
+    
+    return {
+      success: true,
+      analysis
+    };
+    
+  } catch (error) {
+    console.error('Salary negotiation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate internal API token
+ */
+function generateInternalToken() {
+  // In production, use a secure method to generate internal tokens
+  return process.env.INTERNAL_API_KEY || 'internal-dev-token';
+}
+
+/**
+ * Get agent task history
+ */
+async function getAgentTaskHistory(agentId, limit = 50) {
+  try {
+    const tasks = await prisma.agentTask.findMany({
+      where: { agentId },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+    
+    return tasks;
+  } catch (error) {
+    console.error('Error fetching task history:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get agent statistics
+ */
+async function getAgentStats(agentId) {
+  try {
+    const tasks = await prisma.agentTask.findMany({
+      where: { agentId }
+    });
+    
+    const stats = {
+      total: tasks.length,
+      completed: tasks.filter(t => t.status === TASK_STATUS.COMPLETED).length,
+      failed: tasks.filter(t => t.status === TASK_STATUS.FAILED).length,
+      inProgress: tasks.filter(t => t.status === TASK_STATUS.IN_PROGRESS).length
+    };
+    
+    return stats;
+  } catch (error) {
+    console.error('Error fetching agent stats:', error);
+    throw error;
+  }
 }
 
 module.exports = {
-  executeAgent,
-  runActiveAgentsForUser,
-  scheduleAgentExecution
+  executeAgentTask,
+  AGENT_TYPES,
+  AGENT_STATUS,
+  TASK_STATUS,
+  getAgentTaskHistory,
+  getAgentStats
 };
-
