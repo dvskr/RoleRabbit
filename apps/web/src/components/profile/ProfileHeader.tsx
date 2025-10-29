@@ -1,8 +1,10 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { Save, Edit } from 'lucide-react';
+import { Save, Edit, LogOut } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
+import { useAuth } from '../../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
   resumeImportButton?: ReactNode;
@@ -16,6 +18,14 @@ export default function ProfileHeader({
   onSave,
   resumeImportButton
 }: ExtendedProfileHeaderProps) {
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-4 py-2 flex-shrink-0 shadow-sm">
       <div className="flex items-center justify-between">
@@ -42,13 +52,22 @@ export default function ProfileHeader({
             </>
           )}
           {!isEditing && (
-            <button
-              onClick={onEdit}
-              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              <Edit size={16} />
-              Edit Profile
-            </button>
+            <>
+              <button
+                onClick={onEdit}
+                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <Edit size={16} />
+                Edit Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 flex items-center gap-2 shadow-lg"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </>
           )}
         </div>
       </div>
