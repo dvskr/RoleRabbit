@@ -2,8 +2,12 @@
 
 import React from 'react';
 import { BarChart3, Mail, Send, Reply, Clock, TrendingUp } from 'lucide-react';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function AnalyticsTab() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   const stats = {
     totalEmails: 156,
     sentEmails: 89,
@@ -13,19 +17,19 @@ export default function AnalyticsTab() {
   };
 
   const metrics = [
-    { label: 'Total Emails', value: stats.totalEmails, icon: Mail, color: 'bg-blue-100 text-blue-700' },
-    { label: 'Sent', value: stats.sentEmails, icon: Send, color: 'bg-green-100 text-green-700' },
-    { label: 'Received', value: stats.receivedEmails, icon: Mail, color: 'bg-purple-100 text-purple-700' },
-    { label: 'Reply Rate', value: `${stats.replyRate}%`, icon: Reply, color: 'bg-yellow-100 text-yellow-700' },
-    { label: 'Avg Response Time', value: stats.avgResponseTime, icon: Clock, color: 'bg-pink-100 text-pink-700' },
+    { label: 'Total Emails', value: stats.totalEmails, icon: Mail, bgColor: colors.badgeInfoBg, textColor: colors.badgeInfoText },
+    { label: 'Sent', value: stats.sentEmails, icon: Send, bgColor: colors.badgeSuccessBg, textColor: colors.badgeSuccessText },
+    { label: 'Received', value: stats.receivedEmails, icon: Mail, bgColor: colors.badgePurpleBg, textColor: colors.badgePurpleText },
+    { label: 'Reply Rate', value: `${stats.replyRate}%`, icon: Reply, bgColor: colors.badgeWarningBg, textColor: colors.badgeWarningText },
+    { label: 'Avg Response Time', value: stats.avgResponseTime, icon: Clock, bgColor: colors.badgeErrorBg, textColor: colors.badgeErrorText },
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-8">
+    <div className="h-full overflow-y-auto p-8" style={{ background: colors.background }}>
       <div className="max-w-7xl mx-auto space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Email Analytics</h2>
-          <p className="text-gray-600">Track your email performance and communication insights</p>
+          <h2 className="text-2xl font-bold mb-2" style={{ color: colors.primaryText }}>Email Analytics</h2>
+          <p style={{ color: colors.secondaryText }}>Track your email performance and communication insights</p>
         </div>
 
         {/* Stats Grid */}
@@ -33,12 +37,25 @@ export default function AnalyticsTab() {
           {metrics.map((metric, idx) => {
             const Icon = metric.icon;
             return (
-              <div key={idx} className="bg-white border border-gray-200 rounded-lg p-6">
-                <div className={`w-12 h-12 rounded-lg ${metric.color} flex items-center justify-center mb-3`}>
+              <div 
+                key={idx} 
+                className="rounded-lg p-6"
+                style={{
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+              >
+                <div 
+                  className="w-12 h-12 rounded-lg flex items-center justify-center mb-3"
+                  style={{
+                    background: metric.bgColor,
+                    color: metric.textColor,
+                  }}
+                >
                   <Icon size={20} />
                 </div>
-                <p className="text-sm text-gray-600 mb-1">{metric.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                <p className="text-sm mb-1" style={{ color: colors.secondaryText }}>{metric.label}</p>
+                <p className="text-2xl font-bold" style={{ color: colors.primaryText }}>{metric.value}</p>
               </div>
             );
           })}
@@ -46,9 +63,15 @@ export default function AnalyticsTab() {
 
         {/* Charts Placeholder */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Email Activity</h3>
-            <div className="flex items-center justify-center h-64 text-gray-400">
+          <div 
+            className="rounded-lg p-6"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
+            <h3 className="font-semibold mb-4" style={{ color: colors.primaryText }}>Email Activity</h3>
+            <div className="flex items-center justify-center h-64" style={{ color: colors.tertiaryText }}>
               <div className="text-center">
                 <BarChart3 size={48} />
                 <p className="mt-2 text-sm">Chart visualization</p>
@@ -57,9 +80,15 @@ export default function AnalyticsTab() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Reply Rate Trend</h3>
-            <div className="flex items-center justify-center h-64 text-gray-400">
+          <div 
+            className="rounded-lg p-6"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
+            <h3 className="font-semibold mb-4" style={{ color: colors.primaryText }}>Reply Rate Trend</h3>
+            <div className="flex items-center justify-center h-64" style={{ color: colors.tertiaryText }}>
               <div className="text-center">
                 <TrendingUp size={48} />
                 <p className="mt-2 text-sm">Chart visualization</p>

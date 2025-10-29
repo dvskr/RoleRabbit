@@ -1,20 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Bell, Settings, Search, Menu, User, LogOut, LogIn, ChevronDown } from 'lucide-react';
+import { Bell, Settings, Search, User, LogOut, LogIn, ChevronDown, Home } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { LogoIcon } from '../common/Logo';
+import { LogoIcon, Logo } from '../common/Logo';
+import { useTheme } from '../../contexts/ThemeContext';
+import ThemeToggle from '../ThemeToggle';
 
 interface DashboardHeaderProps {
-  onToggleSidebar: () => void;
-  sidebarCollapsed: boolean;
   onSearch?: (query: string) => void;
 }
 
-export default function DashboardHeader({ onToggleSidebar, sidebarCollapsed, onSearch }: DashboardHeaderProps) {
+export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -46,100 +48,194 @@ export default function DashboardHeader({ onToggleSidebar, sidebarCollapsed, onS
     .slice(0, 2) || 'U';
 
   return (
-    <header className="h-16 bg-[#0D1117] border-b border-[#27272A] flex items-center justify-between px-6 sticky top-0 z-40">
-      {/* Left: Logo, Sidebar Toggle, Search */}
-      <div className="flex items-center gap-4 flex-1">
-        <button
-          onClick={onToggleSidebar}
-          className="p-2 hover:bg-[#1A1F26] rounded-lg transition-colors group"
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+    <header 
+      className="px-6 py-4 border-b flex items-center gap-4 flex-shrink-0 sticky top-0 z-40"
+      style={{
+        background: colors.headerBackground,
+        borderBottom: `1px solid ${colors.border}`,
+        backdropFilter: 'blur(20px)',
+      }}
+    >
+      {/* Dashboard Title with Icon and Tagline */}
+      <div className="flex items-center gap-3">
+        <div 
+          className="p-1.5 rounded transition-all"
+          style={{ color: colors.primaryBlue }}
         >
-          <Menu size={20} className="text-[#A0A0A0] group-hover:text-white" />
-        </button>
-        
-        <div className="h-6 w-px bg-[#27272A]" />
-        
-        {/* Dashboard Title */}
-        <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-lg font-bold text-white">Dashboard</h1>
-            <p className="text-xs text-[#A0A0A0] hidden sm:block">Overview of your job search journey</p>
-          </div>
+          <Home size={20} />
         </div>
-        
-        {/* Search Bar - Search resumes, jobs, applications, etc. */}
-        <div className="hidden md:flex items-center gap-2 flex-1 max-w-md ml-8">
-          <form onSubmit={handleSearchSubmit} className="relative flex-1">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0A0A0]" />
-            <input
-              type="text"
-              placeholder="Search resumes, jobs, applications..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 bg-[#1A1F26] border border-[#27272A] rounded-lg text-sm text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  if (onSearch) onSearch('');
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A0A0A0] hover:text-white"
-              >
-                ×
-              </button>
-            )}
-          </form>
+        <div className="flex flex-col">
+          <h1 
+            className="text-lg font-semibold leading-tight"
+            style={{ color: colors.primaryText }}
+          >
+            Dashboard
+          </h1>
+          <p 
+            className="text-xs leading-tight"
+            style={{ color: colors.secondaryText }}
+          >
+            Overview of your job search journey
+          </p>
         </div>
       </div>
 
-      {/* Right: Notifications, Settings, User */}
-      <div className="flex items-center gap-3">
-        <button className="relative p-2 hover:bg-[#1A1F26] rounded-lg transition-colors group">
-          <Bell size={18} className="text-[#A0A0A0] group-hover:text-white" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Search Bar */}
+      <div className="hidden md:flex items-center flex-1 relative max-w-md">
+        <Search 
+          size={16} 
+          className="absolute left-3 top-1/2 -translate-y-1/2" 
+          style={{ color: colors.tertiaryText }}
+        />
+        <form onSubmit={handleSearchSubmit} className="w-full">
+          <input
+            type="text"
+            placeholder="Search resumes, jobs, applications..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="w-full pl-9 pr-3 py-1.5 rounded-md text-sm transition-all"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: colors.primaryText,
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = colors.borderFocused;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                if (onSearch) onSearch('');
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ color: colors.tertiaryText }}
+            >
+              ×
+            </button>
+          )}
+        </form>
+      </div>
+
+      {/* Right Actions */}
+      <div className="flex items-center gap-2">
+        {/* Theme Toggle */}
+        <ThemeToggle />
+
+        {/* Notifications */}
+        <button 
+          className="relative p-1.5 rounded transition-all"
+          style={{ color: colors.tertiaryText }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.hoverBackground;
+            e.currentTarget.style.color = colors.secondaryText;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = colors.tertiaryText;
+          }}
+          title="Notifications"
+        >
+          <Bell size={16} />
+          <span 
+            className="absolute top-1 right-1 w-2 h-2 rounded-full"
+            style={{ background: colors.errorRed }}
+          />
         </button>
-        
-        <button className="p-2 hover:bg-[#1A1F26] rounded-lg transition-colors group">
-          <Settings size={18} className="text-[#A0A0A0] group-hover:text-white" />
+
+        {/* Settings */}
+        <button 
+          className="p-1.5 rounded transition-all"
+          style={{ color: colors.tertiaryText }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.hoverBackground;
+            e.currentTarget.style.color = colors.secondaryText;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = colors.tertiaryText;
+          }}
+          title="Settings"
+        >
+          <Settings size={16} />
         </button>
-        
-        <div className="h-6 w-px bg-[#27272A]" />
-        
-        {/* User Avatar */}
+
+        {/* User Menu */}
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#1A1F26] border border-[#27272A] rounded-lg text-sm text-white hover:border-[#34B27B] transition-all"
+            className="flex items-center gap-1.5 px-2 py-1 rounded transition-all"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = colors.borderFocused;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+            }}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#34B27B] to-[#3ECF8E] flex items-center justify-center">
-              <span className="text-xs font-bold text-white">{userInitials}</span>
+            <div 
+              className="w-6 h-6 rounded-full flex items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+              }}
+            >
+              <span className="text-xs font-bold" style={{ color: colors.primaryText }}>
+                {userInitials}
+              </span>
             </div>
-            <ChevronDown size={14} />
+            <ChevronDown size={12} />
           </button>
-          
+
           {showUserMenu && (
             <>
               <div 
                 className="fixed inset-0 z-40"
                 onClick={() => setShowUserMenu(false)}
               />
-              <div className="absolute right-0 mt-2 w-56 bg-[#1A1F26] border border-[#27272A] rounded-lg shadow-xl py-1 z-50">
+              <div 
+                className="absolute right-0 mt-2 w-56 rounded-lg shadow-xl py-1 z-50"
+                style={{
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+              >
                 {isAuthenticated ? (
                   <>
-                    <div className="px-4 py-3 border-b border-[#27272A]">
-                      <p className="text-sm font-semibold text-white">{user?.name}</p>
-                      <p className="text-xs text-[#A0A0A0]">{user?.email}</p>
+                    <div className="px-4 py-3 border-b" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <p className="text-sm font-semibold" style={{ color: colors.primaryText }}>
+                        {user?.name}
+                      </p>
+                      <p className="text-xs" style={{ color: colors.secondaryText }}>
+                        {user?.email}
+                      </p>
                     </div>
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
                         handleLogout();
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors"
+                      style={{ color: colors.errorRed }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.badgeErrorBg;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
-                      <LogOut size={16} />
+                      <LogOut size={14} />
                       Logout
                     </button>
                   </>
@@ -149,9 +245,16 @@ export default function DashboardHeader({ onToggleSidebar, sidebarCollapsed, onS
                       setShowUserMenu(false);
                       router.push('/login');
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-[#34B27B] hover:bg-[#34B27B]/10 transition-colors"
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors"
+                    style={{ color: colors.primaryBlue }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.badgeInfoBg;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
-                    <LogIn size={16} />
+                    <LogIn size={14} />
                     Login / Sign Up
                   </button>
                 )}

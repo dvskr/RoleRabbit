@@ -34,16 +34,29 @@ import {
   CheckCircle,
   Plus
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface DashboardFigmaProps {
   onNavigateToTab?: (tab: string) => void;
   onQuickAction?: (actionId: string) => void;
 }
 
+interface Todo {
+  id: number;
+  title: string;
+  subtitle: string;
+  time: string;
+  priority: 'low' | 'high' | 'urgent';
+  completed: boolean;
+  date?: string;
+}
+
 export default function DashboardFigma({ 
   onNavigateToTab,
   onQuickAction 
 }: DashboardFigmaProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [activityFilter, setActivityFilter] = useState('All Activity');
   const [todoFilter, setTodoFilter] = useState('All Tasks');
   const [showCompleted, setShowCompleted] = useState(true); // Show all todos by default
@@ -253,20 +266,31 @@ export default function DashboardFigma({
     }
   };
 
-  // Priority color mapping
+  // Priority color mapping - Theme-aware
   const getPriorityColor = (priority: 'low' | 'high' | 'urgent') => {
+    const style: React.CSSProperties = {};
     switch (priority) {
       case 'urgent':
-        return 'bg-red-500/20 text-red-400';
+        style.background = colors.badgeErrorBg;
+        style.color = colors.errorRed;
+        break;
       case 'high':
-        return 'bg-amber-500/20 text-amber-400';
+        style.background = colors.badgeWarningBg;
+        style.color = colors.badgeWarningText;
+        break;
       case 'low':
-        return 'bg-slate-500/20 text-slate-400';
+        style.background = colors.inputBackground;
+        style.color = colors.secondaryText;
+        break;
     }
+    return style;
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-3 sm:p-4 md:p-6">
+    <div 
+      className="min-h-screen w-full p-3 sm:p-4 md:p-6"
+      style={{ background: colors.background }}
+    >
       <div className="w-full max-w-full mx-auto space-y-3 sm:space-y-4 md:space-y-6">
         {/* Filter Tags */}
         <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -288,11 +312,18 @@ export default function DashboardFigma({
             return (
               <div
                 key={index}
-                className="group relative rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer"
+                className="group relative rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 transition-all duration-300 hover:scale-105 hover:shadow-xl cursor-pointer"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                  e.currentTarget.style.boxShadow = `0 10px 25px ${colors.borderFocused}20`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div className="flex items-center justify-between mb-2 sm:mb-3 md:mb-4">
@@ -301,8 +332,8 @@ export default function DashboardFigma({
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1">{metric.value}</p>
-                  <p className="text-xs sm:text-sm text-slate-400">{metric.label}</p>
+                  <p className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1" style={{ color: colors.primaryText }}>{metric.value}</p>
+                  <p className="text-xs sm:text-sm" style={{ color: colors.secondaryText }}>{metric.label}</p>
                 </div>
               </div>
             );
@@ -315,11 +346,10 @@ export default function DashboardFigma({
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3 sm:gap-4">
             {/* Premium Features Widget - Reduced Size */}
             <div
-              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-amber-500/20 flex flex-col overflow-hidden mb-3 sm:mb-4"
+              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-hidden mb-3 sm:mb-4"
               style={{
-                background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(251, 146, 60, 0.3)'
+                background: colors.badgeWarningBg,
+                border: `1px solid ${colors.badgeWarningBorder}`,
               }}
             >
               <div className="flex items-center justify-between mb-3">
@@ -328,11 +358,18 @@ export default function DashboardFigma({
                     <Crown size={16} className="text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-white">Premium Features</h2>
-                    <p className="text-xs text-amber-200/80 hidden sm:block">Unlock your full potential</p>
+                    <h2 className="text-base sm:text-lg font-bold" style={{ color: colors.primaryText }}>Premium Features</h2>
+                    <p className="text-xs hidden sm:block" style={{ color: colors.secondaryText }}>Unlock your full potential</p>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-bold rounded-full border border-amber-500/30">
+                <span 
+                  className="px-2 py-0.5 text-xs font-bold rounded-full border"
+                  style={{
+                    background: colors.badgeWarningBg,
+                    color: colors.badgeWarningText,
+                    borderColor: colors.badgeWarningBorder,
+                  }}
+                >
                   PRO
                 </span>
               </div>
@@ -369,13 +406,25 @@ export default function DashboardFigma({
                   return (
                     <div
                       key={index}
-                      className="p-2 sm:p-2.5 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-200 border border-white/10"
+                      className="p-2 sm:p-2.5 rounded-lg transition-all duration-200 border"
+                      style={{
+                        background: colors.inputBackground,
+                        borderColor: colors.border,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                        e.currentTarget.style.borderColor = colors.borderFocused;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = colors.inputBackground;
+                        e.currentTarget.style.borderColor = colors.border;
+                      }}
                     >
                       <div className={`p-1.5 rounded-lg bg-gradient-to-br ${feature.gradient} w-fit mb-1.5`}>
                         <Icon size={14} className="text-white" />
                       </div>
-                      <h3 className="text-xs sm:text-sm font-semibold text-white mb-0.5">{feature.title}</h3>
-                      <p className="text-xs text-slate-300 leading-tight line-clamp-2">{feature.description}</p>
+                      <h3 className="text-xs sm:text-sm font-semibold mb-0.5" style={{ color: colors.primaryText }}>{feature.title}</h3>
+                      <p className="text-xs leading-tight line-clamp-2" style={{ color: colors.secondaryText }}>{feature.description}</p>
                     </div>
                   );
                 })}
@@ -390,16 +439,24 @@ export default function DashboardFigma({
 
             {/* Activity Feed - Below Premium Features - Reduced Size */}
             <div
-              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-blue-500/10 flex flex-col overflow-hidden"
+              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-hidden"
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
               }}
             >
               <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <h2 className="text-base sm:text-lg font-semibold text-white">Activity Feed</h2>
-                <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">
+                <h2 className="text-base sm:text-lg font-semibold" style={{ color: colors.primaryText }}>Activity Feed</h2>
+                <button 
+                  className="text-xs font-medium transition-colors"
+                  style={{ color: colors.primaryBlue }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = colors.primaryBlueHover || colors.primaryBlue;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                >
                   View All
                 </button>
               </div>
@@ -409,7 +466,19 @@ export default function DashboardFigma({
                 <select
                   value={activityFilter}
                   onChange={(e) => setActivityFilter(e.target.value)}
-                  className="w-full sm:w-auto bg-slate-800/50 border border-slate-700 rounded-lg px-2 sm:px-3 py-1 text-white text-xs focus:outline-none focus:border-blue-500"
+                  className="w-full sm:w-auto rounded-lg px-2 sm:px-3 py-1 text-xs focus:outline-none transition-colors"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
+                  title="Filter activities"
                 >
                   <option>All Activity</option>
                   <option>Applications</option>
@@ -426,7 +495,16 @@ export default function DashboardFigma({
                   return (
                     <div
                       key={activity.id}
-                      className="flex items-start gap-2 p-1.5 sm:p-2 rounded-lg hover:bg-white/5 transition-colors"
+                      className="flex items-start gap-2 p-1.5 sm:p-2 rounded-lg transition-colors"
+                      style={{
+                        background: 'transparent',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
                       <div className={`p-1 rounded-full flex-shrink-0 ${
                         activity.status === 'completed' ? 'bg-emerald-500/20' :
@@ -443,10 +521,10 @@ export default function DashboardFigma({
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-white mb-0.5 truncate">{activity.title}</p>
-                        <p className="text-xs text-slate-400 mb-0.5 line-clamp-1">{activity.subtitle}</p>
+                        <p className="text-xs font-medium mb-0.5 truncate" style={{ color: colors.primaryText }}>{activity.title}</p>
+                        <p className="text-xs mb-0.5 line-clamp-1" style={{ color: colors.secondaryText }}>{activity.subtitle}</p>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-slate-500">{activity.time}</span>
+                          <span className="text-xs" style={{ color: colors.tertiaryText }}>{activity.time}</span>
                           <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${statusColor}`}>
                             {activity.status}
                           </span>
@@ -460,16 +538,21 @@ export default function DashboardFigma({
 
             {/* Upcoming Events & Deadlines Widget - Added to LEFT side */}
             <div
-              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-indigo-500/10"
+              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-hidden"
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
               }}
             >
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold text-white">Upcoming Events</h2>
-                <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-xs font-medium rounded-full">
+                <h2 className="text-base font-semibold" style={{ color: colors.primaryText }}>Upcoming Events</h2>
+                <span 
+                  className="px-2 py-0.5 text-xs font-medium rounded-full"
+                  style={{
+                    background: colors.badgePurpleBg,
+                    color: colors.badgePurpleText,
+                  }}
+                >
                   3 events
                 </span>
               </div>
@@ -505,33 +588,47 @@ export default function DashboardFigma({
                   return (
                     <div
                       key={event.id}
-                      className={`p-2.5 rounded-lg border transition-all hover:bg-white/5 ${
-                        event.urgent
-                          ? 'border-orange-500/30 bg-orange-500/10'
-                          : 'border-slate-700 bg-slate-800/30'
-                      }`}
+                      className="p-2.5 rounded-lg border transition-all"
+                      style={{
+                        border: `1px solid ${event.urgent ? colors.badgeWarningBorder : colors.border}`,
+                        background: event.urgent ? colors.badgeWarningBg : colors.inputBackground,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = event.urgent ? colors.badgeWarningBg : colors.inputBackground;
+                      }}
                     >
                       <div className="flex items-start gap-2.5">
-                        <div className={`p-1.5 rounded-lg flex-shrink-0 ${
-                          event.urgent
-                            ? 'bg-orange-500/20'
-                            : 'bg-indigo-500/20'
-                        }`}>
+                        <div 
+                          className="p-1.5 rounded-lg flex-shrink-0"
+                          style={{
+                            background: event.urgent ? colors.badgeWarningBg : colors.badgeInfoBg,
+                            color: event.urgent ? colors.badgeWarningText : colors.badgeInfoText,
+                          }}
+                        >
                           <Icon
                             size={16}
-                            className={event.urgent ? 'text-orange-400' : 'text-indigo-400'}
+                            style={{
+                              color: event.urgent ? colors.badgeWarningText : colors.badgeInfoText,
+                            }}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium mb-0.5 ${
-                            event.urgent ? 'text-orange-300' : 'text-white'
-                          }`}>
+                          <p className="text-sm font-medium mb-0.5" style={{ color: colors.primaryText }}>
                             {event.title}
                           </p>
-                          <p className="text-xs text-slate-400">{event.date}</p>
+                          <p className="text-xs" style={{ color: colors.secondaryText }}>{event.date}</p>
                         </div>
                         {event.urgent && (
-                          <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-xs font-medium rounded-full">
+                          <span 
+                            className="px-1.5 py-0.5 text-xs font-medium rounded-full"
+                            style={{
+                              background: colors.badgeErrorBg,
+                              color: colors.errorRed,
+                            }}
+                          >
                             Urgent
                           </span>
                         )}
@@ -541,7 +638,22 @@ export default function DashboardFigma({
                 })}
               </div>
               
-              <button className="w-full mt-3 py-2 text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors border border-indigo-500/20">
+              <button 
+                className="w-full mt-3 py-2 text-xs font-medium rounded-lg transition-colors border"
+                style={{
+                  color: colors.primaryBlue,
+                  borderColor: colors.border,
+                  background: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgeInfoBg;
+                  e.currentTarget.style.color = colors.badgeInfoText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+              >
                 View All Events
               </button>
             </div>
@@ -551,14 +663,13 @@ export default function DashboardFigma({
           <div className="lg:col-span-5 xl:col-span-4 grid grid-cols-1 gap-3 sm:gap-4">
             {/* Quick Actions - Move to top */}
             <div
-              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-blue-500/10"
+              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-hidden"
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
               }}
             >
-              <h2 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">Quick Actions</h2>
+              <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3" style={{ color: colors.primaryText }}>Quick Actions</h2>
               <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-3">
                 {quickActions.map((action) => {
                   const Icon = action.icon;
@@ -566,10 +677,25 @@ export default function DashboardFigma({
                     <button
                       key={action.id}
                       onClick={action.action}
-                      className="aspect-square flex items-center justify-center rounded-lg sm:rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 border border-slate-700"
+                      className="aspect-square flex items-center justify-center rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-110"
+                      style={{
+                        background: colors.inputBackground,
+                        border: `1px solid ${colors.border}`,
+                        color: colors.secondaryText,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                        e.currentTarget.style.borderColor = colors.borderFocused;
+                        e.currentTarget.style.color = colors.primaryText;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = colors.inputBackground;
+                        e.currentTarget.style.borderColor = colors.border;
+                        e.currentTarget.style.color = colors.secondaryText;
+                      }}
                       title={action.label}
                     >
-                      <Icon size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6 text-slate-300" />
+                      <Icon size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
                     </button>
                   );
                 })}
@@ -577,38 +703,51 @@ export default function DashboardFigma({
             </div>
             {/* Smart To-Dos - Increased Size, No Scrollbar */}
             <div
-              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-purple-500/10 flex flex-col overflow-visible"
+              className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-visible"
               style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
               }}
             >
               <div className="mb-2 sm:mb-3">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-base font-semibold text-white">To-Dos</h2>
+                  <h2 className="text-base font-semibold" style={{ color: colors.primaryText }}>To-Dos</h2>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs" style={{ color: colors.secondaryText }}>
                       {todos.filter(t => !t.completed).length} active
                     </span>
                     <button
                       onClick={() => setShowAddTodo(true)}
-                      className="p-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 transition-colors"
+                      className="p-1.5 rounded-lg transition-colors"
+                      style={{
+                        background: colors.badgePurpleBg,
+                        border: `1px solid ${colors.badgePurpleBorder}`,
+                        color: colors.badgePurpleText,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
                       title="Add new todo"
                     >
-                      <Plus size={14} className="text-purple-400" />
+                      <Plus size={14} />
                     </button>
                   </div>
                 </div>
                 <div className="mb-2">
                   <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="text-slate-400">Progress</span>
-                    <span className="text-slate-400 font-medium">{todoProgress}%</span>
+                    <span style={{ color: colors.secondaryText }}>Progress</span>
+                    <span className="font-medium" style={{ color: colors.secondaryText }}>{todoProgress}%</span>
                   </div>
-                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: colors.inputBackground }}>
                     <div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all"
-                      style={{ width: `${todoProgress}%` }}
+                      className="h-full rounded-full transition-all"
+                      style={{ 
+                        width: `${todoProgress}%`,
+                        background: colors.successGreen,
+                      }}
                     />
                   </div>
                 </div>
@@ -616,19 +755,48 @@ export default function DashboardFigma({
 
               {/* Add Todo Form - Compact */}
               {showAddTodo && (
-                <div className="mb-1.5 p-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
+                <div 
+                  className="mb-1.5 p-1.5 rounded-lg border"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
                   <input
                     type="text"
                     placeholder="Todo title..."
                     value={newTodoTitle}
                     onChange={(e) => setNewTodoTitle(e.target.value)}
-                    className="w-full mb-1 px-1.5 py-1 bg-slate-900/50 border border-slate-600 rounded text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                    className="w-full mb-1 px-1.5 py-1 rounded text-xs focus:outline-none transition-colors"
+                    style={{
+                      background: colors.cardBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   />
                   <div className="flex items-center gap-1">
                     <select
                       value={newTodoPriority}
                       onChange={(e) => setNewTodoPriority(e.target.value as 'low' | 'high' | 'urgent')}
-                      className="flex-1 px-1.5 py-1 bg-slate-900/50 border border-slate-600 rounded text-xs text-white focus:outline-none focus:border-purple-500"
+                      className="flex-1 px-1.5 py-1 rounded text-xs focus:outline-none transition-colors"
+                      style={{
+                        background: colors.cardBackground,
+                        border: `1px solid ${colors.border}`,
+                        color: colors.primaryText,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = colors.borderFocused;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = colors.border;
+                      }}
+                      title="Priority"
                     >
                       <option value="low">Low</option>
                       <option value="high">High</option>
@@ -652,7 +820,17 @@ export default function DashboardFigma({
                           setShowAddTodo(false);
                         }
                       }}
-                      className="px-2 py-1 bg-purple-500 text-white text-xs font-medium rounded hover:bg-purple-600 transition-colors"
+                      className="px-2 py-1 text-xs font-medium rounded transition-all"
+                      style={{
+                        background: colors.badgePurpleText,
+                        color: 'white',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
                     >
                       Add
                     </button>
@@ -662,7 +840,18 @@ export default function DashboardFigma({
                         setNewTodoTitle('');
                         setNewTodoSubtitle('');
                       }}
-                      className="px-2 py-1 bg-slate-700 text-white text-xs font-medium rounded hover:bg-slate-600 transition-colors"
+                      className="px-2 py-1 text-xs font-medium rounded transition-all"
+                      style={{
+                        background: colors.inputBackground,
+                        color: colors.secondaryText,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = colors.inputBackground;
+                      }}
                     >
                       ×
                     </button>
@@ -679,7 +868,16 @@ export default function DashboardFigma({
                 ).filter(todo => showCompleted || !todo.completed).slice(0, 5).map((todo) => (
                   <div
                     key={todo.id}
-                    className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/5 transition-colors group"
+                    className="flex items-center gap-2 p-1.5 rounded-lg transition-colors group"
+                    style={{
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     <input
                       type="checkbox"
@@ -694,13 +892,25 @@ export default function DashboardFigma({
                         // For default todos, we'd need to track their completion state separately
                         // For now, we'll just allow toggling user todos
                       }}
-                      className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500 flex-shrink-0"
+                      className="w-4 h-4 rounded flex-shrink-0 transition-colors"
+                      style={{
+                        border: `1px solid ${colors.border}`,
+                        background: todo.completed ? colors.successGreen : colors.inputBackground,
+                        color: colors.successGreen,
+                      }}
+                      title={todo.completed ? "Mark as incomplete" : "Mark as complete"}
                     />
                     <div className="flex-1 min-w-0 flex items-center gap-2">
-                      <p className={`text-sm font-medium truncate ${todo.completed ? 'line-through text-slate-500' : 'text-white'}`}>
+                      <p 
+                        className={`text-sm font-medium truncate ${todo.completed ? 'line-through' : ''}`}
+                        style={{ color: todo.completed ? colors.tertiaryText : colors.primaryText }}
+                      >
                         {todo.title}
                       </p>
-                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getPriorityColor(todo.priority)}`}>
+                      <span 
+                        className="px-2 py-0.5 text-xs font-medium rounded-full"
+                        style={getPriorityColor(todo.priority)}
+                      >
                         {todo.priority.slice(0, 1).toUpperCase()}
                       </span>
                     </div>
@@ -715,10 +925,19 @@ export default function DashboardFigma({
                           setDeletedDefaultTodoIds([...deletedDefaultTodoIds, todo.id]);
                         }
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/20 transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all"
+                      style={{
+                        color: colors.errorRed,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.badgeErrorBg;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                       title="Delete todo"
                     >
-                      <X size={12} className="text-red-400" />
+                      <X size={12} />
                     </button>
                   </div>
                 ))}

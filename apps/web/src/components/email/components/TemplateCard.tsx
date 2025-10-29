@@ -3,6 +3,7 @@
 import React from 'react';
 import { Mail, Star, Edit, Trash2, FileText } from 'lucide-react';
 import { EmailTemplate } from '../types';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface TemplateCardProps {
   template: EmailTemplate;
@@ -12,19 +13,42 @@ interface TemplateCardProps {
 }
 
 export default function TemplateCard({ template, onUse, onEdit, onDelete }: TemplateCardProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all">
+    <div 
+      className="rounded-lg p-4 transition-all"
+      style={{
+        background: colors.cardBackground,
+        border: `1px solid ${colors.border}`,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = colors.borderFocused;
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.1)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = colors.border;
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <FileText size={20} className="text-blue-600" />
+          <FileText size={20} style={{ color: colors.primaryBlue }} />
           <div>
-            <h3 className="font-semibold text-gray-900">{template.name}</h3>
-            <p className="text-xs text-gray-500">{template.category}</p>
+            <h3 className="font-semibold" style={{ color: colors.primaryText }}>{template.name}</h3>
+            <p className="text-xs" style={{ color: colors.secondaryText }}>{template.category}</p>
           </div>
         </div>
         {template.isCustom && (
-          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+          <span 
+            className="px-2 py-0.5 rounded text-xs font-medium"
+            style={{
+              background: colors.badgePurpleBg,
+              color: colors.badgePurpleText,
+            }}
+          >
             Custom
           </span>
         )}
@@ -32,19 +56,22 @@ export default function TemplateCard({ template, onUse, onEdit, onDelete }: Temp
 
       {/* Subject Preview */}
       <div className="mb-3">
-        <p className="text-sm font-medium text-gray-700 mb-1">Subject:</p>
-        <p className="text-sm text-gray-600 truncate">{template.subject}</p>
+        <p className="text-sm font-medium mb-1" style={{ color: colors.primaryText }}>Subject:</p>
+        <p className="text-sm truncate" style={{ color: colors.secondaryText }}>{template.subject}</p>
       </div>
 
       {/* Body Preview */}
       <div className="mb-3">
-        <p className="text-sm font-medium text-gray-700 mb-1">Body:</p>
-        <p className="text-sm text-gray-600 line-clamp-2">{template.body}</p>
+        <p className="text-sm font-medium mb-1" style={{ color: colors.primaryText }}>Body:</p>
+        <p className="text-sm line-clamp-2" style={{ color: colors.secondaryText }}>{template.body}</p>
       </div>
 
       {/* Usage Stats */}
-      <div className="flex items-center justify-between mb-3 pt-3 border-t border-gray-100">
-        <div className="flex items-center gap-1 text-xs text-gray-500">
+      <div 
+        className="flex items-center justify-between mb-3 pt-3"
+        style={{ borderTop: `1px solid ${colors.border}` }}
+      >
+        <div className="flex items-center gap-1 text-xs" style={{ color: colors.secondaryText }}>
           <Mail size={14} />
           <span>{template.usageCount} uses</span>
         </div>
@@ -53,19 +80,33 @@ export default function TemplateCard({ template, onUse, onEdit, onDelete }: Temp
             {onEdit && (
               <button
                 onClick={() => onEdit(template)}
-                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                className="p-1.5 rounded transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 title="Edit"
               >
-                <Edit size={14} className="text-gray-600" />
+                <Edit size={14} />
               </button>
             )}
             {onDelete && (
               <button
                 onClick={() => onDelete(template)}
-                className="p-1.5 hover:bg-red-50 rounded transition-colors"
+                className="p-1.5 rounded transition-colors"
+                style={{ color: colors.errorRed }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgeErrorBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 title="Delete"
               >
-                <Trash2 size={14} className="text-red-600" />
+                <Trash2 size={14} />
               </button>
             )}
           </div>
@@ -76,7 +117,17 @@ export default function TemplateCard({ template, onUse, onEdit, onDelete }: Temp
       {onUse && (
         <button
           onClick={() => onUse(template)}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className="w-full px-4 py-2 rounded-lg transition-all text-sm font-medium"
+          style={{
+            background: colors.primaryBlue,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
         >
           Use Template
         </button>

@@ -5,6 +5,7 @@ import { Plus, Search, FileText, Edit, Trash2, X } from 'lucide-react';
 import TemplateCard from './TemplateCard';
 import { EmailTemplate, TemplateCategory } from '../types';
 import { logger } from '../../../utils/logger';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 // Default templates
 const defaultTemplates: EmailTemplate[] = [
@@ -51,6 +52,8 @@ interface TemplateLibraryProps {
 }
 
 export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [templates, setTemplates] = useState<EmailTemplate[]>(defaultTemplates);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<TemplateCategory | 'All'>('All');
@@ -162,17 +165,24 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0">
+      <div className="px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0" style={{ background: colors.headerBackground, borderBottom: `1px solid ${colors.border}` }}>
         <div className="flex items-center gap-3 flex-1">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: colors.tertiaryText }} />
             <input
               type="text"
               placeholder="Search templates..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-2 rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
 
@@ -180,7 +190,14 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as TemplateCategory | 'All')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-3 py-2 rounded-lg"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: colors.primaryText,
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
           >
             <option value="All">All Categories</option>
             <option value="Follow-up">Follow-up</option>
@@ -199,7 +216,10 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
             setNewTemplate({ name: '', category: 'Custom', subject: '', body: '', variables: [] });
             setShowCreateModal(true);
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2"
+          style={{ background: colors.primaryBlue }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
         >
           <Plus size={16} />
           <span className="font-medium">Create Template</span>
@@ -207,12 +227,12 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6" style={{ background: colors.background }}>
         {filteredTemplates.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">No templates found</p>
+              <FileText size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText }} />
+              <p style={{ color: colors.secondaryText }}>No templates found</p>
             </div>
           </div>
         ) : (
@@ -232,18 +252,28 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
 
       {/* Create/Edit Template Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div 
+            className="rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            style={{ background: colors.cardBackground }}
+          >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FileText size={24} className="text-blue-600" />
+                <div className="p-2 rounded-lg" style={{ background: colors.badgeInfoBg }}>
+                  <FileText size={24} style={{ color: colors.badgeInfoText }} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-xl font-semibold" style={{ color: colors.primaryText }}>
                     {editingTemplate ? 'Edit Template' : 'Create Template'}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm" style={{ color: colors.secondaryText }}>
                     {editingTemplate ? 'Update your email template' : 'Build your custom email template'}
                   </p>
                 </div>
@@ -254,7 +284,17 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
                   setEditingTemplate(null);
                   setNewTemplate({ name: '', category: 'Custom', subject: '', body: '', variables: [] });
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: colors.tertiaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.tertiaryText;
+                }}
+                title="Close"
               >
                 <X size={20} />
               </button>
@@ -262,26 +302,40 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Template Name <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                  Template Name <span style={{ color: colors.errorRed }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={newTemplate.name}
                   onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
                   placeholder="e.g., Follow-up Email"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                  Category <span style={{ color: colors.errorRed }}>*</span>
                 </label>
                 <select
                   value={newTemplate.category}
                   onChange={(e) => setNewTemplate({ ...newTemplate, category: e.target.value as TemplateCategory })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 >
                   <option value="Follow-up">Follow-up</option>
                   <option value="Thank You">Thank You</option>
@@ -293,36 +347,50 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subject Line <span className="text-red-500">*</span>
-                  <span className="text-xs text-gray-500 ml-2">Use {"{{variable}}"} for dynamic values</span>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                  Subject Line <span style={{ color: colors.errorRed }}>*</span>
+                  <span className="text-xs ml-2" style={{ color: colors.tertiaryText }}>Use {"{{variable}}"} for dynamic values</span>
                 </label>
                 <input
                   type="text"
                   value={newTemplate.subject}
                   onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })}
                   placeholder="e.g., Follow-up on My Application for {{position}}"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Body <span className="text-red-500">*</span>
-                  <span className="text-xs text-gray-500 ml-2">Use {"{{variable}}"} for dynamic values</span>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                  Email Body <span style={{ color: colors.errorRed }}>*</span>
+                  <span className="text-xs ml-2" style={{ color: colors.tertiaryText }}>Use {"{{variable}}"} for dynamic values</span>
                 </label>
                 <textarea
                   value={newTemplate.body}
                   onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })}
                   placeholder="Dear {{name}},\n\nI wanted to follow up..."
                   rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-3 py-2 rounded-lg resize-none"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800 font-medium mb-2">💡 Pro Tip</p>
-                <p className="text-sm text-blue-700">
+              <div className="rounded-lg p-4" style={{ background: colors.badgeInfoBg, border: `1px solid ${colors.badgeInfoBorder}` }}>
+                <p className="text-sm font-medium mb-2" style={{ color: colors.badgeInfoText }}>💡 Pro Tip</p>
+                <p className="text-sm" style={{ color: colors.badgeInfoText }}>
                   Use {"{{variableName}}"} in your template and RoleReady will prompt you to fill in values when using the template.
                   Common variables: {"{{name}}"}, {"{{company}}"}, {"{{position}}"}, {"{{yourName}}"}
                 </p>
@@ -336,18 +404,39 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
                   setEditingTemplate(null);
                   setNewTemplate({ name: '', category: 'Custom', subject: '', body: '', variables: [] });
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                className="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 Cancel
               </button>
               <button
                 onClick={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}
                 disabled={!newTemplate.name || !newTemplate.subject || !newTemplate.body}
-                className={`flex-1 px-4 py-2 text-white rounded-lg font-medium ${
-                  !newTemplate.name || !newTemplate.subject || !newTemplate.body
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className="flex-1 px-4 py-2 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: (!newTemplate.name || !newTemplate.subject || !newTemplate.body) 
+                    ? colors.inputBackground 
+                    : colors.primaryBlue,
+                  color: (!newTemplate.name || !newTemplate.subject || !newTemplate.body) 
+                    ? colors.tertiaryText 
+                    : 'white',
+                }}
+                onMouseEnter={(e) => {
+                  if (newTemplate.name && newTemplate.subject && newTemplate.body) {
+                    e.currentTarget.style.background = colors.primaryBlueHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (newTemplate.name && newTemplate.subject && newTemplate.body) {
+                    e.currentTarget.style.background = colors.primaryBlue;
+                  }
+                }}
               >
                 {editingTemplate ? 'Update Template' : 'Create Template'}
               </button>

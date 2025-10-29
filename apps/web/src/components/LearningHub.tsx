@@ -16,6 +16,7 @@ import {
   Filter,
   X
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Resource {
   id: string;
@@ -39,6 +40,9 @@ interface Resource {
 }
 
 export default function LearningHub() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
@@ -264,36 +268,43 @@ export default function LearningHub() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'course': return 'bg-blue-100 text-blue-600';
-      case 'video': return 'bg-red-100 text-red-600';
-      case 'article': return 'bg-green-100 text-green-600';
-      case 'tutorial': return 'bg-purple-100 text-purple-600';
-      default: return 'bg-gray-100 text-gray-600';
+      case 'course': return { bg: `${colors.primaryBlue}20`, text: colors.primaryBlue };
+      case 'video': return { bg: `${colors.badgeErrorBg}20`, text: colors.badgeErrorText };
+      case 'article': return { bg: `${colors.badgeSuccessBg}20`, text: colors.badgeSuccessText };
+      case 'tutorial': return { bg: `${colors.badgePurpleBg}20`, text: colors.badgePurpleText };
+      default: return { bg: colors.inputBackground, text: colors.secondaryText };
     }
   };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return 'bg-green-100 text-green-700';
-      case 'intermediate': return 'bg-yellow-100 text-yellow-700';
-      case 'advanced': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-600';
+      case 'beginner': return { bg: `${colors.badgeSuccessBg}20`, text: colors.badgeSuccessText, border: colors.badgeSuccessBorder };
+      case 'intermediate': return { bg: `${colors.badgeWarningBg}20`, text: colors.badgeWarningText, border: colors.badgeWarningBorder };
+      case 'advanced': return { bg: `${colors.badgeErrorBg}20`, text: colors.badgeErrorText, border: colors.badgeErrorBorder };
+      default: return { bg: colors.inputBackground, text: colors.secondaryText, border: colors.border };
     }
   };
 
   return (
-    <div className="h-full bg-gray-50 overflow-hidden flex flex-col">
+    <div className="h-full overflow-hidden flex flex-col" style={{ background: colors.background }}>
       <div className="max-w-7xl mx-auto p-3 flex flex-col h-full overflow-hidden">
         {/* Search Bar */}
         <div className="mb-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={16} style={{ color: colors.tertiaryText }} />
             <input
               type="text"
               placeholder="Search courses, videos, articles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full pl-10 pr-4 py-2 text-sm rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
         </div>
@@ -302,11 +313,16 @@ export default function LearningHub() {
         <div className="grid grid-cols-3 gap-2 mb-3">
           {/* Category Filter */}
           <div>
-            <label className="block text-[10px] font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-[10px] font-medium mb-1" style={{ color: colors.secondaryText }}>Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-2 py-1.5 text-xs rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
               aria-label="Category filter"
             >
               {categories.map(cat => (
@@ -317,11 +333,16 @@ export default function LearningHub() {
 
           {/* Difficulty Filter */}
           <div>
-            <label className="block text-[10px] font-medium text-gray-700 mb-1">Difficulty</label>
+            <label className="block text-[10px] font-medium mb-1" style={{ color: colors.secondaryText }}>Difficulty</label>
             <select
               value={selectedDifficulty}
               onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-2 py-1.5 text-xs rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
               aria-label="Difficulty filter"
             >
               {difficulties.map(diff => (
@@ -332,11 +353,16 @@ export default function LearningHub() {
 
           {/* Type Filter */}
           <div>
-            <label className="block text-[10px] font-medium text-gray-700 mb-1">Type</label>
+            <label className="block text-[10px] font-medium mb-1" style={{ color: colors.secondaryText }}>Type</label>
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-2 py-1.5 text-xs rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
               aria-label="Type filter"
             >
               {types.map(type => (
@@ -348,44 +374,59 @@ export default function LearningHub() {
 
         {/* Results Count */}
         <div className="mb-2">
-          <p className="text-xs text-gray-600">
-            Showing <span className="font-semibold text-gray-900">{filteredResources.length}</span> resources
+          <p className="text-xs" style={{ color: colors.secondaryText }}>
+            Showing <span className="font-semibold" style={{ color: colors.primaryText }}>{filteredResources.length}</span> resources
           </p>
         </div>
 
         {/* Resources Grid - Scrollable */}
         <div className="flex-1 overflow-y-auto pb-3">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredResources.map((resource) => (
+          {filteredResources.map((resource) => {
+            const typeColors = getTypeColor(resource.type);
+            const difficultyColors = getDifficultyColor(resource.difficulty);
+            return (
             <div
               key={resource.id}
-              className="bg-white rounded-xl border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all duration-200 overflow-hidden"
+              className="rounded-xl border overflow-hidden transition-all duration-200"
+              style={{
+                background: colors.cardBackground,
+                borderColor: colors.border,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = colors.primaryBlue;
+                e.currentTarget.style.boxShadow = `0 4px 12px ${colors.primaryBlue}20`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
               {/* Header */}
-              <div className={`p-3 ${getTypeColor(resource.type)} flex items-center justify-between`}>
-                <div className="flex items-center gap-2">
+              <div className="p-3 flex items-center justify-between" style={{ background: typeColors.bg }}>
+                <div className="flex items-center gap-2" style={{ color: typeColors.text }}>
                   {getTypeIcon(resource.type)}
                   <span className="font-medium capitalize">{resource.type}</span>
                 </div>
                 {resource.free && (
-                  <span className="text-xs font-semibold bg-white px-2 py-1 rounded">FREE</span>
+                  <span className="text-xs font-semibold px-2 py-1 rounded" style={{ background: colors.cardBackground, color: colors.primaryText }}>FREE</span>
                 )}
               </div>
 
               {/* Content */}
               <div className="p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-base font-semibold text-gray-900 flex-1">{resource.title}</h3>
-                  <div className="flex items-center gap-1 text-yellow-500">
+                  <h3 className="text-base font-semibold flex-1" style={{ color: colors.primaryText }}>{resource.title}</h3>
+                  <div className="flex items-center gap-1" style={{ color: '#fbbf24' }}>
                     <Star size={14} className="fill-current" />
                     <span className="text-sm font-medium">{resource.rating}</span>
                   </div>
                 </div>
 
-                <p className="text-gray-600 text-xs mb-2 line-clamp-2">{resource.description}</p>
+                <p className="text-xs mb-2 line-clamp-2" style={{ color: colors.secondaryText }}>{resource.description}</p>
 
                 {/* Meta Info */}
-                <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                <div className="flex items-center gap-3 text-xs mb-2" style={{ color: colors.tertiaryText }}>
                   <div className="flex items-center gap-1">
                     <Clock size={14} />
                     <span>{resource.duration}</span>
@@ -399,7 +440,7 @@ export default function LearningHub() {
                 {/* Tags */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {resource.tags.slice(0, 2).map(tag => (
-                    <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                    <span key={tag} className="px-2 py-1 rounded text-xs" style={{ background: colors.inputBackground, color: colors.secondaryText }}>
                       {tag}
                     </span>
                   ))}
@@ -407,23 +448,23 @@ export default function LearningHub() {
 
                 {/* Difficulty Badge */}
                 <div className="flex items-center justify-between mb-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(resource.difficulty)}`}>
+                  <span className="px-3 py-1 rounded-full text-xs font-medium" style={{ background: difficultyColors.bg, color: difficultyColors.text }}>
                     {resource.difficulty.charAt(0).toUpperCase() + resource.difficulty.slice(1)}
                   </span>
-                  <span className="text-xs text-gray-500">{resource.category}</span>
+                  <span className="text-xs" style={{ color: colors.tertiaryText }}>{resource.category}</span>
                 </div>
 
                 {/* Progress Indicator */}
                 {resource.progress !== undefined && resource.progress > 0 && (
                   <div className="mb-3">
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-gray-600">Progress</span>
-                      <span className="text-gray-900 font-medium">{resource.progress}%</span>
+                      <span style={{ color: colors.secondaryText }}>Progress</span>
+                      <span className="font-medium" style={{ color: colors.primaryText }}>{resource.progress}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full rounded-full h-2" style={{ background: colors.inputBackground }}>
                       <div 
-                        className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full transition-all"
-                        style={{ width: `${resource.progress}%` }}
+                        className="h-2 rounded-full transition-all"
+                        style={{ width: `${resource.progress}%`, background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}
                       />
                     </div>
                   </div>
@@ -431,7 +472,7 @@ export default function LearningHub() {
 
                 {/* Completed Badge */}
                 {resource.completed && (
-                  <div className="mb-3 flex items-center gap-2 text-green-600">
+                  <div className="mb-3 flex items-center gap-2" style={{ color: colors.badgeSuccessText }}>
                     <Award size={16} />
                     <span className="text-sm font-medium">Completed</span>
                   </div>
@@ -439,7 +480,7 @@ export default function LearningHub() {
 
                 {/* Instructor or Provider */}
                 {(resource.instructor || resource.provider) && (
-                  <div className="mb-3 text-xs text-gray-600">
+                  <div className="mb-3 text-xs" style={{ color: colors.secondaryText }}>
                     {resource.instructor && <span>Instructor: {resource.instructor}</span>}
                     {resource.provider && !resource.instructor && <span>Provider: {resource.provider}</span>}
                   </div>
@@ -457,7 +498,17 @@ export default function LearningHub() {
                       console.log('Opening resource:', resource.title);
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all font-medium"
+                  style={{
+                    background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                    color: 'white',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = `0 4px 12px ${colors.primaryBlue}40`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 >
                   {resource.type === 'video' ? (
                     <>
@@ -473,16 +524,17 @@ export default function LearningHub() {
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
           </div>
         </div>
 
         {/* Empty State */}
         {filteredResources.length === 0 && (
           <div className="text-center py-16">
-            <BookOpen className="mx-auto text-gray-400" size={48} />
-            <h3 className="text-xl font-semibold text-gray-900 mt-4">No resources found</h3>
-            <p className="text-gray-600 mt-2">Try adjusting your filters or search terms</p>
+            <BookOpen className="mx-auto" size={48} style={{ color: colors.tertiaryText }} />
+            <h3 className="text-xl font-semibold mt-4" style={{ color: colors.primaryText }}>No resources found</h3>
+            <p className="mt-2" style={{ color: colors.secondaryText }}>Try adjusting your filters or search terms</p>
             <button
               onClick={() => {
                 setSearchQuery('');
@@ -490,7 +542,13 @@ export default function LearningHub() {
                 setSelectedDifficulty('all');
                 setSelectedType('all');
               }}
-              className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="mt-4 px-6 py-2 rounded-lg transition-colors"
+              style={{
+                background: colors.primaryBlue,
+                color: 'white',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
             >
               Clear Filters
             </button>

@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useRef } from 'react';
 import { X, Upload, FileText, Link, Cloud } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ImportModalProps {
   showImportModal: boolean;
@@ -24,6 +27,8 @@ export default function ImportModal({
   onImportFromCloud,
   onFileSelected
 }: ImportModalProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!showImportModal) return null;
@@ -54,41 +59,53 @@ export default function ImportModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50" style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0,
-      width: '100vw',
-      height: '100vh',
-      overflow: 'hidden'
-    }}>
-      <div className="absolute top-20 right-4 bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" style={{ 
-        position: 'absolute', 
-        top: '5rem', 
-        right: '1rem',
-        maxHeight: '80vh',
-        overflow: 'auto'
-      }}>
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      <div 
+        className="absolute top-20 right-4 border rounded-2xl p-6 w-full max-w-md shadow-2xl transition-all pointer-events-auto" 
+        style={{ 
+          position: 'absolute', 
+          top: '5rem', 
+          right: '1rem',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl">
+            <div 
+              className="p-2 rounded-xl"
+              style={{
+                background: `linear-gradient(to right, ${colors.successGreen}, ${colors.primaryBlue})`,
+              }}
+            >
               <Upload className="text-white" size={18} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800">Import Resume</h2>
+            <h2 className="text-xl font-bold" style={{ color: colors.primaryText }}>Import Resume</h2>
           </div>
           <button
             onClick={() => setShowImportModal(false)}
-            className="p-2 hover:bg-gray-100 rounded-xl  duration-200 group"
+            className="p-2 rounded-xl transition-colors"
+            style={{ color: colors.tertiaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+              e.currentTarget.style.color = colors.secondaryText;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = colors.tertiaryText;
+            }}
+            title="Close modal"
+            aria-label="Close import modal"
           >
-            <X size={18} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
+            <X size={18} />
           </button>
         </div>
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
+            <label className="block text-sm font-semibold mb-3" style={{ color: colors.secondaryText }}>
               Import Method
             </label>
             <div className="grid grid-cols-1 gap-3">
@@ -98,24 +115,37 @@ export default function ImportModal({
                   <button
                     key={method.value}
                     onClick={() => handleMethodClick(method.value)}
-                    className={`p-4 rounded-xl border-2  duration-200 text-left ${
-                      importMethod === method.value
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-25'
-                    }`}
+                    className="p-4 rounded-xl border-2 transition-all text-left"
+                    style={{
+                      border: `2px solid ${importMethod === method.value ? colors.primaryBlue : colors.border}`,
+                      background: importMethod === method.value ? colors.badgeInfoBg : colors.cardBackground,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (importMethod !== method.value) {
+                        e.currentTarget.style.borderColor = colors.borderFocused;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (importMethod !== method.value) {
+                        e.currentTarget.style.borderColor = colors.border;
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        importMethod === method.value ? 'bg-blue-500' : 'bg-gray-100'
-                      }`}>
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{
+                          background: importMethod === method.value ? colors.primaryBlue : colors.inputBackground,
+                        }}
+                      >
                         <IconComponent 
                           size={18} 
-                          className={importMethod === method.value ? 'text-white' : 'text-gray-600'} 
+                          style={{ color: importMethod === method.value ? 'white' : colors.tertiaryText }}
                         />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-800">{method.label}</div>
-                        <div className="text-sm text-gray-600">{method.desc}</div>
+                        <div className="font-medium" style={{ color: colors.primaryText }}>{method.label}</div>
+                        <div className="text-sm" style={{ color: colors.secondaryText }}>{method.desc}</div>
                       </div>
                     </div>
                   </button>
@@ -129,14 +159,36 @@ export default function ImportModal({
             <div className="flex gap-3 pt-2">
               <button
                 onClick={onImport}
-                className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 px-6 rounded-xl hover:shadow-lg hover:shadow-green-500/30  duration-200 flex items-center justify-center gap-2 font-semibold"
+                className="flex-1 text-white py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 font-semibold"
+                style={{
+                  background: `linear-gradient(to right, ${colors.successGreen}, ${colors.primaryBlue})`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = `0 8px 16px ${colors.successGreen}40`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
                 <Upload size={18} />
                 Import Resume
               </button>
               <button
                 onClick={() => setShowImportModal(false)}
-                className="flex-1 bg-gray-100/80 backdrop-blur-sm text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-200/80 hover:shadow-md  duration-200 font-semibold border border-gray-200"
+                className="flex-1 py-3 px-6 rounded-xl transition-all font-semibold border"
+                style={{
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.secondaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                  e.currentTarget.style.borderColor = colors.border;
+                }}
               >
                 Cancel
               </button>
@@ -150,6 +202,8 @@ export default function ImportModal({
         onChange={handleFileChange}
         accept=".json,.txt,.doc,.docx"
         style={{ display: 'none' }}
+        title="Select resume file to upload"
+        aria-label="File upload input for resume"
       />
     </div>
   );

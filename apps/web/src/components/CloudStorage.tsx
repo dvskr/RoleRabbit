@@ -10,8 +10,12 @@ import FileCard from './cloudStorage/FileCard';
 import UploadModal from './cloudStorage/UploadModal';
 import CredentialManager from './cloudStorage/CredentialManager';
 import { logger } from '../utils/logger';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function CloudStorage({ onClose }: CloudStorageProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   const [activeTab, setActiveTab] = useState<'files' | 'credentials'>('files');
   
   const {
@@ -82,10 +86,19 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   // Show loading state while fetching from API
   if (isLoading) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
+      <div 
+        className="w-full h-full flex items-center justify-center"
+        style={{ background: colors.background }}
+      >
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading files...</p>
+          <div 
+            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              borderColor: colors.primaryBlue,
+              borderTopColor: 'transparent',
+            }}
+          />
+          <p style={{ color: colors.secondaryText }}>Loading files...</p>
         </div>
       </div>
     );
@@ -195,39 +208,95 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white overflow-hidden">
+    <div 
+      className="h-full flex flex-col overflow-hidden"
+      style={{ background: colors.background }}
+    >
+      {/* Header Section */}
+      <div className="flex-shrink-0">
+        <StorageHeader
+          storageInfo={storageInfo}
+          onUpload={() => setShowUploadModal(true)}
+          onRefresh={handleRefresh}
+        />
+      </div>
+
       {/* Tab Navigation */}
-      <div className="flex-shrink-0 border-b border-gray-200 px-4 py-1">
+      <div 
+        className="flex-shrink-0 border-b px-4 py-2.5"
+        style={{ 
+          borderBottom: `1px solid ${colors.border}`,
+          background: colors.headerBackground,
+        }}
+      >
         <div className="flex gap-1">
           <button
             onClick={() => setActiveTab('files')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors ${
-              activeTab === 'files'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
+            className="flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors"
+            style={{
+              borderBottomColor: activeTab === 'files' ? colors.primaryBlue : 'transparent',
+              color: activeTab === 'files' ? colors.primaryBlue : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'files') {
+                e.currentTarget.style.color = colors.primaryText;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'files') {
+                e.currentTarget.style.color = colors.secondaryText;
+              }
+            }}
           >
             <Folder size={14} />
             <span className="font-medium text-sm">My Files</span>
-            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium">
+            <span 
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
+                background: activeTab === 'files' ? colors.badgeInfoBg : colors.inputBackground,
+                color: activeTab === 'files' ? colors.badgeInfoText : colors.secondaryText,
+              }}
+            >
               {files.length}
             </span>
           </button>
           <button
             onClick={() => setActiveTab('credentials')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors ${
-              activeTab === 'credentials'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
+            className="flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors"
+            style={{
+              borderBottomColor: activeTab === 'credentials' ? colors.primaryBlue : 'transparent',
+              color: activeTab === 'credentials' ? colors.primaryBlue : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'credentials') {
+                e.currentTarget.style.color = colors.primaryText;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'credentials') {
+                e.currentTarget.style.color = colors.secondaryText;
+              }
+            }}
           >
             <GraduationCap size={14} />
             <span className="font-medium text-sm">Credentials</span>
-            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[10px] font-medium">
+            <span 
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
+                background: activeTab === 'credentials' ? colors.badgeInfoBg : colors.inputBackground,
+                color: activeTab === 'credentials' ? colors.badgeInfoText : colors.secondaryText,
+              }}
+            >
               {credentials.length}
             </span>
             {credentialReminders.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px] font-medium">
+              <span 
+                className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                style={{
+                  background: colors.badgeWarningBg,
+                  color: colors.badgeWarningText,
+                }}
+              >
                 {credentialReminders.length} expiring
               </span>
             )}
@@ -249,15 +318,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
         </div>
       ) : (
         <>
-          {/* Fixed Header Section */}
-          <div className="flex-shrink-0 p-3 pb-1">
-            <StorageHeader
-              storageInfo={storageInfo}
-              onUpload={() => setShowUploadModal(true)}
-              onRefresh={handleRefresh}
-            />
-          </div>
-
           {/* Fixed Filters Section */}
           <div className="flex-shrink-0 px-3 py-2">
             <StorageFilters
@@ -278,15 +338,36 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           {/* Folder Sidebar & Files Grid */}
           <div className="flex-1 overflow-hidden flex">
             {/* Folder Sidebar */}
-            <div className="w-64 border-r border-gray-200 flex flex-col">
-              <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700">Folders</h3>
+            <div 
+              className="w-64 border-r flex flex-col"
+              style={{ 
+                borderRight: `1px solid ${colors.border}`,
+                background: colors.sidebarBackground,
+              }}
+            >
+              <div 
+                className="px-4 py-3 border-b flex items-center justify-between"
+                style={{ borderBottom: `1px solid ${colors.border}` }}
+              >
+                <h3 
+                  className="text-sm font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Folders
+                </h3>
                 <button
                   onClick={() => setShowCreateFolderModal(true)}
-                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-1.5 rounded-lg transition-colors"
+                  style={{ color: colors.secondaryText }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                   title="Create Folder"
                 >
-                  <FolderPlus size={16} className="text-gray-600" />
+                  <FolderPlus size={16} />
                 </button>
               </div>
               
@@ -295,11 +376,21 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   {/* All Files */}
                   <button
                     onClick={() => setSelectedFolderId(null)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      selectedFolderId === null
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                    style={{
+                      background: selectedFolderId === null ? colors.badgeInfoBg : 'transparent',
+                      color: selectedFolderId === null ? colors.badgeInfoText : colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedFolderId !== null) {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedFolderId !== null) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
                   >
                     <Cloud size={16} />
                     <span>All Files</span>
@@ -309,11 +400,21 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   {folders.map(folder => (
                     <div
                       key={folder.id}
-                      className={`group flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedFolderId === folder.id
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className="group flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                      style={{
+                        background: selectedFolderId === folder.id ? colors.badgeInfoBg : 'transparent',
+                        color: selectedFolderId === folder.id ? colors.badgeInfoText : colors.primaryText,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedFolderId !== folder.id) {
+                          e.currentTarget.style.background = colors.hoverBackground;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedFolderId !== folder.id) {
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
                     >
                       <button
                         onClick={() => setSelectedFolderId(folder.id)}
@@ -321,7 +422,10 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                       >
                         <Folder size={16} style={{ color: folder.color }} />
                         <span className="truncate">{folder.name}</span>
-                        <span className="text-xs text-gray-500 ml-auto">
+                        <span 
+                          className="text-xs ml-auto"
+                          style={{ color: colors.secondaryText }}
+                        >
                           {folder.fileCount || 0}
                         </span>
                       </button>
@@ -333,7 +437,14 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                             setNewFolderName(folder.name);
                             setShowRenameFolderModal(true);
                           }}
-                          className="p-1 hover:bg-gray-200 rounded"
+                          className="p-1 rounded transition-colors"
+                          style={{ color: colors.primaryBlue }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = colors.hoverBackground;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
                           aria-label="Rename folder"
                         >
                           <Pencil size={12} />
@@ -345,10 +456,17 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                               handleDeleteFolder(folder.id);
                             }
                           }}
-                          className="p-1 hover:bg-red-100 rounded"
+                          className="p-1 rounded transition-colors"
+                          style={{ color: colors.errorRed }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = colors.badgeErrorBg;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
                           aria-label="Delete folder"
                         >
-                          <Trash2 size={12} className="text-red-600" />
+                          <Trash2 size={12} />
                         </button>
                       </div>
                     </div>
@@ -385,11 +503,24 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               </div>
             ) : (
               <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Cloud size={24} className="text-gray-400" />
+                <div 
+                  className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4"
+                  style={{
+                    background: colors.inputBackground,
+                  }}
+                >
+                  <Cloud size={24} style={{ color: colors.tertiaryText }} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Files Found</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 
+                  className="text-lg font-semibold mb-2"
+                  style={{ color: colors.primaryText }}
+                >
+                  No Files Found
+                </h3>
+                <p 
+                  className="mb-4"
+                  style={{ color: colors.secondaryText }}
+                >
                   {searchTerm || filterType !== 'all' 
                     ? 'Try adjusting your search or filter criteria'
                     : 'Upload your first file to get started'
@@ -398,7 +529,17 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                 {(!searchTerm && filterType === 'all') && (
                   <button
                     onClick={() => setShowUploadModal(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{
+                      background: colors.primaryBlue,
+                      color: 'white',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
                     aria-label="Upload files"
                   >
                     Upload Your First File
@@ -414,21 +555,52 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
       {/* Folder Management Modals */}
       {/* Create Folder Modal */}
       {showCreateFolderModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div 
+            className="rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <FolderPlus size={24} className="text-indigo-600" />
+                <div 
+                  className="p-2 rounded-lg"
+                  style={{
+                    background: colors.badgeInfoBg,
+                  }}
+                >
+                  <FolderPlus size={24} style={{ color: colors.primaryBlue }} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Create Folder</h3>
-                  <p className="text-sm text-gray-600">Organize your files</p>
+                  <h3 
+                    className="text-xl font-semibold"
+                    style={{ color: colors.primaryText }}
+                  >
+                    Create Folder
+                  </h3>
+                  <p 
+                    className="text-sm"
+                    style={{ color: colors.secondaryText }}
+                  >
+                    Organize your files
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowCreateFolderModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 aria-label="Close create folder modal"
               >
                 <X size={20} />
@@ -437,15 +609,29 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Folder Name <span className="text-red-500">*</span>
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.primaryText }}
+                >
+                  Folder Name <span style={{ color: colors.errorRed }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="My Folder"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-lg transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
                   autoFocus
                 />
               </div>
@@ -457,7 +643,18 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   setShowCreateFolderModal(false);
                   setNewFolderName('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                }}
               >
                 Cancel
               </button>
@@ -470,11 +667,23 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   }
                 }}
                 disabled={!newFolderName.trim()}
-                className={`flex-1 px-4 py-2 text-white rounded-lg ${
-                  !newFolderName.trim()
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                }`}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: !newFolderName.trim() ? colors.inputBackground : colors.primaryBlue,
+                  color: !newFolderName.trim() ? colors.tertiaryText : 'white',
+                  opacity: !newFolderName.trim() ? 0.5 : 1,
+                  cursor: !newFolderName.trim() ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (newFolderName.trim()) {
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (newFolderName.trim()) {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
               >
                 Create Folder
               </button>
@@ -485,16 +694,40 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
 
       {/* Rename Folder Modal */}
       {showRenameFolderModal && folderToRename && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div 
+            className="rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Pencil size={24} className="text-blue-600" />
+                <div 
+                  className="p-2 rounded-lg"
+                  style={{
+                    background: colors.badgeInfoBg,
+                  }}
+                >
+                  <Pencil size={24} style={{ color: colors.primaryBlue }} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Rename Folder</h3>
-                  <p className="text-sm text-gray-600">Update folder name</p>
+                  <h3 
+                    className="text-xl font-semibold"
+                    style={{ color: colors.primaryText }}
+                  >
+                    Rename Folder
+                  </h3>
+                  <p 
+                    className="text-sm"
+                    style={{ color: colors.secondaryText }}
+                  >
+                    Update folder name
+                  </p>
                 </div>
               </div>
               <button
@@ -503,7 +736,14 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   setFolderToRename(null);
                   setNewFolderName('');
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 aria-label="Close rename folder modal"
               >
                 <X size={20} />
@@ -512,15 +752,29 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Folder Name <span className="text-red-500">*</span>
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.primaryText }}
+                >
+                  Folder Name <span style={{ color: colors.errorRed }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Folder name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-lg transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
                   autoFocus
                 />
               </div>
@@ -533,7 +787,18 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   setFolderToRename(null);
                   setNewFolderName('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                }}
               >
                 Cancel
               </button>
@@ -547,11 +812,23 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   }
                 }}
                 disabled={!newFolderName.trim()}
-                className={`flex-1 px-4 py-2 text-white rounded-lg ${
-                  !newFolderName.trim()
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: !newFolderName.trim() ? colors.inputBackground : colors.primaryBlue,
+                  color: !newFolderName.trim() ? colors.tertiaryText : 'white',
+                  opacity: !newFolderName.trim() ? 0.5 : 1,
+                  cursor: !newFolderName.trim() ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (newFolderName.trim()) {
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (newFolderName.trim()) {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
               >
                 Rename
               </button>
@@ -574,7 +851,17 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
         <div className="fixed bottom-6 right-6 z-50">
           <button
             onClick={() => setShowUploadModal(true)}
-            className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            className="w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            style={{
+              background: colors.primaryBlue,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
             title="Upload Files"
           >
             <Upload size={20} className="group-hover:scale-110 transition-transform duration-200" />

@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Eye, Sparkles, GripVertical, X, Plus } from 'lucide-react';
 import { ResumeData } from '../../types/resume';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface SkillsSectionProps {
   resumeData: ResumeData;
@@ -17,41 +20,89 @@ export default function SkillsSection({
   onHideSection,
   onOpenAIGenerateModal
 }: SkillsSectionProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   return (
     <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
-      <div className="bg-white/95 border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl">
+      <div 
+        className="rounded-2xl p-6 transition-all"
+        style={{
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+          boxShadow: `0 4px 6px ${colors.border}10`,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = `0 8px 12px ${colors.border}20`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = `0 4px 6px ${colors.border}10`;
+        }}
+      >
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <GripVertical size={18} className="text-gray-400 cursor-move" />
-            <h3 className="text-lg font-bold text-black uppercase tracking-wide">
+            <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
+            <h3 className="text-lg font-bold uppercase tracking-wide" style={{ color: colors.primaryText }}>
               SKILLS
             </h3>
           </div>
           <button
             onClick={() => onHideSection('skills')}
-            className="p-2 hover:bg-gray-100 rounded-xl "
+            className="p-2 rounded-xl transition-colors"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
             title={sectionVisibility.skills ? "Hide skills section" : "Show skills section"}
           >
-            <Eye size={18} className={sectionVisibility.skills ? "text-gray-600" : "text-gray-400"} />
+            <Eye size={18} style={{ color: sectionVisibility.skills ? colors.secondaryText : colors.tertiaryText }} />
           </button>
         </div>
         
         {/* Skills Container */}
-        <div className="p-1 sm:p-2 lg:p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+        <div 
+          className="p-1 sm:p-2 lg:p-4 rounded-xl border-2 transition-all"
+          style={{
+            background: colors.inputBackground,
+            border: `2px solid ${colors.border}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Skills</h4>
+            <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: colors.secondaryText }}>Skills</h4>
           </div>
           
           <div className="flex flex-wrap gap-2 min-w-0 w-full">
             {resumeData.skills.map((skill, idx) => (
-              <div key={idx} className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-black hover:border-gray-600  group min-w-0 max-w-full flex-shrink-0">
-                <span className="text-xs text-black font-medium break-words overflow-wrap-anywhere min-w-0">{skill}</span>
+              <div 
+                key={idx} 
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg border group min-w-0 max-w-full flex-shrink-0 transition-all"
+                style={{
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                }}
+              >
+                <span className="text-xs font-medium break-words overflow-wrap-anywhere min-w-0" style={{ color: colors.primaryText }}>{skill}</span>
                 <button
                   onClick={() => {
                     const updatedSkills = resumeData.skills.filter((_, index) => index !== idx);
                     setResumeData(prev => ({ ...prev, skills: updatedSkills }));
                   }}
-                  className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700  flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity"
+                  style={{ color: colors.errorRed }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = colors.errorRed;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = colors.errorRed;
+                  }}
                 >
                   <X size={12} />
                 </button>
@@ -59,11 +110,18 @@ export default function SkillsSection({
             ))}
             
             {/* Inline skill input */}
-            <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border-2 border-black min-w-0 max-w-full flex-shrink-0">
+            <div 
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 min-w-0 max-w-full flex-shrink-0"
+              style={{
+                background: colors.cardBackground,
+                border: `2px solid ${colors.border}`,
+              }}
+            >
               <input
                 type="text"
                 placeholder="Enter skill..."
-                className="text-xs text-black font-medium bg-transparent border-none outline-none w-24 min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="text-xs font-medium bg-transparent border-none outline-none w-24 min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                style={{ color: colors.primaryText }}
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     if ((e.target as HTMLInputElement).value.trim()) {
@@ -87,14 +145,21 @@ export default function SkillsSection({
                     input.value = '';
                   }
                 }}
-                className="text-black hover:text-gray-600  flex-shrink-0"
+                className="flex-shrink-0 transition-colors"
+                style={{ color: colors.primaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.secondaryText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
               >
                 <Plus size={12} />
               </button>
             </div>
             
             {resumeData.skills.length === 0 && (
-              <span className="text-xs text-gray-500 italic">No skills added yet</span>
+              <span className="text-xs italic" style={{ color: colors.tertiaryText }}>No skills added yet</span>
             )}
           </div>
         </div>
@@ -102,7 +167,18 @@ export default function SkillsSection({
         <div className="flex justify-end mt-3">
           <button 
             onClick={() => onOpenAIGenerateModal('skills')}
-            className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-2 font-semibold px-3 py-2 rounded-lg hover:bg-purple-50 "
+            className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
+            style={{
+              color: colors.badgePurpleText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.badgePurpleBg;
+              e.currentTarget.style.color = colors.badgePurpleText;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = colors.badgePurpleText;
+            }}
           >
             <Sparkles size={16} />
             AI Generate

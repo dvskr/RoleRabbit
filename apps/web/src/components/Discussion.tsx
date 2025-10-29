@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, MessageSquare, RefreshCw, X, ChevronDown, ChevronUp, Reply, ThumbsUp, ThumbsDown, Clock, User, Bookmark, Flag, Search as SearchIcon, Users, Shield, Trash2 } from 'lucide-react';
 import { useDiscussion } from '../hooks/useDiscussion';
+import { useTheme } from '../contexts/ThemeContext';
 import DiscussionHeader from './discussion/DiscussionHeader';
 import DiscussionTabs from './discussion/DiscussionTabs';
 import PostCard from './discussion/PostCard';
@@ -16,6 +17,9 @@ interface CommentWithChildren extends Comment {
 }
 
 export default function Discussion() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const {
     // State
     activeTab,
@@ -538,32 +542,50 @@ export default function Discussion() {
   const renderCommentTree = (comments: CommentWithChildren[], depth: number = 0) => {
     return comments.map(comment => (
       <div key={comment.id} className={`${depth > 0 ? 'ml-8 mt-2' : ''}`}>
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4 hover:shadow-md transition-shadow">
+        <div
+          className="rounded-lg p-4 mb-4 transition-shadow border"
+          style={{
+            background: colors.cardBackground,
+            borderColor: colors.border,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
           {/* Comment Header */}
           <div className="flex items-center gap-2 mb-2">
-            <User size={16} className="text-gray-500" />
-            <span className="font-semibold text-gray-900">{comment.author.name}</span>
-            {comment.author.verified && <span className="text-blue-600">✓</span>}
-            <span className="text-sm text-gray-500">{comment.author.karma} karma</span>
-            <Clock size={14} className="text-gray-400 ml-2" />
-            <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+            <User size={16} style={{ color: colors.tertiaryText }} />
+            <span className="font-semibold" style={{ color: colors.primaryText }}>{comment.author.name}</span>
+            {comment.author.verified && <span style={{ color: colors.primaryBlue }}>✓</span>}
+            <span className="text-sm" style={{ color: colors.tertiaryText }}>{comment.author.karma} karma</span>
+            <Clock size={14} style={{ color: colors.tertiaryText, marginLeft: '0.5rem' }} />
+            <span className="text-xs" style={{ color: colors.tertiaryText }}>{new Date(comment.timestamp).toLocaleDateString()}</span>
           </div>
           
           {/* Comment Content */}
-          <p className="text-gray-800 mb-3">{comment.content}</p>
+          <p className="mb-3" style={{ color: colors.secondaryText }}>{comment.content}</p>
           
           {/* Comment Actions */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => handleVote(comment.id, 'up')}
-              className="flex items-center gap-1 text-gray-600 hover:text-blue-600 transition-colors"
+              className="flex items-center gap-1 transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = colors.primaryBlue; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = colors.secondaryText; }}
             >
               <ThumbsUp size={16} />
               <span className="text-sm">{comment.votes}</span>
             </button>
             <button
               onClick={() => handleReplyToComment(comment.id)}
-              className="flex items-center gap-1 text-gray-600 hover:text-purple-600 transition-colors"
+              className="flex items-center gap-1 transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = colors.badgePurpleText; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = colors.secondaryText; }}
             >
               <Reply size={16} />
               <span className="text-sm">Reply</span>
@@ -572,23 +594,40 @@ export default function Discussion() {
           
           {/* Reply Input (if replying) */}
           {replyingToComment === comment.id && (
-            <div className="mt-4 border-t pt-4">
+            <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
               <textarea
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write your reply..."
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+                className="w-full px-3 py-2 rounded-lg resize-none"
+                style={{
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = colors.badgePurpleText; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
               />
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={() => handleSubmitReply(comment.id)}
                   disabled={!replyContent.trim()}
-                  className={`px-4 py-1 text-sm rounded-lg ${
-                    replyContent.trim() 
-                      ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
+                  className="px-4 py-1 text-sm rounded-lg transition-colors"
+                  style={{
+                    background: replyContent.trim() ? colors.badgePurpleText : colors.inputBackground,
+                    color: replyContent.trim() ? 'white' : colors.tertiaryText,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (replyContent.trim()) {
+                      e.currentTarget.style.background = colors.badgePurpleText + 'dd';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (replyContent.trim()) {
+                      e.currentTarget.style.background = colors.badgePurpleText;
+                    }
+                  }}
                 >
                   Post Reply
                 </button>
@@ -597,7 +636,13 @@ export default function Discussion() {
                     setReplyingToComment(null);
                     setReplyContent('');
                   }}
-                  className="px-4 py-1 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  className="px-4 py-1 text-sm rounded-lg transition-colors"
+                  style={{
+                    background: colors.inputBackground,
+                    color: colors.primaryText,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = colors.inputBackground; }}
                 >
                   Cancel
                 </button>
@@ -608,7 +653,7 @@ export default function Discussion() {
         
         {/* Render Children (replies) */}
         {comment.children && comment.children.length > 0 && (
-          <div className="border-l-2 border-gray-200 pl-4">
+          <div className="pl-4" style={{ borderLeft: `2px solid ${colors.border}` }}>
             {renderCommentTree(comment.children, depth + 1)}
           </div>
         )}
@@ -617,7 +662,7 @@ export default function Discussion() {
   };
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: colors.background }}>
       {/* Header */}
       <DiscussionHeader
         filters={filters}
@@ -643,15 +688,27 @@ export default function Discussion() {
               {activeTab === 'communities' && (
                 <div className="space-y-6">
                   {/* Professional Network Overview */}
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                  <div
+                    className="rounded-xl p-6 border"
+                    style={{
+                      background: `linear-gradient(to right, ${colors.primaryBlue}15, ${colors.badgePurpleBg}15)`,
+                      borderColor: colors.border,
+                    }}
+                  >
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h2 className="text-lg font-bold text-gray-900 mb-1">Professional Networks</h2>
-                        <p className="text-sm text-gray-600">Join communities and connect with professionals</p>
+                        <h2 className="text-lg font-bold mb-1" style={{ color: colors.primaryText }}>Professional Networks</h2>
+                        <p className="text-sm" style={{ color: colors.secondaryText }}>Join communities and connect with professionals</p>
                       </div>
                       <button
                         onClick={() => setShowCreateCommunity(true)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                        style={{
+                          background: colors.primaryBlue,
+                          color: 'white',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
                       >
                         <Plus size={16} />
                         Create Network
@@ -678,14 +735,20 @@ export default function Discussion() {
                     
                     {filteredCommunities.length === 0 && (
                       <div className="text-center py-8">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                          <MessageSquare size={20} className="text-gray-400" />
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: colors.inputBackground }}>
+                          <MessageSquare size={20} style={{ color: colors.tertiaryText }} />
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-1">No Professional Networks Found</h3>
-                        <p className="text-gray-600 mb-4">Create your first professional network to get started</p>
+                        <h3 className="text-lg font-semibold mb-1" style={{ color: colors.primaryText }}>No Professional Networks Found</h3>
+                        <p className="mb-4" style={{ color: colors.secondaryText }}>Create your first professional network to get started</p>
                         <button
                           onClick={() => setShowCreateCommunity(true)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="px-4 py-2 rounded-lg transition-colors"
+                          style={{
+                            background: colors.primaryBlue,
+                            color: 'white',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
                         >
                           Create Network
                         </button>
@@ -706,11 +769,21 @@ export default function Discussion() {
                         setShowBookmarkedOnly(!showBookmarkedOnly);
                         setShowReportedOnly(false);
                       }}
-                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                        showBookmarkedOnly 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      style={{
+                        background: showBookmarkedOnly ? colors.primaryBlue : colors.inputBackground,
+                        color: showBookmarkedOnly ? 'white' : colors.primaryText,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!showBookmarkedOnly) {
+                          e.currentTarget.style.background = colors.hoverBackground;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!showBookmarkedOnly) {
+                          e.currentTarget.style.background = colors.inputBackground;
+                        }
+                      }}
                     >
                       <Bookmark size={16} />
                       <span>Bookmarked ({bookmarkedPosts.length})</span>
@@ -720,11 +793,21 @@ export default function Discussion() {
                         setShowReportedOnly(!showReportedOnly);
                         setShowBookmarkedOnly(false);
                       }}
-                      className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                        showReportedOnly 
-                          ? 'bg-red-600 text-white' 
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
+                      className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                      style={{
+                        background: showReportedOnly ? colors.badgeErrorText : colors.inputBackground,
+                        color: showReportedOnly ? 'white' : colors.primaryText,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!showReportedOnly) {
+                          e.currentTarget.style.background = colors.hoverBackground;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!showReportedOnly) {
+                          e.currentTarget.style.background = colors.inputBackground;
+                        }
+                      }}
                     >
                       <Flag size={16} />
                       <span>Reported ({Object.keys(flaggedPosts).length})</span>
@@ -752,12 +835,12 @@ export default function Discussion() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 bg-white rounded-lg border border-dashed border-gray-300">
-                      <MessageSquare size={48} className="mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    <div className="text-center py-12 rounded-lg border border-dashed" style={{ background: colors.cardBackground, borderColor: colors.border }}>
+                      <MessageSquare size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText }} />
+                      <h3 className="text-lg font-semibold mb-2" style={{ color: colors.primaryText }}>
                         {showBookmarkedOnly ? 'No bookmarked posts yet' : showReportedOnly ? 'No reported posts' : 'No discussions found'}
                       </h3>
-                      <p className="text-gray-600 mb-4">
+                      <p className="mb-4" style={{ color: colors.secondaryText }}>
                         {showBookmarkedOnly 
                           ? 'Bookmark posts to save them for later' 
                           : showReportedOnly 
@@ -767,7 +850,13 @@ export default function Discussion() {
                       {!showBookmarkedOnly && !showReportedOnly && (
                         <button
                           onClick={() => setShowCreatePost(true)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          className="px-4 py-2 rounded-lg transition-colors"
+                          style={{
+                            background: colors.primaryBlue,
+                            color: 'white',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
                         >
                           Create Discussion
                         </button>
@@ -787,8 +876,21 @@ export default function Discussion() {
         {activeTab !== 'communities' && (
           <button
             onClick={() => setShowCreatePost(true)}
-            className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            className="w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
+            style={{
+              background: colors.primaryBlue,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.primaryBlueHover;
+              e.currentTarget.style.boxShadow = `0 10px 25px ${colors.primaryBlue}40`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.primaryBlue;
+              e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
+            }}
             title="Create Post"
+            aria-label="Create Post"
           >
             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
           </button>
@@ -798,8 +900,21 @@ export default function Discussion() {
         {activeTab === 'communities' && (
           <button
             onClick={() => setShowCreateCommunity(true)}
-            className="w-14 h-14 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+            className="w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
+            style={{
+              background: colors.badgePurpleText,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.badgePurpleText + 'dd';
+              e.currentTarget.style.boxShadow = `0 10px 25px ${colors.badgePurpleText}40`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.badgePurpleText;
+              e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
+            }}
             title="Create Community"
+            aria-label="Create Community"
           >
             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
           </button>
@@ -808,8 +923,22 @@ export default function Discussion() {
         {/* Refresh Button */}
         <button
           onClick={handleRefresh}
-          className="w-12 h-12 bg-gray-600 text-white rounded-full shadow-lg hover:bg-gray-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+          className="w-12 h-12 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
+          style={{
+            background: colors.inputBackground,
+            color: colors.primaryText,
+            border: `1px solid ${colors.border}`,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.hoverBackground;
+            e.currentTarget.style.boxShadow = `0 10px 25px ${colors.border}40`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = colors.inputBackground;
+            e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
+          }}
           title="Refresh"
+          aria-label="Refresh discussions"
         >
           <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-200" />
         </button>
@@ -828,24 +957,34 @@ export default function Discussion() {
 
       {/* Create Post Modal */}
       {showCreatePost && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div className="rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: colors.cardBackground }}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Create Post</h2>
+              <h2 className="text-xl font-bold" style={{ color: colors.primaryText }}>Create Post</h2>
               <button
                 onClick={() => setShowCreatePost(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="transition-colors"
+                style={{ color: colors.tertiaryText }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = colors.secondaryText; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
+                title="Close"
+                aria-label="Close modal"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={24} />
               </button>
             </div>
 
             <div className="space-y-6">
               {/* Post Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Post Title *
                 </label>
                 <input
@@ -853,20 +992,36 @@ export default function Discussion() {
                   value={newPost.title}
                   onChange={(e) => setNewPost(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter post title"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               {/* Community Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Post to Community *
                 </label>
                 <select 
                   value={newPost.community}
                   onChange={(e) => setNewPost(prev => ({ ...prev, community: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                   required
+                  title="Select a community to post to"
+                  aria-label="Select a community to post to"
                 >
                   <option value="">Select a community</option>
                   {communities.map(community => (
@@ -875,7 +1030,7 @@ export default function Discussion() {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
                   {joinedCommunities.filter(id => communities.find(c => c.id === id)).length > 0 && 
                     `${joinedCommunities.filter(id => communities.find(c => c.id === id)).length} joined communities`}
                 </p>
@@ -883,7 +1038,7 @@ export default function Discussion() {
 
               {/* Post Content */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Content *
                 </label>
                 <textarea
@@ -891,34 +1046,41 @@ export default function Discussion() {
                   onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Share your thoughts, ask questions, or start a discussion..."
                   rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 rounded-lg resize-none"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               {/* Post Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Post Type
                 </label>
                 <div className="flex gap-4">
                   <label className="flex items-center">
-                    <input type="radio" name="postType" value="discussion" defaultChecked className="mr-2" />
-                    <span className="text-sm text-gray-700">Discussion</span>
+                    <input type="radio" name="postType" value="discussion" defaultChecked className="mr-2" style={{ accentColor: colors.primaryBlue }} />
+                    <span className="text-sm" style={{ color: colors.primaryText }}>Discussion</span>
                   </label>
                   <label className="flex items-center">
-                    <input type="radio" name="postType" value="question" className="mr-2" />
-                    <span className="text-sm text-gray-700">Question</span>
+                    <input type="radio" name="postType" value="question" className="mr-2" style={{ accentColor: colors.primaryBlue }} />
+                    <span className="text-sm" style={{ color: colors.primaryText }}>Question</span>
                   </label>
                   <label className="flex items-center">
-                    <input type="radio" name="postType" value="announcement" className="mr-2" />
-                    <span className="text-sm text-gray-700">Announcement</span>
+                    <input type="radio" name="postType" value="announcement" className="mr-2" style={{ accentColor: colors.primaryBlue }} />
+                    <span className="text-sm" style={{ color: colors.primaryText }}>Announcement</span>
                   </label>
                 </div>
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Tags (optional)
                 </label>
                 <div className="space-y-2">
@@ -937,7 +1099,14 @@ export default function Discussion() {
                           }
                         }
                       }}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 rounded-lg"
+                      style={{
+                        background: colors.inputBackground,
+                        border: `1px solid ${colors.border}`,
+                        color: colors.primaryText,
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                     />
                   </div>
                   
@@ -947,14 +1116,21 @@ export default function Discussion() {
                       {newPost.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                          className="inline-flex items-center px-3 py-1 text-sm rounded-full"
+                          style={{
+                            background: `${colors.primaryBlue}20`,
+                            color: colors.activeBlueText,
+                          }}
                         >
                           {tag}
                           <button
                             onClick={() => {
                               setNewPost(prev => ({ ...prev, tags: prev.tags.filter((_, i) => i !== index) }));
                             }}
-                            className="ml-2 text-blue-600 hover:text-blue-800"
+                            className="ml-2"
+                            style={{ color: colors.activeBlueText }}
+                            onMouseEnter={(e) => { e.currentTarget.style.color = colors.badgeErrorText; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = colors.activeBlueText; }}
                           >
                             ×
                           </button>
@@ -963,31 +1139,38 @@ export default function Discussion() {
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Tags help others find your post. Press Enter to add.</p>
+                <p className="text-xs mt-1" style={{ color: colors.tertiaryText }}>Tags help others find your post. Press Enter to add.</p>
               </div>
 
               {/* Post Options */}
               <div className="space-y-3">
                 <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm font-medium text-gray-700">Pin this post</span>
+                  <input type="checkbox" className="mr-2" style={{ accentColor: colors.primaryBlue }} />
+                  <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Pin this post</span>
                 </label>
                 <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm font-medium text-gray-700">Allow comments</span>
+                  <input type="checkbox" className="mr-2" style={{ accentColor: colors.primaryBlue }} />
+                  <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Allow comments</span>
                 </label>
                 <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className="text-sm font-medium text-gray-700">Notify community members</span>
+                  <input type="checkbox" className="mr-2" style={{ accentColor: colors.primaryBlue }} />
+                  <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Notify community members</span>
                 </label>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <div className="flex justify-end gap-3 mt-8 pt-6" style={{ borderTop: `1px solid ${colors.border}` }}>
             <button
               onClick={() => setShowCreatePost(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 Cancel
               </button>
@@ -1045,11 +1228,21 @@ export default function Discussion() {
                   }
                 }}
                 disabled={!newPost.title.trim() || !newPost.content.trim() || !newPost.community}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  newPost.title.trim() && newPost.content.trim() && newPost.community
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: (newPost.title.trim() && newPost.content.trim() && newPost.community) ? colors.primaryBlue : colors.inputBackground,
+                  color: (newPost.title.trim() && newPost.content.trim() && newPost.community) ? 'white' : colors.tertiaryText,
+                }}
+                onMouseEnter={(e) => {
+                  if (newPost.title.trim() && newPost.content.trim() && newPost.community) {
+                    e.currentTarget.style.background = colors.primaryBlueHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (newPost.title.trim() && newPost.content.trim() && newPost.community) {
+                    e.currentTarget.style.background = colors.primaryBlue;
+                  }
+                }}
               >
                 Create Post
               </button>
@@ -1059,24 +1252,34 @@ export default function Discussion() {
       )}
 
       {showCreateCommunity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div className="rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: colors.cardBackground }}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Create Community</h2>
+              <h2 className="text-xl font-bold" style={{ color: colors.primaryText }}>Create Community</h2>
               <button
                 onClick={() => setShowCreateCommunity(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="transition-colors"
+                style={{ color: colors.tertiaryText }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = colors.secondaryText; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
+                title="Close"
+                aria-label="Close modal"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={24} />
               </button>
             </div>
 
             <div className="space-y-6">
               {/* Community Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Community Name *
                 </label>
                 <input
@@ -1084,13 +1287,20 @@ export default function Discussion() {
                   value={newCommunity.name}
                   onChange={(e) => setNewCommunity(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter community name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Description *
                 </label>
                 <textarea
@@ -1098,19 +1308,35 @@ export default function Discussion() {
                   onChange={(e) => setNewCommunity(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe your community"
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-3 py-2 rounded-lg resize-none"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Category
                 </label>
                 <select
                   value={newCommunity.category}
                   onChange={(e) => setNewCommunity(prev => ({ ...prev, category: e.target.value as any }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
+                  title="Select community category"
+                  aria-label="Select community category"
                 >
                   <option value="general">General</option>
                   <option value="resume">Resume</option>
@@ -1131,15 +1357,16 @@ export default function Discussion() {
                     checked={newCommunity.isPrivate}
                     onChange={(e) => setNewCommunity(prev => ({ ...prev, isPrivate: e.target.checked }))}
                     className="mr-2"
+                    style={{ accentColor: colors.primaryBlue }}
                   />
-                  <span className="text-sm font-medium text-gray-700">Private Community</span>
+                  <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Private Community</span>
                 </label>
-                <p className="text-xs text-gray-500 mt-1">Private communities require approval to join</p>
+                <p className="text-xs mt-1" style={{ color: colors.tertiaryText }}>Private communities require approval to join</p>
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Tags
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -1148,7 +1375,14 @@ export default function Discussion() {
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     placeholder="Add a tag"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 rounded-lg"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1167,7 +1401,13 @@ export default function Discussion() {
                         setNewTag('');
                       }
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{
+                      background: colors.primaryBlue,
+                      color: 'white',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
                   >
                     Add
                   </button>
@@ -1176,14 +1416,21 @@ export default function Discussion() {
                   {newCommunity.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                      className="inline-flex items-center px-2 py-1 text-xs rounded-full"
+                      style={{
+                        background: `${colors.primaryBlue}20`,
+                        color: colors.activeBlueText,
+                      }}
                     >
                       {tag}
                       <button
                         onClick={() => {
                           setNewCommunity(prev => ({ ...prev, tags: prev.tags.filter((_, i) => i !== index) }));
                         }}
-                        className="ml-1 text-blue-600 hover:text-blue-800"
+                        className="ml-1"
+                        style={{ color: colors.activeBlueText }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = colors.badgeErrorText; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = colors.activeBlueText; }}
                       >
                         ×
                       </button>
@@ -1194,7 +1441,7 @@ export default function Discussion() {
 
               {/* Rules */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Community Rules
                 </label>
                 <div className="flex gap-2 mb-2">
@@ -1203,7 +1450,14 @@ export default function Discussion() {
                     value={newRule}
                     onChange={(e) => setNewRule(e.target.value)}
                     placeholder="Add a rule"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 rounded-lg"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1222,20 +1476,28 @@ export default function Discussion() {
                         setNewRule('');
                       }
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{
+                      background: colors.primaryBlue,
+                      color: 'white',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
                   >
                     Add
                   </button>
                 </div>
                 <div className="space-y-1">
                   {newCommunity.rules.map((rule, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm text-gray-700">{rule}</span>
+                    <div key={index} className="flex items-center justify-between p-2 rounded" style={{ background: colors.inputBackground }}>
+                      <span className="text-sm" style={{ color: colors.primaryText }}>{rule}</span>
                       <button
                         onClick={() => {
                           setNewCommunity(prev => ({ ...prev, rules: prev.rules.filter((_, i) => i !== index) }));
                         }}
-                        className="text-red-500 hover:text-red-700"
+                        style={{ color: colors.badgeErrorText }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = colors.badgeErrorText + 'dd'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = colors.badgeErrorText; }}
                       >
                         ×
                       </button>
@@ -1246,10 +1508,17 @@ export default function Discussion() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <div className="flex justify-end gap-3 mt-8 pt-6" style={{ borderTop: `1px solid ${colors.border}` }}>
             <button
               onClick={() => setShowCreateCommunity(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 Cancel
               </button>
@@ -1287,7 +1556,21 @@ export default function Discussion() {
                   }
                 }}
                 disabled={!newCommunity.name.trim() || !newCommunity.description.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: (newCommunity.name.trim() && newCommunity.description.trim()) ? colors.primaryBlue : colors.inputBackground,
+                  color: (newCommunity.name.trim() && newCommunity.description.trim()) ? 'white' : colors.tertiaryText,
+                }}
+                onMouseEnter={(e) => {
+                  if (newCommunity.name.trim() && newCommunity.description.trim()) {
+                    e.currentTarget.style.background = colors.primaryBlueHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (newCommunity.name.trim() && newCommunity.description.trim()) {
+                    e.currentTarget.style.background = colors.primaryBlue;
+                  }
+                }}
               >
                 Create Community
             </button>
@@ -1297,16 +1580,28 @@ export default function Discussion() {
       )}
 
       {showCommunitySettings && selectedCommunityForSettings && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div className="rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" style={{ background: colors.background }}>
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Edit Community</h2>
+              <h2 className="text-xl font-bold" style={{ color: colors.primaryText }}>Edit Community</h2>
               <button
                 onClick={() => {
                   setShowCommunitySettings(false);
                   setSelectedCommunityForSettings(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                style={{ color: colors.tertiaryText }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = colors.primaryText; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
+                className="transition-colors"
+                title="Close"
+                aria-label="Close"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1316,7 +1611,7 @@ export default function Discussion() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Community Name</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>Community Name</label>
                 <input
                   type="text"
                   value={selectedCommunityForSettings.name}
@@ -1328,12 +1623,21 @@ export default function Discussion() {
                     ));
                     setSelectedCommunityForSettings(prev => prev ? { ...prev, name: e.target.value } : null);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg"
+                  title="Community Name"
+                  aria-label="Community Name"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>Description</label>
                 <textarea
                   value={selectedCommunityForSettings.description}
                   onChange={(e) => {
@@ -1345,12 +1649,22 @@ export default function Discussion() {
                     setSelectedCommunityForSettings(prev => prev ? { ...prev, description: e.target.value } : null);
                   }}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-3 py-2 rounded-lg resize-none"
+                  title="Community Description"
+                  aria-label="Community Description"
+                  placeholder="Enter community description"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>Category</label>
                 <select
                   value={selectedCommunityForSettings.category}
                   onChange={(e) => {
@@ -1362,7 +1676,16 @@ export default function Discussion() {
                     ));
                     setSelectedCommunityForSettings(prev => prev ? { ...prev, category } : null);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
+                  title="Select community category"
+                  aria-label="Select community category"
                 >
                   <option value="general">General</option>
                   <option value="resume">Resume</option>
@@ -1389,25 +1712,33 @@ export default function Discussion() {
                       setSelectedCommunityForSettings(prev => prev ? { ...prev, isPrivate: e.target.checked } : null);
                     }}
                     className="mr-2"
+                    style={{ accentColor: colors.primaryBlue }}
                   />
-                  <span className="text-sm font-medium text-gray-700">Private Community</span>
+                  <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Private Community</span>
                 </label>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Members: {selectedCommunityForSettings.memberCount} | Posts: {selectedCommunityForSettings.postCount}
                 </label>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
+            <div className="flex justify-end gap-3 mt-8 pt-6" style={{ borderTop: `1px solid ${colors.border}` }}>
               <button
                 onClick={() => {
                   setShowCommunitySettings(false);
                   setSelectedCommunityForSettings(null);
                 }}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 Cancel
               </button>
@@ -1416,7 +1747,13 @@ export default function Discussion() {
                   setShowCommunitySettings(false);
                   setSelectedCommunityForSettings(null);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
               >
                 Save Changes
               </button>
@@ -1427,16 +1764,28 @@ export default function Discussion() {
 
       {/* Manage Members Modal */}
       {showManageMembers && managingMembersFor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">Manage Members - {managingMembersFor.name}</h2>
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div className="rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" style={{ background: colors.background }}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}>
+              <h2 className="text-xl font-bold text-white">Manage Members - {managingMembersFor.name}</h2>
               <button
                 onClick={() => {
                   setShowManageMembers(false);
                   setManagingMembersFor(null);
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                title="Close"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -1446,11 +1795,14 @@ export default function Discussion() {
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Members ({communityMembers[managingMembersFor.id]?.length || 0})</h3>
-                    <p className="text-sm text-gray-600">Manage roles and permissions</p>
+                    <h3 className="text-lg font-semibold" style={{ color: colors.primaryText }}>Members ({communityMembers[managingMembersFor.id]?.length || 0})</h3>
+                    <p className="text-sm" style={{ color: colors.tertiaryText }}>Manage roles and permissions</p>
                   </div>
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                    <button className="px-4 py-2 rounded-lg flex items-center gap-2 transition-colors" style={{ background: colors.primaryBlue, color: 'white' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
+                    >
                       <Users size={16} />
                       Invite Members
                     </button>
@@ -1461,34 +1813,44 @@ export default function Discussion() {
                 <input
                   type="text"
                   placeholder="Search members..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
               
               {/* Members List */}
               <div className="space-y-3">
                 {(communityMembers[managingMembersFor.id] || []).map((member, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div key={index} className="rounded-lg p-4 transition-shadow" style={{ border: `1px solid ${colors.border}`, background: colors.cardBackground }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}>
                           {member.name.charAt(0)}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-gray-900">{member.name}</h4>
+                            <h4 className="font-semibold" style={{ color: colors.primaryText }}>{member.name}</h4>
                             {member.role === 'admin' && (
-                              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Admin</span>
+                              <span className="px-2 py-0.5 text-xs rounded-full" style={{ background: `${colors.badgeErrorText}20`, color: colors.badgeErrorText }}>Admin</span>
                             )}
                             {member.role === 'moderator' && (
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Mod</span>
+                              <span className="px-2 py-0.5 text-xs rounded-full" style={{ background: `${colors.primaryBlue}20`, color: colors.activeBlueText }}>Mod</span>
                             )}
                             {member.role === 'member' && (
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">Member</span>
+                              <span className="px-2 py-0.5 text-xs rounded-full" style={{ background: colors.inputBackground, color: colors.primaryText }}>Member</span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">{member.email}</p>
-                          <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
+                          <p className="text-sm" style={{ color: colors.tertiaryText }}>{member.email}</p>
+                          <div className="flex items-center gap-4 text-xs mt-1" style={{ color: colors.tertiaryText }}>
                             <span>{member.postCount} posts</span>
                             <span>Joined {member.joinedAt}</span>
                             <span>Last active: {member.lastActive}</span>
@@ -1503,7 +1865,16 @@ export default function Discussion() {
                             // In real app, update member role
                             logger.debug(`Change role for ${member.name} to ${e.target.value}`);
                           }}
-                          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                          className="px-3 py-1.5 rounded-lg text-sm"
+                          style={{
+                            background: colors.inputBackground,
+                            border: `1px solid ${colors.border}`,
+                            color: colors.primaryText,
+                          }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
+                          title={`Change role for ${member.name}`}
+                          aria-label={`Change role for ${member.name}`}
                         >
                           <option value="member">Member</option>
                           <option value="moderator">Moderator</option>
@@ -1516,7 +1887,18 @@ export default function Discussion() {
                               // In real app, remove member from community
                             }
                           }}
-                          className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+                          className="px-3 py-1.5 rounded-lg transition-colors text-sm"
+                          style={{
+                            background: 'transparent',
+                            border: `1px solid ${colors.badgeErrorText}`,
+                            color: colors.badgeErrorText,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = `${colors.badgeErrorText}20`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
                         >
                           Remove
                         </button>
@@ -1532,16 +1914,28 @@ export default function Discussion() {
 
       {/* Moderation Tools Modal */}
       {showCommunityModerationTools && moderatingCommunity && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">Moderation Tools - {moderatingCommunity.name}</h2>
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
+          <div className="rounded-lg w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col" style={{ background: colors.background }}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ background: `linear-gradient(to right, #dc2626, #ea580c)` }}>
+              <h2 className="text-xl font-bold text-white">Moderation Tools - {moderatingCommunity.name}</h2>
               <button
                 onClick={() => {
                   setShowCommunityModerationTools(false);
                   setModeratingCommunity(null);
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                title="Close"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -1549,54 +1943,78 @@ export default function Discussion() {
             
             <div className="flex-1 overflow-y-auto p-6">
               {/* Tabs */}
-              <div className="flex gap-2 mb-6 border-b border-gray-200">
-                <button className="px-4 py-2 border-b-2 border-red-600 text-red-600 font-medium">Reported Posts (2)</button>
-                <button className="px-4 py-2 text-gray-600 hover:text-gray-900">Flagged Content</button>
-                <button className="px-4 py-2 text-gray-600 hover:text-gray-900">Member Violations</button>
-                <button className="px-4 py-2 text-gray-600 hover:text-gray-900">Rules</button>
+              <div className="flex gap-2 mb-6" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                <button className="px-4 py-2 font-medium" style={{ borderBottom: `2px solid #dc2626`, color: '#dc2626' }}>Reported Posts (2)</button>
+                <button className="px-4 py-2 transition-colors" style={{ color: colors.tertiaryText }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = colors.primaryText; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
+                >Flagged Content</button>
+                <button className="px-4 py-2 transition-colors" style={{ color: colors.tertiaryText }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = colors.primaryText; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
+                >Member Violations</button>
+                <button className="px-4 py-2 transition-colors" style={{ color: colors.tertiaryText }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = colors.primaryText; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
+                >Rules</button>
               </div>
               
               {/* Reported Posts */}
               <div className="space-y-4">
-                <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                <div className="rounded-lg p-4" style={{ border: `1px solid ${colors.badgeErrorText}40`, background: `${colors.badgeErrorText}15` }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold text-gray-900">Post: "Need Help with Resume"</h4>
-                        <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded-full">Reported</span>
+                        <h4 className="font-semibold" style={{ color: colors.primaryText }}>Post: "Need Help with Resume"</h4>
+                        <span className="px-2 py-0.5 text-white text-xs rounded-full" style={{ background: '#dc2626' }}>Reported</span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">Reason: Spam/Inappropriate content</p>
-                      <p className="text-xs text-gray-500">Reported by: 3 users | Author: @username</p>
+                      <p className="text-sm mb-2" style={{ color: colors.secondaryText }}>Reason: Spam/Inappropriate content</p>
+                      <p className="text-xs" style={{ color: colors.tertiaryText }}>Reported by: 3 users | Author: @username</p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                      <button className="px-3 py-1.5 text-white rounded-lg text-sm transition-colors" style={{ background: '#16a34a' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#15803d'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#16a34a'; }}
+                      >
                         Approve
                       </button>
-                      <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                      <button className="px-3 py-1.5 text-white rounded-lg text-sm transition-colors" style={{ background: '#dc2626' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#b91c1c'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#dc2626'; }}
+                      >
                         Remove
                       </button>
                     </div>
                   </div>
                 </div>
                 
-                <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                <div className="rounded-lg p-4" style={{ border: `1px solid #ea580c40`, background: '#ea580c15' }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold text-gray-900">Post: "Job Interview Tips"</h4>
-                        <span className="px-2 py-0.5 bg-orange-600 text-white text-xs rounded-full">Under Review</span>
+                        <h4 className="font-semibold" style={{ color: colors.primaryText }}>Post: "Job Interview Tips"</h4>
+                        <span className="px-2 py-0.5 text-white text-xs rounded-full" style={{ background: '#ea580c' }}>Under Review</span>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">Reason: Misleading information</p>
-                      <p className="text-xs text-gray-500">Reported by: 1 user | Author: @username2</p>
+                      <p className="text-sm mb-2" style={{ color: colors.secondaryText }}>Reason: Misleading information</p>
+                      <p className="text-xs" style={{ color: colors.tertiaryText }}>Reported by: 1 user | Author: @username2</p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                      <button className="px-3 py-1.5 text-white rounded-lg text-sm transition-colors" style={{ background: '#16a34a' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#15803d'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#16a34a'; }}
+                      >
                         Approve
                       </button>
-                      <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                      <button className="px-3 py-1.5 text-white rounded-lg text-sm transition-colors" style={{ background: '#dc2626' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = '#b91c1c'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = '#dc2626'; }}
+                      >
                         Remove
                       </button>
-                      <button className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                      <button className="px-3 py-1.5 text-white rounded-lg text-sm transition-colors" style={{ background: colors.primaryBlue }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
+                      >
                         Review
                       </button>
                     </div>
@@ -1605,20 +2023,29 @@ export default function Discussion() {
               </div>
               
               {/* Quick Actions */}
-              <div className="mt-8 border-t border-gray-200 pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="mt-8 pt-6" style={{ borderTop: `1px solid ${colors.border}` }}>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: colors.primaryText }}>Quick Actions</h3>
                 <div className="grid grid-cols-3 gap-2">
-                  <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
-                    <Shield size={24} className="mx-auto text-blue-600 mb-2" />
-                    <p className="text-sm font-medium text-gray-900">Automod Settings</p>
+                  <button className="p-4 rounded-lg transition-shadow text-center" style={{ border: `1px solid ${colors.border}`, background: colors.cardBackground }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    <Shield size={24} className="mx-auto mb-2" style={{ color: colors.primaryBlue }} />
+                    <p className="text-sm font-medium" style={{ color: colors.primaryText }}>Automod Settings</p>
                   </button>
-                  <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
-                    <Users size={24} className="mx-auto text-green-600 mb-2" />
-                    <p className="text-sm font-medium text-gray-900">Ban Members</p>
+                  <button className="p-4 rounded-lg transition-shadow text-center" style={{ border: `1px solid ${colors.border}`, background: colors.cardBackground }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    <Users size={24} className="mx-auto mb-2" style={{ color: '#16a34a' }} />
+                    <p className="text-sm font-medium" style={{ color: colors.primaryText }}>Ban Members</p>
                   </button>
-                  <button className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow text-center">
-                    <Trash2 size={24} className="mx-auto text-red-600 mb-2" />
-                    <p className="text-sm font-medium text-gray-900">Clean Up Posts</p>
+                  <button className="p-4 rounded-lg transition-shadow text-center" style={{ border: `1px solid ${colors.border}`, background: colors.cardBackground }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    <Trash2 size={24} className="mx-auto mb-2" style={{ color: colors.badgeErrorText }} />
+                    <p className="text-sm font-medium" style={{ color: colors.primaryText }}>Clean Up Posts</p>
                   </button>
                 </div>
               </div>
@@ -1629,18 +2056,23 @@ export default function Discussion() {
 
       {/* Post Detail View with Comment Tree */}
       {viewingPostDetail && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
+          <div className="rounded-2xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden flex flex-col" style={{ background: colors.background }}>
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
-              <h2 className="text-xl font-bold">{viewingPostDetail.title}</h2>
+            <div className="px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}>
+              <h2 className="text-xl font-bold text-white">{viewingPostDetail.title}</h2>
               <button
                 onClick={() => {
                   setViewingPostDetail(null);
                   setReplyingToComment(null);
                   setReplyContent('');
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                title="Close"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -1649,27 +2081,30 @@ export default function Discussion() {
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* Post Content */}
-              <div className="bg-gray-50 rounded-lg p-6 mb-6">
+              <div className="rounded-lg p-6 mb-6" style={{ background: colors.inputBackground }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}>
                     <User size={20} className="text-white" />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">{viewingPostDetail.author.name}</div>
-                    <div className="text-sm text-gray-500">{viewingPostDetail.community}</div>
+                    <div className="font-semibold" style={{ color: colors.primaryText }}>{viewingPostDetail.author.name}</div>
+                    <div className="text-sm" style={{ color: colors.tertiaryText }}>{viewingPostDetail.community}</div>
                   </div>
-                  <div className="ml-auto flex items-center gap-4 text-sm text-gray-600">
+                  <div className="ml-auto flex items-center gap-4 text-sm" style={{ color: colors.tertiaryText }}>
                     <span>{viewingPostDetail.views} views</span>
                     <span>{new Date(viewingPostDetail.timestamp).toLocaleDateString()}</span>
                   </div>
                 </div>
-                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{viewingPostDetail.content}</p>
+                <p className="leading-relaxed whitespace-pre-wrap" style={{ color: colors.primaryText }}>{viewingPostDetail.content}</p>
                 
                 {/* Post Actions */}
-                <div className="flex items-center gap-4 mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-4 mt-6 pt-4" style={{ borderTop: `1px solid ${colors.border}` }}>
                   <button
                     onClick={() => handleVote(viewingPostDetail.id, 'up')}
-                    className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+                    className="flex items-center gap-2 transition-colors"
+                    style={{ color: colors.tertiaryText }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = colors.primaryBlue; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
                   >
                     <ThumbsUp size={18} />
                     <span>{viewingPostDetail.votes} votes</span>
@@ -1679,14 +2114,20 @@ export default function Discussion() {
                       setCommentingPostId(viewingPostDetail.id);
                       setShowCommentModal(true);
                     }}
-                    className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors"
+                    className="flex items-center gap-2 transition-colors"
+                    style={{ color: colors.tertiaryText }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = colors.badgePurpleText; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
                   >
                     <MessageSquare size={18} />
                     <span>Comment</span>
                   </button>
                   <button
                     onClick={() => handleShare(viewingPostDetail.id)}
-                    className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors"
+                    className="flex items-center gap-2 transition-colors"
+                    style={{ color: colors.tertiaryText }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#16a34a'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = colors.tertiaryText; }}
                   >
                     <span>Share</span>
                   </button>
@@ -1696,13 +2137,16 @@ export default function Discussion() {
               {/* Comment Section */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">Comments ({comments.filter(c => c.postId === viewingPostDetail.id).length})</h3>
+                  <h3 className="text-lg font-bold" style={{ color: colors.primaryText }}>Comments ({comments.filter(c => c.postId === viewingPostDetail.id).length})</h3>
                   <button
                     onClick={() => {
                       setCommentingPostId(viewingPostDetail.id);
                       setShowCommentModal(true);
                     }}
-                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors flex items-center gap-2"
+                    className="px-4 py-2 text-white rounded-lg transition-colors flex items-center gap-2"
+                    style={{ background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                   >
                     <Plus size={18} />
                     Add Comment
@@ -1713,9 +2157,9 @@ export default function Discussion() {
                 <div className="space-y-4">
                   {renderCommentTree(buildCommentTree(viewingPostDetail.id))}
                   {comments.filter(c => c.postId === viewingPostDetail.id).length === 0 && (
-                    <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                      <MessageSquare size={48} className="mx-auto text-gray-400 mb-4" />
-                      <p className="text-gray-600">No comments yet. Be the first to comment!</p>
+                    <div className="text-center py-12 rounded-lg border border-dashed" style={{ background: colors.inputBackground, borderColor: colors.border }}>
+                      <MessageSquare size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText }} />
+                      <p style={{ color: colors.secondaryText }}>No comments yet. Be the first to comment!</p>
                     </div>
                   )}
                 </div>
@@ -1727,17 +2171,22 @@ export default function Discussion() {
 
       {/* Comment Modal */}
       {showCommentModal && commentingPostId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold">Add Comment</h2>
+        <div className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0, 0, 0, 0.6)' }}>
+          <div className="rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden" style={{ background: colors.background }}>
+            <div className="px-6 py-4 flex items-center justify-between" style={{ background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}>
+              <h2 className="text-xl font-bold text-white">Add Comment</h2>
               <button
                 onClick={() => {
                   setShowCommentModal(false);
                   setCommentingPostId(null);
                   setNewComment('');
                 }}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: 'white' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                title="Close"
+                aria-label="Close"
               >
                 <X size={20} />
               </button>
@@ -1745,13 +2194,20 @@ export default function Discussion() {
             
             <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 120px)' }}>
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Your Comment</label>
+                <label className="block text-sm font-semibold mb-2" style={{ color: colors.secondaryText }}>Your Comment</label>
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Write your comment here..."
                   rows={6}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-4 py-3 rounded-lg resize-none"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `2px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
                 />
               </div>
 
@@ -1762,18 +2218,37 @@ export default function Discussion() {
                     setCommentingPostId(null);
                     setNewComment('');
                   }}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 rounded-lg transition-colors"
+                  style={{
+                    background: 'transparent',
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmitComment}
                   disabled={!newComment.trim()}
-                  className={`px-6 py-2 text-white rounded-lg transition-colors ${
-                    newComment.trim() 
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700' 
-                      : 'bg-gray-400 cursor-not-allowed'
-                  }`}
+                  className="px-6 py-2 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: newComment.trim() 
+                      ? `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`
+                      : colors.inputBackground,
+                    color: newComment.trim() ? 'white' : colors.tertiaryText,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (newComment.trim()) {
+                      e.currentTarget.style.opacity = '0.9';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (newComment.trim()) {
+                      e.currentTarget.style.opacity = '1';
+                    }
+                  }}
                 >
                   Post Comment
                 </button>

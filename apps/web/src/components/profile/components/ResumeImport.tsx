@@ -2,12 +2,15 @@
 
 import React, { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface ResumeImportProps {
   onResumeImport: (data: any) => void;
 }
 
 export default function ResumeImport({ onResumeImport }: ResumeImportProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -91,18 +94,40 @@ export default function ResumeImport({ onResumeImport }: ResumeImportProps) {
         accept=".pdf,.doc,.docx"
         onChange={handleFileSelect}
         className="hidden"
+        aria-label="Import resume file"
+        title="Import resume file"
       />
       
       <button
         onClick={handleButtonClick}
         disabled={isUploading}
-        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          background: colors.inputBackground,
+          color: colors.primaryText,
+          border: `1px solid ${colors.border}`,
+        }}
+        onMouseEnter={(e) => {
+          if (!isUploading) {
+            e.currentTarget.style.background = colors.hoverBackgroundStrong;
+            e.currentTarget.style.borderColor = colors.borderFocused;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isUploading) {
+            e.currentTarget.style.background = colors.inputBackground;
+            e.currentTarget.style.borderColor = colors.border;
+          }
+        }}
       >
         {isUploading ? (
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+          <div 
+            className="animate-spin rounded-full h-5 w-5 border-b-2"
+            style={{ borderColor: colors.primaryBlue, borderTopColor: 'transparent' }}
+          ></div>
         ) : (
           <>
-            <Upload size={18} />
+            <Upload size={16} />
             <span>Import Resume</span>
           </>
         )}
