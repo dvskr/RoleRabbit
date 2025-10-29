@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../../components/layout/Sidebar';
-import Header from '../../components/layout/Header';
+import Sidebar from '../../components/layout/SidebarNew';
+import Header from '../../components/layout/HeaderNew';
 import PageHeader from '../../components/layout/PageHeader';
-import Home from '../../components/Home';
-import Profile from '../../components/Profile';
+import Home from '../../components/HomeNew';
+import Profile from '../../components/ProfileRedesign';
 import CloudStorage from '../../components/CloudStorage';
 import ResumeEditor from '../../components/features/ResumeEditor';
 import AIPanel from '../../components/features/AIPanel';
@@ -1009,7 +1009,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="fixed inset-0 flex bg-gray-50">
+      <div className="fixed inset-0 flex bg-[#0A0E14]">
         {/* Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -1018,7 +1018,7 @@ export default function DashboardPage() {
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {/* Header */}
           {activeTab === 'editor' ? (
             <Header
