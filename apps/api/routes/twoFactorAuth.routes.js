@@ -21,7 +21,15 @@ const { prisma } = require('../utils/db');
  */
 async function generate2FASetup(request, reply) {
   try {
+    // Better error handling for authentication
+    if (!request.user || !request.user.userId) {
+      console.error('No user in request:', request.user);
+      return reply.status(401).send({ error: 'Not authenticated. Please login first.' });
+    }
+    
     const userId = request.user.userId;
+    console.log('2FA Setup requested by userId:', userId);
+    
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, name: true }
