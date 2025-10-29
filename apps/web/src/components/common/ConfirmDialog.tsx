@@ -36,7 +36,7 @@ export function ConfirmDialog({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
- treaty <div>
+      <div>
         <p className={`mb-6 ${variants[variant]}`}>{message}</p>
         <div className="flex justify-end space-x-3">
           <Button variant="secondary" onClick={onClose}>

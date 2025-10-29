@@ -1,35 +1,83 @@
 import React from 'react';
-import { Circle } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
-interface TimelineItem {
+export interface TimelineItem {
   title: string;
   description?: string;
   date?: string;
   icon?: React.ReactNode;
+  status?: 'completed' | 'active' | 'pending';
 }
 
 interface TimelineProps {
   items: TimelineItem[];
+  orientation?: 'vertical' | 'horizontal';
 }
 
-export function Timeline({ items }: TimelineProps) {
+export function Timeline({ items, orientation = 'vertical' }: TimelineProps) {
+  if (orientation === 'horizontal') {
+    return (
+      <div className="flex items-start">
+        {items.map((item, index) => (
+          <div key={index} className="flex items-start flex-1">
+            <div className="flex flex-col items-center mr-2">
+              <div
+                className={cn(
+                  'w-3 h-3 rounded-full border-2',
+                  item.status === 'completed' && 'bg-green-500 border-green-500',
+                  item.status === 'active' && 'bg-blue-500 border-blue-500',
+                  item.status === 'pending' && 'bg-gray-300 border-gray-300'
+                )}
+              />
+              {index < items.length - 1 && (
+                <div className="w-0.5 h-16 bg-gray-300 mt-1" />
+              )}
+            </div>
+            <div className="pb-8">
+              <h4 className="font-semibold text-sm">{item.title}</h4>
+              {item.description && (
+                <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+              )}
+              {item.date && (
+                <p className="text-xs text-gray-500 mt-1">{item.date}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {items.map((item, index) => (
-        <div key={index} className="relative pl-8 pb-8">
-          {index !== items.length - 1 && (
-            <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-gray-200" />
-          )}
-          <div className="absolute left-0 top-1 flex items-center justify-center w-8 h-8 bg-white border-2 border-gray-300 rounded-full">
-            {item.icon || <Circle className="w-4 h-4 text-gray-400" />}
+        <div key={index} className="flex items-start mb-6">
+          <div className="flex flex-col items-center mr-4">
+            <div
+              className={cn(
+                'w-10 h-10 rounded-full border-2 flex items-center justify-center',
+                item.status === 'completed' && 'bg-green-500 border-green-500',
+                item.status === 'active' && 'bg-blue-500 border-blue-500',
+                item.status === 'pending' && 'bg-white border-gray-300'
+              )}
+            >
+              {item.icon ? (
+                <span className="text-white text-sm">{item.icon}</span>
+              ) : (
+                <span className="text-xs text-gray-500">{index + 1}</span>
+              )}
+            </div>
+            {index < items.length - 1 && (
+              <div className="w-0.5 h-full bg-gray-300 mt-2 min-h-[60px]" />
+            )}
           </div>
-          <div>
-            <h3 className="font-medium text-gray-900">{item.title}</h3>
+          <div className="flex-1 pb-6">
+            <h4 className="font-semibold">{item.title}</h4>
             {item.description && (
-              <p className="mt-1 text-sm text-gray-500">{item.description}</p>
+              <p className="text-gray-600 mt-1">{item.description}</p>
             )}
             {item.date && (
-              <p className="mt-1 text-xs text-gray-400">{item.date}</p>
+              <p className="text-sm text-gray-500 mt-1">{item.date}</p>
             )}
           </div>
         </div>
@@ -37,4 +85,3 @@ export function Timeline({ items }: TimelineProps) {
     </div>
   );
 }
-

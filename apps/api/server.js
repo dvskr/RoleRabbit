@@ -168,6 +168,15 @@ const {
   getAgentStats
 } = require('./utils/aiAgents');
 
+// 2FA Routes
+const {
+  generate2FASetup,
+  enable2FAEndpoint,
+  disable2FAEndpoint,
+  verify2FAToken,
+  get2FAStatus
+} = require('./routes/twoFactorAuth.routes');
+
 // Register compression
 fastify.register(require('@fastify/compress'), {
   global: true,
@@ -383,6 +392,18 @@ fastify.post('/api/auth/login', async (request, reply) => {
     
     const user = await authenticateUser(email, password);
     
+    // Check if user has 2FA enabled - Task 6: 2FA Enforcement
+    if (user.twoFactorEnabled) {
+      // Return 2FA requirement instead of full login
+      return reply.send({
+        success: true,
+        requires2FA: true,
+        message: '2FA verification required',
+        userId: user.id,
+        email: user.email
+      });
+    }
+    
     // Generate JWT access token (short-lived: 15 minutes)
     const accessToken = fastify.jwt.sign({ 
       userId: user.id, 
@@ -572,6 +593,57 @@ fastify.get('/api/auth/sessions', {
     sessions
   });
 });
+
+// ========================================
+// 2FA ROUTES - Complete Implementation
+// ========================================
+
+// Generate 2FA setup (requires authentication)
+fastify.post('/api/auth/2fa/setup', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, generate2FASetup);
+
+// Enable 2FA (requires authentication)
+fastify.post('/api/auth/2fa/enable', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, enable2FAEndpoint);
+
+// Disable 2FA (requires authentication)
+fastify.post('/api/auth/2fa/disable', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, disable2FAEndpoint);
+
+// Verify 2FA token (public - for login)
+fastify.post('/api/auth/2fa/verify', verify2FAToken);
+
+// Get 2FA status (requires authentication)
+fastify.get('/api/auth/2fa/status', {
+  preHandler: async (request, reply) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ error: 'Unauthorized' });
+    }
+  }
+}, get2FAStatus);
 
 // Forgot password endpoint
 fastify.post('/api/auth/forgot-password', async (request, reply) => {

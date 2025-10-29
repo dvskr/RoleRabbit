@@ -28,9 +28,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Verify auth by checking if user is authenticated via cookie
     const checkAuth = async () => {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
         const response = await fetch('http://localhost:3001/api/auth/verify', {
           credentials: 'include',
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
+        
         if (response.ok) {
           const data = await response.json();
           if (data.user) {
@@ -38,14 +44,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
+        if (error.name !== 'AbortError') {
+          console.error('Auth check failed:', error);
+        }
+        // Silently fail - don't block app startup
       }
-      // Don't wait for auth check - set loading to false immediately
       setIsLoading(false);
     };
-    // Set loading false immediately to prevent blocking
+    
+    // Set loading false immediately to prevent blocking startup
     setIsLoading(false);
-    checkAuth();
+    
+    // Run auth check in background (non-blocking)
+    setTimeout(checkAuth, 100);
   }, []);
 
   const login = async (email: string, password: string) => {

@@ -1,79 +1,78 @@
 /**
- * API Documentation Utility
- * Generates API documentation from routes
+ * API Documentation Generator
+ * Generates OpenAPI/Swagger documentation from route handlers
  */
 
-class APIDocGenerator {
-  constructor() {
-    this.routes = [];
+const fs = require('fs');
+const path = require('path');
+
+const schema = {
+  openapi: '3.0.0',
+  info: {
+    title: 'RoleReady API',
+    version: '1.0.0',
+    description: 'Complete API documentation for RoleReady job search platform'
+  },
+  servers: [
+    {
+      url: 'http://localhost:5000',
+      description: 'Development server'
+    },
+    {
+      url: 'https://api.roleready.com',
+      description: 'Production server'
+    }
+  ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT'
+      }
+    }
+  },
+  paths: {}
+};
+
+function registerEndpoint(method, path, options = {}) {
+  if (!schema.paths[path]) {
+    schema.paths[path] = {};
   }
 
-  /**
-   * Register a route for documentation
-   */
-  registerRoute(route) {
-    this.routes.push(route);
-  }
-
-  /**
-   * Generate OpenAPI/Swagger documentation
-   */
-  generateOpenAPISpec() {
-    return {
-      openapi: '3.0.0',
-      info: {
-        title: 'RoleReady API',
-        version: '1.0.0',
-        description: 'AI-powered career management platform API'
-      },
-      servers: [
-        {
-          url: 'http://localhost:3001',
-          description: 'Development server'
-        }
-      ],
-      paths: this.generatePaths(),
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT'
+  schema.paths[path][method.toLowerCase()] = {
+    summary: options.summary || '',
+    description: options.description || '',
+    tags: options.tags || [],
+    security: options.authRequired ? [{ bearerAuth: [] }] : [],
+    parameters: options.parameters || [],
+    requestBody: options.requestBody || undefined,
+    responses: options.responses || {
+      200: {
+        description: 'Successful response',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object'
+            }
           }
         }
       }
-    };
-  }
-
-  /**
-   * Generate paths from registered routes
-   */
-  generatePaths() {
-    const paths = {};
-    
-    this.routes.forEach(route => {
-      if (!paths[route.path]) {
-        paths[route.path] = {};
-      }
-      
-      paths[route.path][route.method.toLowerCase()] = {
-        summary: route.summary || '',
-        description: route.description || '',
-        tags: route.tags || [],
-        parameters: route.parameters || [],
-        requestBody: route.requestBody || undefined,
-        responses: route.responses || {
-          '200': { description: 'Success' },
-          '400': { description: 'Bad Request' },
-          '401': { description: 'Unauthorized' }
-        },
-        security: route.auth ? [{ bearerAuth: [] }] : []
-      };
-    });
-    
-    return paths;
-  }
+    }
+  };
 }
 
-module.exports = new APIDocGenerator();
+function generateDocumentation() {
+  const outputPath = path.join(__dirname, '../docs/api-spec.json');
+  fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));
+  console.log('✅ API documentation generated at:', outputPath);
+  
+  // Also generate HTML using redoc-cli if available
+  // npx redoc-cli bundle docs/api-spec.json -o docs/api-docs.html
+}
 
+module.exports = {
+  registerEndpoint,
+  generateDocumentation,
+  schema
+};

@@ -1,38 +1,55 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface StatsCardProps {
   title: string;
   value: string | number;
-  change?: number;
-  label?: string;
+  change?: {
+    value: string | number;
+    isPositive: boolean;
+  };
   icon?: React.ReactNode;
+  trend?: 'up' | 'down' | 'neutral';
+  className?: string;
 }
 
-export function StatsCard({ title, value, change, label, icon }: StatsCardProps) {
+export function StatsCard({ title, value, change, icon, trend, className }: StatsCardProps) {
+  const trendColors = {
+    up: 'text-green-600',
+    down: 'text-red-600',
+    neutral: 'text-gray-600'
+  };
+
+  const changeColors = {
+    up: 'bg-green-50 text-green-600',
+    down: 'bg-red-50 text-red-600'
+  };
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+    <div className={cn('bg-white rounded-lg border border-gray-200 p-6', className)}>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-        {icon && <div className="text-gray-400">{icon}</div>}
+        <h4 className="text-sm font-medium text-gray-600">{title}</h4>
+        {icon && <span className="text-gray-400">{icon}</span>}
       </div>
-      <div className="flex items-baseline">
-        <p className="text-2xl font-semibold text-gray-900">{value}</p>
-        {change !== undefined && (
-          <div className={`flex items-center ml-3 text-sm font-medium ${
-            change >= 0 ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {change >= 0 ? (
-              <TrendingUp className="w-4 h-4 mr-1" />
-            ) : (
-              <TrendingDown className="w-4 h-4 mr-1" />
-            )}
-            {Math.abs(change)}%
-          </div>
-        )}
+
+      <div className="flex items-baseline justify-between">
+        <div>
+          <p className="text-2xl font-semibold text-gray-900">{value}</p>
+          {change && (
+            <div className="flex items-center space-x-1 mt-1">
+              <span className={cn('text-sm font-medium', trendColors[trend || 'neutral'])}>
+                {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '→'}
+              </span>
+              <span className={cn(
+                'text-xs px-2 py-0.5 rounded-full',
+                change.isPositive ? changeColors.up : changeColors.down
+              )}>
+                {change.value}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
-      {label && <p className="text-sm text-gray-500 mt-1">{label}</p>}
     </div>
   );
 }
-
