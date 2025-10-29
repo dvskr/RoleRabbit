@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Mail, Lock, Eye, EyeOff, Github, Chrome, Star } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Github, Chrome, Star, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { Logo } from '@/components/common/Logo';
 
 export default function MinimalAuthPage() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function MinimalAuthPage() {
   const [activeContent, setActiveContent] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const formRef = useRef<HTMLFormElement>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -30,10 +34,60 @@ export default function MinimalAuthPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setError('');
+  const validateField = (name: string, value: string): string => {
+    if (!value && name !== 'name') return '';
+    
+    if (name === 'email' && value) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(value) ? '' : 'Invalid email format';
+    }
+    
+    if (name === 'password' && value) {
+      if (value.length < 8) return 'Password must be at least 8 characters';
+      if (!/[A-Z]/.test(value)) return 'Password must contain uppercase';
+      if (!/[a-z]/.test(value)) return 'Password must contain lowercase';
+      if (!/[0-9]/.test(value)) return 'Password must contain number';
+      return '';
+    }
+    
+    if (name === 'confirmPassword' && value) {
+      return value === formData.password ? '' : 'Passwords do not match';
+    }
+    
+    return '';
   };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    setError('');
+    
+    // Real-time validation
+    if (touched[name]) {
+      const fieldError = validateField(name, value);
+      setFieldErrors({ ...fieldErrors, [name]: fieldError });
+    }
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setTouched({ ...touched, [name]: true });
+    const fieldError = validateField(name, value);
+    setFieldErrors({ ...fieldErrors, [name]: fieldError });
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Tab' && !e.shiftKey && e.ctrlKey) {
+        e.preventDefault();
+        setActiveTab(activeTab === 'signin' ? 'signup' : 'signin');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [activeTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,11 +186,8 @@ export default function MinimalAuthPage() {
         <div className="w-full max-w-[400px]">
           {/* Logo */}
           <div className="mb-12">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#34B27B] flex items-center justify-center">
-                <Sparkles size={16} className="text-white" />
-              </div>
-              <span className="text-xl font-semibold text-white">Role Ready</span>
+            <Link href="/">
+              <Logo size={32} />
             </Link>
           </div>
 
@@ -171,63 +222,121 @@ export default function MinimalAuthPage() {
             {/* Name (Sign Up only) */}
             {activeTab === 'signup' && (
               <div>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Full name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-[#1A1F26] border border-[#27272A] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors text-sm"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Full name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className="w-full px-4 py-3 bg-[#1A1F26] border border-[#27272A] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors text-sm"
+                    required
+                  />
+                </div>
               </div>
             )}
 
             {/* Email */}
             <div>
-              <input
-                type="email"
-                name="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-[#1A1F26] border border-[#27272A] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors text-sm"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-3 bg-[#1A1F26] border rounded-lg text-white placeholder-[#6B7280] focus:outline-none transition-colors text-sm ${
+                    touched.email 
+                      ? fieldErrors.email 
+                        ? 'border-red-500/50 focus:border-red-500' 
+                        : 'border-[#34B27B]/50 focus:border-[#34B27B]'
+                      : 'border-[#27272A] focus:border-[#34B27B]'
+                  }`}
+                  required
+                />
+                {touched.email && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {fieldErrors.email ? (
+                      <XCircle size={16} className="text-red-400" />
+                    ) : (
+                      <CheckCircle2 size={16} className="text-[#34B27B]" />
+                    )}
+                  </div>
+                )}
+              </div>
+              {fieldErrors.email && (
+                <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Password */}
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-3 pr-12 bg-[#1A1F26] border border-[#27272A] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors text-sm"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280] hover:text-white"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-3 pr-12 bg-[#1A1F26] border rounded-lg text-white placeholder-[#6B7280] focus:outline-none transition-colors text-sm ${
+                    touched.password 
+                      ? fieldErrors.password 
+                        ? 'border-red-500/50 focus:border-red-500' 
+                        : 'border-[#34B27B]/50 focus:border-[#34B27B]'
+                      : 'border-[#27272A] focus:border-[#34B27B]'
+                  }`}
+                  required
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {touched.password && !fieldErrors.password && (
+                    <CheckCircle2 size={16} className="text-[#34B27B]" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[#6B7280] hover:text-white"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-red-400">{fieldErrors.password}</p>
+              )}
             </div>
 
             {/* Confirm Password (Sign Up only) */}
             {activeTab === 'signup' && (
               <div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  placeholder="Confirm password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 bg-[#1A1F26] border border-[#27272A] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors text-sm"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    placeholder="Confirm password"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-3 pr-10 bg-[#1A1F26] border rounded-lg text-white placeholder-[#6B7280] focus:outline-none transition-colors text-sm ${
+                      touched.confirmPassword 
+                        ? fieldErrors.confirmPassword 
+                          ? 'border-red-500/50 focus:border-red-500' 
+                          : 'border-[#34B27B]/50 focus:border-[#34B27B]'
+                        : 'border-[#27272A] focus:border-[#34B27B]'
+                    }`}
+                    required
+                  />
+                  {touched.confirmPassword && !fieldErrors.confirmPassword && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <CheckCircle2 size={16} className="text-[#34B27B]" />
+                    </div>
+                  )}
+                </div>
+                {fieldErrors.confirmPassword && (
+                  <p className="mt-1 text-xs text-red-400">{fieldErrors.confirmPassword}</p>
+                )}
               </div>
             )}
 
@@ -245,18 +354,26 @@ export default function MinimalAuthPage() {
             )}
 
             {/* Error */}
-            {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-                {error}
-              </div>
-            )}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
+                >
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-[#34B27B] text-white font-medium rounded-lg hover:bg-[#3ECF8E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full py-3 bg-[#34B27B] text-white font-medium rounded-lg hover:bg-[#3ECF8E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
             >
+              {isLoading && <Loader2 size={16} className="animate-spin" />}
               {isLoading ? 'Loading...' : (activeTab === 'signin' ? 'Sign In' : 'Create Account')}
             </button>
           </form>

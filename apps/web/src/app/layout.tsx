@@ -6,9 +6,9 @@ import { AuthProvider } from '../contexts/AuthContext';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
 export const metadata: Metadata = {
-  title: 'RoleReady - AI-Powered Resume Builder',
-  description: 'Build professional resumes with AI assistance. Get ATS-optimized resumes that land you interviews.',
-  keywords: ['resume', 'CV', 'AI', 'ATS', 'job application', 'career'],
+  title: 'RoleReady - Your Complete Career Platform',
+  description: 'Build resumes, track jobs, prepare for interviews, and land your dream role. One platform for your entire job search.',
+  keywords: ['resume', 'CV', 'job search', 'career', 'job tracking', 'interview prep', 'ATS', 'job application'],
   authors: [{ name: 'RoleReady Team' }],
 };
 
@@ -26,6 +26,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body style={{ margin: 0, padding: 0 }}>
         <AuthProvider>
           <div id="root">

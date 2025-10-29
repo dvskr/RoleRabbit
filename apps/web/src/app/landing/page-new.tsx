@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Sparkles, Menu, X, Check, ArrowRight, Play, Star, TrendingUp, Zap, Briefcase, Cloud, Globe, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Logo } from '@/components/common/Logo';
 
 export default function NewLandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
   // Stats animation
   const [stats, setStats] = useState({
@@ -15,6 +17,18 @@ export default function NewLandingPage() {
     salary: 0,
     support: 24
   });
+
+  // Scroll progress
+  useEffect(() => {
+    const handleScroll = () => {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      setScrollProgress(scrolled);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     // Animate stats on mount
@@ -41,17 +55,20 @@ export default function NewLandingPage() {
 
   return (
     <div className="min-h-screen bg-[#11181C] text-[#EDEDED] overflow-x-hidden">
+      {/* Scroll Progress Indicator */}
+      <div className="fixed top-0 left-0 h-1 bg-[#27272A] w-full z-[60]">
+        <div 
+          className="h-full bg-gradient-to-r from-[#34B27B] to-[#3ECF8E] transition-all duration-300"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       {/* Navigation Bar */}
       <nav className="fixed top-0 w-full z-50 bg-[rgba(17,24,28,0.8)] backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#34B27B] to-[#3ECF8E] flex items-center justify-center">
-              <Sparkles size={20} className="text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-white to-[#3ECF8E] bg-clip-text text-transparent">
-              Role Ready
-            </span>
+          <Link href="/">
+            <Logo size={40} />
           </Link>
 
           {/* Desktop Nav */}
@@ -117,10 +134,14 @@ export default function NewLandingPage() {
           className="text-center"
         >
           <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to harness-r from-white via-[#34B27B] to-white bg-clip-text text-transparent leading-tight">
-            Get Your Dream Job
+            Your Career
+            <br />
+            <span className="bg-gradient-to-r from-[#34B27B] to-[#3ECF8E] bg-clip-text text-transparent">
+              Starts Here
+            </span>
           </h1>
           <p className="text-xl md:text-2xl text-[#A0A0A0] mb-12 max-w-2xl mx-auto">
-            Build your career in days. Land offers in weeks.
+            One platform to build resumes, track jobs, prepare for interviews, and land your dream role.
           </p>
 
           {/* CTA Buttons */}
@@ -197,7 +218,7 @@ export default function NewLandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: Sparkles, title: 'AI-Powered Resume Builder', desc: 'Create professional resumes with AI guidance' },
+              { icon: Sparkles, title: 'Smart Resume Builder', desc: 'Create professional resumes tailored to each job' },
               { icon: Briefcase, title: 'Smart Job Tracking', desc: 'Track applications and manage your pipeline' },
               { icon: Cloud, title: 'Secure Document Storage', desc: 'Safe cloud storage for all your files' },
               { icon: Globe, title: 'Portfolio Website Generator', desc: 'Build your personal portfolio in minutes' },
