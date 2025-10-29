@@ -4,6 +4,7 @@ import React, { useEffect, useMemo } from 'react';
 import { FileText, Sparkles, Layers, Plus, GripVertical, Trash2, Type, Palette, Eye, EyeOff, Mail, Phone, MapPin, Linkedin, Github, Globe, CheckCircle, X, Layout } from 'lucide-react';
 import MultiResumeManager from './MultiResumeManager';
 import { resumeTemplates } from '../../data/templates';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ResumeEditorProps {
   resumeFileName: string;
@@ -102,6 +103,8 @@ export default function ResumeEditor({
   isSidebarCollapsed = false,
   onToggleSidebar
 }: ResumeEditorProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   // Get the selected template data
   const selectedTemplate = selectedTemplateId 
@@ -190,25 +193,69 @@ export default function ResumeEditor({
   // Calculate sidebar width and padding based on collapse state
   const sidebarWidth = isSidebarCollapsed ? '48px' : '288px';
   const sidebarPadding = isSidebarCollapsed ? '8px' : '24px';
-  const sidebarClasses = isSidebarCollapsed 
-    ? 'bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto flex-shrink-0'
-    : 'bg-white/80 backdrop-blur-xl border-r border-gray-200/50 overflow-y-auto flex-shrink-0';
 
   return (
-    <div className="flex flex-1 h-full overflow-hidden" style={{ height: '100%', maxHeight: '100%' }}>
+    <div className="flex flex-1 h-full overflow-hidden" style={{ height: '100%', maxHeight: '100%', background: colors.background }}>
       {/* Left Sidebar - Section Controls */}
-      <div className={sidebarClasses} style={{ width: sidebarWidth, padding: sidebarPadding }}>
+      <div 
+        className="backdrop-blur-xl overflow-y-auto flex-shrink-0"
+        style={{ 
+          width: sidebarWidth, 
+          padding: sidebarPadding,
+          background: colors.sidebarBackground,
+          borderRight: `1px solid ${colors.border}`,
+        }}
+      >
         {/* Collapsed View - Just Icons */}
         {isSidebarCollapsed ? (
           <div className="flex flex-col gap-2">
-            <button className="p-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all" title="File Name">
-              <FileText size={16} className="text-blue-600 mx-auto" />
+            <button 
+              className="p-2 border rounded-lg transition-all" 
+              title="File Name"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 2px 4px ${colors.border}20`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <FileText size={16} className="mx-auto" style={{ color: colors.primaryBlue }} />
             </button>
-            <button className="p-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all" title="Sections">
-              <Layers size={16} className="text-purple-600 mx-auto" />
+            <button 
+              className="p-2 border rounded-lg transition-all" 
+              title="Sections"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 2px 4px ${colors.border}20`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <Layers size={16} className="mx-auto" style={{ color: colors.badgePurpleText }} />
             </button>
-            <button className="p-2 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all" title="Formatting">
-              <Palette size={16} className="text-purple-600 mx-auto" />
+            <button 
+              className="p-2 border rounded-lg transition-all" 
+              title="Formatting"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 2px 4px ${colors.border}20`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <Palette size={16} className="mx-auto" style={{ color: colors.badgePurpleText }} />
             </button>
           </div>
         ) : (
@@ -216,13 +263,23 @@ export default function ResumeEditor({
             {/* File Name Configuration */}
             <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
-              <FileText size={16} className="text-blue-600" />
+            <h3 className="font-bold flex items-center gap-2 text-sm" style={{ color: colors.primaryText }}>
+              <FileText size={16} style={{ color: colors.primaryBlue }} />
               File Name
             </h3>
             <button
               onClick={() => setResumeFileName(onGenerateSmartFileName())}
-              className="p-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all"
+              className="p-1.5 rounded-lg transition-all"
+              style={{
+                background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                color: 'white',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = `0 4px 12px ${colors.primaryBlue}40`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = 'none';
+              }}
               title="Generate Smart Filename"
             >
               <Sparkles size={12} />
@@ -233,9 +290,22 @@ export default function ResumeEditor({
             value={resumeFileName}
             onChange={(e) => setResumeFileName(e.target.value)}
             placeholder="Enter filename..."
-            className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all bg-white/90"
+            className="w-full px-3 py-2 text-sm rounded-lg transition-all"
+            style={{
+              background: colors.inputBackground,
+              border: `2px solid ${colors.border}`,
+              color: colors.primaryText,
+            }}
+            onFocus={(e) => {
+              e.target.style.borderColor = colors.primaryBlue;
+              e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = colors.border;
+              e.target.style.outline = 'none';
+            }}
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
             💡 AI generates: Name_Title_YYYY-MM format
           </p>
         </div>
@@ -259,13 +329,23 @@ export default function ResumeEditor({
         {/* Sections */}
          <div className="mb-6">
            <div className="flex items-center justify-between mb-4">
-             <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base">
-               <Layers size={18} className="text-purple-600" />
+             <h3 className="font-bold flex items-center gap-2 text-base" style={{ color: colors.primaryText }}>
+               <Layers size={18} style={{ color: colors.badgePurpleText }} />
              Sections
            </h3>
            <button
                 onClick={onShowAddSectionModal}
-             className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:shadow-lg transition-all"
+             className="p-2 rounded-lg transition-all"
+             style={{
+               background: `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`,
+               color: 'white',
+             }}
+             onMouseEnter={(e) => {
+               e.currentTarget.style.boxShadow = `0 4px 12px ${colors.badgePurpleText}40`;
+             }}
+             onMouseLeave={(e) => {
+               e.currentTarget.style.boxShadow = 'none';
+             }}
              title="Add Custom Section"
            >
              <Plus size={16} />
@@ -278,28 +358,58 @@ export default function ResumeEditor({
             const displayName = isCustom ? isCustom.name : section;
             
             return (
-                 <div key={section} className="p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between group hover:shadow-sm transition-all duration-200">
+                 <div 
+                   key={section} 
+                   className="p-3 border rounded-lg flex items-center justify-between group transition-all duration-200"
+                   style={{
+                     background: colors.cardBackground,
+                     border: `1px solid ${colors.border}`,
+                   }}
+                   onMouseEnter={(e) => {
+                     e.currentTarget.style.boxShadow = `0 2px 4px ${colors.border}20`;
+                     e.currentTarget.style.borderColor = colors.borderFocused;
+                   }}
+                   onMouseLeave={(e) => {
+                     e.currentTarget.style.boxShadow = 'none';
+                     e.currentTarget.style.borderColor = colors.border;
+                   }}
+                 >
                 <div className="flex items-center gap-3">
                      <button
                        onClick={() => onToggleSection(section)}
-                       className="p-1 hover:bg-gray-100 rounded transition-colors"
+                       className="p-1 rounded transition-colors"
+                       onMouseEnter={(e) => {
+                         e.currentTarget.style.background = colors.hoverBackground;
+                       }}
+                       onMouseLeave={(e) => {
+                         e.currentTarget.style.background = 'transparent';
+                       }}
                      >
                     {sectionVisibility[section] ? (
-                         <Eye size={16} className="text-blue-600" />
+                         <Eye size={16} style={{ color: colors.primaryBlue }} />
                     ) : (
-                         <EyeOff size={16} className="text-gray-400" />
+                         <EyeOff size={16} style={{ color: colors.tertiaryText }} />
                     )}
                   </button>
-                     <span className="text-sm font-medium text-gray-800">{displayName.charAt(0).toUpperCase() + displayName.slice(1)}</span>
+                     <span className="text-sm font-medium" style={{ color: colors.primaryText }}>{displayName.charAt(0).toUpperCase() + displayName.slice(1)}</span>
                 </div>
                    <div className="flex items-center gap-1">
                      {index > 0 && (
                   <button 
                          onClick={() => onMoveSection(index, 'up')}
-                         className="p-1 hover:bg-gray-100 rounded transition-colors"
+                         className="p-1 rounded transition-colors"
+                         style={{ color: colors.tertiaryText }}
+                         onMouseEnter={(e) => {
+                           e.currentTarget.style.background = colors.hoverBackground;
+                           e.currentTarget.style.color = colors.secondaryText;
+                         }}
+                         onMouseLeave={(e) => {
+                           e.currentTarget.style.background = 'transparent';
+                           e.currentTarget.style.color = colors.tertiaryText;
+                         }}
                          title="Move Up"
                        >
-                         <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                          </svg>
                   </button>
@@ -307,10 +417,19 @@ export default function ResumeEditor({
                      {index < sectionOrder.length - 1 && (
                   <button 
                          onClick={() => onMoveSection(index, 'down')}
-                         className="p-1 hover:bg-gray-100 rounded transition-colors"
+                         className="p-1 rounded transition-colors"
+                         style={{ color: colors.tertiaryText }}
+                         onMouseEnter={(e) => {
+                           e.currentTarget.style.background = colors.hoverBackground;
+                           e.currentTarget.style.color = colors.secondaryText;
+                         }}
+                         onMouseLeave={(e) => {
+                           e.currentTarget.style.background = 'transparent';
+                           e.currentTarget.style.color = colors.tertiaryText;
+                         }}
                          title="Move Down"
                        >
-                         <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                          </svg>
                   </button>
@@ -324,21 +443,34 @@ export default function ResumeEditor({
         
          {/* Formatting */}
          <div className="mb-6">
-           <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base mb-4">
-             <Palette size={18} className="text-purple-600" />
+           <h3 className="font-bold flex items-center gap-2 text-base mb-4" style={{ color: colors.primaryText }}>
+             <Palette size={18} style={{ color: colors.badgePurpleText }} />
             Formatting
           </h3>
 
             {/* Font Family */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 flex items-center gap-2 text-sm mb-2">
-              <Type size={14} className="text-gray-500" />
+            <h4 className="font-semibold flex items-center gap-2 text-sm mb-2" style={{ color: colors.secondaryText }}>
+              <Type size={14} style={{ color: colors.tertiaryText }} />
               FONT FAMILY
             </h4>
               <select 
                 value={fontFamily} 
                 onChange={(e) => setFontFamily(e.target.value)} 
-              className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all bg-white/90"
+              className="w-full px-3 py-2 text-sm border-2 rounded-lg transition-all"
+              style={{
+                background: colors.inputBackground,
+                border: `2px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = colors.badgePurpleText;
+                e.target.style.outline = `2px solid ${colors.badgePurpleText}40`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = colors.border;
+                e.target.style.outline = 'none';
+              }}
             >
               <option value="arial">Arial (ATS Recommended)</option>
               <option value="calibri">Calibri</option>
@@ -349,47 +481,86 @@ export default function ResumeEditor({
 
             {/* Font Size */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 text-sm mb-2">FONT SIZE</h4>
+            <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>FONT SIZE</h4>
               <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setFontSize('ats10pt')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  fontSize === 'ats10pt' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: fontSize === 'ats10pt' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: fontSize === 'ats10pt' ? 'white' : colors.primaryText,
+                  border: fontSize === 'ats10pt' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (fontSize !== 'ats10pt') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (fontSize !== 'ats10pt') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="flex items-center justify-center gap-1">
                   <span>10pt</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
                 </div>
                 <div className="text-xs mt-1">ATS</div>
               </button>
                   <button
                 onClick={() => setFontSize('ats11pt')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  fontSize === 'ats11pt' 
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: fontSize === 'ats11pt' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: fontSize === 'ats11pt' ? 'white' : colors.primaryText,
+                  border: fontSize === 'ats11pt' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (fontSize !== 'ats11pt') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (fontSize !== 'ats11pt') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
                   >
                 <div className="flex items-center justify-center gap-1">
                   <span>11pt</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
                     </div>
                 <div className="text-xs mt-1">ATS</div>
               </button>
               <button
                 onClick={() => setFontSize('ats12pt')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  fontSize === 'ats12pt' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: fontSize === 'ats12pt' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: fontSize === 'ats12pt' ? 'white' : colors.primaryText,
+                  border: fontSize === 'ats12pt' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (fontSize !== 'ats12pt') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (fontSize !== 'ats12pt') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="flex items-center justify-center gap-1">
                   <span>12pt</span>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
                       </div>
                 <div className="text-xs mt-1">ATS</div>
                   </button>
@@ -398,11 +569,24 @@ export default function ResumeEditor({
 
             {/* Line Spacing */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 text-sm mb-2">LINE SPACING</h4>
+            <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>LINE SPACING</h4>
               <select 
                 value={lineSpacing} 
                 onChange={(e) => setLineSpacing(e.target.value)} 
-              className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all bg-white/90"
+              className="w-full px-3 py-2 text-sm border-2 rounded-lg transition-all"
+              style={{
+                background: colors.inputBackground,
+                border: `2px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = colors.badgePurpleText;
+                e.target.style.outline = `2px solid ${colors.badgePurpleText}40`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = colors.border;
+                e.target.style.outline = 'none';
+              }}
               >
                 <option value="tight">Tight</option>
                 <option value="normal">Normal</option>
@@ -412,35 +596,74 @@ export default function ResumeEditor({
 
             {/* Section Spacing */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 text-sm mb-2">SECTION SPACING</h4>
+            <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>SECTION SPACING</h4>
               <div className="flex gap-2">
               <button
                 onClick={() => setSectionSpacing('tight')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  sectionSpacing === 'tight' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: sectionSpacing === 'tight' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: sectionSpacing === 'tight' ? 'white' : colors.primaryText,
+                  border: sectionSpacing === 'tight' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (sectionSpacing !== 'tight') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (sectionSpacing !== 'tight') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 Tight
               </button>
               <button
                 onClick={() => setSectionSpacing('medium')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  sectionSpacing === 'medium' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: sectionSpacing === 'medium' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: sectionSpacing === 'medium' ? 'white' : colors.primaryText,
+                  border: sectionSpacing === 'medium' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (sectionSpacing !== 'medium') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (sectionSpacing !== 'medium') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 Medium
               </button>
                   <button
                 onClick={() => setSectionSpacing('loose')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  sectionSpacing === 'loose' 
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: sectionSpacing === 'loose' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: sectionSpacing === 'loose' ? 'white' : colors.primaryText,
+                  border: sectionSpacing === 'loose' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (sectionSpacing !== 'loose') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (sectionSpacing !== 'loose') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
                   >
                 Loose
                   </button>
@@ -449,35 +672,74 @@ export default function ResumeEditor({
 
             {/* Page Margins */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 text-sm mb-2">PAGE MARGINS</h4>
+            <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>PAGE MARGINS</h4>
               <div className="flex gap-2">
               <button
                 onClick={() => setMargins('narrow')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  margins === 'narrow' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: margins === 'narrow' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: margins === 'narrow' ? 'white' : colors.primaryText,
+                  border: margins === 'narrow' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (margins !== 'narrow') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (margins !== 'narrow') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 Narrow
               </button>
               <button
                 onClick={() => setMargins('normal')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  margins === 'normal' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: margins === 'normal' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: margins === 'normal' ? 'white' : colors.primaryText,
+                  border: margins === 'normal' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (margins !== 'normal') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (margins !== 'normal') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 Normal
               </button>
                   <button
                 onClick={() => setMargins('wide')}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  margins === 'wide' 
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: margins === 'wide' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: margins === 'wide' ? 'white' : colors.primaryText,
+                  border: margins === 'wide' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (margins !== 'wide') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (margins !== 'wide') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
                   >
                 Wide
                   </button>
@@ -486,11 +748,24 @@ export default function ResumeEditor({
 
             {/* Heading Weight */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 text-sm mb-2">HEADING WEIGHT</h4>
+            <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>HEADING WEIGHT</h4>
               <select 
                 value={headingStyle} 
                 onChange={(e) => setHeadingStyle(e.target.value)} 
-              className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400 transition-all bg-white/90"
+              className="w-full px-3 py-2 text-sm border-2 rounded-lg transition-all"
+              style={{
+                background: colors.inputBackground,
+                border: `2px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = colors.badgePurpleText;
+                e.target.style.outline = `2px solid ${colors.badgePurpleText}40`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = colors.border;
+                e.target.style.outline = 'none';
+              }}
               >
               <option value="bold">Bold</option>
                 <option value="semibold">Semi Bold</option>
@@ -500,65 +775,143 @@ export default function ResumeEditor({
 
             {/* Bullet Style */}
           <div className="mb-4">
-            <h4 className="font-semibold text-gray-700 text-sm mb-2">BULLET STYLE</h4>
+            <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>BULLET STYLE</h4>
               <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={() => setBulletStyle('disc')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  bulletStyle === 'disc' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: bulletStyle === 'disc' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: bulletStyle === 'disc' ? 'white' : colors.primaryText,
+                  border: bulletStyle === 'disc' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (bulletStyle !== 'disc') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (bulletStyle !== 'disc') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="text-lg">•</div>
               </button>
               <button
                 onClick={() => setBulletStyle('circle')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  bulletStyle === 'circle' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: bulletStyle === 'circle' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: bulletStyle === 'circle' ? 'white' : colors.primaryText,
+                  border: bulletStyle === 'circle' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (bulletStyle !== 'circle') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (bulletStyle !== 'circle') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="text-lg">◦</div>
               </button>
               <button
                 onClick={() => setBulletStyle('square')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  bulletStyle === 'square' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: bulletStyle === 'square' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: bulletStyle === 'square' ? 'white' : colors.primaryText,
+                  border: bulletStyle === 'square' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (bulletStyle !== 'square') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (bulletStyle !== 'square') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="text-lg">▪</div>
               </button>
               <button
                 onClick={() => setBulletStyle('arrow')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  bulletStyle === 'arrow' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: bulletStyle === 'arrow' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: bulletStyle === 'arrow' ? 'white' : colors.primaryText,
+                  border: bulletStyle === 'arrow' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (bulletStyle !== 'arrow') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (bulletStyle !== 'arrow') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="text-lg">→</div>
               </button>
               <button
                 onClick={() => setBulletStyle('check')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  bulletStyle === 'check' 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: bulletStyle === 'check' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: bulletStyle === 'check' ? 'white' : colors.primaryText,
+                  border: bulletStyle === 'check' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (bulletStyle !== 'check') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (bulletStyle !== 'check') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
               >
                 <div className="text-lg">✓</div>
               </button>
                   <button
                 onClick={() => setBulletStyle('dash')}
-                className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                  bulletStyle === 'dash' 
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                className="p-3 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  background: bulletStyle === 'dash' 
+                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                    : colors.inputBackground,
+                  color: bulletStyle === 'dash' ? 'white' : colors.primaryText,
+                  border: bulletStyle === 'dash' ? 'none' : `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (bulletStyle !== 'dash') {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (bulletStyle !== 'dash') {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
+                }}
                   >
                 <div className="text-lg">–</div>
                   </button>
@@ -568,10 +921,23 @@ export default function ResumeEditor({
           {/* Reset to Default */}
               <button
             onClick={onResetToDefault}
-            className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+              e.currentTarget.style.borderColor = colors.borderFocused;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.inputBackground;
+              e.currentTarget.style.borderColor = colors.border;
+            }}
           >
-            <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+            <div className="w-4 h-4 border-2 rounded-full flex items-center justify-center" style={{ borderColor: colors.tertiaryText }}>
+              <div className="w-2 h-2 rounded-full" style={{ background: colors.tertiaryText }}></div>
             </div>
                 Reset to Default
               </button>
@@ -581,48 +947,69 @@ export default function ResumeEditor({
       </div>
 
       {/* Main Resume Editing Area */}
-      <div className={`flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 will-change-scroll ${
-        selectedTemplate?.colorScheme === 'blue' 
-          ? 'bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100'
-          : selectedTemplate?.colorScheme === 'green'
-          ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100'
-          : selectedTemplate?.colorScheme === 'monochrome'
-          ? 'bg-gradient-to-br from-gray-50 via-slate-50 to-gray-100'
-          : 'bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50'
-      }`} style={{ height: '100%', maxHeight: '100%' }}>
-        <div className={`w-full bg-white rounded-2xl shadow-lg border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full ${
-          selectedTemplate?.colorScheme === 'blue'
-            ? 'border-blue-200'
-            : selectedTemplate?.colorScheme === 'green'
-            ? 'border-green-200'
-            : selectedTemplate?.colorScheme === 'monochrome'
-            ? 'border-gray-300'
-            : 'border-gray-100'
-        }`}>
+      <div 
+        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 will-change-scroll"
+        style={{ 
+          height: '100%', 
+          maxHeight: '100%',
+          background: colors.background,
+        }}
+      >
+        <div 
+          className="w-full rounded-2xl shadow-lg border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full transition-all"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+            boxShadow: `0 4px 6px ${colors.border}10`,
+          }}
+        >
           
           {/* Name Input */}
           <input 
-            className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 w-full border-none outline-none focus:ring-4 focus:ring-blue-300/50 rounded-xl px-3 py-2 mb-4 break-words overflow-wrap-anywhere" 
+            className="text-xl sm:text-2xl lg:text-3xl font-bold w-full border-none outline-none rounded-xl px-3 py-2 mb-4 break-words overflow-wrap-anywhere transition-all" 
+            style={{
+              background: 'transparent',
+              color: colors.primaryText,
+            }}
             value={resumeData.name || ''} 
             onChange={(e) => setResumeData({...resumeData, name: e.target.value})}
-            placeholder="Your Name" 
+            placeholder="Your Name"
+            onFocus={(e) => {
+              e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+            }}
+            onBlur={(e) => {
+              e.target.style.outline = 'none';
+            }}
           />
           
           {/* Contact Fields Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 text-sm mb-6 lg:mb-10">
             {['email', 'phone', 'location', 'linkedin', 'github', 'website'].map((field, idx) => (
               <div key={field} className="flex items-center gap-2 group">
-                {idx === 0 && <Mail size={16} className="text-gray-400" />}
-                {idx === 1 && <Phone size={16} className="text-gray-400" />}
-                {idx === 2 && <MapPin size={16} className="text-gray-400" />}
-                {idx === 3 && <Linkedin size={16} className="text-gray-400" />}
-                {idx === 4 && <Github size={16} className="text-gray-400" />}
-                {idx === 5 && <Globe size={16} className="text-gray-400" />}
+                {idx === 0 && <Mail size={16} style={{ color: colors.tertiaryText }} />}
+                {idx === 1 && <Phone size={16} style={{ color: colors.tertiaryText }} />}
+                {idx === 2 && <MapPin size={16} style={{ color: colors.tertiaryText }} />}
+                {idx === 3 && <Linkedin size={16} style={{ color: colors.tertiaryText }} />}
+                {idx === 4 && <Github size={16} style={{ color: colors.tertiaryText }} />}
+                {idx === 5 && <Globe size={16} style={{ color: colors.tertiaryText }} />}
                 <input 
-                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
+                  className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
+                  style={{
+                    background: colors.inputBackground,
+                    border: `2px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
                   value={resumeData[field] || ''} 
                   onChange={(e) => setResumeData({...resumeData, [field]: e.target.value})}
-                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)} 
+                  placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = colors.primaryBlue;
+                    e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = colors.border;
+                    e.target.style.outline = 'none';
+                  }}
                 />
               </div>
             ))}
@@ -632,7 +1019,12 @@ export default function ResumeEditor({
               <div key={field.id} className="flex items-center gap-2 group">
                 {getFieldIcon(field.icon || 'default')}
                 <input 
-                  className="flex-1 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm" 
+                  className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
+                  style={{
+                    background: colors.inputBackground,
+                    border: `2px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
                   value={field.value} 
                   onChange={(e) => {
                     const updatedFields = customFields.map(f => 
@@ -640,17 +1032,40 @@ export default function ResumeEditor({
                     );
                     setCustomFields(updatedFields);
                   }}
-                  placeholder={field.name} 
+                  placeholder={field.name}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = colors.primaryBlue;
+                    e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = colors.border;
+                    e.target.style.outline = 'none';
+                  }}
                 />
               </div>
             ))}
             
             {/* Add Custom Field Button */}
             <div className="flex items-center gap-2 group">
-              <Plus size={16} className="text-gray-400" />
+              <Plus size={16} style={{ color: colors.tertiaryText }} />
               <button
                 onClick={() => setShowAddFieldModal(true)}
-                className="flex-1 border-2 border-dashed border-gray-300 rounded-lg px-2 sm:px-3 py-2 hover:border-blue-400 hover:bg-blue-50 text-gray-600 hover:text-blue-600 text-left min-w-0 max-w-full"
+                className="flex-1 border-2 border-dashed rounded-lg px-2 sm:px-3 py-2 text-left min-w-0 max-w-full transition-all"
+                style={{
+                  border: `2px dashed ${colors.border}`,
+                  background: 'transparent',
+                  color: colors.secondaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.primaryBlue;
+                  e.currentTarget.style.background = colors.badgeInfoBg;
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.secondaryText;
+                }}
               >
                 <span className="text-xs sm:text-sm font-medium break-words overflow-wrap-anywhere">Add Field</span>
               </button>

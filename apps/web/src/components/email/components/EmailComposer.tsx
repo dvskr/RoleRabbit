@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Send, Paperclip, X } from 'lucide-react';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface EmailComposerProps {
   recipientEmail?: string;
@@ -16,6 +17,9 @@ export default function EmailComposer({
   onSend,
   onCancel,
 }: EmailComposerProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const [to, setTo] = useState(recipientEmail);
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -50,16 +54,20 @@ export default function EmailComposer({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={{ background: colors.background }}>
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="px-4 py-3 flex items-center justify-between flex-shrink-0" style={{ background: colors.headerBackground, borderBottom: `1px solid ${colors.border}` }}>
         <div className="flex items-center gap-2">
           <button
             onClick={handleAttach}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             title="Attach File"
+            aria-label="Attach file"
           >
-            <Paperclip size={18} className="text-gray-600" />
+            <Paperclip size={18} />
           </button>
         </div>
 
@@ -67,7 +75,14 @@ export default function EmailComposer({
           {onCancel && (
             <button
               onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="px-4 py-2 rounded-lg transition-colors font-medium"
+              style={{
+                background: 'transparent',
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               Cancel
             </button>
@@ -75,7 +90,19 @@ export default function EmailComposer({
           <button
             onClick={handleSend}
             disabled={!to || !subject || !body}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+            className="px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: colors.primaryBlue,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              if (!(!to || !subject || !body)) {
+                e.currentTarget.style.background = colors.primaryBlueHover;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.primaryBlue;
+            }}
           >
             <Send size={16} />
             Send
@@ -84,70 +111,101 @@ export default function EmailComposer({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ background: colors.background }}>
         <div className="p-6 space-y-4">
           {/* To */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">To *</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>To *</label>
             <input
               type="email"
               value={to}
               onChange={(e) => setTo(e.target.value)}
               placeholder="Recipient email"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
 
           {/* CC */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">CC</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>CC</label>
             <input
               type="text"
               value={cc}
               onChange={(e) => setCc(e.target.value)}
               placeholder="cc1@example.com, cc2@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
 
           {/* BCC */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">BCC</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>BCC</label>
             <input
               type="text"
               value={bcc}
               onChange={(e) => setBcc(e.target.value)}
               placeholder="bcc1@example.com, bcc2@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>Subject *</label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Email subject"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
 
           {/* Attachments */}
           {attachments.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Attachments</label>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>Attachments</label>
               <div className="flex flex-wrap gap-2">
                 {attachments.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
-                    <Paperclip size={14} />
-                    <span>{file}</span>
+                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style={{ background: colors.inputBackground }}>
+                    <Paperclip size={14} style={{ color: colors.secondaryText }} />
+                    <span style={{ color: colors.primaryText }}>{file}</span>
                     <button
                       onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))}
-                      className="ml-2 hover:text-red-600"
+                      className="ml-2"
+                      style={{ color: colors.badgeErrorText }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
                       <X size={14} />
                     </button>
@@ -159,14 +217,21 @@ export default function EmailComposer({
 
           {/* Body */}
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Body *</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>Body *</label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your email..."
               required
               rows={12}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
+              className="w-full px-3 py-2 rounded-lg resize-none font-mono text-sm"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
         </div>

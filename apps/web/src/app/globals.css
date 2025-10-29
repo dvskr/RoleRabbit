@@ -62,24 +62,34 @@
 }
 
 /* Force scrollbar visibility */
+.force-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(148, 163, 184, 0.5) rgba(15, 10, 30, 0.3) !important;
+}
+
 .force-scrollbar::-webkit-scrollbar {
   width: 12px !important;
   height: 12px !important;
+  display: block !important;
 }
 
 .force-scrollbar::-webkit-scrollbar-track {
-  background: #f3f4f6 !important;
+  background: rgba(15, 10, 30, 0.3) !important;
   border-radius: 6px !important;
 }
 
 .force-scrollbar::-webkit-scrollbar-thumb {
-  background: #6b7280 !important;
+  background: rgba(148, 163, 184, 0.5) !important;
   border-radius: 6px !important;
-  border: 2px solid #f3f4f6 !important;
+  border: 2px solid rgba(15, 10, 30, 0.3) !important;
 }
 
 .force-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4b5563 !important;
+  background: rgba(148, 163, 184, 0.8) !important;
+}
+
+.force-scrollbar::-webkit-scrollbar-corner {
+  background: rgba(15, 10, 30, 0.3) !important;
 }
 
 /* Line clamp utility */
@@ -348,4 +358,25 @@
 
 .add-button:hover {
   background: #2563eb;
+}
+
+/* Filter Panel Animations */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

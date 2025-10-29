@@ -1,8 +1,18 @@
 'use client';
 
 import React from 'react';
-import { Cloud, Upload, RefreshCw, HardDrive, TrendingUp, Users, Star, Archive } from 'lucide-react';
+import { Cloud } from 'lucide-react';
 import { StorageInfo } from '../../types/cloudStorage';
+import { useTheme } from '../../contexts/ThemeContext';
+import ThemeToggle from '../ThemeToggle';
+
+// Add shimmer animation style
+const shimmerStyle = `
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+`;
 
 interface StorageHeaderProps {
   storageInfo: StorageInfo;
@@ -15,80 +25,134 @@ export default function StorageHeader({
   onUpload, 
   onRefresh 
 }: StorageHeaderProps) {
-  const getStorageColor = (percentage: number) => {
-    if (percentage >= 90) return 'text-red-600 bg-red-100';
-    if (percentage >= 75) return 'text-yellow-600 bg-yellow-100';
-    return 'text-green-600 bg-green-100';
-  };
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
+  // Inject shimmer animation
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = shimmerStyle;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
 
   const getStorageBarColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (percentage >= 90) return colors.errorRed;
+    if (percentage >= 75) return colors.badgeWarningText;
+    return colors.successGreen;
   };
 
+  const storageBarColor = getStorageBarColor(storageInfo.percentage);
+  
   return (
-    <div className="mb-1">
-      {/* Ultra-compact unified stats and actions bar */}
-      <div className="flex items-center gap-2">
-        {/* Storage Usage - Compact inline with stats */}
-        <div className="flex items-center gap-2 bg-white rounded-lg px-2.5 py-1 border border-gray-200 flex-1">
-          <HardDrive size={14} className="text-blue-600 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-gray-900">{storageInfo.used} GB</span>
-              <span className="text-[10px] text-gray-500">/ {storageInfo.limit} GB</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStorageColor(storageInfo.percentage)}`}>
+    <div 
+      className="backdrop-blur-sm px-6 py-3 flex-shrink-0 shadow-sm"
+      style={{
+        background: colors.headerBackground,
+        borderBottom: `1px solid ${colors.border}`,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        {/* Left Section: Title and Subtitle */}
+        <div className="flex items-center gap-4">
+          <div 
+            className="flex items-center justify-center w-12 h-12 rounded-xl"
+            style={{
+              background: colors.badgeInfoBg,
+              border: `1px solid ${colors.badgeInfoBorder}`,
+            }}
+          >
+            <Cloud size={24} style={{ color: colors.primaryBlue }} />
+          </div>
+          <div>
+            <h1 
+              className="text-2xl font-bold"
+              style={{ color: colors.primaryText }}
+            >
+              Storage
+            </h1>
+            <p 
+              className="text-sm"
+              style={{ color: colors.secondaryText }}
+            >
+              Manage your files and documents
+            </p>
+          </div>
+        </div>
+
+        {/* Right Section: Storage Usage and Theme Toggle */}
+        <div className="flex items-center gap-3">
+          {/* Storage Usage Info - Elegant Card Design */}
+          <div 
+            className="flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+              backdropFilter: 'blur(10px)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = colors.borderFocused;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.background = colors.cardBackground;
+            }}
+          >
+            {/* Storage Text - Compact & Elegant */}
+            <div className="flex flex-col items-start min-w-[80px]">
+              <div 
+                className="text-sm font-semibold leading-tight"
+                style={{ color: colors.primaryText }}
+              >
+                {storageInfo.used} <span style={{ color: colors.tertiaryText, fontWeight: 'normal' }}>/ {storageInfo.limit} GB</span>
+              </div>
+              <div 
+                className="text-xs font-semibold mt-0.5"
+                style={{ color: storageBarColor }}
+              >
                 {storageInfo.percentage.toFixed(1)}%
-              </span>
+              </div>
+            </div>
+            
+            {/* Progress Bar - Elegant Style */}
+            <div className="flex items-center">
+              <div 
+                className="w-24 h-2 rounded-full relative overflow-hidden shadow-inner"
+                style={{ 
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+              >
+                <div 
+                  className="h-full rounded-full transition-all duration-500 ease-out relative"
+                  style={{
+                    width: `${Math.min(storageInfo.percentage, 100)}%`,
+                    background: storageInfo.percentage >= 90
+                      ? `linear-gradient(90deg, ${storageBarColor} 0%, ${colors.errorRed} 100%)`
+                      : storageInfo.percentage >= 75
+                      ? `linear-gradient(90deg, ${storageBarColor} 0%, ${colors.badgeWarningText} 100%)`
+                      : `linear-gradient(90deg, ${colors.successGreen} 0%, ${storageBarColor} 100%)`,
+                    boxShadow: `0 0 8px ${storageBarColor}40`,
+                  }}
+                >
+                  {/* Animated shine effect */}
+                  <div 
+                    className="absolute inset-0 rounded-full opacity-30"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                      animation: 'shimmer 2s infinite',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-[9px] text-gray-500">
-            <TrendingUp size={9} />
-            156
-          </div>
-          <div className="flex items-center gap-1 text-[9px] text-gray-500">
-            <Users size={9} />
-            12
-          </div>
-          <div className="flex items-center gap-1 text-[9px] text-gray-500">
-            <Archive size={9} />
-            3
-          </div>
-        </div>
-
-        {/* Files stats - compact inline */}
-        <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
-          <Cloud size={12} className="text-green-600" />
-          <span className="text-xs font-bold">24</span>
-        </div>
-        
-        <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
-          <Users size={12} className="text-purple-600" />
-          <span className="text-xs font-bold">8</span>
-        </div>
-        
-        <div className="flex items-center gap-1 bg-white rounded-lg px-2 py-1 border border-gray-200">
-          <Star size={12} className="text-yellow-600" />
-          <span className="text-xs font-bold">5</span>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={onRefresh}
-            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Refresh"
-          >
-            <RefreshCw size={14} />
-          </button>
-          <button
-            onClick={onUpload}
-            className="px-2 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg flex items-center gap-1 transition-all"
-          >
-            <Upload size={14} />
-            <span className="text-xs font-medium">Upload</span>
-          </button>
+          
+          {/* Theme Toggle */}
+          <ThemeToggle />
         </div>
       </div>
     </div>

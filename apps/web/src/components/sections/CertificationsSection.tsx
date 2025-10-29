@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { Eye, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, CertificationItem, CustomField } from '../../types/resume';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CertificationsSectionProps {
   resumeData: ResumeData;
@@ -15,6 +18,9 @@ export default function CertificationsSection({
   sectionVisibility,
   onHideSection
 }: CertificationsSectionProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const addCertification = () => {
     const newCertification: CertificationItem = {
       id: Date.now(),
@@ -79,41 +85,98 @@ export default function CertificationsSection({
 
   return (
     <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
-      <div className="bg-white/95 border border-gray-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl">
+      <div 
+        className="rounded-2xl p-6 transition-all"
+        style={{
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+          boxShadow: `0 4px 6px ${colors.border}10`,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.boxShadow = `0 8px 12px ${colors.border}20`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.boxShadow = `0 4px 6px ${colors.border}10`;
+        }}
+      >
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <GripVertical size={18} className="text-gray-400 cursor-move" />
-          <h3 className="text-lg font-bold text-black uppercase tracking-wide">
+          <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
+          <h3 className="text-lg font-bold uppercase tracking-wide" style={{ color: colors.primaryText }}>
             CERTIFICATIONS
           </h3>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={addCertification}
-            className="text-blue-600 hover:text-blue-700 flex items-center gap-2 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50"
+            className="flex items-center gap-2 font-semibold px-4 py-2 rounded-xl transition-colors"
+            style={{ color: colors.primaryBlue }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.badgeInfoBg;
+              e.currentTarget.style.color = colors.primaryBlue;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = colors.primaryBlue;
+            }}
           >
             <Plus size={18} />
             Add
           </button>
           <button 
             onClick={() => onHideSection('certifications')}
-            className="p-2 hover:bg-gray-100 rounded-xl"
+            className="p-2 rounded-xl transition-colors"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
             title={sectionVisibility.certifications ? "Hide certifications section" : "Show certifications section"}
           >
-            <Eye size={18} className={sectionVisibility.certifications ? "text-gray-600" : "text-gray-400"} />
+            <Eye size={18} style={{ color: sectionVisibility.certifications ? colors.secondaryText : colors.tertiaryText }} />
           </button>
         </div>
       </div>
 
       {resumeData.certifications.length === 0 && (
-        <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-2xl bg-gray-50 hover:bg-blue-50 hover:border-blue-300">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+        <div 
+          className="text-center py-12 border-2 border-dashed rounded-2xl transition-all"
+          style={{
+            border: `2px dashed ${colors.border}`,
+            background: colors.inputBackground,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = colors.primaryBlue;
+            e.currentTarget.style.background = colors.badgeInfoBg;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = colors.border;
+            e.currentTarget.style.background = colors.inputBackground;
+          }}
+        >
+          <div 
+            className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg"
+            style={{
+              background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+            }}
+          >
             <Plus size={32} className="text-white" />
           </div>
-          <p className="text-gray-600 mb-4 font-semibold">No certifications added yet</p>
+          <p className="mb-4 font-semibold" style={{ color: colors.secondaryText }}>No certifications added yet</p>
           <button 
             onClick={addCertification}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/30 inline-flex items-center gap-2 font-bold"
+            className="px-6 py-3 rounded-xl inline-flex items-center gap-2 font-bold transition-all"
+            style={{
+              background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = `0 8px 16px ${colors.primaryBlue}40`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
             <Plus size={18} />
             Add Certification
@@ -122,44 +185,118 @@ export default function CertificationsSection({
       )}
 
       {resumeData.certifications.map((cert) => (
-        <div key={cert.id} className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl hover:shadow-blue-500/10 bg-white">
+        <div 
+          key={cert.id} 
+          className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
+          style={{
+            background: colors.cardBackground,
+            border: `2px solid ${colors.border}`,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = colors.primaryBlue;
+            e.currentTarget.style.boxShadow = `0 8px 16px ${colors.primaryBlue}20`;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = colors.border;
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        >
           <div className="flex items-start gap-3 mb-4">
-            <GripVertical size={18} className="text-gray-400 cursor-move mt-2 flex-shrink-0" />
+            <GripVertical size={18} className="cursor-move mt-2 flex-shrink-0" style={{ color: colors.tertiaryText }} />
             <div className="flex-1 space-y-3 min-w-0">
               <input
-                className="font-bold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="font-bold text-sm border-2 outline-none rounded-xl px-2 sm:px-4 py-2 w-full min-w-0 max-w-full break-words overflow-wrap-anywhere transition-all"
+                style={{
+                  background: colors.inputBackground,
+                  border: `2px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
                 value={cert.name}
                 onChange={(e) => updateCertification(cert.id, { name: e.target.value })}
                 placeholder="Certification Name"
+                onFocus={(e) => {
+                  e.target.style.borderColor = colors.primaryBlue;
+                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.outline = 'none';
+                }}
               />
               <input
-                className="font-semibold text-sm text-gray-900 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-xl px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="font-semibold text-sm border-2 outline-none rounded-xl px-2 sm:px-4 py-2 w-full min-w-0 max-w-full break-words overflow-wrap-anywhere transition-all"
+                style={{
+                  background: colors.inputBackground,
+                  border: `2px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
                 value={cert.issuer}
                 onChange={(e) => updateCertification(cert.id, { issuer: e.target.value })}
                 placeholder="Issuing Organization"
+                onFocus={(e) => {
+                  e.target.style.borderColor = colors.primaryBlue;
+                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.outline = 'none';
+                }}
               />
               <input
-                className="text-sm text-blue-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-4 py-2 w-full  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                className="text-sm border-2 outline-none rounded-lg px-2 sm:px-4 py-2 w-full min-w-0 max-w-full break-words overflow-wrap-anywhere transition-all"
+                style={{
+                  background: colors.inputBackground,
+                  border: `2px solid ${colors.border}`,
+                  color: colors.primaryBlue,
+                }}
                 value={cert.link}
                 onChange={(e) => updateCertification(cert.id, { link: e.target.value })}
                 placeholder="Certification Link/URL"
+                onFocus={(e) => {
+                  e.target.style.borderColor = colors.primaryBlue;
+                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = colors.border;
+                  e.target.style.outline = 'none';
+                }}
               />
               
               {/* Custom Fields */}
               {(cert.customFields || []).map((field) => (
                 <div key={field.id} className="flex items-center gap-2">
                   <input
-                    className="flex-1 text-sm text-gray-600 border-2 border-gray-200 outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 rounded-lg px-2 sm:px-3 py-2  min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                    className="flex-1 text-sm border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `2px solid ${colors.border}`,
+                      color: colors.secondaryText,
+                    }}
                     value={field.value || ''}
                     onChange={(e) => updateCustomFieldInCertification(cert.id, field.id, e.target.value)}
                     placeholder={field.name}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = colors.primaryBlue;
+                      e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = colors.border;
+                      e.target.style.outline = 'none';
+                    }}
                   />
                   <button
                     onClick={() => deleteCustomFieldFromCertification(cert.id, field.id)}
-                    className="p-1 hover:bg-red-100 rounded-lg transition-colors"
+                    className="p-1 rounded-lg transition-colors"
+                    style={{ color: colors.errorRed }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.badgeErrorBg;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                     title="Delete field"
                   >
-                    <Trash2 size={14} className="text-red-600" />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))}
@@ -175,7 +312,14 @@ export default function CertificationsSection({
                     };
                     addCustomFieldToCertification(cert.id, newField);
                   }}
-                  className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 flex items-center gap-1"
+                  className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                  style={{ color: colors.primaryBlue }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.badgeInfoBg;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                 >
                   <Plus size={12} />
                   Add Field
@@ -184,20 +328,35 @@ export default function CertificationsSection({
             </div>
             <button
               onClick={() => deleteCertification(cert.id)}
-              className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-100 rounded-xl "
+              className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-all"
+              style={{ color: colors.errorRed }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.badgeErrorBg;
+                e.currentTarget.style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
               title="Delete certification"
             >
-              <Trash2 size={18} className="text-red-600" />
+              <Trash2 size={18} />
             </button>
           </div>
 
           {/* Skills */}
           <div className="ml-6 mt-4">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold text-gray-700">Skills Covered</h4>
+              <h4 className="text-sm font-semibold" style={{ color: colors.secondaryText }}>Skills Covered</h4>
               <button
                 onClick={() => addSkill(cert.id)}
-                className="text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded-lg hover:bg-blue-50 flex items-center gap-1"
+                className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                style={{ color: colors.primaryBlue }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgeInfoBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 <Plus size={12} />
                 Add Skill
@@ -205,16 +364,39 @@ export default function CertificationsSection({
             </div>
             <div className="flex flex-wrap gap-2">
               {cert.skills.map((skill, skillIndex) => (
-                <div key={skillIndex} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-lg">
+                <div 
+                  key={skillIndex} 
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
+                >
                   <input
-                    className="text-xs text-gray-700 bg-transparent border-none outline-none min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                    className="text-xs bg-transparent border-none outline-none min-w-0 max-w-full break-words overflow-wrap-anywhere transition-all"
+                    style={{
+                      color: colors.primaryText,
+                    }}
                     value={skill}
                     onChange={(e) => updateSkill(cert.id, skillIndex, e.target.value)}
                     placeholder="Skill"
                   />
                   <button
                     onClick={() => deleteSkill(cert.id, skillIndex)}
-                    className="hover:text-red-600 transition-colors"
+                    className="transition-colors flex-shrink-0"
+                    style={{ color: colors.tertiaryText }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = colors.errorRed;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = colors.tertiaryText;
+                    }}
                   >
                     <X size={12} />
                   </button>

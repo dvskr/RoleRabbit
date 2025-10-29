@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Inbox, Search, Mail } from 'lucide-react';
 import EmailThread from '../components/EmailThread';
 import { Email } from '../types';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 // Mock email data
 const mockEmails: Email[] = [
@@ -48,6 +49,8 @@ const mockEmails: Email[] = [
 ];
 
 export default function InboxTab() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [emails] = useState<Email[]>(mockEmails);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all');
@@ -67,17 +70,24 @@ export default function InboxTab() {
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0">
+      <div className="px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0" style={{ background: colors.headerBackground, borderBottom: `1px solid ${colors.border}` }}>
         <div className="flex items-center gap-3 flex-1">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: colors.tertiaryText }} />
             <input
               type="text"
               placeholder="Search emails..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full pl-9 pr-3 py-2 rounded-lg"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
             />
           </div>
         </div>
@@ -86,25 +96,61 @@ export default function InboxTab() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-lg transition-colors text-sm ${
-              filter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className="px-3 py-1.5 rounded-lg transition-colors text-sm"
+            style={{
+              background: filter === 'all' ? colors.badgeInfoBg : 'transparent',
+              color: filter === 'all' ? colors.activeBlueText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (filter !== 'all') {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (filter !== 'all') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             All
           </button>
           <button
             onClick={() => setFilter('unread')}
-            className={`px-3 py-1.5 rounded-lg transition-colors text-sm ${
-              filter === 'unread' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className="px-3 py-1.5 rounded-lg transition-colors text-sm"
+            style={{
+              background: filter === 'unread' ? colors.badgeInfoBg : 'transparent',
+              color: filter === 'unread' ? colors.activeBlueText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (filter !== 'unread') {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (filter !== 'unread') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             Unread
           </button>
           <button
             onClick={() => setFilter('starred')}
-            className={`px-3 py-1.5 rounded-lg transition-colors text-sm ${
-              filter === 'starred' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className="px-3 py-1.5 rounded-lg transition-colors text-sm"
+            style={{
+              background: filter === 'starred' ? colors.badgeInfoBg : 'transparent',
+              color: filter === 'starred' ? colors.activeBlueText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (filter !== 'starred') {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (filter !== 'starred') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             Starred
           </button>
@@ -112,12 +158,12 @@ export default function InboxTab() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6" style={{ background: colors.background }}>
         {filteredEmails.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <Mail size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">No emails found</p>
+              <Mail size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText }} />
+              <p style={{ color: colors.secondaryText }}>No emails found</p>
             </div>
           </div>
         ) : (

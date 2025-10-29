@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface FileCardProps {
   file: ResumeFile;
@@ -58,6 +59,9 @@ export default function FileCard({
   onAddComment,
   onShareWithUser
 }: FileCardProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   const [showShareModal, setShowShareModal] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -91,41 +95,41 @@ export default function FileCard({
   const getFileIcon = (type: string) => {
     switch (type) {
       case 'resume':
-        return <FileText size={20} className="text-blue-600" />;
+        return <FileText size={20} style={{ color: colors.primaryBlue }} />;
       case 'template':
-        return <FileText size={20} className="text-green-600" />;
+        return <FileText size={20} style={{ color: colors.successGreen }} />;
       case 'backup':
-        return <FileText size={20} className="text-orange-600" />;
+        return <FileText size={20} style={{ color: colors.badgeWarningText }} />;
       default:
-        return <FileText size={20} className="text-gray-600" />;
+        return <FileText size={20} style={{ color: colors.tertiaryText }} />;
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'resume':
-        return 'bg-blue-100 text-blue-800';
+        return { bg: colors.badgeInfoBg, text: colors.badgeInfoText };
       case 'template':
-        return 'bg-green-100 text-green-800';
+        return { bg: colors.badgeSuccessBg, text: colors.badgeSuccessText };
       case 'backup':
-        return 'bg-orange-100 text-orange-800';
+        return { bg: colors.badgeWarningBg, text: colors.badgeWarningText };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return { bg: colors.inputBackground, text: colors.secondaryText };
     }
   };
 
   const getPermissionColor = (permission: string) => {
     switch (permission) {
       case 'admin':
-        return 'bg-red-100 text-red-800';
+        return { bg: colors.badgeErrorBg, text: colors.errorRed };
       case 'edit':
-        return 'bg-yellow-100 text-yellow-800';
+        return { bg: colors.badgeWarningBg, text: colors.badgeWarningText };
       case 'comment':
-        return 'bg-blue-100 text-blue-800';
+        return { bg: colors.badgeInfoBg, text: colors.badgeInfoText };
       case 'view':
-        return 'bg-gray-100 text-gray-800';
+        return { bg: colors.inputBackground, text: colors.secondaryText };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return { bg: colors.inputBackground, text: colors.secondaryText };
     }
   };
 
@@ -163,10 +167,25 @@ export default function FileCard({
   };
 
   if (viewMode === 'grid') {
+    const typeColorStyle = getTypeColor(file.type);
     return (
-      <div className={`group border rounded-lg p-3 hover:shadow-lg transition-all duration-300 cursor-pointer ${
-        isSelected ? 'border-blue-500 bg-blue-50 shadow-lg' : 'border-gray-200 bg-white hover:border-gray-300'
-      }`}>
+      <div 
+        className="group rounded-lg p-3 hover:shadow-lg transition-all duration-300 cursor-pointer"
+        style={{
+          border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
+          background: isSelected ? colors.badgeInfoBg : colors.cardBackground,
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.borderColor = colors.borderFocused;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.borderColor = colors.border;
+          }
+        }}
+      >
         {/* Header */}
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center space-x-2">
@@ -174,20 +193,41 @@ export default function FileCard({
               type="checkbox"
               checked={isSelected}
               onChange={() => onSelect(file.id)}
-              className="w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-3.5 h-3.5 rounded focus:ring-2 transition-all"
+              style={{
+                accentColor: colors.primaryBlue,
+                borderColor: colors.border,
+              }}
             />
-            <div className="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              style={{
+                background: colors.inputBackground,
+              }}
+            >
               {getFileIcon(file.type)}
             </div>
           </div>
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onStar(file.id)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                file.isStarred 
-                  ? 'text-yellow-500 bg-yellow-100' 
-                  : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-100'
-              }`}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{
+                color: file.isStarred ? colors.badgeWarningText : colors.tertiaryText,
+                background: file.isStarred ? colors.badgeWarningBg : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!file.isStarred) {
+                  e.currentTarget.style.color = colors.badgeWarningText;
+                  e.currentTarget.style.background = colors.badgeWarningBg;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!file.isStarred) {
+                  e.currentTarget.style.color = colors.tertiaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
               title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
             >
               <Star size={14} className={file.isStarred ? 'fill-current' : ''} />
@@ -195,19 +235,46 @@ export default function FileCard({
             <div className="relative">
               <button 
                 onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: colors.tertiaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.primaryText;
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.tertiaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 title="More options"
               >
                 <MoreVertical size={14} />
               </button>
               {showMoreMenu && (
-                <div ref={moreMenuRef} className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                <div 
+                  ref={moreMenuRef} 
+                  className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-20"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(file.id);
                       setShowMoreMenu(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg flex items-center space-x-2"
+                    className="w-full px-4 py-2 text-left text-sm transition-colors rounded-t-lg flex items-center space-x-2"
+                    style={{
+                      color: colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
                   >
                     <Copy size={14} />
                     <span>Copy ID</span>
@@ -216,7 +283,18 @@ export default function FileCard({
                     onClick={() => {
                       setShowMoreMenu(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+                    className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
+                    style={{
+                      color: colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
                   >
                     <Calendar size={14} />
                     <span>View History</span>
@@ -225,17 +303,37 @@ export default function FileCard({
                     onClick={() => {
                       setShowMoreMenu(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+                    className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
+                    style={{
+                      color: colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
                   >
                     <Tag size={14} />
                     <span>Manage Tags</span>
                   </button>
-                  <div className="border-t border-gray-200"></div>
+                  <div style={{ borderTop: `1px solid ${colors.border}` }}></div>
                   <button
                     onClick={() => {
                       setShowMoreMenu(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors rounded-b-lg flex items-center space-x-2"
+                    className="w-full px-4 py-2 text-left text-sm transition-colors rounded-b-lg flex items-center space-x-2"
+                    style={{
+                      color: colors.errorRed,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.badgeErrorBg;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
                     <Trash2 size={14} />
                     <span>Delete Permanently</span>
@@ -248,28 +346,63 @@ export default function FileCard({
 
         {/* File Info */}
         <div className="mb-2">
-          <h3 className="font-semibold text-gray-900 text-sm mb-1 truncate group-hover:text-blue-600 transition-colors">
+          <h3 
+            className="font-semibold text-sm mb-1 truncate transition-colors"
+            style={{ color: colors.primaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.primaryBlue;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.primaryText;
+            }}
+          >
             {file.name}
           </h3>
           {file.description && (
-            <p className="text-xs text-gray-600 mb-1.5 line-clamp-2">{file.description}</p>
+            <p 
+              className="text-xs mb-1.5 line-clamp-2"
+              style={{ color: colors.secondaryText }}
+            >
+              {file.description}
+            </p>
           )}
           
           <div className="flex items-center space-x-1.5 mb-1.5">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(file.type)}`}>
+            <span 
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{
+                background: typeColorStyle.bg,
+                color: typeColorStyle.text,
+              }}
+            >
               {file.type}
             </span>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            <span 
+              className="text-xs px-2 py-1 rounded-full"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+              }}
+            >
               v{file.version}
             </span>
             {file.isArchived && (
-              <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+              <span 
+                className="text-xs px-2 py-1 rounded-full"
+                style={{
+                  background: colors.badgeWarningBg,
+                  color: colors.badgeWarningText,
+                }}
+              >
                 Archived
               </span>
             )}
           </div>
 
-          <div className="flex items-center space-x-3 text-[10px] text-gray-500 mb-1">
+          <div 
+            className="flex items-center space-x-3 text-[10px] mb-1"
+            style={{ color: colors.secondaryText }}
+          >
             <div className="flex items-center space-x-0.5">
               <Calendar size={10} />
               <span>{file.lastModified}</span>
@@ -278,7 +411,10 @@ export default function FileCard({
           </div>
 
           {/* Stats */}
-          <div className="flex items-center space-x-3 text-[10px] text-gray-500">
+          <div 
+            className="flex items-center space-x-3 text-[10px]"
+            style={{ color: colors.secondaryText }}
+          >
             <div className="flex items-center space-x-0.5">
               <TrendingUp size={10} />
               <span>{file.viewCount} views</span>
@@ -295,13 +431,25 @@ export default function FileCard({
           <div className="mb-2">
             <div className="flex flex-wrap gap-0.5">
               {file.tags.slice(0, 3).map((tag, index) => (
-                <span key={index} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg">
+                <span 
+                  key={index} 
+                  className="inline-flex items-center px-2 py-1 text-xs rounded-lg"
+                  style={{
+                    background: colors.inputBackground,
+                    color: colors.primaryText,
+                  }}
+                >
                   <Tag size={10} className="mr-1" />
                   {tag}
                 </span>
               ))}
               {file.tags.length > 3 && (
-                <span className="text-xs text-gray-500 px-2 py-1">+{file.tags.length - 3} more</span>
+                <span 
+                  className="text-xs px-2 py-1"
+                  style={{ color: colors.secondaryText }}
+                >
+                  +{file.tags.length - 3} more
+                </span>
               )}
             </div>
           </div>
@@ -311,22 +459,45 @@ export default function FileCard({
         {file.sharedWith.length > 0 && (
           <div className="mb-2">
             <div className="flex items-center space-x-1.5">
-              <Users size={12} className="text-gray-400" />
+              <Users size={12} style={{ color: colors.tertiaryText }} />
               <div className="flex -space-x-2">
                 {file.sharedWith.slice(0, 3).map((share) => (
-                  <div key={share.id} className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full border-2 border-white flex items-center justify-center">
+                  <div 
+                    key={share.id} 
+                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                      borderColor: colors.cardBackground,
+                    }}
+                  >
                     <span className="text-xs text-white font-medium">
                       {share.userName.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 ))}
                 {file.sharedWith.length > 3 && (
-                  <div className="w-6 h-6 bg-gray-200 rounded-full border-2 border-white flex items-center justify-center">
-                    <span className="text-xs text-gray-600 font-medium">+{file.sharedWith.length - 3}</span>
+                  <div 
+                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                    style={{
+                      background: colors.inputBackground,
+                      borderColor: colors.cardBackground,
+                    }}
+                  >
+                    <span 
+                      className="text-xs font-medium"
+                      style={{ color: colors.secondaryText }}
+                    >
+                      +{file.sharedWith.length - 3}
+                    </span>
                   </div>
                 )}
               </div>
-              <span className="text-xs text-gray-500">{file.sharedWith.length} shared</span>
+              <span 
+                className="text-xs"
+                style={{ color: colors.secondaryText }}
+              >
+                {file.sharedWith.length} shared
+              </span>
             </div>
           </div>
         )}
@@ -335,22 +506,42 @@ export default function FileCard({
         {file.comments.length > 0 && (
           <div className="mb-2">
             <div className="flex items-center space-x-1.5">
-              <MessageCircle size={12} className="text-gray-400" />
-              <span className="text-xs text-gray-500">{file.comments.length} comment{file.comments.length > 1 ? 's' : ''}</span>
+              <MessageCircle size={12} style={{ color: colors.tertiaryText }} />
+              <span 
+                className="text-xs"
+                style={{ color: colors.secondaryText }}
+              >
+                {file.comments.length} comment{file.comments.length > 1 ? 's' : ''}
+              </span>
             </div>
           </div>
         )}
 
         {/* Actions */}
-        <div className="pt-2 border-t border-gray-100">
+        <div 
+          className="pt-2"
+          style={{ borderTop: `1px solid ${colors.border}` }}
+        >
           <div className="flex items-center justify-center flex-wrap gap-1 max-w-full">
             <button
               onClick={() => onTogglePublic(file.id)}
-              className={`p-1.5 rounded-lg transition-colors ${
-                file.isPublic 
-                  ? 'text-green-600 bg-green-100' 
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-              }`}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{
+                color: file.isPublic ? colors.successGreen : colors.tertiaryText,
+                background: file.isPublic ? colors.badgeSuccessBg : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!file.isPublic) {
+                  e.currentTarget.style.color = colors.primaryText;
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!file.isPublic) {
+                  e.currentTarget.style.color = colors.tertiaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
               title={file.isPublic ? 'Make private' : 'Make public'}
             >
               {file.isPublic ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -358,19 +549,45 @@ export default function FileCard({
             <div className="relative">
               <button
                 onClick={() => setShowDownloadFormat(!showDownloadFormat)}
-                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                className="p-1.5 rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.primaryBlue;
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.secondaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 title="Download"
               >
                 <Download size={12} />
               </button>
               {showDownloadFormat && (
-                <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <div 
+                  className="absolute right-0 mt-2 w-32 rounded-lg shadow-lg z-10"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
                   <button
                     onClick={() => {
                       onDownload(file, 'pdf');
                       setShowDownloadFormat(false);
                     }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg"
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-t-lg"
+                    style={{
+                      color: colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
                   >
                     📄 Download PDF
                   </button>
@@ -379,7 +596,18 @@ export default function FileCard({
                       onDownload(file, 'doc');
                       setShowDownloadFormat(false);
                     }}
-                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-b-lg"
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-b-lg"
+                    style={{
+                      color: colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
                   >
                     📝 Download DOC
                   </button>
@@ -388,7 +616,16 @@ export default function FileCard({
             </div>
             <button
               onClick={() => setShowShareModal(true)}
-              className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.successGreen;
+                e.currentTarget.style.background = colors.badgeSuccessBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.background = 'transparent';
+              }}
               title="Share"
             >
               <Share2 size={12} />
@@ -398,32 +635,71 @@ export default function FileCard({
                 logger.debug('Comment button clicked! Current state:', showComments);
                 setShowComments(!showComments);
               }}
-              className={`p-1.5 rounded-lg transition-colors ${
-                showComments 
-                  ? 'text-purple-600 bg-purple-100' 
-                  : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
-              }`}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{
+                color: showComments ? colors.badgePurpleText : colors.secondaryText,
+                background: showComments ? colors.badgePurpleBg : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!showComments) {
+                  e.currentTarget.style.color = colors.badgePurpleText;
+                  e.currentTarget.style.background = colors.badgePurpleBg;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showComments) {
+                  e.currentTarget.style.color = colors.secondaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
               title="Comments"
             >
               <MessageCircle size={12} />
             </button>
             <button
               onClick={() => onEdit(file.id)}
-              className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.primaryText;
+                e.currentTarget.style.background = colors.hoverBackground;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.background = 'transparent';
+              }}
               title="Edit"
             >
               <Edit size={12} />
             </button>
             <button
               onClick={() => onArchive(file.id)}
-              className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.badgeWarningText;
+                e.currentTarget.style.background = colors.badgeWarningBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.background = 'transparent';
+              }}
               title={file.isArchived ? 'Unarchive' : 'Archive'}
             >
               <Archive size={12} />
             </button>
             <button
               onClick={() => onDelete(file.id)}
-              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.errorRed;
+                e.currentTarget.style.background = colors.badgeErrorBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.background = 'transparent';
+              }}
               title="Delete"
             >
               <Trash2 size={12} />
@@ -433,50 +709,113 @@ export default function FileCard({
 
         {/* Comments Section */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-full overflow-hidden">
+          <div 
+            className="mt-4 pt-4 w-full max-w-full overflow-hidden"
+            style={{ borderTop: `1px solid ${colors.border}` }}
+          >
             <div className="space-y-3 max-w-full">
               {/* Existing Comments */}
               {file.comments && file.comments.length > 0 ? (
                 file.comments.map((comment) => (
                   <div key={comment.id} className="flex space-x-3 max-w-full">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div 
+                      className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                      }}
+                    >
                       <span className="text-xs text-white font-medium">
                         {comment.userName?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
-                        <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                        <span 
+                          className="text-sm font-medium"
+                          style={{ color: colors.primaryText }}
+                        >
+                          {comment.userName || 'User'}
+                        </span>
+                        <span 
+                          className="text-xs"
+                          style={{ color: colors.secondaryText }}
+                        >
+                          {new Date(comment.timestamp).toLocaleDateString()}
+                        </span>
                       </div>
-                      <p className="text-sm text-gray-700 break-words">{comment.content}</p>
+                      <p 
+                        className="text-sm break-words"
+                        style={{ color: colors.primaryText }}
+                      >
+                        {comment.content}
+                      </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-gray-500 text-sm">
+                <div 
+                  className="text-center py-4 text-sm"
+                  style={{ color: colors.secondaryText }}
+                >
                   No comments yet. Be the first to comment!
                 </div>
               )}
               
               {/* Add Comment */}
               <div className="flex space-x-3 max-w-full">
-                <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs text-white font-medium">U</span>
+                <div 
+                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: colors.inputBackground,
+                  }}
+                >
+                  <span 
+                    className="text-xs font-medium"
+                    style={{ color: colors.secondaryText }}
+                  >
+                    U
+                  </span>
                 </div>
                 <div className="flex-1 min-w-0 max-w-full">
                   <textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm box-border"
+                    className="w-full max-w-full px-3 py-2 rounded-lg focus:outline-none resize-none text-sm box-border transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                     rows={2}
                   />
                   <div className="flex justify-end mt-2 space-x-2">
                     <button
                       onClick={handleCommentSubmit}
                       disabled={!newComment.trim()}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                      className="px-3 py-1 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
+                      style={{
+                        background: !newComment.trim() ? colors.inputBackground : colors.primaryBlue,
+                        color: !newComment.trim() ? colors.tertiaryText : 'white',
+                        opacity: !newComment.trim() ? 0.5 : 1,
+                        cursor: !newComment.trim() ? 'not-allowed' : 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (newComment.trim()) {
+                          e.currentTarget.style.opacity = '0.9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (newComment.trim()) {
+                          e.currentTarget.style.opacity = '1';
+                        }
+                      }}
                     >
                       Comment
                     </button>
@@ -485,7 +824,18 @@ export default function FileCard({
                         setNewComment('');
                         setShowComments(false);
                       }}
-                      className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+                      className="px-3 py-1 text-sm rounded-lg transition-colors whitespace-nowrap"
+                      style={{
+                        background: colors.inputBackground,
+                        color: colors.secondaryText,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = colors.inputBackground;
+                      }}
                     >
                       Cancel
                     </button>
@@ -500,49 +850,108 @@ export default function FileCard({
   }
 
   // List view - Enhanced version
+  const typeColorStyleList = getTypeColor(file.type);
   return (
-    <div className={`group flex flex-col p-3 border rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full ${
-      isSelected ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200 bg-white hover:border-gray-300'
-    }`}>
+    <div 
+      className="group flex flex-col p-3 rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full"
+      style={{
+        border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
+        background: isSelected ? colors.badgeInfoBg : colors.cardBackground,
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.borderColor = colors.borderFocused;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.borderColor = colors.border;
+        }
+      }}
+    >
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center space-x-4 flex-1 min-w-0">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={() => onSelect(file.id)}
-          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+          className="w-4 h-4 rounded focus:ring-2 flex-shrink-0 transition-all"
+          style={{
+            accentColor: colors.primaryBlue,
+            borderColor: colors.border,
+          }}
         />
         
-        <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center flex-shrink-0">
+        <div 
+          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{
+            background: colors.inputBackground,
+          }}
+        >
           {getFileIcon(file.type)}
         </div>
 
         <div className="flex-1 min-w-0 max-w-full">
           <div className="flex items-center space-x-3 mb-1">
-            <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+            <h3 
+              className="font-semibold truncate transition-colors"
+              style={{ color: colors.primaryText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.primaryBlue;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.primaryText;
+              }}
+            >
               {file.name}
             </h3>
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(file.type)}`}>
+            <span 
+              className="px-2 py-1 rounded-full text-xs font-medium"
+              style={{
+                background: typeColorStyleList.bg,
+                color: typeColorStyleList.text,
+              }}
+            >
               {file.type}
             </span>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            <span 
+              className="text-xs px-2 py-1 rounded-full"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+              }}
+            >
               v{file.version}
             </span>
             {file.isStarred && (
-              <Star size={14} className="text-yellow-500 fill-current" />
+              <Star size={14} style={{ color: colors.badgeWarningText }} className="fill-current" />
             )}
             {file.isArchived && (
-              <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+              <span 
+                className="text-xs px-2 py-1 rounded-full"
+                style={{
+                  background: colors.badgeWarningBg,
+                  color: colors.badgeWarningText,
+                }}
+              >
                 Archived
               </span>
             )}
           </div>
           
           {file.description && (
-            <p className="text-sm text-gray-600 mb-2 line-clamp-1">{file.description}</p>
+            <p 
+              className="text-sm mb-2 line-clamp-1"
+              style={{ color: colors.secondaryText }}
+            >
+              {file.description}
+            </p>
           )}
           
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
+          <div 
+            className="flex items-center space-x-4 text-sm"
+            style={{ color: colors.secondaryText }}
+          >
             <div className="flex items-center space-x-1">
               <Calendar size={12} />
               <span>{file.lastModified}</span>
@@ -575,22 +984,46 @@ export default function FileCard({
       <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
         <button
           onClick={() => onStar(file.id)}
-          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
-            file.isStarred 
-              ? 'text-yellow-500 bg-yellow-100' 
-              : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-100'
-          }`}
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{
+            color: file.isStarred ? colors.badgeWarningText : colors.tertiaryText,
+            background: file.isStarred ? colors.badgeWarningBg : 'transparent',
+          }}
+          onMouseEnter={(e) => {
+            if (!file.isStarred) {
+              e.currentTarget.style.color = colors.badgeWarningText;
+              e.currentTarget.style.background = colors.badgeWarningBg;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!file.isStarred) {
+              e.currentTarget.style.color = colors.tertiaryText;
+              e.currentTarget.style.background = 'transparent';
+            }
+          }}
           title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
         >
           <Star size={16} className={file.isStarred ? 'fill-current' : ''} />
         </button>
         <button
           onClick={() => onTogglePublic(file.id)}
-          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
-            file.isPublic 
-              ? 'text-green-600 bg-green-100' 
-              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-          }`}
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{
+            color: file.isPublic ? colors.successGreen : colors.tertiaryText,
+            background: file.isPublic ? colors.badgeSuccessBg : 'transparent',
+          }}
+          onMouseEnter={(e) => {
+            if (!file.isPublic) {
+              e.currentTarget.style.color = colors.primaryText;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!file.isPublic) {
+              e.currentTarget.style.color = colors.tertiaryText;
+              e.currentTarget.style.background = 'transparent';
+            }
+          }}
           title={file.isPublic ? 'Make private' : 'Make public'}
         >
           {file.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -598,19 +1031,45 @@ export default function FileCard({
         <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowDownloadFormat(!showDownloadFormat)}
-            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-colors flex-shrink-0"
+            className="p-2 rounded-lg transition-colors flex-shrink-0"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.primaryBlue;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.background = 'transparent';
+            }}
             title="Download"
           >
             <Download size={16} />
           </button>
           {showDownloadFormat && (
-            <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+            <div 
+              className="absolute right-0 mt-2 w-32 rounded-lg shadow-lg z-10"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
               <button
                 onClick={() => {
                   onDownload(file, 'pdf');
                   setShowDownloadFormat(false);
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg"
+                className="w-full px-3 py-2 text-left text-sm transition-colors rounded-t-lg"
+                style={{
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
               >
                 📄 Download PDF
               </button>
@@ -619,7 +1078,18 @@ export default function FileCard({
                   onDownload(file, 'doc');
                   setShowDownloadFormat(false);
                 }}
-                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-b-lg"
+                className="w-full px-3 py-2 text-left text-sm transition-colors rounded-b-lg"
+                style={{
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
               >
                 📝 Download DOC
               </button>
@@ -628,7 +1098,16 @@ export default function FileCard({
         </div>
         <button
           onClick={() => setShowShareModal(true)}
-          className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-100 rounded-lg transition-colors flex-shrink-0"
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{ color: colors.secondaryText }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = colors.successGreen;
+            e.currentTarget.style.background = colors.badgeSuccessBg;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.secondaryText;
+            e.currentTarget.style.background = 'transparent';
+          }}
           title="Share"
         >
           <Share2 size={16} />
@@ -638,32 +1117,71 @@ export default function FileCard({
             logger.debug('Comment button clicked (list view)! Current state:', showComments);
             setShowComments(!showComments);
           }}
-          className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
-            showComments 
-              ? 'text-purple-600 bg-purple-100' 
-              : 'text-gray-500 hover:text-purple-600 hover:bg-purple-100'
-          }`}
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{
+            color: showComments ? colors.badgePurpleText : colors.secondaryText,
+            background: showComments ? colors.badgePurpleBg : 'transparent',
+          }}
+          onMouseEnter={(e) => {
+            if (!showComments) {
+              e.currentTarget.style.color = colors.badgePurpleText;
+              e.currentTarget.style.background = colors.badgePurpleBg;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!showComments) {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.background = 'transparent';
+            }
+          }}
           title="Comments"
         >
           <MessageCircle size={16} />
         </button>
         <button
           onClick={() => onEdit(file.id)}
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{ color: colors.secondaryText }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = colors.primaryText;
+            e.currentTarget.style.background = colors.hoverBackground;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.secondaryText;
+            e.currentTarget.style.background = 'transparent';
+          }}
           title="Edit"
         >
           <Edit size={16} />
         </button>
         <button
           onClick={() => onArchive(file.id)}
-          className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-100 rounded-lg transition-colors flex-shrink-0"
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{ color: colors.secondaryText }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = colors.badgeWarningText;
+            e.currentTarget.style.background = colors.badgeWarningBg;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.secondaryText;
+            e.currentTarget.style.background = 'transparent';
+          }}
           title={file.isArchived ? 'Unarchive' : 'Archive'}
         >
           <Archive size={16} />
         </button>
         <button
           onClick={() => onDelete(file.id)}
-          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-lg transition-colors flex-shrink-0"
+          className="p-2 rounded-lg transition-colors flex-shrink-0"
+          style={{ color: colors.secondaryText }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = colors.errorRed;
+            e.currentTarget.style.background = colors.badgeErrorBg;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.secondaryText;
+            e.currentTarget.style.background = 'transparent';
+          }}
           title="Delete"
         >
           <Trash2 size={16} />
@@ -671,19 +1189,46 @@ export default function FileCard({
         <div className="relative flex-shrink-0">
           <button 
             onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+            className="p-2 rounded-lg transition-colors flex-shrink-0"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.primaryText;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.background = 'transparent';
+            }}
             title="More options"
           >
             <MoreVertical size={16} />
           </button>
           {showMoreMenu && (
-            <div ref={moreMenuRef} className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+            <div 
+              ref={moreMenuRef} 
+              className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-20"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(file.id);
                   setShowMoreMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors rounded-t-lg flex items-center space-x-2"
+                className="w-full px-4 py-2 text-left text-sm transition-colors rounded-t-lg flex items-center space-x-2"
+                style={{
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
               >
                 <Copy size={14} />
                 <span>Copy ID</span>
@@ -692,7 +1237,18 @@ export default function FileCard({
                 onClick={() => {
                   setShowMoreMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+                className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
+                style={{
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
               >
                 <Calendar size={14} />
                 <span>View History</span>
@@ -701,17 +1257,37 @@ export default function FileCard({
                 onClick={() => {
                   setShowMoreMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors flex items-center space-x-2"
+                className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
+                style={{
+                  color: colors.primaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryBlue;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
               >
                 <Tag size={14} />
                 <span>Manage Tags</span>
               </button>
-              <div className="border-t border-gray-200"></div>
+              <div style={{ borderTop: `1px solid ${colors.border}` }}></div>
               <button
                 onClick={() => {
                   setShowMoreMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors rounded-b-lg flex items-center space-x-2"
+                className="w-full px-4 py-2 text-left text-sm transition-colors rounded-b-lg flex items-center space-x-2"
+                style={{
+                  color: colors.errorRed,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgeErrorBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 <Trash2 size={14} />
                 <span>Delete Permanently</span>
@@ -724,50 +1300,113 @@ export default function FileCard({
 
     {/* Comments Section - List View */}
       {showComments && (
-        <div className="mt-4 pt-4 border-t border-gray-200 w-full max-w-full overflow-hidden">
+        <div 
+          className="mt-4 pt-4 w-full max-w-full overflow-hidden"
+          style={{ borderTop: `1px solid ${colors.border}` }}
+        >
           <div className="space-y-3 max-w-full">
             {/* Existing Comments */}
             {file.comments && file.comments.length > 0 ? (
               file.comments.map((comment) => (
                 <div key={comment.id} className="flex space-x-3 max-w-full">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div 
+                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                    }}
+                  >
                     <span className="text-xs text-white font-medium">
                       {comment.userName?.charAt(0).toUpperCase() || 'U'}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-sm font-medium text-gray-900">{comment.userName || 'User'}</span>
-                      <span className="text-xs text-gray-500">{new Date(comment.timestamp).toLocaleDateString()}</span>
+                      <span 
+                        className="text-sm font-medium"
+                        style={{ color: colors.primaryText }}
+                      >
+                        {comment.userName || 'User'}
+                      </span>
+                      <span 
+                        className="text-xs"
+                        style={{ color: colors.secondaryText }}
+                      >
+                        {new Date(comment.timestamp).toLocaleDateString()}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-700 break-words">{comment.content}</p>
+                    <p 
+                      className="text-sm break-words"
+                      style={{ color: colors.primaryText }}
+                    >
+                      {comment.content}
+                    </p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="text-center py-4 text-gray-500 text-sm">
+              <div 
+                className="text-center py-4 text-sm"
+                style={{ color: colors.secondaryText }}
+              >
                 No comments yet. Be the first to comment!
               </div>
             )}
             
             {/* Add Comment */}
             <div className="flex space-x-3 max-w-full">
-              <div className="w-6 h-6 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-xs text-white font-medium">U</span>
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: colors.inputBackground,
+                }}
+              >
+                <span 
+                  className="text-xs font-medium"
+                  style={{ color: colors.secondaryText }}
+                >
+                  U
+                </span>
               </div>
               <div className="flex-1 min-w-0 max-w-full">
                 <textarea
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Add a comment..."
-                  className="w-full max-w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm box-border"
+                  className="w-full max-w-full px-3 py-2 rounded-lg focus:outline-none resize-none text-sm box-border transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
                   rows={2}
                 />
                 <div className="flex justify-end mt-2 space-x-2">
                   <button
                     onClick={handleCommentSubmit}
                     disabled={!newComment.trim()}
-                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                    className="px-3 py-1 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
+                    style={{
+                      background: !newComment.trim() ? colors.inputBackground : colors.primaryBlue,
+                      color: !newComment.trim() ? colors.tertiaryText : 'white',
+                      opacity: !newComment.trim() ? 0.5 : 1,
+                      cursor: !newComment.trim() ? 'not-allowed' : 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (newComment.trim()) {
+                        e.currentTarget.style.opacity = '0.9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (newComment.trim()) {
+                        e.currentTarget.style.opacity = '1';
+                      }
+                    }}
                   >
                     Comment
                   </button>
@@ -776,7 +1415,18 @@ export default function FileCard({
                       setNewComment('');
                       setShowComments(false);
                     }}
-                    className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors whitespace-nowrap"
+                    className="px-3 py-1 text-sm rounded-lg transition-colors whitespace-nowrap"
+                    style={{
+                      background: colors.inputBackground,
+                      color: colors.secondaryText,
+                      border: `1px solid ${colors.border}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = colors.inputBackground;
+                    }}
                   >
                     Cancel
                   </button>
@@ -789,21 +1439,54 @@ export default function FileCard({
 
       {/* Share Modal */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div 
+            className="rounded-xl p-6 w-full max-w-md"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Share2 size={20} className="text-green-600" />
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{
+                    background: colors.badgeSuccessBg,
+                  }}
+                >
+                  <Share2 size={20} style={{ color: colors.successGreen }} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Share File</h2>
-                  <p className="text-sm text-gray-600">{file.name}</p>
+                  <h2 
+                    className="text-xl font-semibold"
+                    style={{ color: colors.primaryText }}
+                  >
+                    Share File
+                  </h2>
+                  <p 
+                    className="text-sm"
+                    style={{ color: colors.secondaryText }}
+                  >
+                    {file.name}
+                  </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowShareModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-2 transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.primaryText;
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.secondaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 <X size={24} />
               </button>
@@ -811,7 +1494,10 @@ export default function FileCard({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.primaryText }}
+                >
                   Share with
                 </label>
                 <div className="flex space-x-2">
@@ -820,12 +1506,39 @@ export default function FileCard({
                     value={shareEmail}
                     onChange={(e) => setShareEmail(e.target.value)}
                     placeholder="Enter email address"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 rounded-lg focus:outline-none transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   />
                   <button
                     onClick={handleShareSubmit}
                     disabled={!shareEmail.trim()}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 rounded-lg transition-colors"
+                    style={{
+                      background: !shareEmail.trim() ? colors.inputBackground : colors.primaryBlue,
+                      color: !shareEmail.trim() ? colors.tertiaryText : 'white',
+                      opacity: !shareEmail.trim() ? 0.5 : 1,
+                      cursor: !shareEmail.trim() ? 'not-allowed' : 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (shareEmail.trim()) {
+                        e.currentTarget.style.opacity = '0.9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (shareEmail.trim()) {
+                        e.currentTarget.style.opacity = '1';
+                      }
+                    }}
                   >
                     <UserPlus size={16} />
                   </button>
@@ -833,40 +1546,84 @@ export default function FileCard({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.primaryText }}
+                >
                   Permission
                 </label>
                 <select
                   value={sharePermission}
                   onChange={(e) => setSharePermission(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
                 >
-                  <option value="view">View only</option>
-                  <option value="comment">Can comment</option>
-                  <option value="edit">Can edit</option>
-                  <option value="admin">Admin access</option>
+                  <option value="view" style={{ background: colors.background, color: colors.secondaryText }}>View only</option>
+                  <option value="comment" style={{ background: colors.background, color: colors.secondaryText }}>Can comment</option>
+                  <option value="edit" style={{ background: colors.background, color: colors.secondaryText }}>Can edit</option>
+                  <option value="admin" style={{ background: colors.background, color: colors.secondaryText }}>Admin access</option>
                 </select>
               </div>
 
               {/* SharePoint-style Access Controls */}
-              <div className="border-t pt-4 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-900">Access Settings</h3>
+              <div 
+                className="pt-4 space-y-4"
+                style={{ borderTop: `1px solid ${colors.border}` }}
+              >
+                <h3 
+                  className="text-sm font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Access Settings
+                </h3>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
                     Expiration Date (Optional)
                   </label>
                   <input
                     type="datetime-local"
                     value={shareExpiresAt}
                     onChange={(e) => setShareExpiresAt(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Link will expire after this date</p>
+                  <p 
+                    className="text-xs mt-1"
+                    style={{ color: colors.tertiaryText }}
+                  >
+                    Link will expire after this date
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
                     Max Downloads (Optional)
                   </label>
                   <input
@@ -875,9 +1632,25 @@ export default function FileCard({
                     onChange={(e) => setMaxDownloads(e.target.value)}
                     placeholder="Unlimited"
                     min="1"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Maximum number of downloads allowed</p>
+                  <p 
+                    className="text-xs mt-1"
+                    style={{ color: colors.tertiaryText }}
+                  >
+                    Maximum number of downloads allowed
+                  </p>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -886,16 +1659,27 @@ export default function FileCard({
                     id="requirePassword"
                     checked={requirePassword}
                     onChange={(e) => setRequirePassword(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 rounded focus:ring-2 transition-all"
+                    style={{
+                      accentColor: colors.primaryBlue,
+                      borderColor: colors.border,
+                    }}
                   />
-                  <label htmlFor="requirePassword" className="text-sm font-medium text-gray-700">
+                  <label 
+                    htmlFor="requirePassword" 
+                    className="text-sm font-medium"
+                    style={{ color: colors.primaryText }}
+                  >
                     Require password to access
                   </label>
                 </div>
 
                 {requirePassword && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label 
+                      className="block text-sm font-medium mb-2"
+                      style={{ color: colors.primaryText }}
+                    >
                       Password
                     </label>
                     <input
@@ -903,7 +1687,18 @@ export default function FileCard({
                       value={sharePassword}
                       onChange={(e) => setSharePassword(e.target.value)}
                       placeholder="Enter password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
+                      style={{
+                        background: colors.inputBackground,
+                        border: `1px solid ${colors.border}`,
+                        color: colors.primaryText,
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = colors.borderFocused;
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = colors.border;
+                      }}
                     />
                   </div>
                 )}
@@ -912,33 +1707,77 @@ export default function FileCard({
               {/* Current Shares */}
               {file.sharedWith.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
                     Currently shared with
                   </label>
                   <div className="space-y-2">
-                    {file.sharedWith.map((share) => (
-                      <div key={share.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                            <span className="text-xs text-white font-medium">
-                              {share.userName.charAt(0).toUpperCase()}
+                    {file.sharedWith.map((share) => {
+                      const permissionColorStyle = getPermissionColor(share.permission);
+                      return (
+                        <div 
+                          key={share.id} 
+                          className="flex items-center justify-between p-3 rounded-lg"
+                          style={{
+                            background: colors.inputBackground,
+                          }}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div 
+                              className="w-8 h-8 rounded-full flex items-center justify-center"
+                              style={{
+                                background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                              }}
+                            >
+                              <span className="text-xs text-white font-medium">
+                                {share.userName.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div>
+                              <p 
+                                className="text-sm font-medium"
+                                style={{ color: colors.primaryText }}
+                              >
+                                {share.userName}
+                              </p>
+                              <p 
+                                className="text-xs"
+                                style={{ color: colors.secondaryText }}
+                              >
+                                {share.userEmail}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span 
+                              className="px-2 py-1 rounded-full text-xs font-medium"
+                              style={{
+                                background: permissionColorStyle.bg,
+                                color: permissionColorStyle.text,
+                              }}
+                            >
+                              {share.permission}
                             </span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{share.userName}</p>
-                            <p className="text-xs text-gray-500">{share.userEmail}</p>
+                            <button 
+                              className="p-1 transition-colors"
+                              style={{ color: colors.tertiaryText }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = colors.errorRed;
+                                e.currentTarget.style.background = colors.badgeErrorBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = colors.tertiaryText;
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPermissionColor(share.permission)}`}>
-                            {share.permission}
-                          </span>
-                          <button className="p-1 text-gray-400 hover:text-red-600 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -947,7 +1786,18 @@ export default function FileCard({
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setShowShareModal(false)}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                }}
               >
                 Close
               </button>

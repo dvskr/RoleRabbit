@@ -3,12 +3,17 @@ import { Plus, Briefcase } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
 import { useJobsApi } from '../hooks/useJobsApi';
-import { Job } from '../types/job';
+import { Job, SavedView } from '../types/job';
 import { logger } from '../utils/logger';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function JobTracker() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   const {
-    jobs,
+    jobs, // Already filtered and sorted - use this for ALL views
+    allJobs, // Unfiltered jobs for stats
     isLoading,
     filters,
     viewMode,
@@ -22,7 +27,9 @@ export default function JobTracker() {
     addJob,
     updateJob,
     deleteJob,
+    restoreJob,
     bulkDelete,
+    bulkRestore,
     bulkUpdateStatus,
     toggleJobSelection,
     selectAllJobs,
@@ -37,14 +44,31 @@ export default function JobTracker() {
   const [viewingJob, setViewingJob] = useState<Job | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+    try {
+      const saved = localStorage.getItem('jobSavedViews');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Show loading state when fetching from API
   if (isLoading) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div 
+        className="h-full flex items-center justify-center"
+        style={{ background: colors.background }}
+      >
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading jobs...</p>
+          <div 
+            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              borderColor: colors.primaryBlue,
+              borderTopColor: 'transparent',
+            }}
+          />
+          <p style={{ color: colors.secondaryText }}>Loading jobs...</p>
         </div>
       </div>
     );
@@ -166,8 +190,10 @@ export default function JobTracker() {
                 onToggleFavorite={toggleFavorite}
                 onToggleSelection={toggleJobSelection}
                 onEdit={handleEditJob}
-                onDelete={deleteJob}
+                onDelete={handleDeleteJobWrapper}
                 onView={handleViewJob}
+                onRestore={restoreJob}
+                showDeleted={filters.showDeleted || false}
               />
             ))}
       </div>
@@ -175,13 +201,76 @@ export default function JobTracker() {
 
       case 'table':
     return (
-          <div className="p-4">
+          <div className="p-4 h-full flex flex-col" style={{ minHeight: 0 }}>
             <EditableJobTable
               jobs={jobs}
               onEdit={handleEditJob}
               onDelete={deleteJob}
+              onRestore={restoreJob}
               onView={handleViewJob}
               onAdd={handleAddJob}
+              onUpdate={handleEditJobSubmit}
+              favorites={favorites}
+              onToggleFavorite={toggleFavorite}
+              selectedJobs={selectedJobs}
+              onToggleSelection={toggleJobSelection}
+              onImport={handleImportJobs}
+              onBulkDelete={bulkDelete}
+              onBulkRestore={bulkRestore}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              onShowFilters={() => setShowFilters(!showFilters)}
+              showDeleted={filters.showDeleted || false}
+              filters={filters}
+              onFiltersChange={setFilters}
+              savedViews={savedViews}
+              onSaveView={(view) => {
+                const newView: SavedView = {
+                  ...view,
+                  id: `view-${Date.now()}`,
+                  createdAt: new Date().toISOString(),
+                };
+                const updated = [...savedViews, newView];
+                setSavedViews(updated);
+                localStorage.setItem('jobSavedViews', JSON.stringify(updated));
+              }}
+              onDeleteView={(viewId) => {
+                const updated = savedViews.filter(v => v.id !== viewId);
+                setSavedViews(updated);
+                localStorage.setItem('jobSavedViews', JSON.stringify(updated));
+              }}
+              onLoadView={(view) => {
+                setFilters(view.filters);
+              }}
+              onCreate={async (jobData) => {
+                try {
+                  const newJob: Omit<Job, 'id'> = {
+                    title: jobData.title || 'Untitled Job',
+                    company: jobData.company || '',
+                    location: jobData.location || '',
+                    status: jobData.status || 'applied',
+                    appliedDate: jobData.appliedDate || new Date().toISOString().split('T')[0],
+                    lastUpdated: new Date().toISOString().split('T')[0],
+                    salary: jobData.salary,
+                    url: jobData.url,
+                    notes: jobData.notes,
+                    nextStep: jobData.nextStep,
+                    nextStepDate: jobData.nextStepDate,
+                    priority: jobData.priority,
+                    contact: jobData.contact || {},
+                    description: jobData.description,
+                    requirements: jobData.requirements,
+                    benefits: jobData.benefits,
+                    remote: jobData.remote,
+                    companySize: jobData.companySize,
+                    industry: jobData.industry,
+                  };
+                  await handleAddJobSubmit(newJob);
+                } catch (error) {
+                  logger.error('Error creating job:', error);
+                  alert('Failed to create job. Please try again.');
+                }
+              }}
             />
       </div>
     );
@@ -199,8 +288,10 @@ export default function JobTracker() {
                 onToggleFavorite={toggleFavorite}
                 onToggleSelection={toggleJobSelection}
                 onEdit={handleEditJob}
-                onDelete={deleteJob}
+                onDelete={handleDeleteJobWrapper}
                 onView={handleViewJob}
+                onRestore={restoreJob}
+                showDeleted={filters.showDeleted || false}
               />
             ))}
       </div>
@@ -209,58 +300,49 @@ export default function JobTracker() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
-      {/* Ultra Compact Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-1 flex-shrink-0">
-        <div className="flex items-center justify-between">
-            <div>
-            <p className="text-xs text-gray-600">Manage your job applications and track your progress</p>
-          </div>
-        </div>
-      </div>
+    <div 
+      className="h-full flex flex-col overflow-hidden"
+      style={{ background: colors.background }}
+    >
 
       {/* Ultra Compact Stats */}
       <div className="px-4 pt-1">
         <JobStats stats={stats} />
-            </div>
+      </div>
             
-      {/* Merged Toolbar (Filters + Actions) */}
-      <JobMergedToolbar
-        filters={filters}
-        onFiltersChange={setFilters}
-        showAdvancedFilters={showFilters}
-        onToggleAdvancedFilters={() => setShowFilters(!showFilters)}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        selectedJobsCount={selectedJobs.length}
-        onBulkUpdateStatus={bulkUpdateStatus}
-        onBulkDelete={bulkDelete}
-        onClearSelection={clearSelection}
-        onExport={handleExportJobs}
-        onImport={handleImportJobs}
-        onShowSettings={handleShowSettings}
-      />
+      {/* Merged Toolbar (Filters + Actions) - Hidden for table view, shown for other views */}
+      {viewMode !== 'table' && (
+        <JobMergedToolbar
+          filters={filters}
+          onFiltersChange={setFilters}
+          showAdvancedFilters={showFilters}
+          onToggleAdvancedFilters={() => setShowFilters(!showFilters)}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          selectedJobsCount={selectedJobs.length}
+          onBulkUpdateStatus={bulkUpdateStatus}
+          onBulkDelete={(permanent) => bulkDelete(permanent)}
+          onBulkRestore={bulkRestore}
+          onClearSelection={clearSelection}
+          onExport={handleExportJobs}
+          onImport={handleImportJobs}
+          onShowSettings={handleShowSettings}
+        />
+      )}
 
       {/* Scrollable Content */}
       <div className={`flex-1 overflow-y-auto ${viewMode === 'kanban' ? 'overflow-x-auto' : ''}`}>
-        {jobs.length === 0 ? (
+        {jobs.length === 0 && viewMode !== 'table' ? (
           <div className="flex-1 flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="text-gray-400 mb-4">
-                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6" />
-                </svg>
-              </div>
-              <EmptyState
-                icon={Briefcase}
-                title="No jobs yet"
-                description="Start tracking your job applications to never miss an opportunity. Add jobs as you apply and watch your pipeline grow."
-                actionLabel="Add Your First Job"
-                onAction={handleAddJob}
-                secondaryActionLabel="Import Jobs"
-                onSecondaryAction={() => alert('Import feature coming soon!')}
-              />
-            </div>
+            <EmptyState
+              icon={Briefcase}
+              title="No jobs yet"
+              description="Start tracking your job applications to never miss an opportunity. Add jobs as you apply and watch your pipeline grow."
+              actionLabel="Add Your First Job"
+              onAction={handleAddJob}
+              secondaryActionLabel="Import Jobs"
+              onSecondaryAction={() => alert('Import feature coming soon!')}
+            />
           </div>
         ) : (
           renderJobs()
@@ -313,14 +395,26 @@ export default function JobTracker() {
       
       {/* Floating Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
-              <button
+        <button
           onClick={() => setShowAddJob(true)}
-          className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all duration-200 flex items-center justify-center group"
+          className="w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
+          style={{
+            background: colors.primaryBlue,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.primaryBlueHover;
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = colors.primaryBlue;
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
           title="Add Job"
         >
           <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
-              </button>
-            </div>
+        </button>
+      </div>
     </div>
   );
 }

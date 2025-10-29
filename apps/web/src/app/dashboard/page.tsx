@@ -20,7 +20,7 @@ const JobTracker = dynamic(() => import('../../components/JobTracker'), { ssr: f
 const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: false });
 const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
-const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/PortfolioGeneratorV2'), { ssr: false });
+const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents'), { ssr: false });
 import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Users, Home as HomeIcon } from 'lucide-react';
@@ -61,6 +61,7 @@ const MobileMenuModal = dynamic(() => import('../../components/modals').then(mod
 const AIGenerateModal = dynamic(() => import('../../components/modals').then(mod => mod.AIGenerateModal), { ssr: false });
 
 import { ResumeFile } from '../../types/cloudStorage';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Lazy load sections (only when Resume Editor is active) - use named exports from index
 const SummarySection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.SummarySection })), { ssr: false });
@@ -75,6 +76,8 @@ export default function DashboardPage() {
   const resumeDataHook = useResumeData();
   const modalsHook = useModals();
   const aiHook = useAI();
+  const { theme } = useTheme();
+  const colors = theme.colors;
   
   // Dashboard-specific state
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -386,6 +389,14 @@ export default function DashboardPage() {
       resumeHelpers.saveToHistory(resumeData, history, historyIndex, setHistory, setHistoryIndex);
     }
   }, [resumeData]);
+
+  // Restore sidebar when leaving editor with AI panel open
+  useEffect(() => {
+    if (activeTab !== 'editor' && showRightPanel && previousMainSidebarState !== undefined) {
+      // When navigating away from editor with AI panel open, restore the main sidebar
+      setSidebarCollapsed(previousMainSidebarState);
+    }
+  }, [activeTab, showRightPanel, previousMainSidebarState]);
 
   // Helper functions
   const handleTabChange = (tab: string) => {
@@ -1014,12 +1025,13 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="fixed inset-0 flex bg-[#0A0E14]">
+      <div className="fixed inset-0 flex" style={{ background: colors.background }}>
         {/* Sidebar */}
         <Sidebar
           activeTab={activeTab}
           sidebarCollapsed={sidebarCollapsed}
           onTabChange={handleTabChange}
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
         {/* Main Content Area */}
@@ -1055,15 +1067,13 @@ export default function DashboardPage() {
             />
           ) : activeTab === 'dashboard' ? (
             <DashboardHeader
-              onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-              sidebarCollapsed={sidebarCollapsed}
               onSearch={(query) => {
                 // Handle search functionality - filter dashboard content
                 console.log('Search query:', query);
                 // You can add search state here and filter the dashboard content
               }}
             />
-          ) : (
+          ) : activeTab === 'profile' || activeTab === 'storage' || activeTab === 'portfolio' || activeTab === 'cover-letter' || activeTab === 'agents' ? null : (
             <PageHeader
               title={
                 activeTab === 'storage' ? 'Storage' :
@@ -1074,7 +1084,6 @@ export default function DashboardPage() {
                 activeTab === 'portfolio' ? 'Portfolio' :
                 activeTab === 'templates' ? 'Templates' :
                 activeTab === 'profile' ? 'Profile' :
-                activeTab === 'agents' ? 'AI Agents' :
                  activeTab === 'learning' ? 'Learning Hub' :
                  activeTab === 'dashboard' ? 'Dashboard' : 'RoleReady'
               }
@@ -1088,7 +1097,6 @@ export default function DashboardPage() {
                 activeTab === 'portfolio' ? 'Build your online portfolio' :
                 activeTab === 'templates' ? 'Browse resume templates' :
                 activeTab === 'profile' ? 'Manage your profile settings' :
-                activeTab === 'agents' ? 'Automate your job search' :
                 activeTab === 'learning' ? 'Learn new skills' : undefined
               }
               icon={(() => {

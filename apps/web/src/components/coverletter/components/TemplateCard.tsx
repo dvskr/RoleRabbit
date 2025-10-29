@@ -1,107 +1,166 @@
 'use client';
 
 import React from 'react';
-import { Code, Palette, Megaphone, TrendingUp, DollarSign, FileText, Star, Eye, Target } from 'lucide-react';
+import { Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, Eye, ArrowRight, BarChart, Sparkles } from 'lucide-react';
 import { TemplateCardProps } from '../types/coverletter';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function TemplateCard({ template, onUse, onPreview }: TemplateCardProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'software': return <Code size={16} />;
-      case 'design': return <Palette size={16} />;
-      case 'marketing': return <Megaphone size={16} />;
-      case 'sales': return <TrendingUp size={16} />;
-      case 'finance': return <DollarSign size={16} />;
-      case 'general': return <FileText size={16} />;
-      default: return <FileText size={16} />;
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'software': return 'bg-blue-100 text-blue-700';
-      case 'design': return 'bg-purple-100 text-purple-700';
-      case 'marketing': return 'bg-green-100 text-green-700';
-      case 'sales': return 'bg-orange-100 text-orange-700';
-      case 'finance': return 'bg-yellow-100 text-yellow-700';
-      case 'general': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'tech':
+      case 'software': 
+        return <Code size={20} />;
+      case 'business': 
+        return <Briefcase size={20} />;
+      case 'creative': 
+        return <Lightbulb size={20} />;
+      case 'executive': 
+        return <TrendingUp size={20} />;
+      case 'academic': 
+        return <GraduationCap size={20} />;
+      default: 
+        return <FileText size={20} />;
     }
   };
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
-      case 'software': return 'Software';
-      case 'design': return 'Design';
-      case 'marketing': return 'Marketing';
-      case 'sales': return 'Sales';
-      case 'finance': return 'Finance';
-      case 'general': return 'General';
+      case 'tech':
+      case 'software': return 'Tech';
+      case 'business': return 'Business';
+      case 'creative': return 'Creative';
+      case 'executive': return 'Executive';
+      case 'academic': return 'Academic';
       default: return 'General';
     }
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${getCategoryColor(template.category)}`}>
-            {getCategoryIcon(template.category)}
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">{template.name}</h3>
-            <p className="text-sm text-gray-600">{getCategoryLabel(template.category)} Template</p>
-          </div>
+    <div 
+      className="rounded-lg p-5 transition-all"
+      style={{
+        background: colors.cardBackground,
+        border: `1px solid ${colors.border}`,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = colors.borderFocused;
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.1)`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = colors.border;
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
+      {/* Header with Icon and Title */}
+      <div className="flex items-start gap-3 mb-3">
+        {/* Icon Square */}
+        <div 
+          className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{
+            background: colors.badgePurpleBg,
+            color: 'white',
+          }}
+        >
+          {getCategoryIcon(template.category)}
         </div>
-        <div className="flex items-center gap-2">
-          {template.aiGenerated && (
-            <div className="flex items-center gap-1 text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">
-              <Star size={12} />
-              AI
-            </div>
-          )}
-          <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-            <Target size={12} />
-            {template.successRate}%
-          </div>
-        </div>
-      </div>
 
-      <div className="mb-4">
-        <p className="text-sm text-gray-600 line-clamp-3 mb-2">{template.description}</p>
-        <div className="text-xs text-gray-500">
-          {template.wordCount} words • {template.usageCount} uses
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex flex-wrap gap-1">
-          {template.tags.slice(0, 3).map((tag, index) => (
-            <span key={index} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-              {tag}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-base" style={{ color: colors.primaryText }}>
+              {template.name}
+            </h3>
+            {template.aiGenerated && (
+              <span 
+                className="px-2 py-0.5 rounded text-xs font-medium"
+                style={{
+                  background: colors.badgePurpleBg,
+                  color: 'white',
+                }}
+              >
+                AI
+              </span>
+            )}
+          </div>
+          
+          {/* ATS Score */}
+          <div className="flex items-center gap-1 mb-2">
+            <BarChart size={14} style={{ color: colors.successGreen }} />
+            <span className="text-sm font-medium" style={{ color: colors.successGreen }}>
+              {template.successRate}% ATS Score
             </span>
-          ))}
-          {template.tags.length > 3 && (
-            <span className="text-xs text-gray-500">+{template.tags.length - 3} more</span>
-          )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {onPreview && (
-            <button
-              onClick={() => onPreview(template)}
-              className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm"
-            >
-              <Eye size={14} className="inline mr-1" />
-              Preview
-            </button>
-          )}
-          <button
-            onClick={() => onUse(template)}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+      </div>
+
+      {/* Description */}
+      <p 
+        className="text-sm mb-3 line-clamp-2"
+        style={{ color: colors.secondaryText }}
+      >
+        {template.description}
+      </p>
+
+      {/* Tags */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {template.tags.slice(0, 3).map((tag, index) => (
+          <span 
+            key={index}
+            className="px-2 py-1 rounded text-xs"
+            style={{
+              background: colors.inputBackground,
+              color: colors.secondaryText,
+            }}
           >
-            Use Template
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        {onPreview && (
+          <button
+            onClick={() => onPreview(template)}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+            style={{
+              background: colors.inputBackground,
+              color: colors.primaryText,
+              border: `1px solid ${colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackgroundStrong;
+              e.currentTarget.style.borderColor = colors.borderFocused;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.inputBackground;
+              e.currentTarget.style.borderColor = colors.border;
+            }}
+          >
+            <Eye size={16} />
+            Preview
           </button>
-        </div>
+        )}
+        <button
+          onClick={() => onUse(template)}
+          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+          style={{
+            background: colors.primaryBlue,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          Use Template
+          <ArrowRight size={16} />
+        </button>
       </div>
     </div>
   );

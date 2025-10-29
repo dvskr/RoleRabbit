@@ -46,6 +46,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { resumeTemplates, templateCategories, getTemplatesByCategory, searchTemplates } from '../data/templates';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface TemplatesProps {
   onAddToEditor?: (templateId: string) => void;
@@ -54,6 +55,8 @@ interface TemplatesProps {
 }
 
 export default function Templates({ onAddToEditor, addedTemplates = [], onRemoveTemplate }: TemplatesProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -151,10 +154,30 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'beginner': return 'text-green-600 bg-green-100';
-      case 'intermediate': return 'text-yellow-600 bg-yellow-100';
-      case 'advanced': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'beginner': 
+        return {
+          text: colors.badgeSuccessText,
+          bg: colors.badgeSuccessBg,
+          border: colors.badgeSuccessBorder,
+        };
+      case 'intermediate': 
+        return {
+          text: colors.badgeWarningText,
+          bg: colors.badgeWarningBg,
+          border: colors.badgeWarningBorder,
+        };
+      case 'advanced': 
+        return {
+          text: colors.badgeErrorText,
+          bg: colors.badgeErrorBg,
+          border: colors.badgeErrorBorder,
+        };
+      default: 
+        return {
+          text: colors.tertiaryText,
+          bg: colors.badgeNeutralBg,
+          border: colors.badgeNeutralBorder,
+        };
     }
   };
 
@@ -532,20 +555,33 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
   };
 
   return (
-    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: colors.background }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex-shrink-0">
+      <div className="px-4 py-2 flex-shrink-0" style={{ background: colors.headerBackground, borderBottom: `1px solid ${colors.border}` }}>
         {/* Search and Filters */}
         <div className="flex items-center gap-2 mb-2">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute left-2 top-1/2 transform -translate-y-1/2" style={{ color: colors.tertiaryText }} />
             <input
               type="text"
               placeholder="Search templates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="w-full pl-8 pr-3 py-2 rounded-lg text-sm"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = colors.borderFocused;
+                e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = colors.border;
+                e.target.style.outline = 'none';
+              }}
             />
           </div>
 
@@ -553,7 +589,12 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            className="px-3 py-2 rounded-lg text-sm"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: colors.primaryText,
+            }}
           >
             <option value="popular">Popular</option>
             <option value="newest">Newest</option>
@@ -562,20 +603,44 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
           </select>
 
           {/* View Mode */}
-          <div className="flex items-center border border-gray-300 rounded-lg p-0.5">
+          <div className="flex items-center rounded-lg p-0.5" style={{ border: `1px solid ${colors.border}` }}>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
-              }`}
+              className="p-1.5 rounded-md transition-colors"
+              style={{
+                background: viewMode === 'grid' ? colors.badgeInfoBg : 'transparent',
+                color: viewMode === 'grid' ? colors.badgeInfoText : colors.tertiaryText,
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'grid') {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'grid') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
               <Grid size={16} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'
-              }`}
+              className="p-1.5 rounded-md transition-colors"
+              style={{
+                background: viewMode === 'list' ? colors.badgeInfoBg : 'transparent',
+                color: viewMode === 'list' ? colors.badgeInfoText : colors.tertiaryText,
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'list') {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'list') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
               <List size={16} />
             </button>
@@ -584,11 +649,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
           {/* Filters Toggle */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-3 py-2 rounded-lg border transition-colors text-sm ${
-              showFilters 
-                ? 'bg-blue-50 border-blue-200 text-blue-700' 
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
+            className="px-3 py-2 rounded-lg border transition-colors text-sm"
+            style={{
+              background: showFilters ? colors.badgeInfoBg : 'transparent',
+              border: `1px solid ${showFilters ? colors.badgeInfoBorder : colors.border}`,
+              color: showFilters ? colors.badgeInfoText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (!showFilters) {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showFilters) {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             <Filter size={16} className="inline mr-1" />
             Filters
@@ -597,7 +673,18 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
           {/* Refresh Button */}
           <button 
             onClick={() => window.location.reload()}
-            className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-sm border border-gray-300"
+            className="px-3 py-2 rounded-lg transition-colors text-sm border"
+            style={{
+              border: `1px solid ${colors.border}`,
+              color: colors.secondaryText,
+              background: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
           >
             <RefreshCw size={14} className="inline mr-1" />
             Refresh
@@ -608,11 +695,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
         <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-2 py-1 rounded-lg whitespace-nowrap transition-colors text-xs ${
-              selectedCategory === 'all' 
-                ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className="px-2 py-1 rounded-lg whitespace-nowrap transition-colors text-xs border"
+            style={{
+              background: selectedCategory === 'all' ? colors.badgeInfoBg : 'transparent',
+              color: selectedCategory === 'all' ? colors.badgeInfoText : colors.secondaryText,
+              border: `1px solid ${selectedCategory === 'all' ? colors.badgeInfoBorder : colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              if (selectedCategory !== 'all') {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (selectedCategory !== 'all') {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
           >
             All ({resumeTemplates.length})
           </button>
@@ -620,11 +718,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`px-2 py-1 rounded-lg whitespace-nowrap transition-colors flex items-center gap-1 text-xs ${
-                selectedCategory === category.id 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              className="px-2 py-1 rounded-lg whitespace-nowrap transition-colors flex items-center gap-1 text-xs border"
+              style={{
+                background: selectedCategory === category.id ? colors.badgeInfoBg : 'transparent',
+                color: selectedCategory === category.id ? colors.badgeInfoText : colors.secondaryText,
+                border: `1px solid ${selectedCategory === category.id ? colors.badgeInfoBorder : colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                if (selectedCategory !== category.id) {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (selectedCategory !== category.id) {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
               {getCategoryIcon(category.id)}
               {category.name} ({category.count})
@@ -634,14 +743,19 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="mt-2 p-2 bg-gray-50 rounded-lg">
+          <div className="mt-2 p-2 rounded-lg" style={{ background: colors.cardBackground }}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Difficulty</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>Difficulty</label>
                 <select
                   value={selectedDifficulty}
                   onChange={(e) => setSelectedDifficulty(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-2 py-1.5 rounded-md text-sm"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
                 >
                   <option value="all">All Levels</option>
                   <option value="beginner">Beginner</option>
@@ -650,11 +764,16 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Layout</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>Layout</label>
                 <select
                   value={selectedLayout}
                   onChange={(e) => setSelectedLayout(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-2 py-1.5 rounded-md text-sm"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
                 >
                   <option value="all">All Layouts</option>
                   <option value="single-column">Single Column</option>
@@ -663,11 +782,16 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Color</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>Color</label>
                 <select
                   value={selectedColorScheme}
                   onChange={(e) => setSelectedColorScheme(e.target.value)}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className="w-full px-2 py-1.5 rounded-md text-sm"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
                 >
                   <option value="all">All Colors</option>
                   <option value="monochrome">Monochrome</option>
@@ -680,25 +804,27 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>Type</label>
                 <div className="space-y-1">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={showFreeOnly}
                       onChange={(e) => setShowFreeOnly(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded"
+                      style={{ borderColor: colors.border }}
                     />
-                    <span className="ml-1.5 text-xs text-gray-700">Free Only</span>
+                    <span className="ml-1.5 text-xs" style={{ color: colors.secondaryText }}>Free Only</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={showPremiumOnly}
                       onChange={(e) => setShowPremiumOnly(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded"
+                      style={{ borderColor: colors.border }}
                     />
-                    <span className="ml-1.5 text-xs text-gray-700">Premium Only</span>
+                    <span className="ml-1.5 text-xs" style={{ color: colors.secondaryText }}>Premium Only</span>
                   </label>
                 </div>
               </div>
@@ -710,53 +836,53 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto p-2 force-scrollbar" style={{ 
         scrollbarWidth: 'thin',
-        scrollbarColor: '#d1d5db #f3f4f6'
+        scrollbarColor: `${colors.tertiaryText} ${colors.background}`
       }}>
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+          <div className="rounded-lg p-2 shadow-sm border" style={{ background: colors.cardBackground, border: `1px solid ${colors.border}` }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-medium text-gray-600">Total</p>
-                <p className="text-sm font-bold text-gray-900">{resumeTemplates.length}</p>
+                <p className="text-[10px] font-medium" style={{ color: colors.secondaryText }}>Total</p>
+                <p className="text-sm font-bold" style={{ color: colors.primaryText }}>{resumeTemplates.length}</p>
               </div>
-              <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText size={12} className="text-blue-600" />
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: colors.badgeInfoBg }}>
+                <FileText size={12} style={{ color: colors.badgeInfoText }} />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+          <div className="rounded-lg p-2 shadow-sm border" style={{ background: colors.cardBackground, border: `1px solid ${colors.border}` }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-600">Free</p>
-                <p className="text-lg font-bold text-gray-900">{resumeTemplates.filter(t => !t.isPremium).length}</p>
+                <p className="text-xs font-medium" style={{ color: colors.secondaryText }}>Free</p>
+                <p className="text-lg font-bold" style={{ color: colors.primaryText }}>{resumeTemplates.filter(t => !t.isPremium).length}</p>
               </div>
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <Unlock size={16} className="text-green-600" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: colors.badgeSuccessBg }}>
+                <Unlock size={16} style={{ color: colors.badgeSuccessText }} />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+          <div className="rounded-lg p-2 shadow-sm border" style={{ background: colors.cardBackground, border: `1px solid ${colors.border}` }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-600">Premium</p>
-                <p className="text-lg font-bold text-gray-900">{resumeTemplates.filter(t => t.isPremium).length}</p>
+                <p className="text-xs font-medium" style={{ color: colors.secondaryText }}>Premium</p>
+                <p className="text-lg font-bold" style={{ color: colors.primaryText }}>{resumeTemplates.filter(t => t.isPremium).length}</p>
               </div>
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Crown size={16} className="text-yellow-600" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: colors.badgeWarningBg }}>
+                <Crown size={16} style={{ color: colors.badgeWarningText }} />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-2 shadow-sm border border-gray-200">
+          <div className="rounded-lg p-2 shadow-sm border" style={{ background: colors.cardBackground, border: `1px solid ${colors.border}` }}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-gray-600">Downloads</p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-xs font-medium" style={{ color: colors.secondaryText }}>Downloads</p>
+                <p className="text-lg font-bold" style={{ color: colors.primaryText }}>
                   {(resumeTemplates.reduce((sum, t) => sum + t.downloads, 0) / 1000).toFixed(0)}k
                 </p>
               </div>
-              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Download size={16} className="text-purple-600" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: colors.badgePurpleBg }}>
+                <Download size={16} style={{ color: colors.badgePurpleText }} />
               </div>
             </div>
           </div>
@@ -766,13 +892,28 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
         {addedTemplatesList.length > 0 && (
           <div className="mb-3">
             <div className="flex items-center gap-2 mb-2">
-              <CheckCircle size={16} className="text-green-600" />
-              <h2 className="text-base font-bold text-gray-900">Added Templates ({addedTemplatesList.length}/10)</h2>
-              <div className="h-1 flex-1 bg-gray-200 rounded"></div>
+              <CheckCircle size={16} style={{ color: colors.successGreen }} />
+              <h2 className="text-base font-bold" style={{ color: colors.primaryText }}>Added Templates ({addedTemplatesList.length}/10)</h2>
+              <div className="h-1 flex-1 rounded" style={{ background: colors.border }}></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {addedTemplatesList.map(template => (
-                <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg overflow-hidden shadow-md group flex flex-col h-full">
+                <div 
+                  key={template.id} 
+                  className="rounded-lg overflow-hidden shadow-md group flex flex-col h-full transition-all"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `2px solid ${colors.successGreen}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                    e.currentTarget.style.boxShadow = `0 4px 12px ${colors.borderFocused}30`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = colors.successGreen;
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  }}
+                >
                   {/* Template Preview */}
                   <div className="relative h-32 bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center overflow-hidden">
                     {/* Mini Resume Preview */}
@@ -860,25 +1001,31 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                   {/* Template Info */}
                   <div className="p-3 flex flex-col flex-1">
                     <div className="flex items-start justify-between mb-1">
-                      <h3 className="font-semibold text-gray-900 text-xs leading-tight">{template.name}</h3>
-                      <div className="flex items-center gap-1 text-xs text-gray-500 ml-2">
-                        <Star size={10} className="text-yellow-400 fill-current" />
+                      <h3 className="font-semibold text-xs leading-tight" style={{ color: colors.primaryText }}>{template.name}</h3>
+                      <div className="flex items-center gap-1 text-xs ml-2" style={{ color: colors.secondaryText }}>
+                        <Star size={10} style={{ color: '#fbbf24' }} fill="#fbbf24" />
                         <span className="font-medium">{template.rating}</span>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-600 mb-2 line-clamp-2 flex-1">{template.description}</p>
+                    <p className="text-xs mb-2 line-clamp-2 flex-1" style={{ color: colors.secondaryText }}>{template.description}</p>
                     
                     <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                       <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${getDifficultyColor(template.difficulty)}`}>
                         {template.difficulty}
                       </span>
-                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-semibold">
+                      <span 
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                        style={{
+                          background: colors.inputBackground,
+                          color: colors.secondaryText,
+                        }}
+                      >
                         {template.layout}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-1 text-xs" style={{ color: colors.secondaryText }}>
                         <Download size={10} />
                         <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                       </div>
@@ -888,7 +1035,17 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                             e.stopPropagation();
                             handlePreviewTemplate(template.id);
                           }}
-                          className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                          style={{
+                            background: colors.primaryBlue,
+                            color: 'white',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.opacity = '0.9';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.opacity = '1';
+                          }}
                         >
                           Preview
                         </button>
@@ -898,7 +1055,17 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                               e.stopPropagation();
                               onRemoveTemplate(template.id);
                             }}
-                            className="px-2.5 py-1.5 bg-red-100 text-red-700 text-xs font-semibold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                            className="px-2.5 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1"
+                            style={{
+                              background: colors.badgeErrorBg,
+                              color: colors.errorRed,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = '0.9';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = '1';
+                            }}
                           >
                             <X size={12} />
                             Remove
@@ -917,7 +1084,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
             {currentTemplates.map(template => (
-              <div key={template.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-blue-300 transition-all duration-200 group flex flex-col h-full">
+              <div 
+                key={template.id} 
+                className="rounded-lg overflow-hidden transition-all duration-200 group flex flex-col h-full"
+                style={{
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${colors.borderFocused}30`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
                 {/* Template Preview */}
                 <div className="relative h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden group cursor-pointer"
                      onClick={() => handlePreviewTemplate(template.id)}>
@@ -1008,25 +1190,31 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                 {/* Template Info */}
                 <div className="p-4 flex flex-col flex-1">
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-sm leading-tight">{template.name}</h3>
-                    <div className="flex items-center gap-1 text-sm text-gray-500 ml-2">
-                      <Star size={12} className="text-yellow-400 fill-current" />
+                    <h3 className="font-semibold text-sm leading-tight" style={{ color: colors.primaryText }}>{template.name}</h3>
+                    <div className="flex items-center gap-1 text-sm ml-2" style={{ color: colors.secondaryText }}>
+                      <Star size={12} style={{ color: '#fbbf24' }} fill="#fbbf24" />
                       <span className="font-medium">{template.rating}</span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">{template.description}</p>
+                  <p className="text-sm mb-3 line-clamp-2 flex-1" style={{ color: colors.secondaryText }}>{template.description}</p>
                   
                   <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
                       {template.difficulty}
                     </span>
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                    <span 
+                      className="px-2 py-1 rounded-full text-xs font-semibold"
+                      style={{
+                        background: colors.inputBackground,
+                        color: colors.secondaryText,
+                      }}
+                    >
                       {template.layout}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
                       <Download size={12} />
                       <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                     </div>
@@ -1081,13 +1269,28 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             {addedTemplatesList.length > 0 && (
               <div className="mb-8">
                 <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle size={20} className="text-green-600" />
-                  <h2 className="text-lg font-bold text-gray-900">Added Templates to Resume Editor ({addedTemplatesList.length}/10)</h2>
-                  <div className="h-1 flex-1 bg-gray-200 rounded"></div>
+                  <CheckCircle size={20} style={{ color: colors.successGreen }} />
+                  <h2 className="text-lg font-bold" style={{ color: colors.primaryText }}>Added Templates to Resume Editor ({addedTemplatesList.length}/10)</h2>
+                  <div className="h-1 flex-1 rounded" style={{ background: colors.border }}></div>
                 </div>
                 <div className="space-y-4">
                   {addedTemplatesList.map(template => (
-                    <div key={template.id} className="bg-white border-2 border-green-300 rounded-lg p-4 hover:shadow-lg transition-all duration-200">
+                    <div 
+                      key={template.id} 
+                      className="rounded-lg p-4 transition-all duration-200"
+                      style={{
+                        background: colors.cardBackground,
+                        border: `2px solid ${colors.successGreen}`,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = colors.borderFocused;
+                        e.currentTarget.style.boxShadow = `0 4px 12px ${colors.borderFocused}30`;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = colors.successGreen;
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
                       <div className="flex items-start gap-4">
                         {/* Template Preview */}
                         <div className="relative w-20 h-24 bg-gradient-to-br from-green-50 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -1149,23 +1352,40 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 text-base mb-1 truncate">{template.name}</h3>
-                              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.description}</p>
+                              <h3 className="font-semibold text-base mb-1 truncate" style={{ color: colors.primaryText }}>{template.name}</h3>
+                              <p className="text-sm mb-2 line-clamp-2" style={{ color: colors.secondaryText }}>{template.description}</p>
                             </div>
                             <div className="flex items-center gap-2 ml-4">
                               <button
                                 onClick={() => toggleFavorite(template.id)}
-                                className={`p-2 rounded-lg transition-colors ${
-                                  favorites.includes(template.id)
-                                    ? 'bg-red-50 text-red-600'
-                                    : 'text-gray-400 hover:bg-gray-100'
-                                }`}
+                                className="p-2 rounded-lg transition-colors"
+                                style={{
+                                  color: favorites.includes(template.id) ? colors.errorRed : colors.tertiaryText,
+                                  background: favorites.includes(template.id) ? colors.badgeErrorBg : 'transparent',
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!favorites.includes(template.id)) {
+                                    e.currentTarget.style.background = colors.hoverBackground;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!favorites.includes(template.id)) {
+                                    e.currentTarget.style.background = 'transparent';
+                                  }
+                                }}
                               >
                                 <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
                               </button>
                               <button
                                 onClick={() => handlePreviewTemplate(template.id)}
-                                className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                                className="p-2 rounded-lg transition-colors"
+                                style={{ color: colors.tertiaryText }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = colors.hoverBackground;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'transparent';
+                                }}
                                 title="Preview"
                               >
                                 <Eye size={14} />
@@ -1174,15 +1394,15 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                           </div>
 
                           <div className="flex items-center gap-4 mb-3">
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
-                              <Star size={12} className="text-yellow-400 fill-current" />
+                            <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
+                              <Star size={12} style={{ color: '#fbbf24' }} fill="#fbbf24" />
                               <span className="font-medium">{template.rating}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
                               <Download size={12} />
                               <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                             </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
+                            <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
                               <Clock size={12} />
                               <span>{template.createdAt}</span>
                             </div>
@@ -1192,10 +1412,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
                               {template.difficulty}
                             </span>
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                            <span 
+                              className="px-2 py-1 rounded-full text-xs font-semibold"
+                              style={{
+                                background: colors.inputBackground,
+                                color: colors.secondaryText,
+                              }}
+                            >
                               {template.layout}
                             </span>
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                            <span 
+                              className="px-2 py-1 rounded-full text-xs font-semibold"
+                              style={{
+                                background: colors.inputBackground,
+                                color: colors.secondaryText,
+                              }}
+                            >
                               {template.colorScheme}
                             </span>
                           </div>
@@ -1203,7 +1435,14 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-wrap">
                               {template.features.slice(0, 3).map(feature => (
-                                <span key={feature} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                                <span 
+                                  key={feature} 
+                                  className="px-2 py-1 rounded text-xs font-medium"
+                                  style={{
+                                    background: colors.badgeInfoBg,
+                                    color: colors.badgeInfoText,
+                                  }}
+                                >
                                   {feature}
                                 </span>
                               ))}
@@ -1211,7 +1450,17 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handlePreviewTemplate(template.id)}
-                                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                className="px-4 py-2 font-semibold rounded-lg transition-all text-sm"
+                                style={{
+                                  background: colors.primaryBlue,
+                                  color: 'white',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.opacity = '0.9';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.opacity = '1';
+                                }}
                               >
                                 Preview
                               </button>
@@ -1221,7 +1470,17 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                                     e.stopPropagation();
                                     onRemoveTemplate(template.id);
                                   }}
-                                  className="px-3 py-2 bg-red-100 text-red-700 text-sm font-semibold rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1"
+                                  className="px-3 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-1"
+                                  style={{
+                                    background: colors.badgeErrorBg,
+                                    color: colors.errorRed,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.opacity = '0.9';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.opacity = '1';
+                                  }}
                                 >
                                   <X size={14} />
                                   Remove
@@ -1240,7 +1499,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
             {/* All Templates List View */}
             <div className="space-y-4 pb-8">
             {currentTemplates.map(template => (
-              <div key={template.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-blue-300 transition-all duration-200">
+              <div 
+                key={template.id} 
+                className="rounded-lg p-4 transition-all duration-200"
+                style={{
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${colors.borderFocused}30`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = colors.border;
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
                 <div className="flex items-start gap-4">
                   {/* Template Preview - Enhanced Mini Resume */}
                   <div className="relative w-20 h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
@@ -1304,23 +1578,40 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 text-base mb-1 truncate">{template.name}</h3>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{template.description}</p>
+                        <h3 className="font-semibold text-base mb-1 truncate" style={{ color: colors.primaryText }}>{template.name}</h3>
+                        <p className="text-sm mb-2 line-clamp-2" style={{ color: colors.secondaryText }}>{template.description}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={() => toggleFavorite(template.id)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            favorites.includes(template.id) 
-                              ? 'bg-red-50 text-red-600' 
-                              : 'text-gray-400 hover:bg-gray-100'
-                          }`}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{
+                            color: favorites.includes(template.id) ? colors.errorRed : colors.tertiaryText,
+                            background: favorites.includes(template.id) ? colors.badgeErrorBg : 'transparent',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!favorites.includes(template.id)) {
+                              e.currentTarget.style.background = colors.hoverBackground;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!favorites.includes(template.id)) {
+                              e.currentTarget.style.background = 'transparent';
+                            }
+                          }}
                         >
                           <Heart size={14} fill={favorites.includes(template.id) ? 'currentColor' : 'none'} />
                         </button>
                         <button 
                           onClick={() => handlePreviewTemplate(template.id)}
-                          className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: colors.tertiaryText }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = colors.hoverBackground;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                          }}
                           title="Preview"
                         >
                           <Eye size={14} />
@@ -1329,15 +1620,15 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                     </div>
 
                     <div className="flex items-center gap-4 mb-3">
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <Star size={12} className="text-yellow-400 fill-current" />
+                      <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
+                        <Star size={12} style={{ color: '#fbbf24' }} fill="#fbbf24" />
                         <span className="font-medium">{template.rating}</span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
                         <Download size={12} />
                         <span className="font-medium">{(template.downloads / 1000).toFixed(0)}k</span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <div className="flex items-center gap-1 text-sm" style={{ color: colors.secondaryText }}>
                         <Clock size={12} />
                         <span>{template.createdAt}</span>
                       </div>
@@ -1347,10 +1638,22 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(template.difficulty)}`}>
                         {template.difficulty}
                       </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                      <span 
+                        className="px-2 py-1 rounded-full text-xs font-semibold"
+                        style={{
+                          background: colors.inputBackground,
+                          color: colors.secondaryText,
+                        }}
+                      >
                         {template.layout}
                       </span>
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                      <span 
+                        className="px-2 py-1 rounded-full text-xs font-semibold"
+                        style={{
+                          background: colors.inputBackground,
+                          color: colors.secondaryText,
+                        }}
+                      >
                         {template.colorScheme}
                       </span>
                     </div>
@@ -1358,7 +1661,14 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
                         {template.features.slice(0, 3).map(feature => (
-                          <span key={feature} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                          <span 
+                            key={feature} 
+                            className="px-2 py-1 rounded text-xs font-medium"
+                            style={{
+                              background: colors.badgeInfoBg,
+                              color: colors.badgeInfoText,
+                            }}
+                          >
                             {feature}
                           </span>
                         ))}

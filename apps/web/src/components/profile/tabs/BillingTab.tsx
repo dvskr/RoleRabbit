@@ -3,8 +3,11 @@
 import React, { useState } from 'react';
 import { CreditCard, CheckCircle, X, Loader } from 'lucide-react';
 import { logger } from '../../../utils/logger';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function BillingTab() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [paymentData, setPaymentData] = useState({
@@ -53,55 +56,119 @@ export default function BillingTab() {
   return (
     <div className="max-w-4xl">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-2">
+        <h2 
+          className="text-3xl font-bold mb-2"
+          style={{ color: colors.primaryText }}
+        >
           Billing & Subscription
         </h2>
-        <p className="text-gray-600">Manage your subscription and billing information</p>
+        <p 
+          style={{ color: colors.secondaryText }}
+        >
+          Manage your subscription and billing information
+        </p>
       </div>
       
       <div className="space-y-8">
         {/* Current Plan */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Current Plan</h3>
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200/50">
+        <div 
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <h3 
+            className="text-xl font-semibold mb-6"
+            style={{ color: colors.primaryText }}
+          >
+            Current Plan
+          </h3>
+          <div 
+            className="p-6 rounded-xl"
+            style={{
+              background: colors.badgeInfoBg,
+              border: `1px solid ${colors.badgeInfoBorder}`,
+            }}
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h4 className="text-lg font-bold text-blue-900">Professional Plan</h4>
-                <p className="text-blue-700">$29/month • Billed monthly</p>
+                <h4 
+                  className="text-lg font-bold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Professional Plan
+                </h4>
+                <p 
+                  style={{ color: colors.secondaryText }}
+                >
+                  $29/month • Billed monthly
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-blue-900">$29</p>
-                <p className="text-sm text-blue-600">per month</p>
+                <p 
+                  className="text-2xl font-bold"
+                  style={{ color: colors.primaryText }}
+                >
+                  $29
+                </p>
+                <p 
+                  className="text-sm"
+                  style={{ color: colors.secondaryText }}
+                >
+                  per month
+                </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-600" />
-                <span>Unlimited job applications</span>
+                <CheckCircle size={16} style={{ color: colors.successGreen }} />
+                <span style={{ color: colors.primaryText }}>Unlimited job applications</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-600" />
-                <span>Advanced analytics</span>
+                <CheckCircle size={16} style={{ color: colors.successGreen }} />
+                <span style={{ color: colors.primaryText }}>Advanced analytics</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-600" />
-                <span>Priority support</span>
+                <CheckCircle size={16} style={{ color: colors.successGreen }} />
+                <span style={{ color: colors.primaryText }}>Priority support</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-600" />
-                <span>Resume templates</span>
+                <CheckCircle size={16} style={{ color: colors.successGreen }} />
+                <span style={{ color: colors.primaryText }}>Resume templates</span>
               </div>
             </div>
             <div className="mt-4 flex gap-3">
               <button 
                 onClick={() => logger.debug('Upgrade plan clicked')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlueHover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlue;
+                }}
               >
                 Upgrade Plan
               </button>
               <button 
                 onClick={() => setShowCancelModal(true)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                }}
               >
                 Cancel Subscription
               </button>
@@ -110,21 +177,62 @@ export default function BillingTab() {
         </div>
 
         {/* Payment Method */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Payment Method</h3>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+        <div 
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <h3 
+            className="text-xl font-semibold mb-6"
+            style={{ color: colors.primaryText }}
+          >
+            Payment Method
+          </h3>
+          <div 
+            className="flex items-center justify-between p-4 rounded-xl"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <CreditCard size={20} className="text-blue-600" />
+              <div 
+                className="p-2 rounded-lg"
+                style={{ background: colors.badgeInfoBg }}
+              >
+                <CreditCard size={20} style={{ color: colors.primaryBlue }} />
               </div>
               <div>
-                <p className="font-semibold text-gray-900">Visa ending in 4242</p>
-                <p className="text-sm text-gray-600">Expires 12/25</p>
+                <p 
+                  className="font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Visa ending in 4242
+                </p>
+                <p 
+                  className="text-sm"
+                  style={{ color: colors.secondaryText }}
+                >
+                  Expires 12/25
+                </p>
               </div>
             </div>
             <button 
               onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 rounded-lg transition-colors"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+                border: `1px solid ${colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.hoverBackgroundStrong;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = colors.inputBackground;
+              }}
             >
               Update
             </button>
@@ -132,48 +240,182 @@ export default function BillingTab() {
         </div>
 
         {/* Billing History */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Billing History</h3>
+        <div 
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <h3 
+            className="text-xl font-semibold mb-6"
+            style={{ color: colors.primaryText }}
+          >
+            Billing History
+          </h3>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div 
+              className="flex items-center justify-between p-4 rounded-xl"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
               <div>
-                <p className="font-semibold text-gray-900">Professional Plan</p>
-                <p className="text-sm text-gray-600">December 2024</p>
+                <p 
+                  className="font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Professional Plan
+                </p>
+                <p 
+                  className="text-sm"
+                  style={{ color: colors.secondaryText }}
+                >
+                  December 2024
+                </p>
               </div>
               <div className="text-right">
-                <p className="font-semibold text-gray-900">$29.00</p>
-                <button className="text-sm text-blue-600 hover:text-blue-800">Download</button>
+                <p 
+                  className="font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  $29.00
+                </p>
+                <button 
+                  className="text-sm transition-colors"
+                  style={{ color: colors.primaryBlue }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = colors.primaryBlueHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                >
+                  Download
+                </button>
               </div>
             </div>
             
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div 
+              className="flex items-center justify-between p-4 rounded-xl"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
               <div>
-                <p className="font-semibold text-gray-900">Professional Plan</p>
-                <p className="text-sm text-gray-600">November 2024</p>
+                <p 
+                  className="font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Professional Plan
+                </p>
+                <p 
+                  className="text-sm"
+                  style={{ color: colors.secondaryText }}
+                >
+                  November 2024
+                </p>
               </div>
               <div className="text-right">
-                <p className="font-semibold text-gray-900">$29.00</p>
-                <button className="text-sm text-blue-600 hover:text-blue-800">Download</button>
+                <p 
+                  className="font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  $29.00
+                </p>
+                <button 
+                  className="text-sm transition-colors"
+                  style={{ color: colors.primaryBlue }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = colors.primaryBlueHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                >
+                  Download
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Usage Statistics */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Usage This Month</h3>
+        <div 
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <h3 
+            className="text-xl font-semibold mb-6"
+            style={{ color: colors.primaryText }}
+          >
+            Usage This Month
+          </h3>
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-xl">
-              <p className="text-2xl font-bold text-blue-900">23</p>
-              <p className="text-sm text-blue-600">Applications Sent</p>
+            <div 
+              className="text-center p-4 rounded-xl"
+              style={{
+                background: colors.badgeInfoBg,
+                border: `1px solid ${colors.badgeInfoBorder}`,
+              }}
+            >
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.primaryText }}
+              >
+                23
+              </p>
+              <p 
+                className="text-sm"
+                style={{ color: colors.secondaryText }}
+              >
+                Applications Sent
+              </p>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-xl">
-              <p className="text-2xl font-bold text-green-900">8</p>
-              <p className="text-sm text-green-600">Interviews</p>
+            <div 
+              className="text-center p-4 rounded-xl"
+              style={{
+                background: colors.badgeSuccessBg,
+                border: `1px solid ${colors.badgeSuccessBorder}`,
+              }}
+            >
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.primaryText }}
+              >
+                8
+              </p>
+              <p 
+                className="text-sm"
+                style={{ color: colors.secondaryText }}
+              >
+                Interviews
+              </p>
             </div>
-            <div className="text-center p-4 bg-purple-50 rounded-xl">
-              <p className="text-2xl font-bold text-purple-900">2</p>
-              <p className="text-sm text-purple-600">Offers</p>
+            <div 
+              className="text-center p-4 rounded-xl"
+              style={{
+                background: colors.badgePurpleBg,
+                border: `1px solid ${colors.badgePurpleBorder}`,
+              }}
+            >
+              <p 
+                className="text-2xl font-bold"
+                style={{ color: colors.primaryText }}
+              >
+                2
+              </p>
+              <p 
+                className="text-sm"
+                style={{ color: colors.secondaryText }}
+              >
+                Offers
+              </p>
             </div>
           </div>
         </div>
@@ -181,13 +423,34 @@ export default function BillingTab() {
 
       {/* Payment Update Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div 
+            className="rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Update Payment Method</h3>
+              <h3 
+                className="text-xl font-semibold"
+                style={{ color: colors.primaryText }}
+              >
+                Update Payment Method
+              </h3>
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 <X size={20} />
               </button>
@@ -196,7 +459,10 @@ export default function BillingTab() {
             <div className="space-y-4">
               {/* Card Number */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.primaryText }}
+                >
                   Card Number
                 </label>
                 <input
@@ -207,13 +473,27 @@ export default function BillingTab() {
                     setPaymentData(prev => ({ ...prev, cardNumber: value }));
                   }}
                   placeholder="1234 5678 9012 3456"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
                 />
               </div>
 
               {/* Card Holder */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label 
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: colors.primaryText }}
+                >
                   Card Holder Name
                 </label>
                 <input
@@ -221,43 +501,88 @@ export default function BillingTab() {
                   value={paymentData.cardHolder}
                   onChange={(e) => setPaymentData(prev => ({ ...prev, cardHolder: e.target.value }))}
                   placeholder="John Doe"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg transition-all"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
                 />
               </div>
 
               {/* Expiry and CVV */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    htmlFor="expiry-month"
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
                     Month
                   </label>
                   <select
+                    id="expiry-month"
                     value={paymentData.expiryMonth}
                     onChange={(e) => setPaymentData(prev => ({ ...prev, expiryMonth: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg transition-all"
+                    aria-label="Expiry month"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   >
-                    <option value="">MM</option>
+                    <option value="" style={{ background: colors.background, color: colors.secondaryText }}>MM</option>
                     {Array.from({ length: 12 }, (_, i) => (
-                      <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
+                      <option key={i + 1} value={String(i + 1).padStart(2, '0')} style={{ background: colors.background, color: colors.secondaryText }}>
                         {String(i + 1).padStart(2, '0')}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    htmlFor="expiry-year"
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
                     Year
                   </label>
                   <select
+                    id="expiry-year"
                     value={paymentData.expiryYear}
                     onChange={(e) => setPaymentData(prev => ({ ...prev, expiryYear: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg transition-all"
+                    aria-label="Expiry year"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   >
-                    <option value="">YY</option>
+                    <option value="" style={{ background: colors.background, color: colors.secondaryText }}>YY</option>
                     {Array.from({ length: 10 }, (_, i) => {
                       const year = new Date().getFullYear() + i;
                       return (
-                        <option key={year} value={String(year).slice(-2)}>
+                        <option key={year} value={String(year).slice(-2)} style={{ background: colors.background, color: colors.secondaryText }}>
                           {year}
                         </option>
                       );
@@ -265,7 +590,10 @@ export default function BillingTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label 
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
                     CVV
                   </label>
                   <input
@@ -276,13 +604,33 @@ export default function BillingTab() {
                       setPaymentData(prev => ({ ...prev, cvv: value }));
                     }}
                     placeholder="123"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
                   />
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
+              <div 
+                className="rounded-lg p-3"
+                style={{
+                  background: colors.badgeInfoBg,
+                  border: `1px solid ${colors.badgeInfoBorder}`,
+                }}
+              >
+                <p 
+                  className="text-sm"
+                  style={{ color: colors.badgeInfoText }}
+                >
                   Your payment information is encrypted and secure. We never store your full card number.
                 </p>
               </div>
@@ -291,18 +639,45 @@ export default function BillingTab() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdatePayment}
                 disabled={!paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryMonth || !paymentData.expiryYear || !paymentData.cvv}
-                className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors ${
-                  !paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryMonth || !paymentData.expiryYear || !paymentData.cvv
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: (!paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryMonth || !paymentData.expiryYear || !paymentData.cvv) 
+                    ? colors.inputBackground 
+                    : colors.primaryBlue,
+                  color: (!paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryMonth || !paymentData.expiryYear || !paymentData.cvv) 
+                    ? colors.tertiaryText 
+                    : 'white',
+                  opacity: (!paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryMonth || !paymentData.expiryYear || !paymentData.cvv) ? 0.5 : 1,
+                  cursor: (!paymentData.cardNumber || !paymentData.cardHolder || !paymentData.expiryMonth || !paymentData.expiryYear || !paymentData.cvv) ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (paymentData.cardNumber && paymentData.cardHolder && paymentData.expiryMonth && paymentData.expiryYear && paymentData.cvv) {
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (paymentData.cardNumber && paymentData.cardHolder && paymentData.expiryMonth && paymentData.expiryYear && paymentData.cvv) {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
               >
                 Update Payment Method
               </button>
@@ -313,27 +688,65 @@ export default function BillingTab() {
 
       {/* Cancel Subscription Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+        >
+          <div 
+            className="rounded-2xl p-6 w-full max-w-md"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Cancel Subscription</h3>
+              <h3 
+                className="text-xl font-semibold"
+                style={{ color: colors.primaryText }}
+              >
+                Cancel Subscription
+              </h3>
               <button
                 onClick={() => setShowCancelModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="space-y-4 mb-6">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div 
+                className="rounded-lg p-4"
+                style={{
+                  background: colors.badgeErrorBg,
+                  border: `1px solid ${colors.badgeErrorBorder}`,
+                }}
+              >
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <CreditCard size={20} className="text-red-600" />
+                  <div 
+                    className="p-2 rounded-lg"
+                    style={{ background: colors.badgeErrorBg }}
+                  >
+                    <CreditCard size={20} style={{ color: colors.errorRed }} />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-red-900 mb-1">Important Information</h4>
-                    <ul className="text-sm text-red-800 space-y-1">
+                    <h4 
+                      className="font-semibold mb-1"
+                      style={{ color: colors.errorRed }}
+                    >
+                      Important Information
+                    </h4>
+                    <ul 
+                      className="text-sm space-y-1"
+                      style={{ color: colors.badgeErrorText }}
+                    >
                       <li>• Your subscription will remain active until the end of your current billing cycle</li>
                       <li>• You will lose access to premium features after cancellation</li>
                       <li>• You can reactivate anytime before the end of your billing period</li>
@@ -342,8 +755,17 @@ export default function BillingTab() {
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800">
+              <div 
+                className="rounded-lg p-3"
+                style={{
+                  background: colors.badgeWarningBg,
+                  border: `1px solid ${colors.badgeWarningBorder}`,
+                }}
+              >
+                <p 
+                  className="text-sm"
+                  style={{ color: colors.badgeWarningText }}
+                >
                   <strong>Current Plan:</strong> Professional Plan ($29/month)<br />
                   <strong>Access until:</strong> January 31, 2025
                 </p>
@@ -353,13 +775,34 @@ export default function BillingTab() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowCancelModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                }}
               >
                 Keep Subscription
               </button>
               <button
                 onClick={handleCancelSubscription}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: colors.errorRed,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
               >
                 Yes, Cancel Subscription
               </button>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -26,24 +27,57 @@ export default function EmptyState({
   illustration,
   className = ''
 }: EmptyStateProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   return (
-    <div className={`flex flex-col items-center justify-center py-16 px-4 ${className}`}>
+    <div className={`flex flex-col items-center justify-center py-16 px-4 text-center ${className}`}>
       {illustration ? (
         <div className="mb-8">{illustration}</div>
       ) : (
-        <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center mb-6">
-          <Icon size={48} className="text-purple-600" />
+        <div 
+          className="w-24 h-24 rounded-2xl flex items-center justify-center mb-6"
+          style={{
+            background: `linear-gradient(135deg, ${colors.badgePurpleBg}, ${colors.badgeInfoBg})`,
+            border: `2px solid ${colors.badgePurpleBorder}`,
+            opacity: 0.9,
+          }}
+        >
+          <Icon 
+            size={48} 
+            style={{ color: colors.badgePurpleText }}
+          />
         </div>
       )}
       
-      <h3 className="text-2xl font-bold text-gray-900 mb-3">{title}</h3>
-      <p className="text-gray-600 text-center max-w-md mb-8">{description}</p>
+      <h3 
+        className="text-xl font-semibold mb-3"
+        style={{ color: colors.primaryText }}
+      >
+        {title}
+      </h3>
+      <p 
+        className="text-center max-w-md mb-8 text-sm"
+        style={{ color: colors.secondaryText }}
+      >
+        {description}
+      </p>
       
       {actionLabel && onAction && (
         <div className="flex gap-3">
           <button
             onClick={onAction}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-medium flex items-center gap-2"
+            className="px-6 py-3 rounded-lg hover:shadow-lg transition-all font-medium flex items-center gap-2"
+            style={{
+              background: `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
           >
             {actionLabel}
           </button>
@@ -51,7 +85,20 @@ export default function EmptyState({
           {secondaryActionLabel && onSecondaryAction && (
             <button
               onClick={onSecondaryAction}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
+              className="px-6 py-3 rounded-lg transition-all font-medium"
+              style={{
+                border: `1px solid ${colors.border}`,
+                background: colors.inputBackground,
+                color: colors.primaryText,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = colors.inputBackground;
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             >
               {secondaryActionLabel}
             </button>

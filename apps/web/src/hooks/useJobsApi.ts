@@ -38,16 +38,47 @@ export function useJobsApi() {
     }
   };
 
-  // Filter and sort jobs
+  // Filter and sort jobs - Comprehensive filtering matching table view
   const filteredJobs = useMemo(() => {
+    // Exclude deleted jobs unless showDeleted is true
     let filtered = jobs.filter(job => {
-      const matchesFilter = filters.status === 'all' || job.status === filters.status;
-      const matchesSearch = job.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-                           job.company.toLowerCase().includes(filters.searchTerm.toLowerCase());
-      return matchesFilter && matchesSearch;
+      if (!filters.showDeleted && job.deletedAt) return false;
+      if (filters.showDeleted && !job.deletedAt) return false;
+      
+      const matchesStatus = filters.status === 'all' || job.status === filters.status;
+      
+      const matchesSearch = filters.searchTerm === '' || 
+        job.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        job.company.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        job.location.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        (job.contact?.name && job.contact.name.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
+        (job.contact?.email && job.contact.email.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
+        (job.notes && job.notes.toLowerCase().includes(filters.searchTerm.toLowerCase()));
+      
+      const matchesPriority = !filters.priority || filters.priority === 'all' || job.priority === filters.priority;
+      
+      const matchesLocation = !filters.location || job.location.toLowerCase().includes(filters.location.toLowerCase());
+      
+      // Date range filtering
+      let matchesDateRange = true;
+      if (filters.dateRange?.start || filters.dateRange?.end) {
+        const jobDate = new Date(job.appliedDate);
+        if (filters.dateRange.start) {
+          const startDate = new Date(filters.dateRange.start);
+          startDate.setHours(0, 0, 0, 0);
+          if (jobDate < startDate) matchesDateRange = false;
+        }
+        if (filters.dateRange.end) {
+          const endDate = new Date(filters.dateRange.end);
+          endDate.setHours(23, 59, 59, 999);
+          if (jobDate > endDate) matchesDateRange = false;
+        }
+      }
+      
+      return matchesStatus && matchesSearch && matchesPriority && matchesLocation && matchesDateRange;
     });
 
-    // Sort jobs
+    // Sort jobs - matching table view sorting
     filtered.sort((a, b) => {
       if (filters.sortBy === 'date') {
         return new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime();
@@ -56,11 +87,18 @@ export function useJobsApi() {
         return a.company.localeCompare(b.company);
       }
       if (filters.sortBy === 'priority') {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return (priorityOrder[b.priority || 'medium'] || 2) - (priorityOrder[a.priority || 'medium'] || 2);
+        const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1, undefined: 0 };
+        return (priorityOrder[b.priority || 'undefined'] || 0) - (priorityOrder[a.priority || 'undefined'] || 0);
       }
-      return 0;
+      if (filters.sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      }
+      // Default: sort by date (newest first)
+      return new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime();
     });
+    
+    // Apply grouping logic if needed (for future use)
+    // Currently grouping is handled in table view only
 
     return filtered;
   }, [jobs, filters]);
@@ -112,33 +150,104 @@ export function useJobsApi() {
     }
   };
 
-  const deleteJob = async (id: string) => {
+  const deleteJob = async (id: string, permanent: boolean = false) => {
     try {
-      await apiService.deleteJob(id);
-      setJobs(prev => prev.filter(job => job.id !== id));
+      if (permanent) {
+        // Permanent delete
+        await apiService.deleteJob(id);
+        setJobs(prev => prev.filter(job => job.id !== id));
+      } else {
+        // Soft delete - move to recycle bin
+        const deletedAt = new Date().toISOString();
+        await apiService.updateJob(id, { deletedAt } as Partial<Job>);
+        setJobs(prev => prev.map(job => 
+          job.id === id ? { ...job, deletedAt } : job
+        ));
+      }
       setSelectedJobs(prev => prev.filter(jobId => jobId !== id));
       setFavorites(prev => prev.filter(jobId => jobId !== id));
-      logger.debug('Job deleted via API:', id);
+      logger.debug('Job deleted via API:', id, permanent ? 'permanently' : 'to recycle bin');
     } catch (error) {
       logger.error('Failed to delete job via API:', error);
-      // Fallback to local delete
-      setJobs(prev => prev.filter(job => job.id !== id));
+      // Fallback to local soft delete
+      if (permanent) {
+        setJobs(prev => prev.filter(job => job.id !== id));
+      } else {
+        const deletedAt = new Date().toISOString();
+        setJobs(prev => prev.map(job => 
+          job.id === id ? { ...job, deletedAt } : job
+        ));
+      }
       setSelectedJobs(prev => prev.filter(jobId => jobId !== id));
       setFavorites(prev => prev.filter(jobId => jobId !== id));
     }
   };
 
-  const bulkDelete = async () => {
+  const restoreJob = async (id: string) => {
     try {
-      // Delete all selected jobs via API
-      await Promise.all(selectedJobs.map(id => apiService.deleteJob(id)));
-      setJobs(prev => prev.filter(job => !selectedJobs.includes(job.id)));
+      await apiService.updateJob(id, { deletedAt: undefined } as Partial<Job>);
+      setJobs(prev => prev.map(job => 
+        job.id === id ? { ...job, deletedAt: undefined } : job
+      ));
+      logger.debug('Job restored via API:', id);
+    } catch (error) {
+      logger.error('Failed to restore job via API:', error);
+      // Fallback to local restore
+      setJobs(prev => prev.map(job => 
+        job.id === id ? { ...job, deletedAt: undefined } : job
+      ));
+    }
+  };
+
+  const bulkDelete = async (permanent: boolean = false) => {
+    try {
+      if (permanent) {
+        // Permanent delete
+        await Promise.all(selectedJobs.map(id => apiService.deleteJob(id)));
+        setJobs(prev => prev.filter(job => !selectedJobs.includes(job.id)));
+      } else {
+        // Soft delete - move to recycle bin
+        const deletedAt = new Date().toISOString();
+        await Promise.all(selectedJobs.map(id => 
+          apiService.updateJob(id, { deletedAt } as Partial<Job>)
+        ));
+        setJobs(prev => prev.map(job => 
+          selectedJobs.includes(job.id) ? { ...job, deletedAt } : job
+        ));
+      }
       setSelectedJobs([]);
-      logger.debug('Bulk delete completed via API');
+      logger.debug('Bulk delete completed via API:', permanent ? 'permanently' : 'to recycle bin');
     } catch (error) {
       logger.error('Failed to bulk delete via API:', error);
       // Fallback to local delete
-      setJobs(prev => prev.filter(job => !selectedJobs.includes(job.id)));
+      if (permanent) {
+        setJobs(prev => prev.filter(job => !selectedJobs.includes(job.id)));
+      } else {
+        const deletedAt = new Date().toISOString();
+        setJobs(prev => prev.map(job => 
+          selectedJobs.includes(job.id) ? { ...job, deletedAt } : job
+        ));
+      }
+      setSelectedJobs([]);
+    }
+  };
+
+  const bulkRestore = async () => {
+    try {
+      await Promise.all(selectedJobs.map(id => 
+        apiService.updateJob(id, { deletedAt: undefined } as Partial<Job>)
+      ));
+      setJobs(prev => prev.map(job => 
+        selectedJobs.includes(job.id) ? { ...job, deletedAt: undefined } : job
+      ));
+      setSelectedJobs([]);
+      logger.debug('Bulk restore completed via API');
+    } catch (error) {
+      logger.error('Failed to bulk restore via API:', error);
+      // Fallback to local restore
+      setJobs(prev => prev.map(job => 
+        selectedJobs.includes(job.id) ? { ...job, deletedAt: undefined } : job
+      ));
       setSelectedJobs([]);
     }
   };
@@ -189,8 +298,9 @@ export function useJobsApi() {
   };
 
   return {
-    // State
-    jobs: filteredJobs,
+    // State - all views use filteredJobs for consistency
+    jobs: filteredJobs, // This is already filtered and sorted
+    allJobs: jobs, // Raw unfiltered jobs for stats calculation
     isLoading,
     filters,
     viewMode,
@@ -206,7 +316,9 @@ export function useJobsApi() {
     addJob,
     updateJob,
     deleteJob,
+    restoreJob,
     bulkDelete,
+    bulkRestore,
     bulkUpdateStatus,
     toggleJobSelection,
     selectAllJobs,
