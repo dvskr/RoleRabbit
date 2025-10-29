@@ -1,22 +1,36 @@
 /**
- * General helper utilities
+ * General Helper Utilities
  */
+
+/**
+ * Get initials from name
+ */
+export function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 /**
  * Generate random ID
  */
-export function generateId(): string {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+export function generateId(prefix = ''): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 9);
+  return `${prefix}${timestamp}-${random}`;
 }
 
 /**
  * Check if value is empty
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined) return true;
-  if (typeof value === 'string' && value.trim() === '') return true;
-  if (Array.isArray(value) && value.length === 0) return true;
-  if (typeof value === 'object' && Object.keys(value).length === 0) return true;
+  if (typeof value === 'string') return value.trim().length === 0;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'object') return Object.keys(value).length === 0;
   return false;
 }
 
@@ -39,35 +53,22 @@ export function sleep(ms: number): Promise<void> {
  */
 export async function retry<T>(
   fn: () => Promise<T>,
-  retries: number = 3,
-  delay: number = 1000
+  maxAttempts = 3,
+  delay = 1000
 ): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries === 0) throw error;
-    await sleep(delay);
-    return retry(fn, retries - 1, delay);
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+      
+      if (attempt < maxAttempts) {
+        await sleep(delay * attempt);
+      }
+    }
   }
-}
-
-/**
- * Format bytes to human readable
- */
-export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
   
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  throw lastError!;
 }
-
-/**
- * Get file extension
- */
-export function getFileExtension(filename: string): string {
-  return filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2);
-}
-

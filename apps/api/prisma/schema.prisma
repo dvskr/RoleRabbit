@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // Use SQLite for simplicity, can switch to PostgreSQL/MySQL later
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -32,6 +32,16 @@ model User {
   refreshTokens RefreshToken[]
   sessions      Session[]
   passwordResetTokens PasswordResetToken[]
+  aiUsage       AIUsage[]
+
+  // AI Usage tracking
+  totalAIUsage  Int @default(0)
+  aiUsageLimit  Int @default(100000) // 100K tokens per month
+  
+  // Two-Factor Authentication
+  twoFactorEnabled  Boolean @default(false)
+  twoFactorSecret   String?
+  twoFactorBackupCodes String? // JSON array of backup codes
 
   @@map("users")
 }
@@ -336,5 +346,37 @@ model AnalyticsSnapshot {
   @@index([userId])
   @@index([type])
   @@index([period])
+}
+
+model AIUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  model       String   // gpt-4, gpt-4o-mini, etc.
+  tokensUsed  Int
+  cost        Float
+  endpoint    String?  // generate, analyze, ats-score
+  timestamp   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_usage")
+  @@index([userId])
+  @@index([timestamp])
+  @@index([model])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // info, success, warning, error
+  title       String
+  message     String
+  metadata    String?  // JSON metadata
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([read])
 }
 

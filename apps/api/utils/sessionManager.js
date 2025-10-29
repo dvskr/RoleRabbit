@@ -1,170 +1,180 @@
 /**
- * Session Management Utilities
+ * Session Management Utility
+ * Handles user session creation, validation, and cleanup
  */
 
 const crypto = require('crypto');
 const { prisma } = require('./db');
+const logger = require('./logger');
 
 /**
- * Generate a unique session ID
+ * Create a new session for user
  */
-function generateSessionId() {
-  return crypto.randomBytes(32).toString('hex');
-}
-
-/**
- * Detect device type from user agent
- */
-function detectDevice(userAgent) {
-  if (!userAgent) return 'unknown';
-  
-  const ua = userAgent.toLowerCase();
-  if (ua.includes('mobile') || ua.includes('android') || ua.includes('iphone')) {
-    return 'mobile';
+async function createSession(userId, ipAddress, userAgent) {
+  try {
+    const sessionId = crypto.randomBytes(32).toString('hex');
+    
+    const session = await prisma.session.create({
+      data: {
+        id: sessionId,
+        userId,
+        ipAddress,
+        userAgent,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      }
+    });
+    
+    logger.info(`Session created for user ${userId}`);
+    
+    return session;
+  } catch (error) {
+    logger.error('Failed to create session', error);
+    throw error;
   }
-  if (ua.includes('tablet') || ua.includes('ipad')) {
-    return 'tablet';
-  }
-  return 'desktop';
 }
 
 /**
- * Create a new session for a user
- * @param {string} userId - User ID
- * @param {string} ipAddress - IP address
- * @param {string} userAgent - User agent string
- * @param {number} expiresInDays - Session expiration in days (default: 30)
- * @returns {Promise<string>} Session ID
- */
-async function createSession(userId, ipAddress, userAgent, expiresInDays = 30) {
-  const sessionId = generateSessionId();
-  const device = detectDevice(userAgent);
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
-
-  await prisma.session.create({
-    data: {
-      id: sessionId,
-      userId,
-      device,
-      ipAddress,
-      userAgent,
-      expiresAt,
-      isActive: true,
-    },
-  });
-
-  return sessionId;
-}
-
-/**
- * Get active sessions for a user
- * @param {string} userId - User ID
- * @returns {Promise<Array>} Active sessions
- */
-async function getUserSessions(userId) {
-  return prisma.session.findMany({
-    where: {
-      userId,
-      isActive: true,
-      expiresAt: {
-        gt: new Date(),
-      },
-    },
-    orderBy: {
-      lastActivity: 'desc',
-    },
-  });
-}
-
-/**
- * Get a specific session
- * @param {string} sessionId - Session ID
- * @returns {Promise<Object|null>} Session object or null
+ * Get active session by ID
  */
 async function getSession(sessionId) {
-  return prisma.session.findUnique({
-    where: { id: sessionId },
-    include: { user: true },
-  });
-}
-
-/**
- * Update session last activity
- * @param {string} sessionId - Session ID
- */
-async function updateSessionActivity(sessionId) {
   try {
-    await prisma.session.update({
+    const session = await prisma.session.findUnique({
       where: { id: sessionId },
-      data: {
-        lastActivity: new Date(),
-      },
+      include: { user: true }
     });
+    
+    if (!session) {
+      return null;
+    }
+    
+    // Check if session is expired
+    if (new Date() > session.expiresAt) {
+      await deactivateSession(sessionId);
+      return null;
+    }
+    
+    // Check if session is active
+    if (!session.isActive) {
+      return null;
+    }
+    
+    return session;
   } catch (error) {
-    console.error('Error updating session activity:', error);
+    logger.error('Failed to get session', error);
+    return null;
   }
 }
 
 /**
  * Deactivate a session
- * @param {string} sessionId - Session ID
  */
 async function deactivateSession(sessionId) {
   try {
     await prisma.session.update({
       where: { id: sessionId },
-      data: {
-        isActive: false,
-      },
+      data: { isActive: false }
     });
+    
+    logger.info(`Session deactivated: ${sessionId}`);
+    
+    return { success: true };
   } catch (error) {
-    console.error('Error deactivating session:', error);
+    logger.error('Failed to deactivate session', error);
+    throw error;
   }
 }
 
 /**
  * Deactivate all sessions for a user
- * @param {string} userId - User ID
  */
 async function deactivateAllUserSessions(userId) {
   try {
-    await prisma.session.updateMany({
-      where: { userId },
-      data: {
-        isActive: false,
-      },
+    const result = await prisma.session.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false }
     });
+    
+    logger.info(`Deactivated ${result.count} sessions for user ${userId}`);
+    
+    return result.count;
   } catch (error) {
-    console.error('Error deactivating user sessions:', error);
+    logger.error('Failed to deactivate user sessions', error);
+    throw error;
   }
 }
 
 /**
- * Clean up expired sessions (cron job)
+ * Get all active sessions for a user
+ */
+async function getUserSessions(userId) {
+  try {
+    const sessions = await prisma.session.findMany({
+      where: {
+        userId,
+        isActive: true,
+        expiresAt: {
+          gt: new Date()
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    return sessions;
+  } catch (error) {
+    logger.error('Failed to get user sessions', error);
+    return [];
+  }
+}
+
+/**
+ * Refresh session expiry
+ */
+async function refreshSession(sessionId) {
+  try {
+    const session = await prisma.session.update({
+      where: { id: sessionId },
+      data: {
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Extend 7 days
+        lastActivityAt: new Date()
+      }
+    });
+    
+    return session;
+  } catch (error) {
+    logger.error('Failed to refresh session', error);
+    throw error;
+  }
+}
+
+/**
+ * Cleanup expired sessions
  */
 async function cleanupExpiredSessions() {
   try {
     const result = await prisma.session.deleteMany({
       where: {
         expiresAt: {
-          lt: new Date(),
-        },
-      },
+          lt: new Date()
+        }
+      }
     });
-    console.log(`Cleaned up ${result.count} expired sessions`);
+    
+    logger.info(`Cleaned up ${result.count} expired sessions`);
+    return result.count;
   } catch (error) {
-    console.error('Error cleaning up expired sessions:', error);
+    logger.error('Failed to cleanup expired sessions', error);
+    throw error;
   }
 }
 
 module.exports = {
   createSession,
-  getUserSessions,
   getSession,
-  updateSessionActivity,
   deactivateSession,
   deactivateAllUserSessions,
-  cleanupExpiredSessions,
+  getUserSessions,
+  refreshSession,
+  cleanupExpiredSessions
 };
-

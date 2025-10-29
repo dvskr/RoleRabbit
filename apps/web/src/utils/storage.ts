@@ -1,64 +1,64 @@
 /**
- * Storage utilities for local storage management
+ * Storage Utility
+ * Abstracted local/session storage operations
  */
 
-export class StorageManager {
-  private prefix: string;
-
-  constructor(prefix: string = 'roleready_') {
-    this.prefix = prefix;
-  }
-
-  /**
-   * Get item from localStorage
-   */
-  getItem<T>(key: string, defaultValue?: T): T | null {
-    if (typeof window === 'undefined') return defaultValue || null;
-    
+/**
+ * Local Storage
+ */
+export const localStorage = {
+  get: <T>(key: string): T | null => {
     try {
-      const item = localStorage.getItem(this.prefix + key);
-      return item ? JSON.parse(item) : defaultValue || null;
-    } catch (error) {
-      console.error('Error reading from localStorage:', error);
-      return defaultValue || null;
+      const item = window.localStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
+    } catch {
+      return null;
     }
-  }
-
-  /**
-   * Set item to localStorage
-   */
-  setItem<T>(key: string, value: T): void {
-    if (typeof window === 'undefined') return;
-    
+  },
+  
+  set: <T>(key: string, value: T): void => {
     try {
-      localStorage.setItem(this.prefix + key, JSON.stringify(value));
+      window.localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      console.error('Error writing to localStorage:', error);
+      console.error('LocalStorage set failed:', error);
     }
+  },
+  
+  remove: (key: string): void => {
+    window.localStorage.removeItem(key);
+  },
+  
+  clear: (): void => {
+    window.localStorage.clear();
   }
+};
 
-  /**
-   * Remove item from localStorage
-   */
-  removeItem(key: string): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(this.prefix + key);
+/**
+ * Session Storage
+ */
+export const sessionStorage = {
+  get: <T>(key: string): T | null => {
+    try {
+      const item = window.sessionStorage.getItem(key);
+      return item ? JSON.parse(item) : null;
+    } catch {
+      return null;
+    }
+  },
+  
+  set: <T>(key: string, value: T): void => {
+    try {
+      window.sessionStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error('SessionStorage set failed:', error);
+    }
+  },
+  
+  remove: (key: string): void => {
+    window.sessionStorage.removeItem(key);
+  },
+  
+  clear: (): void => {
+    window.sessionStorage.clear();
   }
-
-  /**
-   * Clear all items with prefix
-   */
-  clear(): void {
-    if (typeof window === 'undefined') return;
-    
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (key.startsWith(this.prefix)) {
-        localStorage.removeItem(key);
-      }
-    });
-  }
-}
-
-export const storageManager = new StorageManager();
-
+};

@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {
   currentPage: number;
@@ -8,24 +7,42 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  const pages = Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1);
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  };
 
   return (
-    <div className="flex items-center gap-2">
+    <nav className="flex items-center justify-center space-x-2">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="p-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <ChevronLeft className="w-4 h-4" />
+        Previous
       </button>
       
-      {pages.map(page => (
+      {getPageNumbers().map(page => (
         <button
           key={page}
           onClick={() => onPageChange(page)}
-          className={`px-4 py-2 border rounded ${
-            currentPage === page ? 'bg-blue-600 text-white' : ''
+          className={`px-3 py-2 border rounded ${
+            currentPage === page
+              ? 'bg-blue-600 text-white'
+              : 'hover:bg-gray-50'
           }`}
         >
           {page}
@@ -35,11 +52,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="p-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-3 py-2 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <ChevronRight className="w-4 h-4" />
+        Next
       </button>
-    </div>
+    </nav>
   );
 }
-

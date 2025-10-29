@@ -1,153 +1,85 @@
 /**
  * Database Backup Utility
- * Provides database backup and restore functionality
+ * Handles database backups
  */
 
-const { PrismaClient } = require('@prisma/client');
+const { exec } = require('child_process');
+const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 const logger = require('./logger');
 
+const execAsync = promisify(exec);
+
 /**
- * Create database backup
+ * Backup PostgreSQL database
  */
-async function createBackup() {
+async function backupPostgreSQL(databaseUrl, outputPath) {
   try {
-    const prisma = new PrismaClient();
+    // Parse DATABASE_URL
+    const url = new URL(databaseUrl);
+    const dbName = url.pathname.slice(1);
     
-    // Get database path (SQLite)
-    const dbPath = path.join(__dirname, '../../prisma/dev.db');
+    const backupCommand = `pg_dump "${databaseUrl}" -F c -f "${outputPath}"`;
     
-    // Create backup directory if it doesn't exist
-    const backupDir = path.join(__dirname, '../../backups');
-    await fs.mkdir(backupDir, { recursive: true });
+    await execAsync(backupCommand);
     
-    // Generate backup filename with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(backupDir, `backup-${timestamp}.db`);
+    logger.info(`Database backup created: ${outputPath}`);
     
-    // Copy database file
-    await fs.copyFile(dbPath, backupPath);
-    
-    logger.info('Database backup created', { backupPath });
-    
-    // Keep only last 10 backups
-    await cleanupOldBackups(backupDir, 10);
-    
-    await prisma.$disconnect();
-    
-    return backupPath;
+    return { success: true, path: outputPath };
   } catch (error) {
-    logger.logError(error, { context: 'database backup' });
+    logger.error('Backup failed', error);
     throw error;
   }
 }
 
 /**
- * Cleanup old backups
+ * List all backups
  */
-async function cleanupOldBackups(backupDir, keepCount = 10) {
+async function listBackups(backupDir) {
   try {
     const files = await fs.readdir(backupDir);
-    const backups = files
-      .filter(file => file.startsWith('backup-') && file.endsWith('.db'))
-      .map(file => ({
-        name: file,
-        path: path.join(backupDir, file),
-        stats: null
-      }));
-    
-    // Get stats for all backups
-    for (const backup of backups) {
-      backup.stats = await fs.stat(backup.path);
-    }
-    
-    // Sort by modification time (newest first)
-    backups.sort((a, b) => b.stats.mtime - a.stats.mtime);
-    
-    // Delete backups beyond the keep count
-    const toDelete = backups.slice(keepCount);
-    for (const backup of toDelete) {
-      await fs.unlink(backup.path);
-      logger.info('Old backup deleted', { path: backup.path });
-    }
-    
+    return files
+      .filter(file => file.endsWith('.backup'))
+      .sort()
+      .reverse();
   } catch (error) {
-    logger.logError(error, { context: 'backup cleanup' });
+    logger.error('Failed to list backups', error);
+    return [];
   }
 }
 
 /**
- * Restore from backup
+ * Clean old backups
  */
-async function restoreBackup(backupPath) {
+async function cleanOldBackups(backupDir, keepDays = 30) {
   try {
-    // Verify backup file exists
-    await fs.access(backupPath);
+    const files = await listBackups(backupDir);
+    const cutoffDate = new Date(Date.now() - keepDays * 24 * 60 * 60 * 1000);
     
-    const dbPath = path.join(__dirname, '../../prisma/dev.db');
+    let deleted = 0;
     
-    // Backup current database first
-    await createBackup();
-    
-    // Restore from backup
-    await fs.copyFile(backupPath, dbPath);
-    
-    logger.info('Database restored from backup', { backupPath });
-    
-    return true;
-  } catch (error) {
-    logger.logError(error, { context: 'database restore' });
-    throw error;
-  }
-}
-
-/**
- * Get backup list
- */
-async function getBackupList() {
-  try {
-    const backupDir = path.join(__dirname, '../../backups');
-    
-    try {
-      const files = await fs.readdir(backupDir);
-      const backups = [];
+    for (const file of files) {
+      const filePath = path.join(backupDir, file);
+      const stats = await fs.stat(filePath);
       
-      for (const file of files) {
-        if (file.startsWith('backup-') && file.endsWith('.db')) {
-          const filePath = path.join(backupDir, file);
-          const stats = await fs.stat(filePath);
-          
-          backups.push({
-            name: file,
-            path: filePath,
-            size: stats.size,
-            createdAt: stats.birthtime,
-            modifiedAt: stats.mtime
-          });
-        }
+      if (stats.mtime < cutoffDate) {
+        await fs.unlink(filePath);
+        deleted++;
       }
-      
-      // Sort by creation time (newest first)
-      backups.sort((a, b) => b.createdAt - a.createdAt);
-      
-      return backups;
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        return [];
-      }
-      throw error;
     }
+    
+    logger.info(`Cleaned ${deleted} old backups`);
+    
+    return deleted;
   } catch (error) {
-    logger.logError(error, { context: 'get backup list' });
+    logger.error('Failed to clean backups', error);
     throw error;
   }
 }
 
 module.exports = {
-  createBackup,
-  restoreBackup,
-  getBackupList,
-  cleanupOldBackups
+  backupPostgreSQL,
+  listBackups,
+  cleanOldBackups
 };
-

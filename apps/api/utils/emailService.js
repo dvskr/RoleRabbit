@@ -1,13 +1,21 @@
 const sgMail = require('@sendgrid/mail');
 const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Initialize SendGrid
+// Initialize Resend (Primary)
+const resendApiKey = process.env.RESEND_API_KEY;
+let resend = null;
+if (resendApiKey) {
+  resend = new Resend(resendApiKey);
+}
+
+// Initialize SendGrid (Fallback)
 const sendgridApiKey = process.env.SENDGRID_API_KEY;
 if (sendgridApiKey) {
   sgMail.setApiKey(sendgridApiKey);
 }
 
-// Fallback transporter for development (without SendGrid)
+// Fallback transporter for development (SMTP)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT) || 587,
@@ -19,11 +27,29 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Send email using SendGrid or fallback SMTP
+ * Send email using Resend, tempGrid, or fallback SMTP
  */
 async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.com' }) {
   try {
-    // Try SendGrid first if API key is configured
+    // Try Resend first (Primary - You chose this)
+    if (resend) {
+      const { data, error } = await resend.emails.send({
+        from: from,
+        to: to,
+        subject: subject,
+        html: html,
+        text: text,
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      console.log(`Email sent via Resend to ${to}:`, data.id);
+      return { success: true, provider: 'resend', id: data.id };
+    }
+    
+    // Try SendGrid if Resend not configured
     if (sendgridApiKey) {
       const msg = {
         to,

@@ -1,161 +1,93 @@
 /**
- * Analytics API utilities
- * Handles database operations for analytics tracking
+ * Analytics Utility
+ * Tracks and aggregates user analytics
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-
-/**
- * Get all analytics for a user
- * @param {string} userId - User ID
- * @returns {Promise<Array>} Array of analytics
- */
-async function getAnalyticsByUserId(userId) {
-  try {
-    const analytics = await prisma.analytics.findMany({
-      where: {
-        userId: userId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    return analytics;
-  } catch (error) {
-    console.error('Error fetching analytics:', error);
-    throw error;
-  }
-}
+const { prisma } = require('./db');
+const logger = require('./logger');
 
 /**
- * Get a single analytics entry by ID
- * @param {string} analyticsId - Analytics ID
- * @returns {Promise<Object>} Analytics object
+ * Track user activity
  */
-async function getAnalyticsById(analyticsId) {
+async function trackActivity(userId, activityType, metadata = {}) {
   try {
-    const analytics = await prisma.analytics.findUnique({
-      where: {
-        id: analyticsId
-      }
-    });
-    return analytics;
-  } catch (error) {
-    console.error('Error fetching analytics:', error);
-    throw error;
-  }
-}
-
-/**
- * Create a new analytics entry
- * @param {string} userId - User ID
- * @param {Object} analyticsData - Analytics data
- * @returns {Promise<Object>} Created analytics entry
- */
-async function createAnalytics(userId, analyticsData) {
-  try {
-    const analytics = await prisma.analytics.create({
+    await prisma.analytics.create({
       data: {
         userId,
-        type: analyticsData.type || 'application_analytics',
-        data: typeof analyticsData.data === 'string' 
-          ? analyticsData.data 
-          : JSON.stringify(analyticsData.data || {}),
-        date: analyticsData.date ? new Date(analyticsData.date) : new Date()
+        activityType,
+        metadata: JSON.stringify(metadata),
+        timestamp: new Date()
       }
     });
-    return analytics;
+    
+    return { success: true };
   } catch (error) {
-    console.error('Error creating analytics:', error);
-    throw error;
+    logger.error('Failed to track activity', error);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Update an analytics entry
- * @param {string} analyticsId - Analytics ID
- * @param {Object} updates - Updates to apply
- * @returns {Promise<Object>} Updated analytics entry
+ * Get user analytics
  */
-async function updateAnalytics(analyticsId, updates) {
+async function getUserAnalytics(userId, startDate, endDate) {
   try {
-    // Filter out undefined fields
-    const cleanUpdates = {};
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        if (key === 'data' && typeof updates[key] === 'object') {
-          cleanUpdates[key] = JSON.stringify(updates[key]);
-        } else if (key === 'date') {
-          cleanUpdates[key] = new Date(updates[key]);
-        } else {
-          cleanUpdates[key] = updates[key];
+    const activities = await prisma.analytics.findMany({
+      where: {
+        userId,
+        timestamp: {
+          gte: startDate,
+          lte: endDate
         }
       }
     });
-
-    const analytics = await prisma.analytics.update({
-      where: {
-        id: analyticsId
-      },
-      data: cleanUpdates
-    });
-    return analytics;
+    
+    return activities;
   } catch (error) {
-    console.error('Error updating analytics:', error);
-    throw error;
+    logger.error('Failed to get user analytics', error);
+    return [];
   }
 }
 
 /**
- * Delete an analytics entry
- * @param {string} analyticsId - Analytics ID
- * @returns {Promise<boolean>} Success status
+ * Get analytics summary
  */
-async function deleteAnalytics(analyticsId) {
+async function getAnalyticsSummary(userId) {
   try {
-    await prisma.analytics.delete({
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    
+    const activities = await prisma.analytics.findMany({
       where: {
-        id: analyticsId
+        userId,
+        timestamp: { gte: thirtyDaysAgo }
       }
     });
-    return true;
-  } catch (error) {
-    console.error('Error deleting analytics:', error);
-    throw error;
-  }
-}
-
-/**
- * Get analytics by type
- * @param {string} userId - User ID
- * @param {string} type - Analytics type
- * @returns {Promise<Array>} Array of analytics
- */
-async function getAnalyticsByType(userId, type) {
-  try {
-    const analytics = await prisma.analytics.findMany({
-      where: {
-        userId: userId,
-        type: type
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+    
+    const summary = {
+      totalActivities: activities.length,
+      activitiesByType: {},
+      dailyActivity: {}
+    };
+    
+    activities.forEach(activity => {
+      // Count by type
+      summary.activitiesByType[activity.activityType] = 
+        (summary.activitiesByType[activity.activityType] || 0) + 1;
+      
+      // Count by day
+      const day = activity.timestamp.toISOString().split('T')[0];
+      summary.dailyActivity[day] = (summary.dailyActivity[day] || 0) + 1;
     });
-    return analytics;
+    
+    return summary;
   } catch (error) {
-    console.error('Error fetching analytics by type:', error);
-    throw error;
+    logger.error('Failed to get analytics summary', error);
+    return null;
   }
 }
 
 module.exports = {
-  getAnalyticsByUserId,
-  getAnalyticsById,
-  createAnalytics,
-  updateAnalytics,
-  deleteAnalytics,
-  getAnalyticsByType
+  trackActivity,
+  getUserAnalytics,
+  getAnalyticsSummary
 };
-
