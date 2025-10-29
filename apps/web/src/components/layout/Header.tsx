@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen, User, LogOut, LogIn, ChevronDown } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -61,14 +59,6 @@ export default function Header({
   previousMainSidebarState,
   setPreviousMainSidebarState
 }: HeaderProps) {
-  const { user, isAuthenticated, logout } = useAuth();
-  const router = useRouter();
-  const [showUserMenu, setShowUserMenu] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-  };
   const handleToggleAIPanel = () => {
     if (!showRightPanel) {
       // Opening AI panel - save current MAIN sidebar state and collapse it
@@ -194,58 +184,6 @@ export default function Header({
           <Save size={16} className="text-gray-700 group-hover:text-blue-600" />
           <span className="font-medium">Save</span>
         </button>
-        
-        {/* User Menu */}
-        <div className="relative">
-          <button
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg text-xs font-semibold hover:shadow-lg transition-all duration-200 shadow-sm"
-          >
-            <User size={16} />
-            <span className="font-medium">{isAuthenticated ? (user?.name || 'User') : 'Guest'}</span>
-            <ChevronDown size={14} />
-          </button>
-          
-          {showUserMenu && (
-            <>
-              <div 
-                className="fixed inset-0 z-40"
-                onClick={() => setShowUserMenu(false)}
-              />
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50">
-                {isAuthenticated ? (
-                  <>
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-900">{user?.name}</p>
-                      <p className="text-xs text-gray-500">{user?.email}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        handleLogout();
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut size={16} />
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      router.push('/login');
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors"
-                  >
-                    <LogIn size={16} />
-                    Login / Sign Up
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
       </div>
     </div>
   );
