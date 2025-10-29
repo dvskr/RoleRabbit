@@ -47,6 +47,107 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Auth endpoints
+  if (path === '/api/auth/verify' && method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ user: null })); // Not authenticated in simple server
+    return;
+  }
+
+  if (path === '/api/auth/login' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      const { email, password } = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        user: { id: '1', name: 'Test User', email }
+      }));
+    });
+    return;
+  }
+
+  if (path === '/api/auth/register' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      const { name, email, password } = JSON.parse(body);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ 
+        user: { id: '1', name, email }
+      }));
+    });
+    return;
+  }
+
+  if (path === '/api/auth/logout' && method === 'POST') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
+  // 2FA Setup endpoint
+  if (path === '/api/auth/2fa/setup' && method === 'POST') {
+    const speakeasy = require('speakeasy');
+    const qrcode = require('qrcode');
+    
+    // Generate 2FA secret
+    const secret = speakeasy.generateSecret({
+      name: 'RoleReady',
+      issuer: 'RoleReady'
+    });
+    
+    // Generate QR code
+    let qrCodeDataUrl = '';
+    qrcode.toDataURL(secret.otpauth_url, (err, url) => {
+      if (!err) {
+        qrCodeDataUrl = url;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        secret: secret.base32,
+        qrCode: qrCodeDataUrl,
+        backupCodes: ['BACKUP1', 'BACKUP2', 'BACKUP3'],
+        manualEntryKey: secret.base32
+      }));
+    });
+    return;
+  }
+
+  // 2FA Enable endpoint
+  if (path === '/api/auth/2fa/enable' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: '2FA enabled' }));
+    });
+    return;
+  }
+
+  // 2FA Disable endpoint
+  if (path === '/api/auth/2fa/disable' && method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, message: '2FA disabled' }));
+    });
+    return;
+  }
+
+  // 2FA Status endpoint
+  if (path === '/api/auth/2fa/status' && method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ enabled: false, hasBackupCodes: false }));
+    return;
+  }
+
   // User profile endpoint
   if (path === '/api/users/profile' && method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });

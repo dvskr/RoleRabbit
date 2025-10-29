@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Monitor, Tablet, Smartphone, CheckCircle, X } from 'lucide-react';
-import { WebsiteConfig, Section } from '../../../types/portfolio';
+import { WebsiteConfig, Section } from '../../types/portfolio';
 
 interface PreviewPanelProps {
   onNext: () => void;

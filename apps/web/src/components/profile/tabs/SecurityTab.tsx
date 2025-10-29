@@ -58,11 +58,53 @@ export default function SecurityTab() {
     }, 1000);
   };
 
-  const handleEnable2FA = () => {
-    setShow2FAModal(true);
+  const handleEnable2FA = async () => {
+    console.log('Toggle clicked, current state:', twoFAEnabled);
+    
+    if (twoFAEnabled) {
+      // Disable 2FA
+      try {
+        const response = await fetch('http://localhost:3001/api/auth/2fa/disable', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            password: 'currentPassword', 
+            twoFactorToken: '999999' 
+          })
+        });
+        if (response.ok) {
+          setTwoFAEnabled(false);
+        }
+      } catch (error) {
+        console.error('Failed to disable 2FA:', error);
+        alert('Failed to disable 2FA. Please try again.');
+      }
+    } else {
+      // Enable 2FA - Show modal first
+      try {
+        const response = await fetch('http://localhost:3001/api/auth/2fa/setup', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('2FA Setup data:', data);
+          setShow2FAModal(true);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Failed to setup 2FA:', response.statusText, errorData);
+          alert(`Failed to setup 2FA: ${errorData.error || response.statusText}`);
+        }
+      } catch (error) {
+        console.error('2FA setup failed:', error);
+        alert('Failed to setup 2FA. Is the API server running on port 3001?');
+      }
+    }
   };
 
-  const handleVerify2FA = () => {
+  const handleVerify2FA = async () => {
     if (twoFACode.length === 6) {
       logger.debug('Verifying 2FA code...');
       setTimeout(() => {
@@ -123,16 +165,18 @@ export default function SecurityTab() {
                   </p>
                 </div>
               </div>
-              <button 
+              {/* Toggle Switch */}
+              <button
                 onClick={handleEnable2FA}
-                disabled={twoFAEnabled}
-                className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                  twoFAEnabled 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-blue-600 hover:bg-blue-700'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${
+                  twoFAEnabled ? 'bg-green-600' : 'bg-gray-300'
                 }`}
               >
-                {twoFAEnabled ? '✓ 2FA Enabled' : 'Enable 2FA'}
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    twoFAEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
             </div>
           </div>
