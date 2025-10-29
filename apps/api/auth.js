@@ -113,6 +113,50 @@ async function updateUserPassword(userId, oldPassword, newPassword) {
 }
 
 /**
+ * Reset user password (forgot password flow)
+ */
+async function resetUserPassword(token, newPassword) {
+  // Validate new password
+  if (!isStrongPassword(newPassword)) {
+    throw new Error('Password must be at least 8 characters with uppercase, lowercase, and number');
+  }
+
+  // Hash new password
+  const hashedPassword = await hashPassword(newPassword);
+  
+  // Get token and user
+  const resetToken = await prisma.passwordResetToken.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!resetToken) {
+    throw new Error('Invalid or expired reset token');
+  }
+
+  if (resetToken.used) {
+    throw new Error('Reset token has already been used');
+  }
+
+  if (resetToken.expiresAt < new Date()) {
+    throw new Error('Reset token has expired');
+  }
+
+  // Update password and mark token as used
+  await prisma.user.update({
+    where: { id: resetToken.userId },
+    data: { password: hashedPassword },
+  });
+
+  await prisma.passwordResetToken.update({
+    where: { token },
+    data: { used: true },
+  });
+
+  return true;
+}
+
+/**
  * Get all users (for development/debugging)
  */
 async function getAllUsers() {
@@ -135,6 +179,7 @@ module.exports = {
   authenticateUser,
   getUserById,
   updateUserPassword,
+  resetUserPassword,
   getAllUsers
 };
 

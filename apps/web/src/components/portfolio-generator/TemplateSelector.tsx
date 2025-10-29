@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Palette, Layout, Code, Briefcase, Sparkles, ArrowRight, Monitor, Smartphone, Tablet, Eye } from 'lucide-react';
-import { WebsiteConfig, Theme } from '../../../types/portfolio';
+import { WebsiteConfig, Theme } from '../../types/portfolio';
 import TemplatePreviewModal from './TemplatePreviewModal';
 
 interface TemplateSelectorProps {

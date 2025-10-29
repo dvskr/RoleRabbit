@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite" // Use SQLite for simplicity, can switch to PostgreSQL/MySQL later
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -29,8 +29,67 @@ model User {
   cloudFiles    CloudFile[]
   analytics     Analytics[]
   aiAgents      AIAgent[]
+  refreshTokens RefreshToken[]
+  sessions      Session[]
+  passwordResetTokens PasswordResetToken[]
+  aiUsage       AIUsage[]
+
+  // AI Usage tracking
+  totalAIUsage  Int @default(0)
+  aiUsageLimit  Int @default(100000) // 100K tokens per month
+  
+  // Two-Factor Authentication
+  twoFactorEnabled  Boolean @default(false)
+  twoFactorSecret   String?
+  twoFactorBackupCodes String? // JSON array of backup codes
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([userId])
+  @@index([token])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  device    String?  // Device info (desktop, mobile, tablet)
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  lastActivity DateTime @default(now())
+  expiresAt DateTime
+  isActive  Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
 }
 
 model Resume {
@@ -222,13 +281,15 @@ model AIAgent {
 
 model AIAgentTask {
   id          String   @id @default(cuid())
-  userId      String
   agentId     String
-  type        String   // job_discovery, resume_optimization, interview_prep, etc.
+  userId      String
+  taskType    String   // job_discovery, resume_optimization, interview_prep, etc.
   status      String   // pending, in_progress, completed, failed
-  description String
+  parameters  String?  // JSON parameters
+  description String?
   result      String?  // JSON result
   error       String?
+  startedAt   DateTime?
   createdAt   DateTime @default(now())
   completedAt DateTime?
 
@@ -238,5 +299,84 @@ model AIAgentTask {
   @@index([agentId])
   @@index([userId])
   @@index([status])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // USER_LOGIN, RESUME_CREATE, etc.
+  resource    String?  // resume, job, email
+  resourceId  String?
+  details     String?  // JSON details
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model JobDescription {
+  id          String   @id @default(cuid())
+  userId      String
+  jobId       String
+  text        String
+  company     String?
+  position    String?
+  source      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("job_descriptions")
+  @@index([userId])
+  @@index([jobId])
+}
+
+model AnalyticsSnapshot {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // daily, weekly, monthly
+  period      String   // 2024-01-01
+  data        String   // JSON snapshot data
+  createdAt   DateTime @default(now())
+
+  @@map("analytics_snapshots")
+  @@index([userId])
+  @@index([type])
+  @@index([period])
+}
+
+model AIUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  model       String   // gpt-4, gpt-4o-mini, etc.
+  tokensUsed  Int
+  cost        Float
+  endpoint    String?  // generate, analyze, ats-score
+  timestamp   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_usage")
+  @@index([userId])
+  @@index([timestamp])
+  @@index([model])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // info, success, warning, error
+  title       String
+  message     String
+  metadata    String?  // JSON metadata
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([read])
 }
 

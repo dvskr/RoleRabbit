@@ -24,12 +24,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session on mount
-    const savedUser = localStorage.getItem('roleready_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // IMMEDIATELY set loading to false to prevent blocking
     setIsLoading(false);
+    
+    // Check for existing session on mount - completely non-blocking
+    // Use requestIdleCallback for lowest priority, fallback to setTimeout
+    const scheduleAuthCheck = () => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          checkAuth();
+        }, { timeout: 3000 });
+      } else {
+        // Fallback - delay even more
+        setTimeout(checkAuth, 2000);
+      }
+    };
+    
+    const checkAuth = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1000); // Very short timeout
+        
+        const response = await fetch('http://localhost:3001/api/auth/verify', {
+          credentials: 'include',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            setUser(data.user);
+          }
+        }
+      } catch (error) {
+        // Completely silent - don't log, don't block
+      }
+    };
+    
+    scheduleAuthCheck();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -42,6 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: Include cookies for httpOnly token
         body: JSON.stringify({ email, password }),
       });
       
@@ -52,12 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const data = await response.json();
       
-      // Store token and user data
-      if (data.token) {
-        localStorage.setItem('roleready_token', data.token);
-      }
+      // Token is now stored in httpOnly cookie (not in localStorage)
+      // Only store user data in memory
       if (data.user) {
-        localStorage.setItem('roleready_user', JSON.stringify(data.user));
         setUser(data.user);
       }
     } catch (error) {
@@ -78,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Important: Include cookies for httpOnly token
         body: JSON.stringify({ name, email, password }),
       });
       
@@ -88,12 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const data = await response.json();
       
-      // Store token and user data
-      if (data.token) {
-        localStorage.setItem('roleready_token', data.token);
-      }
+      // Token is now stored in httpOnly cookie (not in localStorage)
+      // Only store user data in memory
       if (data.user) {
-        localStorage.setItem('roleready_user', JSON.stringify(data.user));
         setUser(data.user);
       }
     } catch (error) {
@@ -104,9 +133,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   };
 
-  const logout = () => {
-    localStorage.removeItem('roleready_token');
-    localStorage.removeItem('roleready_user');
+  const logout = async () => {
+    try {
+      // Call logout endpoint to clear httpOnly cookie
+      await fetch('http://localhost:3001/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     setUser(null);
   };
 

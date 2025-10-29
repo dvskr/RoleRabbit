@@ -12,10 +12,13 @@ import {
   Target,
   FileText,
   BarChart3,
-  LucideIcon
+  LucideIcon,
+  LogOut
 } from 'lucide-react';
 import apiService from '@/services/apiService';
 import { logger } from '@/utils/logger';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 import {
   ProfileHeader,

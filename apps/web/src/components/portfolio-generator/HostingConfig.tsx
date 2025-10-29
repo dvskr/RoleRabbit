@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Globe, Server, Cloud, Upload, CheckCircle, ExternalLink, Copy } from 'lucide-react';
-import { WebsiteConfig } from '../../../types/portfolio';
+import { WebsiteConfig } from '../../types/portfolio';
 // Import will be done dynamically when needed
 
 interface HostingConfigProps {
@@ -34,7 +34,7 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
     
     try {
       // Call the downloadPortfolio function to generate the ZIP
-      const { downloadPortfolio } = await import('../../../utils/portfolioExporter');
+      const { downloadPortfolio } = await import('../../utils/portfolioExporter');
       await downloadPortfolio(config, portfolioData);
       
       // Simulate deployment success
