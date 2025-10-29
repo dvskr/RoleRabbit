@@ -1,73 +1,60 @@
 /**
- * Task Queue Manager
- * Handles background job processing
+ * Task Queue
+ * Manages background tasks with concurrency control
  */
 
 class TaskQueue {
-  constructor() {
+  constructor(concurrency = 3) {
+    this.concurrency = concurrency;
     this.queue = [];
-    this.processing = false;
+    this.running = [];
   }
 
-  /**
-   * Add task to queue
-   */
-  add(task) {
-    this.queue.push({ ...task, id: this.generateId(), createdAt: new Date() });
-    
-    if (!this.processing) {
+  async enqueue(task) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({
+        task,
+        resolve,
+        reject
+      });
+      this.process();
+    });
+  }
+
+  async process() {
+    if (this.running.length >= this.concurrency || this.queue.length === 0) {
+      return;
+    }
+
+    const item = this.queue.shift();
+    if (!item) return;
+
+    this.running.push(item);
+
+    try {
+      const result = await item.task();
+      item.resolve(result);
+    } catch (error) {
+      item.reject(error);
+    } finally {
+      this.running = this.running.filter(r => r !== item);
       this.process();
     }
   }
 
-  /**
-   * Process queue
-   */
-  async process() {
-    this.processing = true;
-    
-    while (this.queue.length > 0) {
-      const task = this.queue.shift();
-      
-      try {
-        await this.executeTask(task);
-      } catch (error) {
-        console.error('Task failed:', task.id, error);
-      }
-    }
-    
-    this.processing = false;
+  getQueueLength() {
+    return this.queue.length;
   }
 
-  /**
-   * Execute a task
-   */
-  async executeTask(task) {
-    console.log(`Executing task: ${task.type} (ID: ${task.id})`);
-    
-    // Simulate task execution
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    return { success: true, taskId: task.id };
+  getRunningCount() {
+    return this.running.length;
   }
 
-  /**
-   * Generate task ID
-   */
-  generateId() {
-    return `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-  }
-
-  /**
-   * Get queue status
-   */
-  getStatus() {
-    return {
-      queueLength: this.queue.length,
-      processing: this.processing
-    };
+  clear() {
+    this.queue = [];
   }
 }
 
-module.exports = new TaskQueue();
+const taskQueue = new TaskQueue();
 
+module.exports = taskQueue;

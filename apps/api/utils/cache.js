@@ -1,82 +1,73 @@
 /**
- * Redis-based caching utility
- * Falls back to PM2 memory cache if Redis not available
+ * Cache Manager
+ * Simple in-memory cache with TTL support
  */
 
 class Cache {
   constructor() {
-    this.localCache = new Map();
-    this.useLocal = true; // Use local cache by default
+    this.cache = new Map();
   }
 
-  /**
-   * Get value from cache
-   */
-  async get(key) {
-    try {
-      return this.localCache.get(key);
-    } catch (error) {
-      console.error('Cache get error:', error);
+  set(key, value, ttl = 3600000) {
+    const expiresAt = Date.now() + ttl;
+    this.cache.set(key, {
+      value,
+      expiresAt
+    });
+  }
+
+  get(key) {
+    const item = this.cache.get(key);
+    
+    if (!item) return null;
+    
+    if (Date.now() > item.expiresAt) {
+      this.cache.delete(key);
       return null;
     }
+    
+    return item.value;
   }
 
-  /**
-   * Set value in cache
-   */
-  async set(key, value, ttl = 3600) {
-    try {
-      this.localCache.set(key, value);
-      
-      // Set expiration
-      setTimeout(() => {
-        this.localCache.delete(key);
-      }, ttl * 1000);
-      
-      return true;
-    } catch (error) {
-      console.error('Cache set error:', error);
+  delete(key) {
+    this.cache.delete(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+
+  has(key) {
+    const item = this.cache.get(key);
+    if (!item) return false;
+    
+    if (Date.now() > item.expiresAt) {
+      this.cache.delete(key);
       return false;
     }
+    
+    return true;
   }
 
-  /**
-   * Delete key from cache
-   */
-  async delete(key) {
-    try {
-      return this.localCache.delete(key);
-    } catch (error) {
-      console.error('Cache delete error:', error);
-      return false;
+  size() {
+    return this.cache.size;
+  }
+
+  cleanup() {
+    const now = Date.now();
+    for (const [key, item] of this.cache.entries()) {
+      if (now > item.expiresAt) {
+        this.cache.delete(key);
+      }
     }
-  }
-
-  /**
-   * Clear all cache
-   */
-  async clear() {
-    try {
-      this.localCache.clear();
-      return true;
-    } catch (error) {
-      console.error('Cache clear error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get cache stats
-   */
-  async getStats() {
-    return {
-      size: this.localCache.size,
-      type: 'local-memory'
-    };
   }
 }
 
 const cache = new Cache();
 
-module.exports = cache;
+// Run cleanup every 5 minutes
+setInterval(() => {
+  cache.cleanup();
+}, 5 * 60 * 1000);
 
+module.exports = cache;

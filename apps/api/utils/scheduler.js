@@ -1,68 +1,90 @@
 /**
- * Job Scheduler Utility
- * Manages recurring jobs and tasks
+ * Task Scheduler
+ * Handles cron jobs and scheduled tasks
  */
 
 const cron = require('node-cron');
-const logger = require('./logger');
 
-class JobScheduler {
-  constructor() {
-    this.jobs = new Map();
+const jobs = new Map();
+
+function scheduleTask(name, cronExpression, callback) {
+  if (jobs.has(name)) {
+    throw new Error(`Task ${name} is already scheduled`);
   }
-  
-  /**
-   * Schedule a job
-   */
-  schedule(name, pattern, task) {
-    const job = cron.schedule(pattern, task);
-    this.jobs.set(name, job);
-    logger.info(`Scheduled job: ${name}`);
-  }
-  
-  /**
-   * Start a job
-   */
-  start(name) {
-    const job = this.jobs.get(name);
-    if (job) {
-      job.start();
-      logger.info(`Started job: ${name}`);
-    }
-  }
-  
-  /**
-   * Stop a job
-   */
-  stop(name) {
-    const job = this.jobs.get(name);
-    if (job) {
-      job.stop();
-      logger.info(`Stopped job: ${name}`);
-    }
-  }
-  
-  /**
-   * Remove a job
-   */
-  remove(name) {
-    const job = this.jobs.get(name);
-    if (job) {
-      job.destroy();
-      this.jobs.delete(name);
-      logger.info(`Removed job: ${name}`);
-    }
-  }
-  
-  /**
-   * Get all jobs
-   */
-  getJobs() {
-    return Array.from(this.jobs.keys());
-  }
+
+  const task = cron.schedule(cronExpression, callback, {
+    scheduled: false,
+    timezone: 'UTC'
+  });
+
+  jobs.set(name, {
+    task,
+    expression: cronExpression,
+    running: false
+  });
+
+  return task;
 }
 
-// Singleton instance
-const scheduler = new JobScheduler();
+function startTask(name) {
+  const job = jobs.get(name);
+  if (!job) {
+    throw new Error(`Task ${name} not found`);
+  }
+  
+  job.task.start();
+  job.running = true;
+  console.log(`✅ Task "${name}" started`);
+}
 
-module.exports = scheduler;
+function stopTask(name) {
+  const job = jobs.get(name);
+  if (!job) {
+    throw new Error(`Task ${name} not found`);
+  }
+  
+  job.task.stop();
+  job.running = false;
+  console.log(`⏸️ Task "${name}" stopped`);
+}
+
+function removeTask(name) {
+  const job = jobs.get(name);
+  if (!job) {
+    throw new Error(`Task ${name} not found`);
+  }
+  
+  job.task.stop();
+  job.task.destroy();
+  jobs.delete(name);
+  console.log(`🗑️ Task "${name}" removed`);
+}
+
+function getAllTasks() {
+  return Array.from(jobs.entries()).map(([name, job]) => ({
+    name,
+    expression: job.expression,
+    running: job.running
+  }));
+}
+
+// Predefined common tasks
+const TASKS = {
+  HOURLY: '0 * * * *',
+  DAILY: '0 0 * * *',
+  WEEKLY: '0 0 * * 0',
+  MONTHLY: '0 0 1 * *',
+  EVERY_MINUTE: '* * * * *',
+  EVERY_5_MINUTES: '*/5 * * * *',
+  EVERY_15_MINUTES: '*/15 * * * *',
+  EVERY_30_MINUTES: '*/30 * * * *'
+};
+
+module.exports = {
+  scheduleTask,
+  startTask,
+  stopTask,
+  removeTask,
+  getAllTasks,
+  TASKS
+};

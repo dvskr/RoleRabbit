@@ -1,76 +1,128 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Command } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Modal } from './Modal';
+import { cn } from '../../lib/utils';
 
-interface CommandItem {
+export interface Command {
   id: string;
   label: string;
-  action: () => void;
   shortcut?: string;
+  icon?: React.ReactNode;
+  group?: string;
+  action: () => void;
 }
 
 interface CommandPaletteProps {
-  items: CommandItem[];
-  triggerKey?: string;
+  isOpen: boolean;
+  onClose: () => void;
+  commands: Command[];
+  placeholder?: string;
 }
 
-export function CommandPalette({ items, triggerKey = 'k' }: CommandPaletteProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
+export function CommandPalette({
+  isOpen,
+  onClose,
+  commands,
+  placeholder = 'Type a command or search...'
+}: CommandPaletteProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const filteredCommands = useMemo(() => {
+    if (!searchTerm) return commands;
+    return commands.filter((cmd) =>
+      cmd.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [commands, searchTerm]);
+
+  const groupedCommands = useMemo(() => {
+    const groups: Record<string, Command[]> = {};
+    filteredCommands.forEach((cmd) => {
+      const group = cmd.group || 'Other';
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(cmd);
+    });
+    return groups;
+  }, [filteredCommands]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === triggerKey) {
-        e.preventDefault();
-        setIsOpen(true);
+    setSelectedIndex(0);
+  }, [searchTerm]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const command = filteredCommands[selectedIndex];
+      if (command) {
+        command.action();
+        onClose();
       }
-    };
+    } else if (e.key === 'Escape') {
+      onClose();
+    }
+  };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [triggerKey]);
-
-  const filteredItems = items.filter(item =>
-    item.label.toLowerCase().includes(search.toLowerCase())
-  );
-
-  if (!isOpen) return null;
+  const handleSelect = (command: Command) => {
+    command.action();
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20%]">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsOpen(false)} />
-      <div className="relative w-full max-w-lg bg-white rounded-lg shadow-xl">
-        <div className="flex items-center px-4 border-b">
-          <Search className="w-5 h-5 text-gray-400 mr-2" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Type a command or search..."
-            className="w-full py-3 outline-none"
-            autoFocus
-          />
-        </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="">
+      <div onKeyDown={handleKeyDown}>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={placeholder}
+          className="w-full px-4 py-3 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoFocus
+        />
+
         <div className="max-h-96 overflow-y-auto">
-          {filteredItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => {
-                item.action();
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center justify-between"
-            >
-              <span>{item.label}</span>
-              {item.shortcut && (
-                <kbd className="px-2 py-1 text-xs bg-gray-100 rounded">
-                  {item.shortcut}
-                </kbd>
-              )}
-            </button>
+          {Object.entries(groupedCommands).map(([group, cmds]) => (
+            <div key={group} className="mb-4">
+              <h3 className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">
+                {group}
+              </h3>
+              {cmds.map((cmd, index) => {
+                const globalIndex = filteredCommands.indexOf(cmd);
+                return (
+                  <div
+                    key={cmd.id}
+                    onClick={() => handleSelect(cmd)}
+                    className={cn(
+                      'flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-gray-100',
+                      globalIndex === selectedIndex && 'bg-blue-50'
+                    )}
+                  >
+                    <div className="flex items-center space-x-3">
+                      {cmd.icon && <span>{cmd.icon}</span>}
+                      <span>{cmd.label}</span>
+                    </div>
+                    {cmd.shortcut && (
+                      <span className="text-xs text-gray-500 font-mono">
+                        {cmd.shortcut}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ))}
+
+          {filteredCommands.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No commands found
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
-
