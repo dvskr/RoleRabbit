@@ -24,12 +24,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session on mount
-    // Verify auth by checking if user is authenticated via cookie
+    // IMMEDIATELY set loading to false to prevent blocking
+    setIsLoading(false);
+    
+    // Check for existing session on mount - completely non-blocking
+    // Use requestIdleCallback for lowest priority, fallback to setTimeout
+    const scheduleAuthCheck = () => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        requestIdleCallback(() => {
+          checkAuth();
+        }, { timeout: 3000 });
+      } else {
+        // Fallback - delay even more
+        setTimeout(checkAuth, 2000);
+      }
+    };
+    
     const checkAuth = async () => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 1000); // Very short timeout
         
         const response = await fetch('http://localhost:3001/api/auth/verify', {
           credentials: 'include',
@@ -44,19 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Auth check failed:', error);
-        }
-        // Silently fail - don't block app startup
+        // Completely silent - don't log, don't block
       }
-      setIsLoading(false);
     };
     
-    // Set loading false immediately to prevent blocking startup
-    setIsLoading(false);
-    
-    // Run auth check in background (non-blocking)
-    setTimeout(checkAuth, 100);
+    scheduleAuthCheck();
   }, []);
 
   const login = async (email: string, password: string) => {

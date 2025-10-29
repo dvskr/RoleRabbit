@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, BookOpen, Bot, Menu, Users } from 'lucide-react';
-import { LogoIcon } from '../common/Logo';
+import { LogoIcon, Logo } from '../common/Logo';
 
 interface SidebarProps {
   activeTab: string;
@@ -62,11 +62,15 @@ export default function SidebarNew({
       {/* Logo/Header */}
       <div className="h-16 border-b border-[#27272A] flex items-center px-6">
         {sidebarCollapsed ? (
-          <LogoIcon size={32} />
-        ) : (
-          <div className="flex items-center gap-3">
+          <div className="w-full flex justify-center">
             <LogoIcon size={32} />
-            <span className="text-lg font-semibold text-white">RoleReady</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 w-full">
+            <LogoIcon size={32} />
+            <span className="text-lg font-semibold bg-gradient-to-r from-[#a855f7] to-[#60a5fa] bg-clip-text text-transparent">
+              RoleReady
+            </span>
           </div>
         )}
       </div>
