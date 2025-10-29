@@ -1,20 +1,20 @@
 /**
- * Validation utilities for forms and inputs
+ * Validation Utilities
  */
 
 /**
- * Validate email
+ * Validate email format
  */
 export function validateEmail(email: string): boolean {
-  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return re.test(email);
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
 }
 
 /**
  * Validate password strength
  */
 export function validatePassword(password: string): {
-  valid: boolean;
+  isValid: boolean;
   errors: string[];
 } {
   const errors: string[] = [];
@@ -22,27 +22,31 @@ export function validatePassword(password: string): {
   if (password.length < 8) {
     errors.push('Password must be at least 8 characters');
   }
+  
   if (!/[A-Z]/.test(password)) {
-    errors.push('Password must contain an uppercase letter');
+    errors.push('Password must contain at least one uppercase letter');
   }
+  
   if (!/[a-z]/.test(password)) {
-    errors.push('Password must contain a lowercase letter');
+    errors.push('Password must contain at least one lowercase letter');
   }
-  if (!/\d/.test(password)) {
-    errors.push('Password must contain a number');
+  
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
   }
-  if (!/[!@#$%^&*]/.test(password)) {
-    errors.push('Password must contain a special character');
+  
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    errors.push('Password must contain at least one special character');
   }
   
   return {
-    valid: errors.length === 0,
+    isValid: errors.length === 0,
     errors
   };
 }
 
 /**
- * Validate URL
+ * Validate URL format
  */
 export function validateURL(url: string): boolean {
   try {
@@ -54,21 +58,16 @@ export function validateURL(url: string): boolean {
 }
 
 /**
- * Validate required field
+ * Validate phone number
  */
-export function validateRequired(value: any): boolean {
-  if (value === null || value === undefined) return false;
-  if (typeof value === 'string' && value.trim() === '') return false;
-  if (Array.isArray(value) && value.length === 0) return false;
-  return true;
+export function validatePhone(phone: string): boolean {
+  const regex = /^[\d\s\-\+\(\)]+$/;
+  return regex.test(phone) && phone.replace(/\D/g, '').length >= 10;
 }
 
 /**
- * Sanitize HTML
+ * Sanitize input string
  */
-export function sanitizeHTML(html: string): string {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
+export function sanitizeInput(input: string): string {
+  return input.trim().replace(/[<>]/g, '');
 }
-

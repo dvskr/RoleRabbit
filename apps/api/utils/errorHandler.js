@@ -1,111 +1,74 @@
 /**
  * Global Error Handler
- * Provides consistent error responses across the application
+ * Centralized error handling for the API
  */
 
-class AppError extends Error {
-  constructor(message, statusCode, code, details = {}) {
+const logger = require('./logger');
+
+/**
+ * Custom API Error class
+ */
+class ApiError extends Error {
+  constructor(statusCode, message, isOperational = true) {
     super(message);
     this.statusCode = statusCode;
-    this.code = code;
-    this.details = details;
-    this.isOperational = true;
+    this.isOperational = isOperational;
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-class ValidationError extends AppError {
-  constructor(message, details = {}) {
-    super(message, 400, 'VALIDATION_ERROR', details);
-  }
-}
-
-class AuthenticationError extends AppError {
-  constructor(message = 'Authentication required') {
-    super(message, 401, 'AUTHENTICATION_ERROR');
-  }
-}
-
-class AuthorizationError extends AppError {
-  constructor(message = 'Insufficient permissions') {
-    super(message, 403, 'AUTHORIZATION_ERROR');
-  }
-}
-
-class NotFoundError extends AppError {
-  constructor(resource = 'Resource') {
-    super(`${resource} not found`, 404, 'NOT_FOUND');
-  }
-}
-
-class ConflictError extends AppError {
-  constructor(message) {
-    super(message, 409, 'CONFLICT');
-  }
-}
-
-class RateLimitError extends AppError {
-  constructor(message = 'Too many requests') {
-    super(message, 429, 'RATE_LIMIT_EXCEEDED');
-  }
-}
-
-class InternalServerError extends AppError {
-  constructor(message = 'Internal server error') {
-    super(message, 500, 'INTERNAL_ERROR');
-  }
-}
-
 /**
- * Format error response
+ * Convert error to API response format
  */
-function formatError(error, includeStack = false) {
-  const response = {
-    success: false,
-    error: {
-      message: error.message,
-      code: error.code || 'INTERNAL_ERROR',
-      ...(error.statusCode && { statusCode: error.statusCode })
-    }
-  };
-
-  if (error.details && Object.keys(error.details).length > 0) {
-    response.error.details = error.details;
-  }
-
-  if (includeStack && error.stack) {
-    response.error.stack = error.stack;
-  }
-
-  return response;
-}
-
-/**
- * Global error handler
- */
-function globalErrorHandler(error, request, reply) {
-  const logger = require('./logger');
+function formatError(error) {
+  // Don't leak internal errors to client
+  const message = error.isOperational 
+    ? error.message 
+    : 'An unexpected error occurred';
   
-  // Log the error
-  logger.logError(error, {
+  return {
+    success: false,
+    error: message,
+    ...(process.env.NODE_ENV === 'development' && {
+      details: error.message,
+      stack: error.stack
+    })
+  };
+}
+
+/**
+ * Global error handler middleware
+ */
+async function globalErrorHandler(error, request, reply) {
+  // Log error
+  logger.error({
+    error: error.message,
+    stack: error.stack,
     url: request.url,
     method: request.method,
-    ip: request.ip,
-    userId: request.user?.userId
+    statusCode: error.statusCode || 500
   });
-
+  
   // Determine status code
   const statusCode = error.statusCode || 500;
-
-  // Format error response
-  const includeStack = process.env.NODE_ENV === 'development';
-  const response = formatError(error, includeStack);
-
-  reply.status(statusCode).send(response);
+  
+  // Send error response
+  return reply.code(statusCode).send(formatError(error));
 }
 
 /**
- * Handle async errors
+ * Handle 404 Not Found
+ */
+async function notFoundHandler(request, reply) {
+  return reply.code(404).send({
+    success: false,
+    error: 'Route not found',
+    path: request.url
+  });
+}
+
+/**
+ * Async error wrapper for route handlers
  */
 function asyncHandler(fn) {
   return (request, reply) => {
@@ -116,15 +79,9 @@ function asyncHandler(fn) {
 }
 
 module.exports = {
-  AppError,
-  ValidationError,
-  AuthenticationError,
-  AuthorizationError,
-  NotFoundError,
-  ConflictError,
-  RateLimitError,
-  InternalServerError,
+  ApiError,
+  formatError,
   globalErrorHandler,
+  notFoundHandler,
   asyncHandler
 };
-

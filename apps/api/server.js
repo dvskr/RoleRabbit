@@ -785,35 +785,33 @@ fastify.post('/api/resumes/:id/export', {
     const { id } = request.params;
     const { format = 'pdf' } = request.body;
     
-    // Get resume
     const resume = await getResumeById(id);
-    
     if (!resume) {
-      reply.status(404).send({ error: 'Resume not found' });
-      return;
+      return reply.status(404).send({ error: 'Resume not found' });
     }
     
-    // Verify resume belongs to user
     if (resume.userId !== request.user.userId) {
-      reply.status(403).send({ error: 'Forbidden' });
-      return;
+      return reply.status(403).send({ error: 'Forbidden' });
     }
     
-    // Generate export
-    const fileBuffer = await exportResume(resume.data, format);
+    const resumeData = typeof resume.data === 'string' ? JSON.parse(resume.data) : resume.data;
+    const exportResume = require('./utils/resumeExport');
     
-    // Set response headers
-    const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    const extension = format === 'pdf' ? 'pdf' : 'docx';
-    const filename = `${resume.name || 'resume'}.${extension}`;
+    let exportedData;
+    if (format === 'pdf') {
+      exportedData = await exportResume.exportResume(resumeData, 'pdf');
+      reply.type('application/pdf');
+    } else if (format === 'docx') {
+      exportedData = await exportResume.exportResume(resumeData, 'docx');
+      reply.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    } else {
+      return reply.status(400).send({ error: 'Invalid format. Use pdf or docx' });
+    }
     
-    reply
-      .header('Content-Type', contentType)
-      .header('Content-Disposition', `attachment; filename="${filename}"`)
-      .send(fileBuffer);
-      
+    reply.header('Content-Disposition', `attachment; filename="${resume.name || 'resume'}.${format}"`);
+    reply.send(exportedData);
+    
   } catch (error) {
-    console.error('Export error:', error);
     reply.status(500).send({ error: error.message });
   }
 });
