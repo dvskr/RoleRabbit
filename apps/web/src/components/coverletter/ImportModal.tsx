@@ -47,8 +47,10 @@ export default function ImportModal({
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      <div className="absolute top-20 right-4 bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl pointer-events-auto" style={{ 
-        position: 'absolute', 
+      <div className="absolute top-20 right-4 rounded-2xl p-6 w-full max-w-md shadow-2xl pointer-events-auto" style={{ 
+        position: 'absolute',
+        background: '#2a1b4d',
+        border: '1px solid #3d2a5f', 
         top: '5rem', 
         right: '1rem',
         maxHeight: '80vh',

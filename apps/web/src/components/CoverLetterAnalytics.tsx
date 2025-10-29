@@ -61,7 +61,10 @@ export default function CoverLetterAnalytics({ isOpen, onClose }: CoverLetterAna
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-gray-200">
+      <div className="rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto" style={{ 
+        background: '#2a1b4d',
+        border: '1px solid #3d2a5f'
+      }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

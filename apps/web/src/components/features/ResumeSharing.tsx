@@ -121,9 +121,9 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
       <div 
         className="rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all relative pointer-events-auto"
         style={{
-          background: colors.cardBackground,
+          background: colors.badgePurpleBg,
           boxShadow: `0 20px 25px -5px ${colors.border}40`,
-          border: `1px solid ${colors.border}`,
+          border: `1px solid ${colors.badgePurpleBorder}`,
         }}
       >
         {/* Header */}

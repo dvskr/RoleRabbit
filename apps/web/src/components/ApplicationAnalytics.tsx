@@ -105,7 +105,10 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-      <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto border border-gray-200">
+      <div className="rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto" style={{ 
+        background: '#2a1b4d',
+        border: '1px solid #3d2a5f'
+      }}>
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
           <div className="flex items-center justify-between">
