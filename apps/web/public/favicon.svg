@@ -1,25 +1,144 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="32" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#34B27B;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#3ECF8E;stop-opacity:1" />
+    <!-- Rocket Body Gradient -->
+    <linearGradient id="favicon-rocket-gradient-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="1" />
+      <stop offset="50%" stop-color="#3b82f6" stop-opacity="1" />
+      <stop offset="100%" stop-color="#2563eb" stop-opacity="1" />
     </linearGradient>
-  </defs>
-  
-  <!-- Badge Background -->
-  <circle cx="32" cy="32" r="30" fill="url(#faviconGradient)" />
-  
-  <!-- Stylized "R" -->
-  <path
-    d="M 32 14 L 32 38 L 24 38 L 24 42 L 32 42 L 36 42 L 42 36 L 36 30 L 36 38 L 32 38 M 24 20 L 32 20 L 36 24 L 32 28 L 24 28 Z"
-    fill="none"
-    stroke="white"
-    stroke-width="3"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  
-  <!-- Accent dot -->
-  <circle cx="39" cy="39" r="3" fill="white" />
-</svg>
 
+    <!-- Purple Accent Gradient -->
+    <linearGradient id="favicon-rocket-gradient-2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="1" />
+      <stop offset="50%" stop-color="#8b5cf6" stop-opacity="1" />
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="1" />
+    </linearGradient>
+
+    <!-- Teal Flame Gradient -->
+    <linearGradient id="favicon-rocket-gradient-3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="1" />
+      <stop offset="100%" stop-color="#0d9488" stop-opacity="1" />
+    </linearGradient>
+
+    <!-- Outer Glow Gradient -->
+    <radialGradient id="favicon-glow-gradient" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Outer Glow Background Circle -->
+  <circle cx="24" cy="24" r="22" fill="url(#favicon-glow-gradient)" />
+
+  <!-- Rocket Body (Hexagonal) -->
+  <path
+    d="M24 5 L32 18 L32 32 L24 38 L16 32 L16 18 Z"
+    fill="url(#favicon-rocket-gradient-1)"
+  />
+
+  <!-- Nose Cone (Triangular) -->
+  <path
+    d="M24 2 L32 12 L24 9 L16 12 Z"
+    fill="url(#favicon-rocket-gradient-2)"
+  />
+
+  <!-- Window - Outer Circle -->
+  <circle cx="24" cy="21" r="3.5" fill="#93c5fd" fill-opacity="0.9" />
+  <!-- Window - Inner Glow -->
+  <circle cx="24" cy="21" r="2.2" fill="#dbeafe" />
+
+  <!-- Left Wing -->
+  <path
+    d="M16 24 L8 30 L10 33 L16 29 Z"
+    fill="url(#favicon-rocket-gradient-2)"
+  />
+
+  <!-- Right Wing -->
+  <path
+    d="M32 24 L40 30 L38 33 L32 29 Z"
+    fill="url(#favicon-rocket-gradient-2)"
+  />
+
+  <!-- Body Highlight Streak 1 -->
+  <line
+    x1="22"
+    y1="8"
+    x2="22"
+    y2="32"
+    stroke="#dbeafe"
+    stroke-width="1.2"
+    stroke-linecap="round"
+  />
+
+  <!-- Body Highlight Streak 2 -->
+  <line
+    x1="26"
+    y1="10"
+    x2="26"
+    y2="34"
+    stroke="#dbeafe"
+    stroke-width="1"
+    stroke-linecap="round"
+  />
+
+  <!-- Flames - Left -->
+  <path
+    d="M20 38 Q18 42 16 45 Q18 42 20 40 Z"
+    fill="url(#favicon-rocket-gradient-3)"
+    fill-opacity="0.9"
+  >
+    <animate
+      attributeName="fill-opacity"
+      values="0.6;1;0.6"
+      dur="1s"
+      repeatCount="indefinite"
+    />
+  </path>
+
+  <!-- Flames - Center (Brightest) -->
+  <path
+    d="M24 38 Q24 43 24 47 Q24 43 24 40 Z"
+    fill="url(#favicon-rocket-gradient-3)"
+    fill-opacity="1"
+  >
+    <animate
+      attributeName="fill-opacity"
+      values="0.8;1;0.8"
+      dur="0.8s"
+      repeatCount="indefinite"
+    />
+  </path>
+
+  <!-- Flames - Right -->
+  <path
+    d="M28 38 Q30 42 32 45 Q30 42 28 40 Z"
+    fill="url(#favicon-rocket-gradient-3)"
+    fill-opacity="0.9"
+  >
+    <animate
+      attributeName="fill-opacity"
+      values="0.6;1;0.6"
+      dur="1.2s"
+      repeatCount="indefinite"
+    />
+  </path>
+
+  <!-- Twinkling Stars - Simplified for small size -->
+  <circle cx="8" cy="10" r="1.2" fill="#60a5fa" opacity="0.8">
+    <animate
+      attributeName="opacity"
+      values="0.3;1;0.3"
+      dur="2s"
+      repeatCount="indefinite"
+    />
+  </circle>
+
+  <circle cx="40" cy="12" r="1" fill="#a855f7" opacity="0.8">
+    <animate
+      attributeName="opacity"
+      values="0.5;1;0.5"
+      dur="1.5s"
+      repeatCount="indefinite"
+    />
+  </circle>
+</svg>

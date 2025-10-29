@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   description: 'Build resumes, track jobs, prepare for interviews, and land your dream role. One platform for your entire job search.',
   keywords: ['resume', 'CV', 'job search', 'career', 'job tracking', 'interview prep', 'ATS', 'job application'],
   authors: [{ name: 'RoleReady Team' }],
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 export const viewport = {
@@ -28,6 +36,7 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
       </head>
       <body style={{ margin: 0, padding: 0 }}>
         <AuthProvider>

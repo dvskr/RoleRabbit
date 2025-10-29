@@ -1,22 +1,28 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+// Critical components - load immediately
 import Sidebar from '../../components/layout/SidebarNew';
 import Header from '../../components/layout/HeaderNew';
+import DashboardHeader from '../../components/layout/DashboardHeader';
 import PageHeader from '../../components/layout/PageHeader';
-import Home from '../../components/HomeNew';
-import Profile from '../../components/ProfileRedesign';
-import CloudStorage from '../../components/CloudStorage';
-import ResumeEditor from '../../components/features/ResumeEditor';
-import AIPanel from '../../components/features/AIPanel';
-import Templates from '../../components/Templates';
-import JobTracker from '../../components/JobTracker';
-import Discussion from '../../components/Discussion';
-import Email from '../../components/Email';
-import CoverLetterGenerator from '../../components/CoverLetterGenerator';
-import PortfolioGenerator from '../../components/portfolio-generator/PortfolioGeneratorV2';
-import LearningHub from '../../components/LearningHub';
-import AIAgents from '../../components/AIAgents';
+
+// Lazy load all heavy components to prevent blocking startup
+const DashboardFigma = dynamic(() => import('../../components/DashboardFigma'), { ssr: false });
+const Profile = dynamic(() => import('../../components/Profile'), { ssr: false });
+const CloudStorage = dynamic(() => import('../../components/CloudStorage'), { ssr: false });
+const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor'), { ssr: false });
+const AIPanel = dynamic(() => import('../../components/features/AIPanel'), { ssr: false });
+const Templates = dynamic(() => import('../../components/Templates'), { ssr: false });
+const JobTracker = dynamic(() => import('../../components/JobTracker'), { ssr: false });
+const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: false });
+const Email = dynamic(() => import('../../components/Email'), { ssr: false });
+const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
+const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/PortfolioGeneratorV2'), { ssr: false });
+const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
+const AIAgents = dynamic(() => import('../../components/AIAgents'), { ssr: false });
 import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Users, Home as HomeIcon } from 'lucide-react';
 import { 
   CustomField, 
@@ -32,33 +38,37 @@ import {
 import { useResumeData } from '../../hooks/useResumeData';
 import { useModals } from '../../hooks/useModals';
 import { useAI } from '../../hooks/useAI';
+// Keep utils lazy - import only when actually needed
 import { resumeHelpers } from '../../utils/resumeHelpers';
 import * as exportHelpers from '../../utils/exportHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
-import ResumeSharing from '../../components/features/ResumeSharing';
-import CoverLetterAnalytics from '../../components/CoverLetterAnalytics';
-import EmailAnalytics from '../../components/email/EmailAnalytics';
-import ApplicationAnalytics from '../../components/ApplicationAnalytics';
-import {
-  ExportModal,
-  ImportModal,
-  AddSectionModal,
-  AddFieldModal,
-  NewResumeModal,
-  MobileMenuModal,
-  AIGenerateModal
-} from '../../components/modals';
+// Lazy load heavy analytics and modal components
+const ResumeSharing = dynamic(() => import('../../components/features/ResumeSharing'), { ssr: false });
+const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
+const EmailAnalytics = dynamic(() => import('../../components/email/EmailAnalytics'), { ssr: false });
+const ApplicationAnalytics = dynamic(() => import('../../components/ApplicationAnalytics'), { ssr: false });
+
+// Lazy load modals individually when they're actually opened
+// Using named exports properly
+const ExportModal = dynamic(() => import('../../components/modals').then(mod => mod.ExportModal), { ssr: false });
+const ImportModal = dynamic(() => import('../../components/modals').then(mod => mod.ImportModal), { ssr: false });
+const AddSectionModal = dynamic(() => import('../../components/modals').then(mod => mod.AddSectionModal), { ssr: false });
+const AddFieldModal = dynamic(() => import('../../components/modals').then(mod => mod.AddFieldModal), { ssr: false });
+const NewResumeModal = dynamic(() => import('../../components/modals').then(mod => mod.NewResumeModal), { ssr: false });
+const MobileMenuModal = dynamic(() => import('../../components/modals').then(mod => mod.MobileMenuModal), { ssr: false });
+const AIGenerateModal = dynamic(() => import('../../components/modals').then(mod => mod.AIGenerateModal), { ssr: false });
+
 import { ResumeFile } from '../../types/cloudStorage';
-import {
-  SummarySection,
-  SkillsSection,
-  ExperienceSection,
-  EducationSection,
-  ProjectsSection,
-  CertificationsSection
-} from '../../components/sections';
+
+// Lazy load sections (only when Resume Editor is active) - use named exports from index
+const SummarySection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.SummarySection })), { ssr: false });
+const SkillsSection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.SkillsSection })), { ssr: false });
+const ExperienceSection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.ExperienceSection })), { ssr: false });
+const EducationSection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.EducationSection })), { ssr: false });
+const ProjectsSection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.ProjectsSection })), { ssr: false });
+const CertificationsSection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.CertificationsSection })), { ssr: false });
 
 export default function DashboardPage() {
   // Use custom hooks for state management
@@ -583,23 +593,19 @@ export default function DashboardPage() {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <Home 
-            enableMissionControl={true}
+          <DashboardFigma 
             onQuickAction={(actionId) => {
               logger.debug('Quick action:', actionId);
-              // Handle quick actions - could navigate to specific tabs
+              // Handle quick actions
               switch (actionId) {
-                case '1': // Start New Application
-                  handleTabChange('tracker');
+                case 'export':
+                  // Trigger export functionality
                   break;
-                case '2': // Send Follow-up
-                  handleTabChange('email');
+                case 'customize':
+                  // Open customization modal
                   break;
-                case '3': // Update Resume
-                  handleTabChange('editor');
-                  break;
-                case '4': // Research Companies
-                  handleTabChange('discussion');
+                case 'themes':
+                  // Open theme selector
                   break;
                 default:
                   break;
@@ -608,7 +614,6 @@ export default function DashboardPage() {
             onNavigateToTab={(tab) => {
               handleTabChange(tab);
             }}
-            onOpenApplicationAnalytics={() => setShowApplicationAnalytics(true)}
           />
         );
       case 'profile':
@@ -1003,7 +1008,7 @@ export default function DashboardPage() {
       case 'agents':
         return <AIAgents />;
       default:
-        return <Home />;
+        return <DashboardFigma onNavigateToTab={handleTabChange} />;
     }
   };
 
@@ -1047,6 +1052,16 @@ export default function DashboardPage() {
               setMainSidebarCollapsed={setSidebarCollapsed}
               previousMainSidebarState={previousMainSidebarState}
               setPreviousMainSidebarState={setPreviousMainSidebarState}
+            />
+          ) : activeTab === 'dashboard' ? (
+            <DashboardHeader
+              onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+              sidebarCollapsed={sidebarCollapsed}
+              onSearch={(query) => {
+                // Handle search functionality - filter dashboard content
+                console.log('Search query:', query);
+                // You can add search state here and filter the dashboard content
+              }}
             />
           ) : (
             <PageHeader
@@ -1116,20 +1131,24 @@ export default function DashboardPage() {
             <div className="absolute inset-0 h-full w-full overflow-y-auto">
               {/* Render all tabs but hide inactive ones - mounted but hidden */}
               <div className={`absolute inset-0 h-full ${activeTab === 'dashboard' ? '' : 'hidden'}`}>
-                <Home 
-                  enableMissionControl={true}
+                <DashboardFigma 
                   onQuickAction={(actionId) => {
                     logger.debug('Quick action:', actionId);
                     switch (actionId) {
-                      case '1': handleTabChange('tracker'); break;
-                      case '2': handleTabChange('email'); break;
-                      case '3': handleTabChange('editor'); break;
-                      case '4': handleTabChange('discussion'); break;
-                      default: break;
+                      case 'export':
+                        // Trigger export functionality
+                        break;
+                      case 'customize':
+                        // Open customization modal
+                        break;
+                      case 'themes':
+                        // Open theme selector
+                        break;
+                      default:
+                        break;
                     }
                   }}
                   onNavigateToTab={(tab) => handleTabChange(tab)}
-                  onOpenApplicationAnalytics={() => setShowApplicationAnalytics(true)}
                 />
               </div>
               <div className={`absolute inset-0 h-full ${activeTab === 'profile' ? '' : 'hidden'}`}>

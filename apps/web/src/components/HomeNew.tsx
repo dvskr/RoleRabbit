@@ -32,18 +32,10 @@ export default function HomeNew({
   onNavigateToTab,
   onOpenApplicationAnalytics
 }: HomeProps) {
-  // If Mission Control is enabled, render the existing dashboard
-  if (enableMissionControl) {
-    const { MissionControlDashboard } = require('./dashboard');
-    return (
-      <MissionControlDashboard
-        config={dashboardConfig}
-        onQuickAction={onQuickAction}
-        onNavigateToTab={onNavigateToTab}
-        onOpenApplicationAnalytics={onOpenApplicationAnalytics}
-      />
-    );
-  }
+  // Mission Control disabled for faster startup - no blocking require()
+  // if (enableMissionControl) {
+  //   // Disabled to prevent blocking
+  // }
 
   // Mock data for widgets
   const stats = [
