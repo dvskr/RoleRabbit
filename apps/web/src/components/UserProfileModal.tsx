@@ -352,7 +352,10 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-      <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden pointer-events-auto shadow-2xl border border-gray-200">
+      <div className="rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden pointer-events-auto shadow-2xl" style={{ 
+        background: '#2a1b4d',
+        border: '1px solid #3d2a5f'
+      }}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">

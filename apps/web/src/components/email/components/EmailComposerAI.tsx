@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Send, Paperclip, X, Wand2, Sparkles, RefreshCw, MessageSquare, FileText } from 'lucide-react';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface EmailComposerAIProps {
   recipientEmail?: string;
@@ -16,6 +17,8 @@ export default function EmailComposerAI({
   onSend,
   onCancel,
 }: EmailComposerAIProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [to, setTo] = useState(recipientEmail);
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
@@ -168,36 +171,73 @@ Best regards,
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col" style={{ background: colors.background }}>
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
+      <div 
+        className="px-4 py-3 flex items-center justify-between flex-shrink-0"
+        style={{
+          background: colors.cardBackground,
+          borderBottom: `1px solid ${colors.border}`,
+        }}
+      >
         <div className="flex items-center gap-2">
           <button
             onClick={handleAttach}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{
+              color: colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+              e.currentTarget.style.color = colors.primaryText;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = colors.secondaryText;
+            }}
             title="Attach File"
           >
-            <Paperclip size={18} className="text-gray-600" />
+            <Paperclip size={18} />
           </button>
 
           {/* Use Template Button */}
           <button
             onClick={() => setShowTemplateModal(true)}
-            className="p-2 hover:bg-indigo-50 rounded-lg transition-colors flex items-center gap-2"
+            className="p-2 rounded-lg transition-colors flex items-center gap-2"
+            style={{
+              color: colors.primaryBlue,
+              background: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.badgeInfoBg;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
             title="Use Email Template"
           >
-            <FileText size={18} className="text-indigo-600" />
-            <span className="text-xs text-indigo-600 font-medium">Template</span>
+            <FileText size={18} />
+            <span className="text-xs font-medium">Template</span>
           </button>
           
           {/* AI Assistant Button */}
           <button
             onClick={() => setShowPromptInput(true)}
-            className="p-2 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-2"
+            className="p-2 rounded-lg transition-colors flex items-center gap-2"
+            style={{
+              color: colors.badgePurpleText,
+              background: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.badgePurpleBg;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
             title="AI Generate Email from Prompt"
           >
-            <Sparkles size={18} className="text-purple-600" />
-            <span className="text-xs text-purple-600 font-medium">Generate</span>
+            <Sparkles size={18} />
+            <span className="text-xs font-medium">Generate</span>
           </button>
 
           {/* Improve with AI */}
@@ -205,13 +245,25 @@ Best regards,
             <button
               onClick={improveWithAI}
               disabled={isGenerating}
-              className="p-2 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg transition-colors disabled:opacity-50"
+              style={{
+                color: colors.primaryBlue,
+                background: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!isGenerating) {
+                  e.currentTarget.style.background = colors.badgeInfoBg;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
               title="Improve with AI"
             >
               {isGenerating ? (
-                <RefreshCw size={18} className="text-blue-600 animate-spin" />
+                <RefreshCw size={18} className="animate-spin" />
               ) : (
-                <Wand2 size={18} className="text-blue-600" />
+                <Wand2 size={18} />
               )}
             </button>
           )}
@@ -221,13 +273,25 @@ Best regards,
             <button
               onClick={generateSubject}
               disabled={isGenerating}
-              className="p-2 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+              className="p-2 rounded-lg transition-colors disabled:opacity-50"
+              style={{
+                color: colors.successGreen,
+                background: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!isGenerating) {
+                  e.currentTarget.style.background = colors.badgeSuccessBg;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
               title="AI Generate Subject"
             >
               {isGenerating ? (
-                <RefreshCw size={18} className="text-green-600 animate-spin" />
+                <RefreshCw size={18} className="animate-spin" />
               ) : (
-                <span className="text-green-600 text-xs font-semibold">AI</span>
+                <span className="text-xs font-semibold">AI</span>
               )}
             </button>
           )}
@@ -237,7 +301,20 @@ Best regards,
           {onCancel && (
             <button
               onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              className="px-4 py-2 rounded-lg transition-colors font-medium"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.secondaryText,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.hoverBackground;
+                e.currentTarget.style.color = colors.primaryText;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = colors.inputBackground;
+                e.currentTarget.style.color = colors.secondaryText;
+              }}
             >
               Cancel
             </button>
@@ -245,7 +322,19 @@ Best regards,
           <button
             onClick={handleSend}
             disabled={!to || !subject || !body}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+            className="px-6 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+            style={{
+              background: colors.primaryBlue,
+              color: 'white',
+            }}
+            onMouseEnter={(e) => {
+              if (!(!to || !subject || !body)) {
+                e.currentTarget.style.background = colors.primaryBlueHover || colors.primaryBlue;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.primaryBlue;
+            }}
           >
             <Send size={16} />
             Send
@@ -255,10 +344,29 @@ Best regards,
 
       {/* AI Prompt Input Modal */}
       {showPromptInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Sparkles size={20} className="text-purple-600" />
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPromptInput(false);
+              setAiPrompt('');
+            }
+          }}
+        >
+          <div 
+            className="rounded-lg shadow-xl w-full max-w-2xl p-6"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
+              <Sparkles size={20} style={{ color: colors.badgePurpleText }} />
               AI Generate Email from Prompt
             </h3>
             <textarea
@@ -266,7 +374,18 @@ Best regards,
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder="Describe what you want to write about... e.g., 'Follow up on my job application for the senior developer position'"
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none"
+              className="w-full px-3 py-2 rounded-lg resize-none transition-colors"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             />
             <div className="flex gap-3 mt-4">
               <button
@@ -274,14 +393,39 @@ Best regards,
                   setShowPromptInput(false);
                   setAiPrompt('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-4 py-2 rounded-lg transition-colors font-medium"
+                style={{
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.secondaryText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                  e.currentTarget.style.color = colors.secondaryText;
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={generateFromPrompt}
                 disabled={!aiPrompt.trim() || isGenerating}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
+                style={{
+                  background: colors.badgePurpleText,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  if (!(!aiPrompt.trim() || isGenerating)) {
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
               >
                 {isGenerating ? (
                   <>
@@ -301,70 +445,130 @@ Best regards,
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ background: colors.background }}>
         <div className="p-6 space-y-4">
           {/* To */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">To *</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>To *</label>
             <input
               type="email"
               value={to}
               onChange={(e) => setTo(e.target.value)}
               placeholder="Recipient email"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg transition-colors"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             />
           </div>
 
           {/* CC */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">CC</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>CC</label>
             <input
               type="text"
               value={cc}
               onChange={(e) => setCc(e.target.value)}
               placeholder="cc1@example.com, cc2@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg transition-colors"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             />
           </div>
 
           {/* BCC */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">BCC</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>BCC</label>
             <input
               type="text"
               value={bcc}
               onChange={(e) => setBcc(e.target.value)}
               placeholder="bcc1@example.com, bcc2@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg transition-colors"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             />
           </div>
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>Subject *</label>
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Email subject"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 rounded-lg transition-colors"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             />
           </div>
 
           {/* Attachments */}
           {attachments.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Attachments</label>
+              <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>Attachments</label>
               <div className="flex flex-wrap gap-2">
                 {attachments.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
+                  <div 
+                    key={idx} 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                  >
                     <Paperclip size={14} />
                     <span>{file}</span>
                     <button
                       onClick={() => setAttachments(attachments.filter((_, i) => i !== idx))}
-                      className="ml-2 hover:text-red-600"
+                      className="ml-2 transition-colors"
+                      style={{ color: colors.errorRed }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.8';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      title="Remove attachment"
                     >
                       <X size={14} />
                     </button>
@@ -376,16 +580,27 @@ Best regards,
 
           {/* Body */}
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Body *</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>Body *</label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder="Write your email... Click the sparkles icon for AI suggestions!"
               required
               rows={12}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
+              className="w-full px-3 py-2 rounded-lg resize-none font-mono text-sm transition-colors"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
             />
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs mt-2" style={{ color: colors.secondaryText }}>
               💡 Tip: Use AI buttons above for smart suggestions, improvement, and subject generation
             </p>
           </div>
@@ -394,21 +609,58 @@ Best regards,
 
       {/* Template Selection Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowTemplateModal(false);
+            }
+          }}
+        >
+          <div 
+            className="rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <FileText size={24} className="text-indigo-600" />
+                <div 
+                  className="p-2 rounded-lg"
+                  style={{
+                    background: colors.badgeInfoBg,
+                    color: colors.badgeInfoText,
+                  }}
+                >
+                  <FileText size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Select Email Template</h3>
-                  <p className="text-sm text-gray-600">Choose a template to use in your email</p>
+                  <h3 className="text-xl font-semibold" style={{ color: colors.primaryText }}>Select Email Template</h3>
+                  <p className="text-sm" style={{ color: colors.secondaryText }}>Choose a template to use in your email</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowTemplateModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  color: colors.secondaryText,
+                  background: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.secondaryText;
+                }}
+                title="Close modal"
               >
                 <X size={20} />
               </button>
@@ -419,20 +671,38 @@ Best regards,
                 <div
                   key={template.id}
                   onClick={() => handleSelectTemplate(template)}
-                  className="p-4 border border-gray-200 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all"
+                  className="p-4 rounded-lg cursor-pointer transition-all border"
+                  style={{
+                    background: colors.inputBackground,
+                    borderColor: colors.border,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="font-semibold text-gray-900">{template.name}</h4>
+                    <h4 className="font-semibold" style={{ color: colors.primaryText }}>{template.name}</h4>
                     {template.isCustom && (
-                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                      <span 
+                        className="px-2 py-0.5 rounded text-xs font-medium"
+                        style={{
+                          background: colors.badgePurpleBg,
+                          color: colors.badgePurpleText,
+                        }}
+                      >
                         Custom
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mb-2">{template.category}</p>
-                  <p className="text-sm text-gray-600 truncate mb-1">{template.subject}</p>
-                  <p className="text-xs text-gray-500 line-clamp-2">{template.body}</p>
-                  <div className="flex items-center gap-1 mt-3 text-xs text-gray-500">
+                  <p className="text-xs mb-2" style={{ color: colors.secondaryText }}>{template.category}</p>
+                  <p className="text-sm truncate mb-1" style={{ color: colors.primaryText }}>{template.subject}</p>
+                  <p className="text-xs line-clamp-2" style={{ color: colors.secondaryText }}>{template.body}</p>
+                  <div className="flex items-center gap-1 mt-3 text-xs" style={{ color: colors.tertiaryText }}>
                     <MessageSquare size={12} />
                     <span>{template.usageCount} uses</span>
                   </div>
@@ -442,9 +712,9 @@ Best regards,
 
             {templates.length === 0 && (
               <div className="text-center py-12">
-                <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500 mb-2">No templates available</p>
-                <p className="text-sm text-gray-400">Create templates in the Templates tab</p>
+                <FileText size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText }} />
+                <p className="mb-2" style={{ color: colors.secondaryText }}>No templates available</p>
+                <p className="text-sm" style={{ color: colors.tertiaryText }}>Create templates in the Templates tab</p>
               </div>
             )}
           </div>

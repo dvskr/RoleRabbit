@@ -53,7 +53,7 @@ export default function ExportModal({
           right: '1rem',
           maxHeight: '80vh',
           overflow: 'auto',
-          background: colors.cardBackground,
+          background: colors.badgePurpleBg,
           border: `1px solid ${colors.border}`,
         }}
       >
