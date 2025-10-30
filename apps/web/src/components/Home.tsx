@@ -153,7 +153,9 @@ export default function Home({
             <div className="w-16 h-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center mr-4">
               <Sparkles size={32} className="text-white" />
             </div>
-            <h1 className="text-5xl font-bold">RoleReady</h1>
+            <h1 className="text-5xl font-bold roleready-gradient">
+              RoleReady
+            </h1>
           </div>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
             Your all-in-one career platform for resume building, job tracking, networking, and professional growth.

@@ -53,18 +53,18 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
       <div 
         className="rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto pointer-events-auto shadow-2xl"
         style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
+          background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
           backdropFilter: 'blur(20px)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 60px rgba(0, 0, 0, 0.5)',
         }}
       >
         {/* Header */}
         <div 
           className="sticky top-0 px-6 py-3 flex items-center justify-between"
           style={{
-            background: colors.headerBackground,
-            borderBottom: `1px solid ${colors.border}`,
+            background: theme.mode === 'light' ? '#ffffff' : colors.headerBackground,
+            borderBottom: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
             backdropFilter: 'blur(20px)',
           }}
         >

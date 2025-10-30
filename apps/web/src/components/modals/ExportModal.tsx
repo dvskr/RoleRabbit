@@ -44,7 +44,10 @@ export default function ExportModal({
   if (!showExportModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 pointer-events-none">
+    <div 
+      className="fixed inset-0 z-50 pointer-events-none"
+      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
+    >
       <div 
         className="absolute top-20 right-4 border rounded-2xl p-6 w-full max-w-md shadow-2xl transition-all pointer-events-auto"
         style={{ 
@@ -53,8 +56,9 @@ export default function ExportModal({
           right: '1rem',
           maxHeight: '80vh',
           overflow: 'auto',
-          background: colors.badgePurpleBg,
-          border: `1px solid ${colors.border}`,
+          background: theme.mode === 'light' ? '#ffffff' : colors.badgePurpleBg,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
       >
         <div className="flex justify-between items-center mb-6">

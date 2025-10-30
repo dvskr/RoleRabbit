@@ -53,10 +53,10 @@ const NavigationItems = memo(({
             onClick={() => onTabChange(item.id)}
             className={`w-full flex items-center ${
               sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'
-            } rounded-xl transition-all duration-300 ${
+            } rounded-xl transition-colors duration-75 ${
               activeTab === item.id
-                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102'
-                : 'text-gray-700 hover:bg-white/60 hover:shadow-md'
+                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30'
+                : 'text-gray-700 hover:bg-gradient-to-r hover:from-pink-500 hover:to-purple-500 hover:text-white hover:shadow-lg hover:shadow-pink-500/30'
             }`}
             title={sidebarCollapsed ? item.label : ''}
           >
@@ -165,12 +165,12 @@ const Sidebar = memo<SidebarProps>(({ onTabChange, onShowNewResumeModal, onShowI
       {/* Header */}
       <div className={headerClasses}>
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
             <Sparkles size={20} className="text-white" />
           </div>
           {!sidebarCollapsed && (
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold roleready-gradient">
                 RoleReady
               </h1>
             </div>

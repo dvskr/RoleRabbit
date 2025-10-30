@@ -6,7 +6,6 @@ import { ProfileHeaderProps } from './types/profile';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '../../contexts/ThemeContext';
-import ThemeToggle from '../ThemeToggle';
 
 interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
   resumeImportButton?: ReactNode;
@@ -67,9 +66,6 @@ export default function ProfileHeader({
         
         {/* Right: All Action Buttons in One Bar */}
         <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-          
           {/* Unified Button Group */}
           {isEditing ? (
             <>
