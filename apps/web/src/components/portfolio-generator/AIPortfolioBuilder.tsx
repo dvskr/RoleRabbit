@@ -22,7 +22,6 @@ import {
   User as UserIcon
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import ThemeToggle from '../ThemeToggle';
 
 interface PortfolioSection {
   id: string;
@@ -313,9 +312,6 @@ export default function AIPortfolioBuilder({ onClose, profileData }: AIPortfolio
               </React.Fragment>
             ))}
           </div>
-          
-          {/* Theme Toggle - Properly Aligned */}
-          <ThemeToggle />
         </div>
       </div>
 

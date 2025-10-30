@@ -61,8 +61,23 @@ export default function Profile() {
     try {
       const response = await apiService.getUserProfile();
       if (response && response.user) {
-        // Map API response to UserData format
-        setUserData(response.user as UserData);
+        // Map API response to UserData format and ensure analytics properties exist
+        const userProfile = response.user as UserData;
+        
+        // Ensure analytics properties have default values if missing
+        const userDataWithDefaults: UserData = {
+          ...userProfile,
+          profileViews: userProfile.profileViews || 0,
+          applicationsSent: userProfile.applicationsSent || 0,
+          interviewsScheduled: userProfile.interviewsScheduled || 0,
+          offersReceived: userProfile.offersReceived || 0,
+          successRate: userProfile.successRate || 0,
+          profileCompleteness: userProfile.profileCompleteness || 0,
+          skillMatchRate: userProfile.skillMatchRate || 0,
+          avgResponseTime: userProfile.avgResponseTime || 0,
+        };
+        
+        setUserData(userDataWithDefaults);
       }
     } catch (error) {
       logger.error('Failed to load user profile:', error);

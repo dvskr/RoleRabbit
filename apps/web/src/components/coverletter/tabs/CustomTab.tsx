@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Edit3, Save, FileText, Lightbulb } from 'lucide-react';
 import CoverLetterEditor from '../components/CoverLetterEditor';
 import { logger } from '../../../utils/logger';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface CustomTabProps {
   content: string;
@@ -14,6 +15,9 @@ interface CustomTabProps {
 }
 
 export default function CustomTab({ content, setContent, title, setTitle, setWordCount }: CustomTabProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   // Calculate word count from content
   const wordCount = useMemo(() => {
     const words = content.trim().split(/\s+/).filter(word => word.length > 0);
@@ -66,17 +70,40 @@ export default function CustomTab({ content, setContent, title, setTitle, setWor
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Edit3 size={24} className="text-blue-600" />
+          <div 
+            className="p-2 rounded-lg"
+            style={{ background: colors.badgeInfoBg }}
+          >
+            <Edit3 size={24} style={{ color: colors.primaryBlue }} />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Custom Cover Letter</h2>
-            <p className="text-sm text-gray-600">Write your cover letter from scratch</p>
+            <h2 
+              className="text-xl font-semibold"
+              style={{ color: colors.primaryText }}
+            >
+              Custom Cover Letter
+            </h2>
+            <p 
+              className="text-sm"
+              style={{ color: colors.secondaryText }}
+            >
+              Write your cover letter from scratch
+            </p>
           </div>
         </div>
         <button
           onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+          style={{
+            background: colors.primaryBlue,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.primaryBlueHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = colors.primaryBlue;
+          }}
         >
           <Save size={16} />
           Save Draft
@@ -85,12 +112,30 @@ export default function CustomTab({ content, setContent, title, setTitle, setWor
 
       {/* Title Input */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Cover Letter Title</label>
+        <label 
+          className="block text-sm font-semibold mb-2"
+          style={{ color: colors.primaryText }}
+        >
+          Cover Letter Title
+        </label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          className="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
+          style={{
+            background: colors.inputBackground,
+            border: `1px solid ${colors.border}`,
+            color: colors.primaryText,
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = colors.primaryBlue;
+            e.target.style.boxShadow = `0 0 0 2px ${colors.primaryBlue}20`;
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = colors.border;
+            e.target.style.boxShadow = 'none';
+          }}
           placeholder="e.g., Software Engineer - Tech Corp"
         />
       </div>
@@ -126,27 +171,68 @@ Sincerely,
         {/* Right Column - Writing Tips */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <Lightbulb size={16} className="text-yellow-600" />
-            <h3 className="font-semibold text-gray-900">Writing Tips</h3>
+            <Lightbulb size={16} style={{ color: colors.warningYellow }} />
+            <h3 
+              className="font-semibold"
+              style={{ color: colors.primaryText }}
+            >
+              Writing Tips
+            </h3>
           </div>
           
           <div className="space-y-3">
             {writingTips.map((tip, index) => (
-              <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <h4 className="font-semibold text-yellow-900 text-sm mb-1">{tip.title}</h4>
-                <p className="text-xs text-yellow-800">{tip.tip}</p>
+              <div 
+                key={index} 
+                className="border rounded-lg p-3"
+                style={{
+                  background: colors.badgeWarningBg,
+                  borderColor: colors.badgeWarningBorder,
+                }}
+              >
+                <h4 
+                  className="font-semibold text-sm mb-1"
+                  style={{ color: colors.badgeWarningText }}
+                >
+                  {tip.title}
+                </h4>
+                <p 
+                  className="text-xs"
+                  style={{ color: colors.secondaryText }}
+                >
+                  {tip.tip}
+                </p>
               </div>
             ))}
           </div>
 
           {/* Word Count Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div 
+            className="border rounded-lg p-3"
+            style={{
+              background: colors.badgeInfoBg,
+              borderColor: colors.badgeInfoBorder,
+            }}
+          >
             <div className="flex items-center gap-2 mb-2">
-              <FileText size={16} className="text-blue-600" />
-              <h4 className="font-semibold text-blue-900 text-sm">Word Count</h4>
+              <FileText size={16} style={{ color: colors.primaryBlue }} />
+              <h4 
+                className="font-semibold text-sm"
+                style={{ color: colors.primaryText }}
+              >
+                Word Count
+              </h4>
             </div>
-            <p className="text-2xl font-bold text-blue-900 mb-1">{wordCount}</p>
-            <p className="text-xs text-blue-700">
+            <p 
+              className="text-2xl font-bold mb-1"
+              style={{ color: colors.primaryText }}
+            >
+              {wordCount}
+            </p>
+            <p 
+              className="text-xs"
+              style={{ color: colors.secondaryText }}
+            >
               {wordCount < 150 && "Too short - aim for 250-400 words"}
               {wordCount >= 150 && wordCount < 250 && "Getting there - aim for 250-400 words"}
               {wordCount >= 250 && wordCount <= 400 && "Perfect length!"}
@@ -155,16 +241,54 @@ Sincerely,
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-            <h4 className="font-semibold text-gray-900 text-sm mb-2">Quick Actions</h4>
+          <div 
+            className="border rounded-lg p-3"
+            style={{
+              background: colors.inputBackground,
+              borderColor: colors.border,
+            }}
+          >
+            <h4 
+              className="font-semibold text-sm mb-2"
+              style={{ color: colors.primaryText }}
+            >
+              Quick Actions
+            </h4>
             <div className="space-y-2">
-              <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <button 
+                className="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
                 Load Template
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <button 
+                className="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
                 Use AI Generator
               </button>
-              <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <button 
+                className="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
                 Check Grammar
               </button>
             </div>

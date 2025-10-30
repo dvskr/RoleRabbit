@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, BookOpen, Bot, Menu, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LogoIcon, Logo } from '../common/Logo';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -25,6 +25,18 @@ export default function SidebarNew({
 }: SidebarProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+
+  // Reset hover states when activeTab changes
+  useEffect(() => {
+    Object.values(buttonRefs.current).forEach(button => {
+      if (button) {
+        button.style.background = 'transparent';
+        button.style.color = colors.secondaryText;
+        button.style.boxShadow = 'none';
+      }
+    });
+  }, [activeTab, colors.secondaryText]);
 
   const navSections: NavSection[] = [
     {
@@ -63,7 +75,7 @@ export default function SidebarNew({
 
   return (
     <div 
-      className={`h-full border-r flex flex-col transition-all duration-300 ${
+      className={`h-full border-r flex flex-col ${
         sidebarCollapsed ? 'w-20' : 'w-64'
       }`}
       style={{
@@ -170,10 +182,7 @@ export default function SidebarNew({
               
               {/* Text Content with Tagline */}
               <div className="flex flex-col flex-1 min-w-0">
-                <span 
-                  className="text-lg font-bold leading-tight"
-                  style={{ color: colors.primaryText }}
-                >
+                <span className="text-lg font-bold leading-tight roleready-gradient">
                   RoleReady
                 </span>
                 <span 
@@ -196,8 +205,12 @@ export default function SidebarNew({
               <h3 
                 className="text-xs uppercase tracking-wider px-3"
                 style={{ 
-                  color: colors.tertiaryText, 
-                  fontWeight: 500 
+                  color: section.title === 'WORKSPACE' ? '#3b82f6' : // Blue
+                         section.title === 'PREPARE' ? '#10b981' : // Green
+                         section.title === 'APPLY' ? '#f59e0b' : // Orange
+                         section.title === 'CONNECT' ? '#8b5cf6' : // Purple
+                         colors.tertiaryText, 
+                  fontWeight: 600 
                 }}
               >
                 {section.title}
@@ -211,8 +224,9 @@ export default function SidebarNew({
                 return (
                   <button
                     key={item.id}
+                    ref={(el) => (buttonRefs.current[item.id] = el)}
                     onClick={() => onTabChange(item.id)}
-                    className={`w-full flex items-center transition-all duration-200 rounded-md ${
+                    className={`w-full flex items-center transition-colors duration-75 rounded-md ${
                       sidebarCollapsed ? 'justify-center px-3 py-2' : 'gap-3 px-3 py-2'
                     }`}
                     style={{
@@ -225,14 +239,16 @@ export default function SidebarNew({
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
-                        e.currentTarget.style.background = colors.hoverBackground;
-                        e.currentTarget.style.color = colors.primaryText;
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isActive) {
                         e.currentTarget.style.background = 'transparent';
                         e.currentTarget.style.color = colors.secondaryText;
+                        e.currentTarget.style.boxShadow = 'none';
                       }
                     }}
                     title={sidebarCollapsed ? item.label : ''}

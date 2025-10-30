@@ -76,14 +76,14 @@ const darkTheme: ThemeConfig = {
     
     // Text colors
     primaryText: '#f1f5f9',
-    secondaryText: '#94a3b8',
-    tertiaryText: '#64748b',
+    secondaryText: '#cbd5e1',
+    tertiaryText: '#94a3b8',
     activeText: '#e9d5ff',
     activeBlueText: '#60a5fa',
     
     // Border colors
-    border: 'rgba(148, 163, 184, 0.1)',
-    borderFocused: 'rgba(148, 163, 184, 0.3)',
+    border: 'rgba(203, 213, 225, 0.15)',
+    borderFocused: 'rgba(203, 213, 225, 0.4)',
     
     // Accent colors
     primaryBlue: '#3b82f6',
@@ -106,7 +106,7 @@ const darkTheme: ThemeConfig = {
     badgePurpleText: '#a855f7',
     badgePurpleBorder: 'rgba(168, 85, 247, 0.3)',
     badgeNeutralBg: 'rgba(148, 163, 184, 0.15)',
-    badgeNeutralText: '#94a3b8',
+    badgeNeutralText: '#cbd5e1',
     badgeNeutralBorder: 'rgba(148, 163, 184, 0.3)',
     
     // Status colors
@@ -175,6 +175,7 @@ const lightTheme: ThemeConfig = {
 interface ThemeContextType {
   theme: ThemeConfig;
   themeMode: 'light' | 'dark';
+  isClient: boolean;
   toggleTheme: () => void;
   setThemeMode: (mode: 'light' | 'dark') => void;
 }
@@ -182,44 +183,49 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<'light' | 'dark'>(() => {
-    // Check localStorage first
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('themeMode');
-      if (saved === 'light' || saved === 'dark') {
-        return saved;
-      }
-      
-      // Check system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
-    }
-    return 'dark'; // Default to dark (glossy theme)
-  });
+  // Always start with dark theme to prevent hydration mismatch
+  const [themeMode, setThemeModeState] = useState<'light' | 'dark'>('dark');
+  const [isClient, setIsClient] = useState(false);
 
-  const [theme, setTheme] = useState<ThemeConfig>(
-    themeMode === 'dark' ? darkTheme : lightTheme
-  );
+  const [theme, setTheme] = useState<ThemeConfig>(darkTheme);
 
-  // Update theme when mode changes
+  // Initialize client-side theme after hydration
   useEffect(() => {
+    setIsClient(true);
+    
+    // Check localStorage for saved preference
+    const saved = localStorage.getItem('themeMode');
+    if (saved === 'light' || saved === 'dark') {
+      setThemeModeState(saved);
+      return;
+    }
+    
+    // Check system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setThemeModeState('dark');
+    } else {
+      setThemeModeState('light');
+    }
+  }, []);
+
+  // Update theme when mode changes (only on client)
+  useEffect(() => {
+    if (!isClient) return;
+    
     setTheme(themeMode === 'dark' ? darkTheme : lightTheme);
     
     // Apply theme class to document
-    if (typeof window !== 'undefined') {
-      document.documentElement.classList.remove('light', 'dark');
-      document.documentElement.classList.add(themeMode);
-      document.documentElement.setAttribute('data-theme', themeMode);
-      
-      // Store in localStorage
-      localStorage.setItem('themeMode', themeMode);
-    }
-  }, [themeMode]);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(themeMode);
+    document.documentElement.setAttribute('data-theme', themeMode);
+    
+    // Store in localStorage
+    localStorage.setItem('themeMode', themeMode);
+  }, [themeMode, isClient]);
 
-  // Listen for system theme changes
+  // Listen for system theme changes (only on client)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!isClient) return;
     
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
@@ -241,7 +247,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       mediaQuery.addListener(handleChange);
       return () => mediaQuery.removeListener(handleChange);
     }
-  }, []);
+  }, [isClient]);
 
   const toggleTheme = () => {
     setThemeModeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -254,11 +260,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const value: ThemeContextType = {
     theme,
     themeMode,
+    isClient,
     toggleTheme,
     setThemeMode,
   };
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme(): ThemeContextType {

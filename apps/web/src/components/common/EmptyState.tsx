@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
@@ -11,19 +12,47 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4">
-      {icon && <div className="mb-4 text-gray-400">{icon}</div>}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      {icon && (
+        <div 
+          className="mb-4"
+          style={{ color: colors.tertiaryText }}
+        >
+          {icon}
+        </div>
+      )}
+      <h3 
+        className="text-lg font-semibold mb-2"
+        style={{ color: colors.primaryText }}
+      >
+        {title}
+      </h3>
       {description && (
-        <p className="text-sm text-gray-600 text-center max-w-md mb-4">
+        <p 
+          className="text-sm text-center max-w-md mb-4"
+          style={{ color: colors.secondaryText }}
+        >
           {description}
         </p>
       )}
       {action && (
         <button
           onClick={action.onClick}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="px-4 py-2 rounded-lg transition-colors"
+          style={{
+            background: colors.primaryBlue,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.primaryBlueHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = colors.primaryBlue;
+          }}
         >
           {action.label}
         </button>

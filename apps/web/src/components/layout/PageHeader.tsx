@@ -17,7 +17,6 @@ import {
   Cloud
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import ThemeToggle from '../ThemeToggle';
 
 interface PageHeaderProps {
   title: string;
@@ -198,9 +197,6 @@ export default function PageHeader({
           })}
         </div>
       )}
-
-      {/* Theme Toggle */}
-      <ThemeToggle />
     </div>
   );
 }

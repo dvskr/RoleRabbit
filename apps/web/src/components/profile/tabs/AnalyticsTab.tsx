@@ -50,7 +50,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.profileViews.toLocaleString()}
+                {(userData.profileViews || 0).toLocaleString()}
               </p>
               <p 
                 className="text-sm font-medium"
@@ -87,7 +87,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.applicationsSent}
+                {userData.applicationsSent || 0}
               </p>
               <p 
                 className="text-sm font-medium"
@@ -124,7 +124,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.interviewsScheduled}
+                {userData.interviewsScheduled || 0}
               </p>
               <p 
                 className="text-sm font-medium"
@@ -161,7 +161,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.successRate}%
+                {userData.successRate || 0}%
               </p>
               <p 
                 className="text-sm font-medium"
@@ -201,7 +201,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.profileCompleteness}%
+                {userData.profileCompleteness || 0}%
               </p>
               <p 
                 className="text-sm font-medium"
@@ -238,7 +238,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.skillMatchRate}%
+                {userData.skillMatchRate || 0}%
               </p>
               <p 
                 className="text-sm font-medium"
@@ -275,7 +275,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-2xl font-bold"
                 style={{ color: colors.primaryText }}
               >
-                {userData.avgResponseTime}d
+                {userData.avgResponseTime || 0}d
               </p>
               <p 
                 className="text-sm font-medium"
@@ -321,7 +321,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-sm font-bold"
                 style={{ color: colors.primaryBlue }}
               >
-                {userData.profileCompleteness}%
+                {userData.profileCompleteness || 0}%
               </span>
             </div>
             <div 
@@ -331,7 +331,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
               <div 
                 className="h-3 rounded-full transition-all duration-1000" 
                 style={{ 
-                  width: `${userData.profileCompleteness}%`,
+                  width: `${userData.profileCompleteness || 0}%`,
                   background: `linear-gradient(90deg, ${colors.primaryBlue}, ${colors.badgeInfoText})`
                 }}
               />
@@ -340,8 +340,8 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
               className="text-xs mt-2"
               style={{ color: colors.tertiaryText }}
             >
-              {userData.profileCompleteness < 70 ? 'Complete your profile to increase visibility by 40%' :
-               userData.profileCompleteness < 85 ? 'Your profile is looking good! Complete a few more sections for optimal results.' :
+              {(userData.profileCompleteness || 0) < 70 ? 'Complete your profile to increase visibility by 40%' :
+               (userData.profileCompleteness || 0) < 85 ? 'Your profile is looking good! Complete a few more sections for optimal results.' :
                'Excellent! Your profile is complete and optimized'}
             </p>
           </div>
@@ -358,7 +358,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-sm font-bold"
                 style={{ color: colors.successGreen }}
               >
-                {userData.skillMatchRate}%
+                {userData.skillMatchRate || 0}%
               </span>
             </div>
             <div 
@@ -368,7 +368,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
               <div 
                 className="h-3 rounded-full transition-all duration-1000" 
                 style={{ 
-                  width: `${userData.skillMatchRate}%`,
+                  width: `${userData.skillMatchRate || 0}%`,
                   background: `linear-gradient(90deg, ${colors.successGreen}, ${colors.badgeSuccessText})`
                 }}
               />
@@ -377,8 +377,8 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
               className="text-xs mt-2"
               style={{ color: colors.tertiaryText }}
             >
-              {userData.skillMatchRate >= 90 ? 'Your skills match excellently with current job openings!' :
-               userData.skillMatchRate >= 75 ? 'Your skills match well with current opportunities' :
+              {(userData.skillMatchRate || 0) >= 90 ? 'Your skills match excellently with current job openings!' :
+               (userData.skillMatchRate || 0) >= 75 ? 'Your skills match well with current opportunities' :
                'Consider adding more in-demand skills to improve your match rate'}
             </p>
           </div>
@@ -395,7 +395,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
                 className="text-sm font-bold"
                 style={{ color: colors.badgeWarningText }}
               >
-                {userData.avgResponseTime} days
+                {userData.avgResponseTime || 0} days
               </span>
             </div>
             <div 
@@ -405,7 +405,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
               <div 
                 className="h-3 rounded-full transition-all duration-1000" 
                 style={{ 
-                  width: `${Math.min(100, userData.avgResponseTime * 10)}%`,
+                  width: `${Math.min(100, (userData.avgResponseTime || 0) * 10)}%`,
                   background: `linear-gradient(90deg, ${colors.badgeWarningText}, ${colors.errorRed})`
                 }}
               />
@@ -414,8 +414,8 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
               className="text-xs mt-2"
               style={{ color: colors.tertiaryText }}
             >
-              {userData.avgResponseTime <= 2 ? 'Recruiters are responding quickly to your applications!' :
-               userData.avgResponseTime <= 5 ? 'Response time is reasonable' :
+              {(userData.avgResponseTime || 0) <= 2 ? 'Recruiters are responding quickly to your applications!' :
+               (userData.avgResponseTime || 0) <= 5 ? 'Response time is reasonable' :
                'Consider optimizing your applications for faster responses'}
             </p>
           </div>

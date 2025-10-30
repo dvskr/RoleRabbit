@@ -108,24 +108,25 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
       <div 
         className="rounded-lg w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl"
         style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
+          background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
           backdropFilter: 'blur(20px)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 60px rgba(0, 0, 0, 0.5)',
         }}
       >
         {/* Header */}
         <div 
           className="p-4 flex-shrink-0"
           style={{
-            background: `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-            color: 'white',
+            background: theme.mode === 'light' ? '#ffffff' : `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+            color: theme.mode === 'light' ? colors.primaryText : 'white',
+            borderBottom: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
           }}
         >
           <div className="flex items-center justify-between mb-2">
             <h2 
               className="text-lg font-bold"
-              style={{ color: 'white' }}
+              style={{ color: theme.mode === 'light' ? colors.primaryText : 'white' }}
             >
               {job.title}
             </h2>

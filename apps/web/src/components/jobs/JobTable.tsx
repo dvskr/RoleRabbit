@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronUp, Star, Eye, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { Job } from '../../types/job';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface JobTableProps {
   jobs: Job[];
@@ -25,22 +26,25 @@ export default function JobTable({
   onDelete,
   onView
 }: JobTableProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const getStatusColor = (status: Job['status']) => {
     switch (status) {
-      case 'applied': return 'bg-blue-100 text-blue-800';
-      case 'interview': return 'bg-yellow-100 text-yellow-800';
-      case 'offer': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'applied': return { background: colors.badgeInfoBg, color: colors.badgeInfoText, border: colors.badgeInfoBorder };
+      case 'interview': return { background: colors.badgeWarningBg, color: colors.badgeWarningText, border: colors.badgeWarningBorder };
+      case 'offer': return { background: colors.badgeSuccessBg, color: colors.badgeSuccessText, border: colors.badgeSuccessBorder };
+      case 'rejected': return { background: colors.badgeErrorBg, color: colors.badgeErrorText, border: colors.badgeErrorBorder };
+      default: return { background: colors.badgeNeutralBg, color: colors.badgeNeutralText, border: colors.badgeNeutralBorder };
     }
   };
 
   const getPriorityColor = (priority?: Job['priority']) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'high': return { background: colors.badgeErrorBg, color: colors.badgeErrorText, border: colors.badgeErrorBorder };
+      case 'medium': return { background: colors.badgeWarningBg, color: colors.badgeWarningText, border: colors.badgeWarningBorder };
+      case 'low': return { background: colors.badgeSuccessBg, color: colors.badgeSuccessText, border: colors.badgeSuccessBorder };
+      default: return { background: colors.badgeNeutralBg, color: colors.badgeNeutralText, border: colors.badgeNeutralBorder };
     }
   };
 
@@ -56,10 +60,22 @@ export default function JobTable({
   const someSelected = selectedJobs.length > 0 && selectedJobs.length < jobs.length;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div 
+      className="rounded-lg overflow-hidden"
+      style={{
+        background: colors.cardBackground,
+        border: `1px solid ${colors.border}`,
+      }}
+    >
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead 
+            className="border-b"
+            style={{
+              background: colors.inputBackground,
+              borderColor: colors.border,
+            }}
+          >
             <tr>
               <th className="px-4 py-3 text-left">
                 <input
@@ -69,54 +85,110 @@ export default function JobTable({
                     if (input) input.indeterminate = someSelected;
                   }}
                   onChange={onSelectAll}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded"
+                  style={{
+                    accentColor: colors.primaryBlue,
+                    borderColor: colors.border,
+                  }}
                 />
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Job Title
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Company
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Location
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Priority
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Applied Date
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Salary
               </th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th 
+                className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider"
+                style={{ color: colors.tertiaryText }}
+              >
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody 
+            className="divide-y transition-colors"
+            style={{
+              background: colors.cardBackground,
+              borderColor: colors.border,
+            }}
+          >
             {jobs.map((job) => (
-              <tr key={job.id} className="hover:bg-gray-50 transition-colors">
+              <tr 
+                key={job.id} 
+                className="transition-colors"
+                style={{
+                  borderBottom: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.cardBackground;
+                }}
+              >
                 <td className="px-4 py-4">
                   <input
                     type="checkbox"
                     checked={selectedJobs.includes(job.id)}
                     onChange={() => onToggleSelection(job.id)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded"
+                    style={{
+                      accentColor: colors.primaryBlue,
+                      borderColor: colors.border,
+                    }}
                   />
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center">
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div 
+                        className="text-sm font-medium"
+                        style={{ color: colors.primaryText }}
+                      >
                         {job.title}
                       </div>
                       {job.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div 
+                          className="text-sm truncate max-w-xs"
+                          style={{ color: colors.secondaryText }}
+                        >
                           {job.description}
                         </div>
                       )}
@@ -124,7 +196,14 @@ export default function JobTable({
                     {job.url && (
                       <button
                         onClick={() => window.open(job.url, '_blank')}
-                        className="ml-2 p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        className="ml-2 p-1 transition-colors"
+                        style={{ color: colors.tertiaryText }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = colors.primaryBlue;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = colors.tertiaryText;
+                        }}
                         title="View Job Posting"
                       >
                         <ExternalLink size={14} />
@@ -133,69 +212,134 @@ export default function JobTable({
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <div className="text-sm text-gray-900">{job.company}</div>
+                  <div 
+                    className="text-sm"
+                    style={{ color: colors.primaryText }}
+                  >
+                    {job.company}
+                  </div>
                   {job.companySize && (
-                    <div className="text-sm text-gray-500">{job.companySize}</div>
+                    <div 
+                      className="text-sm"
+                      style={{ color: colors.secondaryText }}
+                    >
+                      {job.companySize}
+                    </div>
                   )}
                 </td>
                 <td className="px-4 py-4">
-                  <div className="text-sm text-gray-900">
+                  <div 
+                    className="text-sm"
+                    style={{ color: colors.primaryText }}
+                  >
                     {job.location}
                     {job.remote && (
-                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                      <span 
+                        className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                        style={{
+                          background: colors.badgeSuccessBg,
+                          color: colors.badgeSuccessText,
+                        }}
+                      >
                         Remote
                       </span>
                     )}
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                  <span 
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      background: getStatusColor(job.status).background,
+                      color: getStatusColor(job.status).color,
+                      border: `1px solid ${getStatusColor(job.status).border}`,
+                    }}
+                  >
                     {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                   </span>
                 </td>
                 <td className="px-4 py-4">
                   {job.priority && (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(job.priority)}`}>
+                    <span 
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                      style={{
+                        background: getPriorityColor(job.priority).background,
+                        color: getPriorityColor(job.priority).color,
+                        border: `1px solid ${getPriorityColor(job.priority).border}`,
+                      }}
+                    >
                       {job.priority.charAt(0).toUpperCase() + job.priority.slice(1)}
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-900">
+                <td 
+                  className="px-4 py-4 text-sm"
+                  style={{ color: colors.primaryText }}
+                >
                   {formatDate(job.appliedDate)}
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-900">
+                <td 
+                  className="px-4 py-4 text-sm"
+                  style={{ color: colors.primaryText }}
+                >
                   {job.salary || '-'}
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center justify-center space-x-2">
                     <button
                       onClick={() => onToggleFavorite(job.id)}
-                      className={`p-1 rounded transition-colors ${
-                        favorites.includes(job.id)
-                          ? 'text-yellow-500 hover:text-yellow-600'
-                          : 'text-gray-400 hover:text-yellow-500'
-                      }`}
+                      className="p-1 rounded transition-colors"
+                      style={{
+                        color: favorites.includes(job.id) ? colors.warningYellow : colors.tertiaryText,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = colors.warningYellow;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = favorites.includes(job.id) ? colors.warningYellow : colors.tertiaryText;
+                      }}
                       title={favorites.includes(job.id) ? 'Remove from favorites' : 'Add to favorites'}
                     >
                       <Star size={16} fill={favorites.includes(job.id) ? 'currentColor' : 'none'} />
                     </button>
                     <button
                       onClick={() => onView(job)}
-                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                      className="p-1 transition-colors"
+                      style={{ color: colors.tertiaryText }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = colors.primaryBlue;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = colors.tertiaryText;
+                      }}
                       title="View details"
                     >
                       <Eye size={16} />
                     </button>
                     <button
                       onClick={() => onEdit(job)}
-                      className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                      className="p-1 transition-colors"
+                      style={{ color: colors.tertiaryText }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = colors.successGreen;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = colors.tertiaryText;
+                      }}
                       title="Edit job"
                     >
                       <Edit size={16} />
                     </button>
                     <button
                       onClick={() => onDelete(job.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      className="p-1 transition-colors"
+                      style={{ color: colors.tertiaryText }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = colors.errorRed;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = colors.tertiaryText;
+                      }}
                       title="Delete job"
                     >
                       <Trash2 size={16} />

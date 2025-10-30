@@ -95,10 +95,12 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
 
           {/* App Title */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
               <span className="text-white text-sm font-bold">R</span>
             </div>
-            <h1 className="text-lg font-semibold text-gray-900">RoleReady</h1>
+            <h1 className="text-lg font-semibold roleready-gradient">
+              RoleReady
+            </h1>
           </div>
 
           {/* Fullscreen Button */}

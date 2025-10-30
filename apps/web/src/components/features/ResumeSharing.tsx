@@ -117,13 +117,14 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
     >
       <div 
         className="rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all relative pointer-events-auto"
         style={{
-          background: colors.badgePurpleBg,
-          boxShadow: `0 20px 25px -5px ${colors.border}40`,
-          border: `1px solid ${colors.badgePurpleBorder}`,
+          background: theme.mode === 'light' ? '#ffffff' : colors.badgePurpleBg,
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : `0 20px 25px -5px ${colors.border}40`,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.badgePurpleBorder}`,
         }}
       >
         {/* Header */}

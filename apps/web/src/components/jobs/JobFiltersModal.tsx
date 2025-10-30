@@ -38,16 +38,17 @@ export default function JobFiltersModal({
       <div 
         className="rounded-lg shadow-2xl w-full max-w-md mx-4"
         style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
+          background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
           backdropFilter: 'blur(20px)',
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div 
           className="px-6 py-4 border-b flex items-center justify-between"
-          style={{ borderBottom: `1px solid ${colors.border}` }}
+          style={{ borderBottom: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}` }}
         >
           <div className="flex items-center gap-2">
             <FilterIcon size={18} style={{ color: colors.primaryBlue }} />

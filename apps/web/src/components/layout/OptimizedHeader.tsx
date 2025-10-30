@@ -14,6 +14,7 @@ import {
   Minimize2
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -167,10 +168,10 @@ const Header = memo<HeaderProps>(({
         </button>
 
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
             <Sparkles size={16} className="text-white" />
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold roleready-gradient">
             RoleReady
           </h1>
         </div>

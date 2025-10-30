@@ -75,7 +75,14 @@ export default function EmailAnalytics({ isOpen, onClose }: EmailAnalyticsProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-      <div className="rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto" style={{ background: colors.badgePurpleBg, border: `1px solid ${colors.badgePurpleBorder}` }}>
+      <div 
+        className="rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto" 
+        style={{ 
+          background: theme.mode === 'light' ? '#ffffff' : colors.badgePurpleBg, 
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.badgePurpleBorder}`,
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

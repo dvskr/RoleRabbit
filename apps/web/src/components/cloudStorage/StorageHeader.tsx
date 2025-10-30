@@ -4,7 +4,6 @@ import React from 'react';
 import { Cloud } from 'lucide-react';
 import { StorageInfo } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
-import ThemeToggle from '../ThemeToggle';
 
 // Add shimmer animation style
 const shimmerStyle = `
@@ -150,9 +149,6 @@ export default function StorageHeader({
               </div>
             </div>
           </div>
-          
-          {/* Theme Toggle */}
-          <ThemeToggle />
         </div>
       </div>
     </div>

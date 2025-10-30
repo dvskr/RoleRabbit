@@ -58,13 +58,14 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
   return (
     <div 
       className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto"
-      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
     >
       <div 
         className="rounded-lg p-4 w-full max-w-lg my-auto"
         style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
+          background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
       >
         <div className="flex items-center justify-between mb-4">

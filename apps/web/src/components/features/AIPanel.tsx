@@ -79,6 +79,7 @@ export default function AIPanel({
   const [isApplied, setIsApplied] = useState(false);
   const [improvedResumeData, setImprovedResumeData] = useState<any>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
   const { theme } = useTheme();
   const colors = theme.colors;
   
@@ -335,41 +336,6 @@ export default function AIPanel({
         {/* Panel Content */}
         <div className="flex-1 overflow-y-auto" style={{ background: colors.background }}>
           <div className="p-6 space-y-6">
-            {/* AI Model Selection */}
-            <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
-                AI Model
-              </label>
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = colors.badgePurpleText;
-                  e.target.style.outline = `2px solid ${colors.badgePurpleText}40`;
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = colors.border;
-                  e.target.style.outline = 'none';
-                }}
-                title="Select AI model for resume optimization"
-                aria-label="AI Model selection"
-              >
-                {aiModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name} - {model.description}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-1 text-xs" style={{ color: colors.tertiaryText }}>
-                {aiModels.find(m => m.id === selectedModel)?.capabilities.join(', ')}
-              </div>
-            </div>
 
             {/* Mode Selection */}
             <div>
@@ -435,11 +401,13 @@ export default function AIPanel({
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
                     placeholder="Paste the job description here..."
-                    className="w-full h-28 px-3 py-2 border rounded-lg transition-all resize-none text-sm"
+                    className="w-full h-56 md:h-72 px-3 py-2 border rounded-lg transition-all resize-y text-sm"
                     style={{
                       background: colors.inputBackground,
                       border: `1px solid ${colors.border}`,
                       color: colors.primaryText,
+                      lineHeight: '1.5',
+                      whiteSpace: 'pre-wrap'
                     }}
                     onFocus={(e) => {
                       e.target.style.borderColor = colors.badgePurpleText;
@@ -467,6 +435,145 @@ export default function AIPanel({
                       {isApplied ? 'Applied' : isApplying ? 'Applying...' : isAnalyzing ? 'Analyzing...' : showApplyButton ? 'Apply Improvements' : 'Run ATS Check'}
                     </button>
                   </div>
+                </div>
+                {/* Compact Settings Section */}
+                <div 
+                  className="rounded-xl border overflow-hidden transition-all"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `1px solid ${colors.border}`,
+                    boxShadow: `0 2px 8px ${colors.border}20`,
+                  }}
+                >
+                  {/* Collapsible Header */}
+                  <button
+                    onClick={() => setShowAISettings(!showAISettings)}
+                    className="w-full flex items-center justify-between p-3 transition-all hover:bg-opacity-50"
+                    style={{
+                      background: showAISettings ? `${colors.inputBackground}80` : 'transparent',
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Settings 
+                        size={16} 
+                        style={{ 
+                          color: colors.primaryText,
+                          transform: showAISettings ? 'rotate(90deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s ease'
+                        }} 
+                      />
+                      <span className="text-sm font-medium" style={{ color: colors.primaryText }}>
+                        AI Settings
+                      </span>
+                    </div>
+                    <div 
+                      style={{
+                        transform: showAISettings ? 'rotate(180deg)' : 'rotate(0deg)',
+                        transition: 'transform 0.2s ease',
+                        color: colors.secondaryText,
+                        fontSize: '10px'
+                      }}
+                    >
+                      ▼
+                    </div>
+                  </button>
+                  
+                  {/* Collapsible Content */}
+                  {showAISettings && (
+                  <div className="px-3 pb-3 space-y-3 border-t" style={{ borderColor: colors.border }}>
+                    {/* Edit Mode & Tone Row - Space Efficient Grid */}
+                    <div className="space-y-3 pt-3">
+                      {/* Edit Mode */}
+                      <div>
+                        <label className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
+                          Mode
+                        </label>
+                        <div className="flex rounded-lg p-1" style={{ background: colors.inputBackground }}>
+                          <button
+                            onClick={() => setTailorEditMode('partial')}
+                            className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all"
+                            style={{
+                              background: tailorEditMode === 'partial' ? colors.badgePurpleBg : 'transparent',
+                              color: tailorEditMode === 'partial' ? colors.badgePurpleText : colors.secondaryText,
+                              border: tailorEditMode === 'partial' ? `1px solid ${colors.badgePurpleBorder}` : 'none',
+                            }}
+                          >
+                            Partial
+                          </button>
+                          <button
+                            onClick={() => setTailorEditMode('full')}
+                            className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all"
+                            style={{
+                              background: tailorEditMode === 'full' ? colors.badgePurpleBg : 'transparent',
+                              color: tailorEditMode === 'full' ? colors.badgePurpleText : colors.secondaryText,
+                              border: tailorEditMode === 'full' ? `1px solid ${colors.badgePurpleBorder}` : 'none',
+                            }}
+                          >
+                            Full
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tone - Icon Only Pills */}
+                      <div>
+                        <label className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
+                          Writing Tone
+                        </label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { id: 'professional', icon: '💼', label: 'Professional' },
+                            { id: 'technical', icon: '⚙️', label: 'Technical' },
+                            { id: 'creative', icon: '🎨', label: 'Creative' },
+                            { id: 'casual', icon: '😊', label: 'Casual' }
+                          ].map((tone) => (
+                            <button
+                              key={tone.id}
+                              onClick={() => setSelectedTone(tone.id)}
+                              className="px-2.5 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1"
+                              style={{
+                                background: selectedTone === tone.id ? colors.badgePurpleBg : colors.inputBackground,
+                                border: selectedTone === tone.id ? `1px solid ${colors.badgePurpleBorder}` : `1px solid ${colors.border}`,
+                              }}
+                             >
+                              <span>{tone.icon}</span>
+                              <span>{tone.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Length - Compact Segmented Control */}
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
+                        Length
+                      </label>
+                      <div className="flex rounded-lg p-1" style={{ background: colors.inputBackground }}>
+                        {[
+                          { id: 'concise', label: 'Brief', desc: 'Short' },
+                          { id: 'detailed', label: 'Thorough', desc: 'Medium' },
+                          { id: 'comprehensive', label: 'Complete', desc: 'Full' }
+                        ].map((length) => (
+                          <button
+                            key={length.id}
+                            onClick={() => setSelectedLength(length.id)}
+                            className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all"
+                            style={{
+                              background: selectedLength === length.id ? colors.badgePurpleBg : 'transparent',
+                              color: selectedLength === length.id ? colors.badgePurpleText : colors.secondaryText,
+                              border: selectedLength === length.id ? `1px solid ${colors.badgePurpleBorder}` : 'none',
+                            }}
+                          >
+                            <div className="text-center">
+                              <div className="font-medium">{length.label}</div>
+                              <div style={{ fontSize: '9px', opacity: 0.75 }}>{length.desc}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  )}
                 </div>
 
                 {/* Detailed ATS Analysis */}
@@ -692,129 +799,7 @@ export default function AIPanel({
                   </div>
                 )}
 
-                {/* Tailoring Mode Selection */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3" style={{ color: colors.primaryText }}>Tailoring Mode</h4>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setTailorEditMode('partial')}
-                      className="w-full p-3 rounded-lg border transition-all text-left"
-                      style={{
-                        background: tailorEditMode === 'partial' ? colors.badgePurpleBg : colors.cardBackground,
-                        border: tailorEditMode === 'partial' ? `1px solid ${colors.badgePurpleBorder}` : `1px solid ${colors.border}`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (tailorEditMode !== 'partial') {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (tailorEditMode !== 'partial') {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }
-                      }}
-                    >
-                      <h5 className="text-sm font-medium mb-1" style={{ color: colors.primaryText }}>Partial Edit (ATS Optimization)</h5>
-                      <p className="text-xs" style={{ color: colors.secondaryText }}>Adds keywords, preserves original content</p>
-                    </button>
-                    <button
-                      onClick={() => setTailorEditMode('full')}
-                      className="w-full p-3 rounded-lg border transition-all text-left"
-                      style={{
-                        background: tailorEditMode === 'full' ? colors.badgePurpleBg : colors.cardBackground,
-                        border: tailorEditMode === 'full' ? `1px solid ${colors.badgePurpleBorder}` : `1px solid ${colors.border}`,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (tailorEditMode !== 'full') {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (tailorEditMode !== 'full') {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }
-                      }}
-                    >
-                      <h5 className="text-sm font-medium mb-1" style={{ color: colors.primaryText }}>Full Edit (Complete Tailoring)</h5>
-                      <p className="text-xs" style={{ color: colors.secondaryText }}>Rewrites sections to match job description</p>
-                    </button>
-                  </div>
-                </div>
 
-                {/* AI Writing Preferences */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3" style={{ color: colors.primaryText }}>AI Writing Preferences</h4>
-                  
-                  {/* Tone Selection */}
-                  <div className="mb-4">
-                    <h5 className="text-xs font-medium mb-2 uppercase tracking-wide" style={{ color: colors.secondaryText }}>Tone</h5>
-                    <div className="space-y-1.5">
-                      {toneOptions.map((tone) => {
-                        const IconComponent = tone.icon;
-                        return (
-                          <button
-                            key={tone.id}
-                            onClick={() => setSelectedTone(tone.id)}
-                            className="w-full p-2.5 rounded-lg border transition-all text-left"
-                            style={{
-                              background: selectedTone === tone.id ? colors.badgePurpleBg : colors.cardBackground,
-                              border: selectedTone === tone.id ? `1px solid ${colors.badgePurpleBorder}` : `1px solid ${colors.border}`,
-                            }}
-                            onMouseEnter={(e) => {
-                              if (selectedTone !== tone.id) {
-                                e.currentTarget.style.borderColor = colors.borderFocused;
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (selectedTone !== tone.id) {
-                                e.currentTarget.style.borderColor = colors.border;
-                              }
-                            }}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <IconComponent size={16} className={tone.color} />
-                              <div>
-                                <h6 className="text-sm font-medium" style={{ color: colors.primaryText }}>{tone.name}</h6>
-                                <p className="text-xs" style={{ color: colors.secondaryText }}>{tone.description}</p>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Content Length Selection */}
-                  <div>
-                    <h5 className="text-xs font-medium mb-2 uppercase tracking-wide" style={{ color: colors.secondaryText }}>Content Length</h5>
-                    <div className="space-y-1.5">
-                      {lengthOptions.map((length) => (
-                        <button
-                          key={length.id}
-                          onClick={() => setSelectedLength(length.id)}
-                          className="w-full p-2.5 rounded-lg border transition-all text-left"
-                          style={{
-                            background: selectedLength === length.id ? colors.badgePurpleBg : colors.cardBackground,
-                            border: selectedLength === length.id ? `1px solid ${colors.badgePurpleBorder}` : `1px solid ${colors.border}`,
-                          }}
-                          onMouseEnter={(e) => {
-                            if (selectedLength !== length.id) {
-                              e.currentTarget.style.borderColor = colors.borderFocused;
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (selectedLength !== length.id) {
-                              e.currentTarget.style.borderColor = colors.border;
-                            }
-                          }}
-                        >
-                          <h6 className="text-sm font-medium" style={{ color: colors.primaryText }}>{length.name}</h6>
-                          <p className="text-xs" style={{ color: colors.secondaryText }}>{length.description}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
