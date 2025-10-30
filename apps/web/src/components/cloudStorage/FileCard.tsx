@@ -17,11 +17,8 @@ import {
   Users,
   MessageCircle,
   Copy,
-  Lock,
-  Clock,
   TrendingUp,
   UserPlus,
-  Settings,
   X
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
@@ -31,7 +28,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 interface FileCardProps {
   file: ResumeFile;
   isSelected: boolean;
-  viewMode: 'grid' | 'list';
+  viewMode: 'grid' | 'list' | 'compact';
   onSelect: (fileId: string) => void;
   onDownload: (file: ResumeFile, format?: 'pdf' | 'doc') => void;
   onShare: (file: ResumeFile) => void;
@@ -44,7 +41,7 @@ interface FileCardProps {
   onShareWithUser: (fileId: string, userEmail: string, permission: 'view' | 'comment' | 'edit' | 'admin') => void;
 }
 
-export default function FileCard({
+const FileCard = React.memo(function FileCard({
   file,
   isSelected,
   viewMode,
@@ -845,6 +842,108 @@ export default function FileCard({
             </div>
           </div>
         )}
+      </div>
+    );
+  }
+
+  // Compact view - Dense table-like layout
+  if (viewMode === 'compact') {
+    const typeColorStyleCompact = getTypeColor(file.type);
+    return (
+      <div 
+        className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-opacity-50 transition-all"
+        style={{
+          background: isSelected ? colors.badgeInfoBg : 'transparent',
+          border: `1px solid ${isSelected ? colors.primaryBlue : 'transparent'}`,
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.background = colors.hoverBackground;
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.background = isSelected ? colors.badgeInfoBg : 'transparent';
+          }
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onSelect(file.id)}
+          className="w-3.5 h-3.5 rounded flex-shrink-0"
+          style={{
+            accentColor: colors.primaryBlue,
+            borderColor: colors.border,
+          }}
+        />
+        
+        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+          {getFileIcon(file.type)}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span 
+              className="font-medium truncate text-sm"
+              style={{ color: colors.primaryText }}
+            >
+              {file.name}
+            </span>
+            <span 
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{
+                background: typeColorStyleCompact.bg,
+                color: typeColorStyleCompact.text,
+              }}
+            >
+              {file.type}
+            </span>
+            {file.isStarred && (
+              <Star size={12} style={{ color: colors.badgeWarningText }} className="fill-current flex-shrink-0" />
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-xs flex-shrink-0" style={{ color: colors.secondaryText }}>
+          <span>{file.size}</span>
+          <span>{file.lastModified}</span>
+        </div>
+
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+          <button
+            onClick={() => onDownload(file)}
+            className="p-1.5 rounded transition-colors"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.primaryBlue;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.background = 'transparent';
+            }}
+            title="Download"
+          >
+            <Download size={14} />
+          </button>
+          <button
+            onClick={() => setShowShareModal(true)}
+            className="p-1.5 rounded transition-colors"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.successGreen;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.background = 'transparent';
+            }}
+            title="Share"
+          >
+            <Share2 size={14} />
+          </button>
+        </div>
       </div>
     );
   }
@@ -1807,4 +1906,10 @@ export default function FileCard({
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.file.id === nextProps.file.id &&
+         prevProps.isSelected === nextProps.isSelected &&
+         prevProps.viewMode === nextProps.viewMode;
+});
+
+export default FileCard;

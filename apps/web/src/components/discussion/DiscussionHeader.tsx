@@ -1,7 +1,10 @@
-import React, { useEffect } from 'react';
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
 import { Search, Filter, RefreshCw } from 'lucide-react';
 import { DiscussionFilters, Community } from '../../types/discussion';
 import { useTheme } from '../../contexts/ThemeContext';
+import { debounce } from '../../utils/performance';
 
 interface DiscussionHeaderProps {
   filters: DiscussionFilters;
@@ -20,6 +23,29 @@ export default function DiscussionHeader({
 }: DiscussionHeaderProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Local state for search input (for instant UI feedback)
+  const [localSearchQuery, setLocalSearchQuery] = useState(filters.searchQuery || '');
+
+  // Debounced filter update for search
+  const debouncedUpdateFilters = useCallback(
+    debounce((searchValue: string) => {
+      onUpdateFilters({ searchQuery: searchValue });
+    }, 300),
+    [onUpdateFilters]
+  );
+
+  // Update local state when filters prop changes externally
+  useEffect(() => {
+    setLocalSearchQuery(filters.searchQuery || '');
+  }, [filters.searchQuery]);
+
+  // Debounce search term changes
+  useEffect(() => {
+    if (localSearchQuery !== filters.searchQuery) {
+      debouncedUpdateFilters(localSearchQuery);
+    }
+  }, [localSearchQuery, filters.searchQuery, debouncedUpdateFilters]);
 
   // Inject styles for select dropdown options to support dark theme
   useEffect(() => {
@@ -90,8 +116,8 @@ export default function DiscussionHeader({
           <input
             type="text"
             placeholder="Search discussions..."
-            value={filters.searchQuery}
-            onChange={(e) => onUpdateFilters({ searchQuery: e.target.value })}
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
             className="w-full pl-10 pr-3 py-2 rounded-lg text-sm"
             style={{
               background: colors.inputBackground,
@@ -118,6 +144,8 @@ export default function DiscussionHeader({
           onMouseLeave={(e) => { e.currentTarget.style.background = colors.inputBackground; }}
           onFocus={(e) => { e.currentTarget.style.borderColor = colors.primaryBlue; }}
           onBlur={(e) => { e.currentTarget.style.borderColor = colors.border; }}
+          aria-label="Filter by community"
+          title="Filter by community"
         >
           <option value="">All Communities</option>
           {communities.map(community => (

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { 
   ThumbsUp, 
@@ -37,7 +39,7 @@ interface PostCardProps {
   animatingAction?: string;
 }
 
-export default function PostCard({
+const PostCard = React.memo(function PostCard({
   post,
   onVote,
   onComment,
@@ -84,12 +86,12 @@ export default function PostCard({
     return date.toLocaleDateString();
   };
 
-  const getRoleColorStyles = (role: string) => {
+  const getRoleColorStyles = (role: string): React.CSSProperties => {
     switch (role) {
-      case 'admin': return { bg: colors.badgeErrorBg, text: colors.badgeErrorText };
-      case 'moderator': return { bg: colors.badgeInfoBg, text: colors.badgeInfoText };
-      case 'ai': return { bg: colors.badgePurpleBg, text: colors.badgePurpleText };
-      default: return { bg: colors.inputBackground, text: colors.secondaryText };
+      case 'admin': return { backgroundColor: colors.badgeErrorBg, color: colors.badgeErrorText };
+      case 'moderator': return { backgroundColor: colors.badgeInfoBg, color: colors.badgeInfoText };
+      case 'ai': return { backgroundColor: colors.badgePurpleBg, color: colors.badgePurpleText };
+      default: return { backgroundColor: colors.inputBackground, color: colors.secondaryText };
     }
   };
 
@@ -150,6 +152,8 @@ export default function PostCard({
             style={{ color: colors.tertiaryText }}
             onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            aria-label="More options"
+            title="More options"
           >
             <MoreHorizontal size={16} />
           </button>
@@ -190,12 +194,16 @@ export default function PostCard({
               style={{ color: colors.secondaryText }}
               onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              aria-label="Upvote post"
+              title="Upvote"
             >
               <ThumbsUp size={16} />
             </button>
             <span className="text-sm font-medium" style={{ color: colors.primaryText }}>{post.votes}</span>
             <button
               onClick={() => onVote(post.id, 'down')}
+              aria-label="Downvote post"
+              title="Downvote"
               className="p-1 rounded transition-colors"
               style={{ color: colors.secondaryText }}
               onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
@@ -317,4 +325,11 @@ export default function PostCard({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.post.id === nextProps.post.id &&
+         prevProps.isBookmarked === nextProps.isBookmarked &&
+         prevProps.isFlagged === nextProps.isFlagged &&
+         prevProps.animatingAction === nextProps.animatingAction;
+});
+
+export default PostCard;

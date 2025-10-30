@@ -1,22 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   TrendingUp, 
   Target, 
-  CheckCircle, 
-  Clock, 
   FileText, 
   Calendar, 
   X, 
   Briefcase,
   Award,
-  Send,
   Users,
   BarChart3,
-  Activity,
-  DollarSign
+  Activity
 } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface ApplicationAnalyticsProps {
   isOpen: boolean;
@@ -65,7 +62,17 @@ interface ApplicationData {
 }
 
 export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAnalyticsProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('all');
+  
+  const handleTimeframeChange = useCallback((period: 'week' | 'month' | 'all') => {
+    setTimeframe(period);
+  }, []);
+  
+  const handleCloseClick = useCallback(() => {
+    onClose();
+  }, [onClose]);
   
   const [data] = useState<ApplicationData>({
     totalApplications: 47,
@@ -104,21 +111,41 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-      <div className="rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto" style={{ 
-        background: '#2a1b4d',
-        border: '1px solid #3d2a5f'
-      }}>
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+      style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(4px)' }}
+    >
+      <div 
+        className="rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto"
+        style={{
+          background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 60px rgba(0, 0, 0, 0.5)',
+        }}
+      >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+        <div 
+          className="sticky top-0 px-6 py-4 z-10"
+          style={{
+            background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+            borderBottom: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`
+          }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <BarChart3 size={24} className="text-purple-600" />
+              <div 
+                className="p-2 rounded-lg"
+                style={{ background: colors.badgePurpleBg }}
+              >
+                <BarChart3 size={24} style={{ color: colors.badgePurpleText }} />
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">Application Analytics</h3>
-                <p className="text-sm text-gray-600">Track your job search progress and effectiveness</p>
+                <h3 className="text-xl font-semibold" style={{ color: colors.primaryText }}>
+                  Application Analytics
+                </h3>
+                <p className="text-sm" style={{ color: colors.secondaryText }}>
+                  Track your job search progress and effectiveness
+                </p>
               </div>
             </div>
             
@@ -127,19 +154,43 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
               {(['week', 'month', 'all'] as const).map((period) => (
                 <button
                   key={period}
-                  onClick={() => setTimeframe(period)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    timeframe === period
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  onClick={() => handleTimeframeChange(period)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                  style={{
+                    background: timeframe === period ? colors.badgePurpleText : colors.inputBackground,
+                    color: timeframe === period ? 'white' : colors.secondaryText,
+                    border: `1px solid ${timeframe === period ? colors.badgePurpleBorder : colors.border}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (timeframe !== period) {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (timeframe !== period) {
+                      e.currentTarget.style.background = colors.inputBackground;
+                      e.currentTarget.style.borderColor = colors.border;
+                    }
+                  }}
                 >
                   {period.charAt(0).toUpperCase() + period.slice(1)}
                 </button>
               ))}
               <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors ml-4"
+                onClick={handleCloseClick}
+                className="p-2 rounded-lg transition-colors ml-4"
+                style={{ color: colors.tertiaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.color = colors.secondaryText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.tertiaryText;
+                }}
+                title="Close modal"
+                aria-label="Close modal"
               >
                 <X size={20} />
               </button>
@@ -150,63 +201,118 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
         <div className="p-6">
           {/* Key Metrics Grid */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div 
+              className="p-4 rounded-lg border"
+              style={{
+                background: colors.badgeInfoBg,
+                border: `1px solid ${colors.badgeInfoBorder}`,
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <Briefcase size={18} className="text-blue-600" />
-                <span className="text-sm font-medium text-gray-700">Total</span>
+                <Briefcase size={18} style={{ color: colors.primaryBlue }} />
+                <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Total</span>
               </div>
-              <div className="text-2xl font-bold text-blue-600">{data.totalApplications}</div>
-              <p className="text-xs text-gray-500">Applications</p>
+              <div className="text-2xl font-bold" style={{ color: colors.primaryBlue }}>
+                {data.totalApplications}
+              </div>
+              <p className="text-xs" style={{ color: colors.secondaryText }}>Applications</p>
             </div>
 
-            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <div 
+              className="p-4 rounded-lg border"
+              style={{
+                background: colors.badgeWarningBg,
+                border: `1px solid ${colors.badgeWarningBorder}`,
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <Activity size={18} className="text-orange-600" />
-                <span className="text-sm font-medium text-gray-700">Active</span>
+                <Activity size={18} style={{ color: colors.badgeWarningText }} />
+                <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Active</span>
               </div>
-              <div className="text-2xl font-bold text-orange-600">{data.activeApplications}</div>
-              <p className="text-xs text-gray-500">In Progress</p>
+              <div className="text-2xl font-bold" style={{ color: colors.badgeWarningText }}>
+                {data.activeApplications}
+              </div>
+              <p className="text-xs" style={{ color: colors.secondaryText }}>In Progress</p>
             </div>
 
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+            <div 
+              className="p-4 rounded-lg border"
+              style={{
+                background: colors.badgeSuccessBg,
+                border: `1px solid ${colors.badgeSuccessBorder}`,
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <Users size={18} className="text-green-600" />
-                <span className="text-sm font-medium text-gray-700">Interviews</span>
+                <Users size={18} style={{ color: colors.successGreen }} />
+                <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Interviews</span>
               </div>
-              <div className="text-2xl font-bold text-green-600">{data.interviews}</div>
-              <p className="text-xs text-gray-500">Scheduled</p>
+              <div className="text-2xl font-bold" style={{ color: colors.successGreen }}>
+                {data.interviews}
+              </div>
+              <p className="text-xs" style={{ color: colors.secondaryText }}>Scheduled</p>
             </div>
 
-            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
+            <div 
+              className="p-4 rounded-lg border"
+              style={{
+                background: colors.badgeSuccessBg,
+                border: `1px solid ${colors.badgeSuccessBorder}`,
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <Award size={18} className="text-emerald-600" />
-                <span className="text-sm font-medium text-gray-700">Offers</span>
+                <Award size={18} style={{ color: colors.successGreen }} />
+                <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Offers</span>
               </div>
-              <div className="text-2xl font-bold text-emerald-600">{data.offers}</div>
-              <p className="text-xs text-gray-500">Received</p>
+              <div className="text-2xl font-bold" style={{ color: colors.successGreen }}>
+                {data.offers}
+              </div>
+              <p className="text-xs" style={{ color: colors.secondaryText }}>Received</p>
             </div>
 
-            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <div 
+              className="p-4 rounded-lg border"
+              style={{
+                background: colors.badgePurpleBg,
+                border: `1px solid ${colors.badgePurpleBorder}`,
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
-                <TrendingUp size={18} className="text-purple-600" />
-                <span className="text-sm font-medium text-gray-700">Rate</span>
+                <TrendingUp size={18} style={{ color: colors.badgePurpleText }} />
+                <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Rate</span>
               </div>
-              <div className="text-2xl font-bold text-purple-600">{data.acceptanceRate}%</div>
-              <p className="text-xs text-gray-500">Acceptance</p>
+              <div className="text-2xl font-bold" style={{ color: colors.badgePurpleText }}>
+                {data.acceptanceRate}%
+              </div>
+              <p className="text-xs" style={{ color: colors.secondaryText }}>Acceptance</p>
             </div>
           </div>
 
           {/* Status Breakdown */}
-          <div className="bg-gray-50 rounded-xl p-6 mb-6">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Target size={20} className="text-purple-600" />
+          <div 
+            className="rounded-xl p-6 mb-6 border"
+            style={{
+              background: colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
+              <Target size={20} style={{ color: colors.badgePurpleText }} />
               Application Status Breakdown
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {Object.entries(data.byStatus).map(([status, count]) => (
-                <div key={status} className="bg-white rounded-lg p-3 border border-gray-200">
-                  <p className="text-xs font-medium text-gray-500 uppercase mb-1">{status}</p>
-                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+                <div 
+                  key={status} 
+                  className="rounded-lg p-3 border"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `1px solid ${colors.border}`,
+                  }}
+                >
+                  <p className="text-xs font-medium uppercase mb-1" style={{ color: colors.secondaryText }}>
+                    {status}
+                  </p>
+                  <p className="text-2xl font-bold" style={{ color: colors.primaryText }}>{count}</p>
                 </div>
               ))}
             </div>
@@ -215,28 +321,44 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Industry Performance */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <FileText size={20} className="text-indigo-600" />
+            <div 
+              className="rounded-xl p-6 border"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
+                <FileText size={20} style={{ color: colors.primaryBlue }} />
                 By Industry
               </h4>
               <div className="space-y-4">
                 {data.byIndustry.map((industry, idx) => (
                   <div key={idx}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">{industry.industry}</span>
-                      <span className="text-sm font-bold text-indigo-600">
+                      <span className="text-sm font-medium" style={{ color: colors.primaryText }}>
+                        {industry.industry}
+                      </span>
+                      <span className="text-sm font-bold" style={{ color: colors.primaryBlue }}>
                         {industry.rate > 0 ? `${industry.rate}%` : '0%'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="flex-1 rounded-full h-2"
+                        style={{ background: colors.inputBackground }}
+                      >
                         <div
-                          className="bg-indigo-600 h-2 rounded-full transition-all"
-                          style={{ width: `${(industry.rate / 20) * 100}%` }}
+                          className="h-2 rounded-full transition-all"
+                          style={{ 
+                            background: colors.primaryBlue,
+                            width: `${(industry.rate / 20) * 100}%` 
+                          }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500">{industry.count}</span>
+                      <span className="text-xs" style={{ color: colors.secondaryText }}>
+                        {industry.count}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -244,22 +366,38 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
             </div>
 
             {/* Weekly Trend */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp size={20} className="text-green-600" />
+            <div 
+              className="rounded-xl p-6 border"
+              style={{
+                background: colors.cardBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              <h4 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
+                <TrendingUp size={20} style={{ color: colors.successGreen }} />
                 Weekly Trend
               </h4>
               <div className="space-y-3">
                 {data.weeklyApplications.map((week, idx) => (
                   <div key={idx}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">{week.week}</span>
-                      <span className="text-sm font-bold text-green-600">{week.count}</span>
+                      <span className="text-sm font-medium" style={{ color: colors.primaryText }}>
+                        {week.week}
+                      </span>
+                      <span className="text-sm font-bold" style={{ color: colors.successGreen }}>
+                        {week.count}
+                      </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div 
+                      className="w-full rounded-full h-3"
+                      style={{ background: colors.inputBackground }}
+                    >
                       <div
-                        className="bg-green-600 h-3 rounded-full transition-all"
-                        style={{ width: `${(week.count / 15) * 100}%` }}
+                        className="h-3 rounded-full transition-all"
+                        style={{ 
+                          background: colors.successGreen,
+                          width: `${(week.count / 15) * 100}%` 
+                        }}
                       />
                     </div>
                   </div>
@@ -269,43 +407,77 @@ export default function ApplicationAnalytics({ isOpen, onClose }: ApplicationAna
           </div>
 
           {/* Recent Activity */}
-          <div className="mt-6 bg-white rounded-xl p-6 border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Activity size={20} className="text-orange-600" />
+          <div 
+            className="mt-6 rounded-xl p-6 border"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
+            <h4 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
+              <Activity size={20} style={{ color: colors.badgeWarningText }} />
               Recent Activity
             </h4>
             <div className="space-y-3">
-              {data.recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${
-                      activity.type === 'Interview' ? 'bg-green-100' :
-                      activity.type === 'Offer' ? 'bg-emerald-100' :
-                      activity.type === 'Application' ? 'bg-blue-100' :
-                      activity.type === 'Rejection' ? 'bg-red-100' :
-                      'bg-purple-100'
-                    }`}>
-                      <Calendar size={16} className={
-                        activity.type === 'Interview' ? 'text-green-600' :
-                        activity.type === 'Offer' ? 'text-emerald-600' :
-                        activity.type === 'Application' ? 'text-blue-600' :
-                        activity.type === 'Rejection' ? 'text-red-600' :
-                        'text-purple-600'
-                      } />
+              {data.recentActivity.map((activity) => {
+                const getTypeColors = () => {
+                  switch (activity.type) {
+                    case 'Interview':
+                      return { bg: colors.badgeSuccessBg, text: colors.successGreen };
+                    case 'Offer':
+                      return { bg: colors.badgeSuccessBg, text: colors.successGreen };
+                    case 'Application':
+                      return { bg: colors.badgeInfoBg, text: colors.primaryBlue };
+                    case 'Rejection':
+                      return { bg: colors.badgeErrorBg, text: colors.errorRed };
+                    default:
+                      return { bg: colors.badgePurpleBg, text: colors.badgePurpleText };
+                  }
+                };
+                const typeColors = getTypeColors();
+                
+                return (
+                  <div 
+                    key={activity.id} 
+                    className="flex items-center justify-between p-3 rounded-lg border transition-all"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                      e.currentTarget.style.background = colors.hoverBackground;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                      e.currentTarget.style.background = colors.inputBackground;
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="p-2 rounded-lg"
+                        style={{ background: typeColors.bg }}
+                      >
+                        <Calendar size={16} style={{ color: typeColors.text }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: colors.primaryText }}>
+                          {activity.company}
+                        </p>
+                        <p className="text-xs" style={{ color: colors.secondaryText }}>
+                          {activity.position}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{activity.company}</p>
-                      <p className="text-xs text-gray-600">{activity.position}</p>
+                    <div className="text-right">
+                      <p className="text-sm" style={{ color: colors.primaryText }}>{activity.type}</p>
+                      <p className="text-xs" style={{ color: colors.tertiaryText }}>
+                        {new Date(activity.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-900">{activity.type}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(activity.date).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

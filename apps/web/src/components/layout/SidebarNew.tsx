@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
-import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, BookOpen, Bot, Menu, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import React from 'react';
+import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, BookOpen, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LogoIcon, Logo } from '../common/Logo';
 import { useTheme } from '../../contexts/ThemeContext';
+import NavigationItem from './NavigationItem';
 
 interface SidebarProps {
   activeTab: string;
@@ -25,27 +26,6 @@ export default function SidebarNew({
 }: SidebarProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
-
-  // Reset hover states when activeTab changes, but preserve active state
-  useEffect(() => {
-    Object.keys(buttonRefs.current).forEach(key => {
-      const button = buttonRefs.current[key];
-      if (button) {
-        if (key === activeTab) {
-          // Keep active state styling
-          button.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
-          button.style.color = 'white';
-          button.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
-        } else {
-          // Reset non-active buttons
-          button.style.background = 'transparent';
-          button.style.color = colors.secondaryText;
-          button.style.boxShadow = 'none';
-        }
-      }
-    });
-  }, [activeTab, colors.secondaryText]);
 
   const navSections: NavSection[] = [
     {
@@ -207,84 +187,63 @@ export default function SidebarNew({
       </div>
       
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-4">
-        {navSections.map((section, sectionIndex) => (
-          <div key={sectionIndex} className="space-y-2">
-            {!sidebarCollapsed && (
-              <h3 
-                className="text-xs uppercase tracking-wider px-3"
-                style={{ 
-                  color: section.title === 'WORKSPACE' ? '#3b82f6' : // Blue
-                         section.title === 'PREPARE' ? '#10b981' : // Green
-                         section.title === 'APPLY' ? '#f59e0b' : // Orange
-                         section.title === 'CONNECT' ? '#8b5cf6' : // Purple
-                         colors.tertiaryText, 
-                  fontWeight: 600 
-                }}
-              >
-                {section.title}
-              </h3>
-            )}
-            <div className="space-y-0.5">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    ref={(el) => (buttonRefs.current[item.id] = el)}
-                    onClick={() => onTabChange(item.id)}
-                    className={`w-full flex items-center transition-colors duration-75 rounded-md ${
-                      sidebarCollapsed ? 'justify-center px-3 py-2' : 'gap-3 px-3 py-2'
-                    }`}
-                    style={{
-                      background: isActive 
-                        ? 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)'
-                        : 'transparent',
-                      color: isActive 
-                        ? 'white'
-                        : colors.secondaryText,
-                      boxShadow: isActive 
-                        ? '0 4px 12px rgba(236, 72, 153, 0.3)'
-                        : 'none',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
-                      } else {
-                        // Ensure active state stays - reapply styles on hover
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = colors.secondaryText;
-                        e.currentTarget.style.boxShadow = 'none';
-                      } else {
-                        // Immediately show active state after leaving hover
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
-                      }
-                    }}
-                    title={sidebarCollapsed ? item.label : ''}
-                  >
-                    <Icon size={18} />
-                    {!sidebarCollapsed && (
-                      <span className="text-sm font-medium">{item.label}</span>
-                    )}
-                  </button>
-                );
-              })}
+      <nav className="flex-1 overflow-y-auto p-4 space-y-6">
+        {navSections.map((section, sectionIndex) => {
+          // Determine section color for accent bars and headers
+          const getSectionColor = (title: string): { accent: string; header: string } => {
+            switch (title) {
+              case 'WORKSPACE':
+                return { accent: '#a855f7', header: '#a855f7' }; // Purple
+              case 'PREPARE':
+                return { accent: '#3b82f6', header: '#3b82f6' }; // Blue
+              case 'APPLY':
+                return { accent: 'linear-gradient(to bottom, #06b6d4, #14b8a6)', header: '#14b8a6' }; // Teal gradient for bar, solid teal for header
+              case 'CONNECT':
+                return { accent: '#8b5cf6', header: '#8b5cf6' }; // Purple
+              default:
+                return { accent: '#6b7280', header: '#6b7280' }; // Gray fallback
+            }
+          };
+
+          const sectionColors = getSectionColor(section.title);
+          const sectionColor = sectionColors.accent;
+          const headerColor = sectionColors.header;
+
+          return (
+            <div key={sectionIndex} className="space-y-2">
+              {!sidebarCollapsed && (
+                <h3 
+                  className="text-xs uppercase tracking-wider px-3 mb-2"
+                  style={{ 
+                    color: headerColor,
+                    fontWeight: 600 
+                  }}
+                >
+                  {section.title}
+                </h3>
+              )}
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const isActive = activeTab === item.id;
+                  
+                  return (
+                    <NavigationItem
+                      key={item.id}
+                      id={item.id}
+                      icon={item.icon}
+                      label={item.label}
+                      isActive={isActive}
+                      isCollapsed={sidebarCollapsed}
+                      sectionColor={sectionColor}
+                      onClick={() => onTabChange(item.id)}
+                      colors={colors}
+                    />
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Collapse Toggle Button - Bottom of Sidebar */}

@@ -195,7 +195,7 @@ async function verify2FAToken(request, reply) {
     }
     
     if (!isValid) {
-      return reply.status(401).可以对({ error: 'Invalid 2FA token or backup code' });
+      return reply.status(401).send({ error: 'Invalid 2FA token or backup code' });
     }
     
     reply.send({ 

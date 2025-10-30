@@ -13,8 +13,7 @@ import {
   User,
   Sparkles,
   GraduationCap,
-  MessageSquare,
-  Cloud
+  MessageSquare
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 

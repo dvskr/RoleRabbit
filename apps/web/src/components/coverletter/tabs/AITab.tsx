@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Sparkles, User, Mail, Phone, MapPin, Building, Eye, Download, Copy, ArrowRight } from 'lucide-react';
+import { Sparkles, User, Mail, Phone, MapPin, Building, Eye, Download, Copy } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 interface AITabProps {

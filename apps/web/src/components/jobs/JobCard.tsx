@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Building, MapPin, Calendar, Eye, Edit, Trash2, Star, DollarSign, Link, Trash, RotateCcw } from 'lucide-react';
 import { Job } from '../../types/job';
@@ -17,7 +19,7 @@ interface JobCardProps {
   showDeleted?: boolean;
 }
 
-export default function JobCard({
+const JobCard = React.memo(function JobCard({
   job,
   isFavorite,
   isSelected,
@@ -88,6 +90,8 @@ export default function JobCard({
           <button
             onClick={() => onToggleFavorite(job.id)}
             className="p-1 rounded transition-colors"
+            aria-label={job.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            title={job.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
             style={{ color: isFavorite ? colors.warningYellow : colors.tertiaryText }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = colors.warningYellow;
@@ -261,4 +265,6 @@ export default function JobCard({
       )}
     </div>
   );
-}
+});
+
+export default JobCard;

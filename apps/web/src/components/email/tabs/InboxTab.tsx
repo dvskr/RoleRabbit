@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Inbox, Search, Mail } from 'lucide-react';
 import EmailThread from '../components/EmailThread';
 import { Email } from '../types';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { debounce } from '../../../utils/performance';
 
 // Mock email data
 const mockEmails: Email[] = [
@@ -53,19 +54,34 @@ export default function InboxTab() {
   const colors = theme.colors;
   const [emails] = useState<Email[]>(mockEmails);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all');
 
-  const filteredEmails = emails.filter(email => {
-    if (filter === 'unread' && email.isRead) return false;
-    if (filter === 'starred' && !email.isStarred) return false;
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return email.subject.toLowerCase().includes(searchLower) ||
-             email.body.toLowerCase().includes(searchLower) ||
-             email.fromName.toLowerCase().includes(searchLower);
-    }
-    return true;
-  });
+  // Debounce search input
+  const debouncedSetSearch = useCallback(
+    debounce((value: string) => {
+      setDebouncedSearchTerm(value);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSetSearch(searchTerm);
+  }, [searchTerm, debouncedSetSearch]);
+
+  const filteredEmails = useMemo(() => {
+    return emails.filter(email => {
+      if (filter === 'unread' && email.isRead) return false;
+      if (filter === 'starred' && !email.isStarred) return false;
+      if (debouncedSearchTerm) {
+        const searchLower = debouncedSearchTerm.toLowerCase();
+        return email.subject.toLowerCase().includes(searchLower) ||
+               email.body.toLowerCase().includes(searchLower) ||
+               email.fromName.toLowerCase().includes(searchLower);
+      }
+      return true;
+    });
+  }, [emails, filter, debouncedSearchTerm]);
 
   return (
     <div className="h-full flex flex-col">

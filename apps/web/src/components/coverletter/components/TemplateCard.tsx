@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, Eye, ArrowRight, BarChart, Sparkles } from 'lucide-react';
+import { Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, Eye, ArrowRight, BarChart } from 'lucide-react';
 import { TemplateCardProps } from '../types/coverletter';
 import { useTheme } from '../../../contexts/ThemeContext';
 
-export default function TemplateCard({ template, onUse, onPreview }: TemplateCardProps) {
+const TemplateCard = React.memo(function TemplateCard({ template, onUse, onPreview }: TemplateCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
 
@@ -164,4 +164,8 @@ export default function TemplateCard({ template, onUse, onPreview }: TemplateCar
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.template.id === nextProps.template.id;
+});
+
+export default TemplateCard;

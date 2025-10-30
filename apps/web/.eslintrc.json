@@ -19,7 +19,10 @@
     "prefer-const": "warn",
     "no-var": "error",
     "react-hooks/exhaustive-deps": "warn",
-    "react/no-unescaped-entities": "off"
+    "react/no-unescaped-entities": "off",
+    "@next/next/no-css-tags": "off",
+    "@next/next/no-img-element": "off",
+    "react/no-danger": "off"
   },
   "env": {
     "browser": true,
@@ -27,4 +30,3 @@
     "es2021": true
   }
 }
-

@@ -430,3 +430,52 @@
   background-color: #3b82f6 !important;
   color: #ffffff !important;
 }
+
+/* Performance Optimization - Disable animations globally for instant UI */
+html,
+body,
+*,
+*::before,
+*::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+/* Navigation Item Styles - No animations, instant hover */
+.nav-item,
+.nav-item * {
+  transition: none !important;
+  animation: none !important;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.nav-item-active {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.nav-item-accent {
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: none !important;
+}
+
+.nav-item:hover .nav-item-accent,
+.nav-item-active .nav-item-accent {
+  transform: scaleY(1) !important;
+}
+
+.nav-item-content {
+  transform: translateX(0);
+  transition: none !important;
+}
+
+.nav-item:hover .nav-item-content,
+.nav-item-active .nav-item-content {
+  transform: translateX(8px) !important;
+}

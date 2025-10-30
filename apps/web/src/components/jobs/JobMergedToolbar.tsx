@@ -1,7 +1,10 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter as FilterIcon, List, Grid, Columns, BarChart3, Trash2, Download, Upload, Settings } from 'lucide-react';
 import { JobFilters as JobFiltersType, ViewMode } from '../../types/job';
 import { useTheme } from '../../contexts/ThemeContext';
+import { debounce } from '../../utils/performance';
 
 interface JobMergedToolbarProps {
   filters: JobFiltersType;
@@ -38,12 +41,44 @@ export default function JobMergedToolbar({
 }: JobMergedToolbarProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Local state for search input (for instant UI feedback)
+  const [localSearchTerm, setLocalSearchTerm] = useState(filters.searchTerm || '');
+
+  // Debounced filter update for search
+  const debouncedUpdateFilters = useCallback(
+    debounce((searchValue: string) => {
+      onFiltersChange({
+        ...filters,
+        searchTerm: searchValue
+      });
+    }, 300),
+    [filters, onFiltersChange]
+  );
+
+  // Update local state when filters prop changes externally
+  useEffect(() => {
+    setLocalSearchTerm(filters.searchTerm || '');
+  }, [filters.searchTerm]);
+
+  // Debounce search term changes
+  useEffect(() => {
+    if (localSearchTerm !== filters.searchTerm) {
+      debouncedUpdateFilters(localSearchTerm);
+    }
+  }, [localSearchTerm, filters.searchTerm, debouncedUpdateFilters]);
 
   const handleFilterChange = (key: keyof JobFiltersType, value: any) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value
-    });
+    if (key === 'searchTerm') {
+      // Update local state immediately for instant UI feedback
+      setLocalSearchTerm(value);
+    } else {
+      // For non-search filters, update immediately
+      onFiltersChange({
+        ...filters,
+        [key]: value
+      });
+    }
   };
 
   return (
@@ -68,9 +103,9 @@ export default function JobMergedToolbar({
             <input
               type="text"
               placeholder="Search jobs..."
-              value={filters.searchTerm}
+              value={localSearchTerm}
               onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-md text-sm transition-all"
+              className="w-full pl-9 pr-3 py-1.5 rounded-md text-sm"
               style={{
                 background: colors.inputBackground,
                 border: `1px solid ${colors.border}`,

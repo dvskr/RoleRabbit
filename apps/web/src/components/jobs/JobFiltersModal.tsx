@@ -90,6 +90,8 @@ export default function JobFiltersModal({
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
+              aria-label="Filter by status"
+              title="Filter by status"
               className="w-full px-3 py-2 rounded-md text-sm transition-all"
               style={{
                 background: colors.inputBackground,
@@ -121,6 +123,8 @@ export default function JobFiltersModal({
             </label>
             <select
               value={filters.priority || 'all'}
+              aria-label="Filter by priority"
+              title="Filter by priority"
               onChange={(e) => handleFilterChange('priority', e.target.value === 'all' ? undefined : e.target.value)}
               className="w-full px-3 py-2 rounded-md text-sm transition-all"
               style={{
@@ -182,6 +186,7 @@ export default function JobFiltersModal({
               <input
                 type="date"
                 value={filters.dateRange?.start || ''}
+                aria-label="Start date"
                 onChange={(e) => handleFilterChange('dateRange', {
                   ...filters.dateRange,
                   start: e.target.value || undefined
@@ -210,6 +215,7 @@ export default function JobFiltersModal({
               <input
                 type="date"
                 value={filters.dateRange?.end || ''}
+                aria-label="End date"
                 onChange={(e) => handleFilterChange('dateRange', {
                   ...filters.dateRange,
                   end: e.target.value || undefined

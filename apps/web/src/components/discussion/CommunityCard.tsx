@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Users, MessageSquare, Lock, Globe, Settings, Plus, Edit, Trash2, UserCog, Shield } from 'lucide-react';
 import { Community } from '../../types/discussion';
@@ -16,7 +18,7 @@ interface CommunityCardProps {
   isAnimating: boolean;
 }
 
-export default function CommunityCard({
+const CommunityCard = React.memo(function CommunityCard({
   community,
   onJoin,
   onView,
@@ -287,4 +289,10 @@ export default function CommunityCard({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.community.id === nextProps.community.id &&
+         prevProps.isJoined === nextProps.isJoined &&
+         prevProps.isAnimating === nextProps.isAnimating;
+});
+
+export default CommunityCard;

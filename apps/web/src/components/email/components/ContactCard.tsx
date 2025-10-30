@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Contact } from '../types';
-import { Mail, Phone, Building, Briefcase, Calendar, MessageSquare, PhoneCall } from 'lucide-react';
+import { Mail, Building, Briefcase, Calendar, MessageSquare, PhoneCall } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 interface ContactCardProps {
@@ -10,7 +10,7 @@ interface ContactCardProps {
   onClick: () => void;
 }
 
-export default function ContactCard({ contact, onClick }: ContactCardProps) {
+const ContactCard = React.memo(function ContactCard({ contact, onClick }: ContactCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const initials = `${contact.firstName[0]}${contact.lastName[0]}`.toUpperCase();
@@ -131,5 +131,10 @@ export default function ContactCard({ contact, onClick }: ContactCardProps) {
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.contact.id === nextProps.contact.id &&
+         prevProps.onClick === nextProps.onClick;
+});
+
+export default ContactCard;
 

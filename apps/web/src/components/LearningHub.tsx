@@ -13,7 +13,6 @@ import {
   Star,
   TrendingUp,
   Search,
-  Filter,
   X
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';

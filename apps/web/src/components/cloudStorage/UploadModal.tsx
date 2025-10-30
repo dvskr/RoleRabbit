@@ -103,6 +103,8 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
               e.currentTarget.style.color = colors.secondaryText;
               e.currentTarget.style.background = 'transparent';
             }}
+            aria-label="Close upload modal"
+            title="Close"
           >
             <X size={18} />
           </button>
@@ -202,6 +204,8 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
                 value={fileType}
                 onChange={(e) => setFileType(e.target.value as 'resume' | 'template' | 'backup')}
                 className="w-full px-2 py-1.5 text-sm rounded-lg focus:outline-none transition-all"
+                aria-label="File type"
+                title="File type"
                 style={{
                   background: colors.inputBackground,
                   border: `1px solid ${colors.border}`,

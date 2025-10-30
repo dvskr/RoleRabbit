@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, Target, CheckCircle, Clock, FileText, Calendar, Download, X } from 'lucide-react';
+import { TrendingUp, Target, CheckCircle, Clock, FileText, Calendar, X } from 'lucide-react';
 
 interface CoverLetterAnalyticsProps {
   isOpen: boolean;
@@ -79,6 +79,8 @@ export default function CoverLetterAnalytics({ isOpen, onClose }: CoverLetterAna
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Close cover letter analytics"
+            title="Close"
           >
             <X size={20} />
           </button>

@@ -12,7 +12,7 @@ import {
 import { logger } from '../utils/logger';
 import { CoverLetterTemplate } from './coverletter/types/coverletter';
 import { ResumeFile } from '../types/cloudStorage';
-import { Cloud, X, Download, TrendingUp, Sparkles } from 'lucide-react';
+import { Cloud, X, Download, Sparkles } from 'lucide-react';
 import ExportModal from './coverletter/ExportModal';
 import ImportModal from './coverletter/ImportModal';
 import CoverLetterAnalytics from './CoverLetterAnalytics';

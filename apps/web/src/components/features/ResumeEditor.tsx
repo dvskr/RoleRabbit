@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import { FileText, Sparkles, Layers, Plus, GripVertical, Trash2, Type, Palette, Eye, EyeOff, Mail, Phone, MapPin, Linkedin, Github, Globe, CheckCircle, X, Layout } from 'lucide-react';
+import { FileText, Sparkles, Layers, Plus, Type, Palette, Eye, EyeOff, Mail, Phone, MapPin, Linkedin, Github, Globe, X } from 'lucide-react';
 import MultiResumeManager from './MultiResumeManager';
 import { resumeTemplates } from '../../data/templates';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -458,6 +458,8 @@ export default function ResumeEditor({
                 value={fontFamily} 
                 onChange={(e) => setFontFamily(e.target.value)} 
               className="w-full px-3 py-2 text-sm border-2 rounded-lg transition-all"
+              aria-label="Font family"
+              title="Font family"
               style={{
                 background: colors.inputBackground,
                 border: `2px solid ${colors.border}`,
@@ -574,6 +576,8 @@ export default function ResumeEditor({
                 value={lineSpacing} 
                 onChange={(e) => setLineSpacing(e.target.value)} 
               className="w-full px-3 py-2 text-sm border-2 rounded-lg transition-all"
+              aria-label="Line spacing"
+              title="Line spacing"
               style={{
                 background: colors.inputBackground,
                 border: `2px solid ${colors.border}`,
@@ -753,6 +757,8 @@ export default function ResumeEditor({
                 value={headingStyle} 
                 onChange={(e) => setHeadingStyle(e.target.value)} 
               className="w-full px-3 py-2 text-sm border-2 rounded-lg transition-all"
+              aria-label="Heading weight"
+              title="Heading weight"
               style={{
                 background: colors.inputBackground,
                 border: `2px solid ${colors.border}`,
@@ -948,7 +954,7 @@ export default function ResumeEditor({
 
       {/* Main Resume Editing Area */}
       <div 
-        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0 will-change-scroll"
+        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0"
         style={{ 
           height: '100%', 
           maxHeight: '100%',

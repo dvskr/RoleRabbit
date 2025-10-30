@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CreditCard, CheckCircle, X, Loader } from 'lucide-react';
+import { CreditCard, CheckCircle, X } from 'lucide-react';
 import { logger } from '../../../utils/logger';
 import { useTheme } from '../../../contexts/ThemeContext';
 
@@ -451,6 +451,8 @@ export default function BillingTab() {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
                 }}
+                aria-label="Close payment modal"
+                title="Close"
               >
                 <X size={20} />
               </button>
@@ -716,6 +718,8 @@ export default function BillingTab() {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
                 }}
+                aria-label="Close cancel subscription modal"
+                title="Close"
               >
                 <X size={20} />
               </button>

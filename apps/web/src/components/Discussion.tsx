@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, MessageSquare, RefreshCw, X, ChevronDown, ChevronUp, Reply, ThumbsUp, ThumbsDown, Clock, User, Bookmark, Flag, Search as SearchIcon, Users, Shield, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, MessageSquare, RefreshCw, X, Reply, ThumbsUp, Clock, User, Bookmark, Flag, Users, Shield, Trash2 } from 'lucide-react';
 import { useDiscussion } from '../hooks/useDiscussion';
 import { useTheme } from '../contexts/ThemeContext';
 import DiscussionHeader from './discussion/DiscussionHeader';
@@ -10,7 +10,8 @@ import PostCard from './discussion/PostCard';
 import CommunityCard from './discussion/CommunityCard';
 import DiscussionFilters from './discussion/DiscussionFilters';
 import { logger } from '../utils/logger';
-import { Comment, Post, Community } from '../types/discussion';
+import type { Comment, Post, Community } from '../types/discussion';
+import { debounce } from '../utils/performance';
 
 interface CommentWithChildren extends Comment {
   children?: CommentWithChildren[];
@@ -91,7 +92,20 @@ export default function Discussion() {
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [animatingCommunityId, setAnimatingCommunityId] = useState<string | null>(null);
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+  const [debouncedCommunitySearchQuery, setDebouncedCommunitySearchQuery] = useState('');
   const [showCommunityDropdown, setShowCommunityDropdown] = useState(false);
+  
+  // Debounce community search
+  const debouncedSetCommunitySearch = useCallback(
+    debounce((value: string) => {
+      setDebouncedCommunitySearchQuery(value);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSetCommunitySearch(communitySearchQuery);
+  }, [communitySearchQuery, debouncedSetCommunitySearch]);
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [showCommunityModerationTools, setShowCommunityModerationTools] = useState(false);
   const [managingMembersFor, setManagingMembersFor] = useState<Community | null>(null);
@@ -149,12 +163,12 @@ export default function Discussion() {
   }, [filteredPosts, activeTab, showBookmarkedOnly, showReportedOnly, bookmarkedPosts, flaggedPosts]);
 
   // Filtered communities for post creation (joined first, then search results)
-  const filteredCommunitiesForPost = React.useMemo(() => {
+  const filteredCommunitiesForPost = useMemo(() => {
     let filtered = [...communities];
     
     // Filter by search query
-    if (communitySearchQuery) {
-      const query = communitySearchQuery.toLowerCase();
+    if (debouncedCommunitySearchQuery) {
+      const query = debouncedCommunitySearchQuery.toLowerCase();
       filtered = communities.filter(community =>
         community.name.toLowerCase().includes(query) ||
         community.description.toLowerCase().includes(query) ||
@@ -170,14 +184,14 @@ export default function Discussion() {
       if (!aJoined && bJoined) return 1;
       return b.memberCount - a.memberCount;
     });
-  }, [communities, communitySearchQuery, joinedCommunities]);
+  }, [communities, debouncedCommunitySearchQuery, joinedCommunities]);
   
   // Post detail view state
   const [viewingPostDetail, setViewingPostDetail] = useState<Post | null>(null);
   const [replyingToComment, setReplyingToComment] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
 
-  const handleVote = (id: string, direction: 'up' | 'down') => {
+  const handleVote = useCallback((id: string, direction: 'up' | 'down') => {
     const increment = direction === 'up' ? 1 : -1;
     
     // Check if it's a post vote
@@ -202,15 +216,15 @@ export default function Discussion() {
         return c;
       }));
     }
-  };
+  }, [posts, comments]);
 
-  const handleComment = (postId: string) => {
+  const handleComment = useCallback((postId: string) => {
     setCommentingPostId(postId);
     setShowCommentModal(true);
     logger.debug(`Opening comment modal for post ${postId}`);
-  };
+  }, []);
 
-  const handleViewPost = (postId: string) => {
+  const handleViewPost = useCallback((postId: string) => {
     const post = posts.find(p => p.id === postId);
     if (post) {
       setViewingPostDetail(post);
@@ -222,14 +236,14 @@ export default function Discussion() {
         return p;
       }));
     }
-  };
+  }, [posts]);
 
-  const handleReplyToComment = (commentId: string) => {
+  const handleReplyToComment = useCallback((commentId: string) => {
     setReplyingToComment(commentId);
     setReplyContent('');
-  };
+  }, []);
 
-  const handleSubmitReply = (commentId: string) => {
+  const handleSubmitReply = useCallback((commentId: string) => {
     if (replyContent.trim()) {
       const replyComment = {
         content: replyContent.trim(),
@@ -254,9 +268,9 @@ export default function Discussion() {
       setReplyContent('');
       setReplyingToComment(null);
     }
-  };
+  }, [replyContent, viewingPostDetail, addComment]);
 
-  const handleShare = (postId: string) => {
+  const handleShare = useCallback((postId: string) => {
     const post = posts.find(p => p.id === postId);
     if (post && navigator.share) {
       navigator.share({
@@ -271,9 +285,9 @@ export default function Discussion() {
       // Fallback to clipboard
       navigator.clipboard.writeText(`${window.location.origin}/discussions/post/${postId}`);
     }
-  };
+  }, [posts]);
 
-  const handleBookmark = (postId: string) => {
+  const handleBookmark = useCallback((postId: string) => {
     logger.debug(`Bookmark post ${postId}`);
     
     // Animate icon
@@ -299,9 +313,9 @@ export default function Discussion() {
         ? { ...post, isBookmarked: !isBookmarked }
         : post
     ));
-  };
+  }, [bookmarkedPosts, posts]);
 
-  const handleFlag = (postId: string) => {
+  const handleFlag = useCallback((postId: string) => {
     logger.debug(`Flag post ${postId}`);
     
     // Animate icon
@@ -322,9 +336,9 @@ export default function Discussion() {
       setFlaggedPosts(nowFlagged);
       localStorage.setItem('flaggedPosts', JSON.stringify(Object.values(nowFlagged)));
     }
-  };
+  }, [flaggedPosts]);
 
-  const handlePin = (postId: string) => {
+  const handlePin = useCallback((postId: string) => {
     logger.debug(`Pin post ${postId}`);
     
     // Animate icon
@@ -354,14 +368,14 @@ export default function Discussion() {
           : post
       ));
     }
-  };
+  }, [pinnedPosts]);
 
-  const handleView = (postId: string) => {
+  const handleView = useCallback((postId: string) => {
     logger.debug(`View post ${postId}`);
     handleViewPost(postId);
-  };
+  }, [handleViewPost]);
 
-  const handleJoinCommunity = (communityId: string) => {
+  const handleJoinCommunity = useCallback((communityId: string) => {
     logger.debug(`Join/Leave community ${communityId}`);
     
     // Animate
@@ -397,9 +411,9 @@ export default function Discussion() {
         return c;
       }));
     }
-  };
+  }, [joinedCommunities, setJoinedCommunities, setCommunities, setAnimatingCommunityId]);
 
-  const handleViewCommunity = (communityId: string) => {
+  const handleViewCommunity = useCallback((communityId: string) => {
     logger.debug(`View community ${communityId}`);
     // Filter posts by community
     const community = communities.find(c => c.id === communityId);
@@ -407,9 +421,9 @@ export default function Discussion() {
       updateFilters({ selectedCommunity: community.name });
       setActiveTab('all'); // Switch to posts tab to see filtered posts
     }
-  };
+  }, [communities, updateFilters, setActiveTab]);
 
-  const handlePostToCommunity = (communityId: string) => {
+  const handlePostToCommunity = useCallback((communityId: string) => {
     logger.debug(`Post to community ${communityId}`);
     const community = communities.find(c => c.id === communityId);
     if (community) {
@@ -422,29 +436,29 @@ export default function Discussion() {
         handleJoinCommunity(communityId);
       }
     }
-  };
+  }, [communities, joinedCommunities, handleJoinCommunity, setShowCreatePost, setNewPost]);
 
-  const handleCommunitySettings = (community: any) => {
+  const handleCommunitySettings = useCallback((community: any) => {
     setSelectedCommunityForSettings(community);
     setShowCommunitySettings(true);
-  };
+  }, [setSelectedCommunityForSettings, setShowCommunitySettings]);
 
-  const handleEditCommunity = (community: Community) => {
+  const handleEditCommunity = useCallback((community: Community) => {
     setSelectedCommunityForSettings(community);
     setShowCommunitySettings(true);
-  };
+  }, [setSelectedCommunityForSettings, setShowCommunitySettings]);
 
-  const handleManageMembers = (community: Community) => {
+  const handleManageMembers = useCallback((community: Community) => {
     setManagingMembersFor(community);
     setShowManageMembers(true);
-  };
+  }, [setManagingMembersFor, setShowManageMembers]);
 
-  const handleModerationTools = (community: Community) => {
+  const handleModerationTools = useCallback((community: Community) => {
     setModeratingCommunity(community);
     setShowCommunityModerationTools(true);
-  };
+  }, [setModeratingCommunity, setShowCommunityModerationTools]);
 
-  const handleDeleteCommunity = (community: Community) => {
+  const handleDeleteCommunity = useCallback((community: Community) => {
     if (confirm(`Are you sure you want to delete "${community.name}"?\n\nThis action cannot be undone and will remove all posts, members, and data associated with this community.`)) {
       setCommunities(prev => prev.filter(c => c.id !== community.id));
       // Also remove from joined communities
@@ -453,16 +467,16 @@ export default function Discussion() {
       
       logger.debug(`Deleted community: ${community.name}`);
     }
-  };
+  }, [joinedCommunities, setCommunities, setJoinedCommunities]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     logger.debug('Refresh discussions');
     // Refresh by resetting posts to trigger a re-render
     // In a real app, this would fetch fresh data from API
     window.location.reload();
-  };
+  }, []);
 
-  const handleSubmitComment = () => {
+  const handleSubmitComment = useCallback(() => {
     if (newComment.trim() && commentingPostId) {
       const newCommentObj = {
         content: newComment.trim(),
@@ -497,7 +511,7 @@ export default function Discussion() {
       setShowCommentModal(false);
       setCommentingPostId(null);
     }
-  };
+  }, [newComment, commentingPostId, addComment]);
 
   // Load saved state on mount
   React.useEffect(() => {

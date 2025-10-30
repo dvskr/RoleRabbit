@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Search, Filter, Grid, List } from 'lucide-react';
+import { Search, Filter, Grid, List, Columns } from 'lucide-react';
 import { FileType, SortBy, ViewMode } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -72,6 +72,8 @@ export default function StorageFilters({
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as FileType)}
             className="px-2.5 py-1.5 rounded-lg focus:outline-none text-sm transition-all"
+            aria-label="Filter by file type"
+            title="Filter by file type"
             style={{
               background: colors.inputBackground,
               border: `1px solid ${colors.border}`,
@@ -95,6 +97,8 @@ export default function StorageFilters({
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
           className="px-2.5 py-1.5 rounded-lg focus:outline-none text-sm transition-all"
+          aria-label="Sort files"
+          title="Sort files"
           style={{
             background: colors.inputBackground,
             border: `1px solid ${colors.border}`,
@@ -161,6 +165,27 @@ export default function StorageFilters({
             title="Grid view"
           >
             <Grid size={14} />
+          </button>
+          <button
+            onClick={() => setViewMode('compact')}
+            className="p-1 rounded-md transition-colors"
+            style={{
+              background: viewMode === 'compact' ? colors.cardBackground : 'transparent',
+              color: viewMode === 'compact' ? colors.primaryText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (viewMode !== 'compact') {
+                e.currentTarget.style.color = colors.primaryText;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (viewMode !== 'compact') {
+                e.currentTarget.style.color = colors.secondaryText;
+              }
+            }}
+            title="Compact view"
+          >
+            <Columns size={14} />
           </button>
         </div>
       </div>

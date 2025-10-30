@@ -23,7 +23,7 @@ const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterG
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents'), { ssr: false });
-import { EyeOff, Sparkles, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Home as HomeIcon } from 'lucide-react';
+import { EyeOff, Sparkles, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Home as HomeIcon, GripVertical, Eye, Trash2 } from 'lucide-react';
 import { 
   CustomField, 
   ResumeData, 
@@ -503,26 +503,111 @@ export default function DashboardPage() {
     // Handle custom sections
     const customSection = customSections.find(s => s.id === section);
     if (customSection) {
+      // Use colors from component scope (theme is already available)
+
       return (
-        <div className="mb-6 p-2 sm:p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-bold text-gray-800">{customSection.name.toUpperCase()}</h3>
-            <button 
-              onClick={() => deleteCustomSection(customSection.id)}
-              className="p-1 hover:bg-red-100 rounded-lg transition-colors"
-              title="Delete Section"
+        <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
+          <div 
+            className="rounded-2xl p-6 transition-all"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+              boxShadow: `0 4px 6px ${colors.border}10`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = `0 8px 12px ${colors.border}20`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = `0 4px 6px ${colors.border}10`;
+            }}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
+                <h3 className="text-lg font-bold uppercase tracking-wide" style={{ color: colors.primaryText }}>
+                  {customSection.name.toUpperCase()}
+                </h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => hideSection(customSection.id)}
+                  className="p-2 rounded-xl transition-colors"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                  title={sectionVisibility[section] ? `Hide ${customSection.name} section` : `Show ${customSection.name} section`}
+                >
+                  <Eye size={18} style={{ color: sectionVisibility[section] ? colors.secondaryText : colors.tertiaryText }} />
+                </button>
+                <button 
+                  onClick={() => deleteCustomSection(customSection.id)}
+                  className="p-2 rounded-xl transition-colors"
+                  style={{ color: colors.errorRed }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.badgeErrorBg;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                  title="Delete Section"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div 
+              className="mb-4 p-4 border-2 rounded-2xl transition-all"
+              style={{
+                background: colors.inputBackground,
+                border: `2px solid ${colors.border}`,
+              }}
             >
-              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
+              <textarea
+                value={customSection.content}
+                onChange={(e) => updateCustomSection(customSection.id, e.target.value)}
+                className="w-full min-h-[120px] px-3 py-2 rounded-lg resize-none break-words overflow-wrap-anywhere transition-all"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: colors.primaryText,
+                  outline: 'none',
+                }}
+                placeholder={`Add your ${customSection.name.toLowerCase()} content here...`}
+                onFocus={(e) => {
+                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                }}
+                onBlur={(e) => {
+                  e.target.style.outline = 'none';
+                }}
+              />
+            </div>
+
+            {/* AI Generate Button - Always visible */}
+            <div className="flex justify-end mt-3">
+              <button 
+                onClick={() => openAIGenerateModal(customSection.id)}
+                className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
+                style={{
+                  color: colors.badgePurpleText,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgePurpleBg;
+                  e.currentTarget.style.color = colors.badgePurpleText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = colors.badgePurpleText;
+                }}
+              >
+                <Sparkles size={16} />
+                AI Generate
+              </button>
+            </div>
           </div>
-          <textarea
-            value={customSection.content}
-            onChange={(e) => updateCustomSection(customSection.id, e.target.value)}
-            className="w-full h-24 px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none break-words overflow-wrap-anywhere"
-            placeholder={`Add your ${customSection.name.toLowerCase()} content here...`}
-          />
         </div>
       );
     }
@@ -1631,6 +1716,7 @@ export default function DashboardPage() {
           setNewSectionContent,
           setShowAddSectionModal
         )}
+        onOpenAIGenerateModal={openAIGenerateModal}
       />
 
       {/* Add Custom Field Modal */}
@@ -1692,7 +1778,8 @@ export default function DashboardPage() {
           contentLength,
           resumeData,
           setResumeData,
-          setShowAIGenerateModal
+          setShowAIGenerateModal,
+          aiGenerateSection === 'custom' ? setNewSectionContent : undefined
         )}
       />
 

@@ -19,7 +19,6 @@ import {
   Search,
   Rocket,
   MoreVertical,
-  Sparkles,
   List,
   Bot
 } from 'lucide-react';

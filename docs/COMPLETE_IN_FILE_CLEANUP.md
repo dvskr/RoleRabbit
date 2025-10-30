@@ -92,7 +92,7 @@
 
 ## ✅ Verification
 
--态[x] All removed items confirmed unused
+- [x] All removed items confirmed unused
 - [x] No broken functionality
 - [x] All accessibility issues fixed
 - [x] Linter errors resolved (except intentional CSS inline styles)

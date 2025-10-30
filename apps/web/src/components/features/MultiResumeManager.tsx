@@ -96,6 +96,8 @@ export default function MultiResumeManager({ onSwitchResume, onSelectTemplate, s
               <button
                 onClick={() => handleDeleteResume(resume.id)}
                 className="p-1 hover:bg-red-50 rounded transition-colors"
+                aria-label={`Delete resume ${resume.name}`}
+                title="Delete resume"
               >
                 <Trash2 size={14} className="text-red-500" />
               </button>
@@ -133,7 +135,7 @@ export default function MultiResumeManager({ onSwitchResume, onSelectTemplate, s
       {showHorizontalScroller && (
         <div className="mb-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-bold text-gray-800 flex items-center gap-2 text-sm">
+            <h3 className="font-bold text-white flex items-center gap-2 text-sm">
               <Layout size={16} className="text-purple-600" />
               Templates ({addedTemplates.length}/10)
             </h3>
@@ -149,7 +151,7 @@ export default function MultiResumeManager({ onSwitchResume, onSelectTemplate, s
                   onClick={() => onSelectTemplate(template.id)}
                   className={`w-full border-2 rounded-lg overflow-hidden hover:shadow-lg transition-all relative ${
                     selectedTemplateId === template.id
-                      ? 'border-purple-600 ring-2 ring-purple-300'
+                      ? 'border-gray-300'
                       : 'border-gray-300 hover:border-purple-400'
                   }`}
                 >
@@ -236,14 +238,10 @@ export default function MultiResumeManager({ onSwitchResume, onSelectTemplate, s
                     )}
                     {/* Selection indicator */}
                     {selectedTemplateId === template.id && (
-                      <>
-                        <div className="absolute top-1 left-1 bg-purple-600 text-white px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 z-10">
-                          <CheckCircle size={10} />
-                          Active
-                        </div>
-                        {/* Pulsing ring animation */}
-                        <div className="absolute inset-0 border-2 border-purple-400 rounded-lg animate-pulse pointer-events-none"></div>
-                      </>
+                      <div className="absolute top-1 left-1 bg-purple-600 text-white px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 z-10">
+                        <CheckCircle size={10} />
+                        Active
+                      </div>
                     )}
                     {/* Template Name */}
                     <div className="mt-2 text-center">

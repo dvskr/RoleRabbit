@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, Grid, List, Eye, ArrowRight, BarChart } from 'lucide-react';
+import { Search, Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, Grid, List, Eye } from 'lucide-react';
 import { CoverLetterTemplate } from '../types/coverletter';
 import TemplateCard from '../components/TemplateCard';
 import { logger } from '../../../utils/logger';

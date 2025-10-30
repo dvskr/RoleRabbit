@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, Camera, User, Mail, Briefcase, Linkedin, Github, Globe, X, Check, CheckCircle, FileText } from 'lucide-react';
+import { Upload, User, Mail, Briefcase, Linkedin, Github, Globe, X, CheckCircle, FileText } from 'lucide-react';
 import { resumeParser } from '../../services/resumeParser';
 
 interface SetupStepProps {
@@ -226,6 +226,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                     accept=".pdf,.doc,.docx,.txt"
                     onChange={handleResumeUpload}
                     className="hidden"
+                    aria-label="Upload resume file"
                   />
                 </div>
             </div>
@@ -250,7 +251,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                   <Upload size={16} className="inline mr-2" />
                   Upload Photo
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} aria-label="Upload profile picture" />
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Columns, Plus, Trash2, Eye, X, ArrowUpDown, ArrowUp, ArrowDown, Download, Upload, Star, CheckSquare, Filter as FilterIcon, List, Grid, Layout, RotateCcw, Trash, Trash as TrashIcon, Search, Calendar, BarChart3, Settings, Building2, Briefcase } from 'lucide-react';
+import { Columns, Plus, Trash2, Eye, X, ArrowUpDown, ArrowUp, ArrowDown, Download, Upload, Star, CheckSquare, Filter as FilterIcon, List, Grid, RotateCcw, Trash, Trash as TrashIcon, Search, Calendar, BarChart3, Settings, Building2 } from 'lucide-react';
 import { Job, ViewMode, JobFilters, SavedView } from '../../types/job';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getStatusBadgeStyles, getPriorityBadgeStyles } from '../../utils/themeHelpers';

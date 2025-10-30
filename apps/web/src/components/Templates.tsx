@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { logger } from '../utils/logger';
+import { debounce } from '../utils/performance';
 import {
   Search,
   Filter,
@@ -15,11 +16,9 @@ import {
   Users,
   Award,
   Zap,
-  ChevronDown,
   X,
   Heart,
   Share2,
-  Bookmark,
   CheckCircle,
   Sparkles,
   Palette,
@@ -27,21 +26,14 @@ import {
   Target,
   TrendingUp,
   Globe,
-  Lock,
   Unlock,
   Plus,
   RefreshCw,
-  Settings,
   FileText,
-  Image,
-  Video,
   File,
-  ArrowLeft,
-  ArrowRight,
   ChevronLeft,
   ChevronRight,
   Upload,
-  Cloud,
   Folder,
   XCircle
 } from 'lucide-react';
@@ -58,6 +50,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
   const { theme } = useTheme();
   const colors = theme.colors;
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'popular' | 'newest' | 'rating' | 'name'>('popular');
@@ -79,12 +72,24 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewResume, setPreviewResume] = useState<string | null>(null);
 
+  // Debounce search input
+  const debouncedSetSearch = useCallback(
+    debounce((value: string) => {
+      setDebouncedSearchQuery(value);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSetSearch(searchQuery);
+  }, [searchQuery, debouncedSetSearch]);
+
   const filteredTemplates = useMemo(() => {
     let templates = resumeTemplates;
 
     // Search filter
-    if (searchQuery) {
-      templates = searchTemplates(searchQuery);
+    if (debouncedSearchQuery) {
+      templates = searchTemplates(debouncedSearchQuery);
     }
 
     // Category filter
@@ -132,7 +137,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
     });
 
     return templates;
-  }, [searchQuery, selectedCategory, selectedDifficulty, selectedLayout, selectedColorScheme, showPremiumOnly, showFreeOnly, sortBy]);
+  }, [debouncedSearchQuery, selectedCategory, selectedDifficulty, selectedLayout, selectedColorScheme, showPremiumOnly, showFreeOnly, sortBy]);
 
   // Pagination
   const totalPages = Math.ceil(filteredTemplates.length / templatesPerPage);
@@ -144,13 +149,13 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
   const addedTemplatesList = filteredTemplates.filter(t => addedTemplates.includes(t.id));
   const notAddedTemplates = filteredTemplates.filter(t => !addedTemplates.includes(t.id));
 
-  const toggleFavorite = (templateId: string) => {
+  const toggleFavorite = useCallback((templateId: string) => {
     setFavorites(prev => 
       prev.includes(templateId) 
         ? prev.filter(id => id !== templateId)
         : [...prev, templateId]
     );
-  };
+  }, []);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -197,18 +202,18 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
     }
   };
 
-  const handleSelectTemplate = (templateId: string) => {
+  const handleSelectTemplate = useCallback((templateId: string) => {
     // Here you would integrate with the resume editor
     logger.debug('Selected template:', templateId);
     setShowTemplateSelector(false);
-  };
+  }, []);
 
-  const handlePreviewTemplate = (templateId: string) => {
+  const handlePreviewTemplate = useCallback((templateId: string) => {
     setSelectedTemplate(templateId);
     setShowPreviewModal(true);
-  };
+  }, []);
 
-  const handleUseTemplate = (templateId: string) => {
+  const handleUseTemplate = useCallback((templateId: string) => {
     logger.debug('Adding template to editor:', templateId);
     
     // Call the callback to add template to editor
@@ -225,9 +230,16 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
     }, 2000);
     
     // Don't close the modal
-  };
+  }, [onAddToEditor]);
 
-  const handleDownloadTemplate = () => {
+  // Memoize currentSelectedTemplate to avoid recomputation
+  const currentSelectedTemplate = useMemo(() => {
+    return selectedTemplate 
+      ? resumeTemplates.find(t => t.id === selectedTemplate) 
+      : null;
+  }, [selectedTemplate]);
+
+  const handleDownloadTemplate = useCallback(() => {
     if (!currentSelectedTemplate) return;
     logger.debug('Downloading template:', currentSelectedTemplate.name);
     
@@ -316,9 +328,9 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  };
+  }, [currentSelectedTemplate]);
 
-  const handleShareTemplate = () => {
+  const handleShareTemplate = useCallback(() => {
     if (!currentSelectedTemplate) return;
     logger.debug('Sharing template:', currentSelectedTemplate.name);
     
@@ -333,11 +345,7 @@ export default function Templates({ onAddToEditor, addedTemplates = [], onRemove
       navigator.clipboard.writeText(`${currentSelectedTemplate.name} - ${currentSelectedTemplate.description}`);
       alert('Template link copied to clipboard!');
     }
-  };
-
-  const currentSelectedTemplate = selectedTemplate 
-    ? resumeTemplates.find(t => t.id === selectedTemplate) 
-    : null;
+  }, [currentSelectedTemplate]);
 
   const generateSampleResumePreview = (template: any): React.ReactNode => {
     if (!template) return null;

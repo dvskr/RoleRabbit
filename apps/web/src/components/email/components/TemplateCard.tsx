@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, Star, Edit, Trash2, FileText } from 'lucide-react';
+import { Mail, Edit, Trash2, FileText } from 'lucide-react';
 import { EmailTemplate } from '../types';
 import { useTheme } from '../../../contexts/ThemeContext';
 
@@ -12,7 +12,7 @@ interface TemplateCardProps {
   onDelete?: (template: EmailTemplate) => void;
 }
 
-export default function TemplateCard({ template, onUse, onEdit, onDelete }: TemplateCardProps) {
+const TemplateCard = React.memo(function TemplateCard({ template, onUse, onEdit, onDelete }: TemplateCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
 
@@ -134,4 +134,8 @@ export default function TemplateCard({ template, onUse, onEdit, onDelete }: Temp
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.template.id === nextProps.template.id;
+});
+
+export default TemplateCard;

@@ -13,7 +13,7 @@ export default function EmailHeader({ onCompose, onSync }: EmailHeaderProps) {
     <div className="px-6 py-4 flex-shrink-0" style={{ background: colors.headerBackground, borderBottom: `1px solid ${colors.border}` }}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm" style={{ color: colors.secondaryText }}>Send professional emails with AI assistance</p>
+          <p className="text-sm" style={{ color: colors.secondaryText }}>Send professional emails</p>
         </div>
         <div className="flex items-center gap-2">
           <button 

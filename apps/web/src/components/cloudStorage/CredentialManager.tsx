@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GraduationCap, Clock, CheckCircle, XCircle, QrCode, FileText, X } from 'lucide-react';
+import { GraduationCap, Clock, CheckCircle, XCircle, QrCode, X } from 'lucide-react';
 import { CredentialInfo, CredentialReminder } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -351,6 +351,8 @@ export default function CredentialManager({
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = colors.hoverBackground;
                 }}
+                aria-label="Close add credential modal"
+                title="Close"
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
                 }}
@@ -368,6 +370,8 @@ export default function CredentialManager({
                 </label>
                 <select 
                   className="w-full px-3 py-2 rounded-lg transition-all"
+                  aria-label="Credential type"
+                  title="Credential type"
                   style={{
                     background: colors.inputBackground,
                     border: `1px solid ${colors.border}`,
@@ -446,6 +450,7 @@ export default function CredentialManager({
                   <input
                     type="date"
                     className="w-full px-3 py-2 rounded-lg transition-all"
+                    aria-label="Issued date"
                     style={{
                       background: colors.inputBackground,
                       border: `1px solid ${colors.border}`,
@@ -469,6 +474,7 @@ export default function CredentialManager({
                   <input
                     type="date"
                     className="w-full px-3 py-2 rounded-lg transition-all"
+                    aria-label="Expiration date"
                     style={{
                       background: colors.inputBackground,
                       border: `1px solid ${colors.border}`,
@@ -568,6 +574,8 @@ export default function CredentialManager({
                   e.currentTarget.style.color = colors.primaryText;
                   e.currentTarget.style.background = colors.hoverBackground;
                 }}
+                aria-label="Close credential details"
+                title="Close"
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = colors.secondaryText;
                   e.currentTarget.style.background = 'transparent';

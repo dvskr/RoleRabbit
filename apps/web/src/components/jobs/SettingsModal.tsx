@@ -39,6 +39,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
           <button
             onClick={onClose}
             className="p-1.5 rounded transition-all"
+            aria-label="Close settings"
+            title="Close"
             style={{ color: colors.tertiaryText }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = colors.hoverBackground;
@@ -119,6 +121,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 </label>
                 <select 
                   className="w-full px-3 py-2 rounded-lg text-sm transition-all"
+                  aria-label="Default view mode"
+                  title="Default view mode"
                   style={{
                     background: colors.inputBackground,
                     border: `1px solid ${colors.border}`,
@@ -147,6 +151,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 </label>
                 <select 
                   className="w-full px-3 py-2 rounded-lg text-sm transition-all"
+                  aria-label="Items per page"
+                  title="Items per page"
                   style={{
                     background: colors.inputBackground,
                     border: `1px solid ${colors.border}`,

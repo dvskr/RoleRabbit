@@ -464,7 +464,7 @@
   /* Mobile performance optimizations */
   .mobile-gpu-accelerated {
     transform: translateZ(0);
-    will-change: transform;
+    /* will-change removed for performance - not needed without animations */
   }
 
   .mobile-smooth-scroll {

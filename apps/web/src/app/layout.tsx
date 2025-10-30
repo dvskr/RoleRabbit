@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import GlobalErrorBoundary from '../components/GlobalErrorBoundary';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -35,20 +36,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="/favicon.svg" sizes="180x180" />
-      </head>
       <body style={{ margin: 0, padding: 0 }}>
-        <ThemeProvider>
-          <AuthProvider>
-            <div id="root">
-              {children}
-            </div>
-            <div id="modal-root" />
-            <div id="toast-root" />
-          </AuthProvider>
-        </ThemeProvider>
+        <GlobalErrorBoundary level="page">
+          <ThemeProvider>
+            <AuthProvider>
+              <div id="root">
+                {children}
+              </div>
+              <div id="modal-root" />
+              <div id="toast-root" />
+            </AuthProvider>
+          </ThemeProvider>
+        </GlobalErrorBoundary>
       </body>
     </html>
   );

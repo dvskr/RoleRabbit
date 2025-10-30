@@ -53,6 +53,13 @@ export default function AIGenerateModal({
       "Frontend: React, Vue.js, Angular, TypeScript, JavaScript",
       "Backend: Node.js, Python, Java, C#, Express.js",
       "Cloud: AWS, Azure, Docker, Kubernetes, CI/CD"
+    ],
+    custom: [
+      "List of professional certifications and licenses with dates",
+      "Awards and recognitions received in my career",
+      "Publications and articles written or contributed to",
+      "Languages spoken with proficiency levels",
+      "Volunteer experience and community involvement"
     ]
   };
 

@@ -26,7 +26,7 @@ export default function EmailComposerAI({
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<string[]>([]);
   
-  // AI Assistant states
+  // Assistant states
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [showPromptInput, setShowPromptInput] = useState(false);
@@ -83,7 +83,7 @@ export default function EmailComposerAI({
     
     setIsGenerating(true);
     
-    // Simulate AI generation
+    // Simulate generation
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     const generatedContent = `Dear ${recipientName || 'Recipient'},
@@ -107,10 +107,10 @@ Best regards,
   const improveWithAI = async () => {
     setIsGenerating(true);
     
-    // Simulate AI improvement
+    // Simulate improvement
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const improved = body + '\n\n[AI-Enhanced: This is an improved version with better clarity and professionalism.]';
+    const improved = body + '\n\n[Enhanced: This is an improved version with better clarity and professionalism.]';
     setBody(improved);
     setIsGenerating(false);
   };
@@ -220,7 +220,7 @@ Best regards,
             <span className="text-xs font-medium">Template</span>
           </button>
           
-          {/* AI Assistant Button */}
+          {/* Generate Button */}
           <button
             onClick={() => setShowPromptInput(true)}
             className="p-2 rounded-lg transition-colors flex items-center gap-2"
@@ -234,13 +234,13 @@ Best regards,
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
             }}
-            title="AI Generate Email from Prompt"
+            title="Generate Email from Prompt"
           >
             <Sparkles size={18} />
             <span className="text-xs font-medium">Generate</span>
           </button>
 
-          {/* Improve with AI */}
+          {/* Improve Email */}
           {body && (
             <button
               onClick={improveWithAI}
@@ -258,7 +258,7 @@ Best regards,
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
               }}
-              title="Improve with AI"
+              title="Improve Email"
             >
               {isGenerating ? (
                 <RefreshCw size={18} className="animate-spin" />
@@ -286,12 +286,12 @@ Best regards,
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
               }}
-              title="AI Generate Subject"
+              title="Generate Subject"
             >
               {isGenerating ? (
                 <RefreshCw size={18} className="animate-spin" />
               ) : (
-                <span className="text-xs font-semibold">AI</span>
+                <span className="text-xs font-semibold">Auto</span>
               )}
             </button>
           )}
@@ -342,7 +342,7 @@ Best regards,
         </div>
       </div>
 
-      {/* AI Prompt Input Modal */}
+      {/* Prompt Input Modal */}
       {showPromptInput && (
         <div 
           className="fixed inset-0 flex items-center justify-center z-50"
@@ -367,7 +367,7 @@ Best regards,
           >
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
               <Sparkles size={20} style={{ color: colors.badgePurpleText }} />
-              AI Generate Email from Prompt
+              Generate Email from Prompt
             </h3>
             <textarea
               value={aiPrompt}
@@ -584,7 +584,7 @@ Best regards,
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Write your email... Click the sparkles icon for AI suggestions!"
+              placeholder="Write your email... Click the sparkles icon for suggestions!"
               required
               rows={12}
               className="w-full px-3 py-2 rounded-lg resize-none font-mono text-sm transition-colors"
@@ -601,7 +601,7 @@ Best regards,
               }}
             />
             <p className="text-xs mt-2" style={{ color: colors.secondaryText }}>
-              💡 Tip: Use AI buttons above for smart suggestions, improvement, and subject generation
+              💡 Tip: Use buttons above for smart suggestions, improvement, and subject generation
             </p>
           </div>
         </div>

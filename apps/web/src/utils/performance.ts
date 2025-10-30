@@ -1,74 +1,32 @@
 /**
- * Performance utilities for monitoring and optimization
+ * Performance optimization utilities
+ * These utilities help improve UI responsiveness throughout the app
  */
 
-export class PerformanceMonitor {
-  private metrics: Map<string, number> = new Map();
-
-  /**
-   * Start performance measurement
-   */
-  start(label: string): () => void {
-    const startTime = performance.now();
-    
-    return () => {
-      const duration = performance.now() - startTime;
-      this.metrics.set(label, duration);
-      return duration;
-    };
-  }
-
-  /**
-   * Get performance metrics
-   */
-  getMetrics() {
-    return Array.from(this.metrics.entries()).map(([label, duration]) => ({
-      label,
-      duration: `${duration.toFixed(2)}ms`
-    }));
-  }
-
-  /**
-   * Clear all metrics
-   */
-  clear() {
-    this.metrics.clear();
-  }
-}
-
-export const performanceMonitor = new PerformanceMonitor();
-
 /**
- * Lazy load component
- */
-export function lazyLoad<T>(
-  importFn: () => Promise<{ default: T }>
-): Promise<T> {
-  return importFn().then(module => module.default);
-}
-
-/**
- * Debounce function
+ * Debounce function to limit how often a function is called
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: NodeJS.Timeout | null = null;
   
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
-      clearTimeout(timeout);
+      timeout = null;
       func(...args);
     };
     
-    clearTimeout(timeout);
+    if (timeout) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(later, wait);
   };
 }
 
 /**
- * Throttle function
+ * Throttle function to limit function execution rate
  */
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
@@ -80,8 +38,64 @@ export function throttle<T extends (...args: any[]) => any>(
     if (!inThrottle) {
       func(...args);
       inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      setTimeout(() => (inThrottle = false), limit);
     }
   };
 }
 
+/**
+ * Memoize expensive computation results
+ */
+export function memoize<T extends (...args: any[]) => any>(fn: T): T {
+  const cache = new Map();
+  
+  return ((...args: Parameters<T>) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) {
+      return cache.get(key);
+    }
+    const result = fn(...args);
+    cache.set(key, result);
+    return result;
+  }) as T;
+}
+
+/**
+ * Check if code is running on the client side
+ */
+export const isClient = typeof window !== 'undefined';
+
+/**
+ * Use requestIdleCallback with fallback for better performance
+ */
+export function requestIdleCallbackPolyfill(callback: () => void): number {
+  if (isClient && 'requestIdleCallback' in window) {
+    return window.requestIdleCallback(callback, { timeout: 1000 });
+  } else {
+    return setTimeout(callback, 1);
+  }
+}
+
+/**
+ * Cancel idle callback
+ */
+export function cancelIdleCallbackPolyfill(id: number): void {
+  if (isClient && 'cancelIdleCallback' in window) {
+    window.cancelIdleCallback(id);
+  } else {
+    clearTimeout(id);
+  }
+}
+
+/**
+ * Batch state updates for better performance
+ */
+export function batchUpdates(updates: (() => void)[]): void {
+  if (isClient && 'requestAnimationFrame' in window) {
+    requestAnimationFrame(() => {
+      updates.forEach(update => update());
+    });
+  } else {
+    updates.forEach(update => update());
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, User, Bot, Upload, FileText, Link as LinkIcon, Award, Lightbulb, Wand2 } from 'lucide-react';
+import { Send, Sparkles, User, Bot, Upload, FileText, Award, Lightbulb, Wand2 } from 'lucide-react';
 import { portfolioPrompts, quickPrompts } from './prompts';
 
 interface Message {

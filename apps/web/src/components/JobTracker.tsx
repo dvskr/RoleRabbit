@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Plus, Briefcase } from 'lucide-react';
 import EmptyState from './EmptyState';
 import { JobCard, JobMergedToolbar, JobKanban, JobStats, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
@@ -50,60 +50,39 @@ export default function JobTracker() {
     }
   });
 
-  // Show loading state when fetching from API
-  if (isLoading) {
-    return (
-      <div 
-        className="h-full flex items-center justify-center"
-        style={{ background: colors.background }}
-      >
-        <div className="text-center">
-          <div 
-            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
-            style={{
-              borderColor: colors.primaryBlue,
-              borderTopColor: 'transparent',
-            }}
-          />
-          <p style={{ color: colors.secondaryText }}>Loading jobs...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleAddJob = () => {
+  // All hooks must be called before any conditional returns
+  const handleAddJob = useCallback(() => {
     setPreSelectedStatus(null);
     setShowAddJob(true);
-  };
+  }, []);
 
-  const handleAddJobSubmit = (jobData: any) => {
+  const handleAddJobSubmit = useCallback((jobData: any) => {
     addJob(jobData);
     setShowAddJob(false);
     setPreSelectedStatus(null);
-  };
+  }, [addJob]);
 
-  const handleEditJob = (job: Job) => {
+  const handleEditJob = useCallback((job: Job) => {
     setEditingJob(job);
-  };
+  }, []);
 
-  const handleEditJobSubmit = (jobData: Job) => {
+  const handleEditJobSubmit = useCallback((jobData: Job) => {
     updateJob(jobData.id, jobData);
     setEditingJob(null);
-  };
+  }, [updateJob]);
 
-  const handleViewJob = (job: Job) => {
+  const handleViewJob = useCallback((job: Job) => {
     setViewingJob(job);
-  };
+  }, []);
 
-  const handleAddJobToColumn = (status: Job['status']) => {
-    // Open add job modal with pre-selected status
+  const handleAddJobToColumn = useCallback((status: Job['status']) => {
     setPreSelectedStatus(status);
     setShowAddJob(true);
-  };
+  }, []);
 
-  const handleExportJobs = () => {
+  const handleExportJobs = useCallback(() => {
     setShowExportModal(true);
-  };
+  }, []);
 
   const handleImportJobs = () => {
     const input = document.createElement('input');
@@ -159,14 +138,14 @@ export default function JobTracker() {
     input.click();
   };
 
-  const handleShowSettings = () => {
+  const handleShowSettings = useCallback(() => {
     setShowSettingsModal(true);
-  };
+  }, []);
 
-  const renderJobs = () => {
+  const renderJobs = useMemo(() => {
     switch (viewMode) {
       case 'kanban':
-    return (
+        return (
           <JobKanban
             jobs={jobs}
             favorites={favorites}
@@ -176,7 +155,7 @@ export default function JobTracker() {
         );
       
       case 'grid':
-    return (
+        return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
             {jobs.map(job => (
               <JobCard
@@ -193,11 +172,11 @@ export default function JobTracker() {
                 showDeleted={filters.showDeleted || false}
               />
             ))}
-      </div>
-    );
+          </div>
+        );
 
       case 'table':
-    return (
+        return (
           <div className="p-4 h-full flex flex-col" style={{ minHeight: 0 }}>
             <EditableJobTable
               jobs={jobs}
@@ -274,7 +253,7 @@ export default function JobTracker() {
 
       case 'list':
       default:
-    return (
+        return (
           <div className="space-y-3 p-4">
             {jobs.map(job => (
               <JobCard
@@ -291,10 +270,31 @@ export default function JobTracker() {
                 showDeleted={filters.showDeleted || false}
               />
             ))}
+          </div>
+        );
+    }
+  }, [viewMode, jobs, favorites, selectedJobs, filters, toggleFavorite, toggleJobSelection, handleEditJob, deleteJob, handleViewJob, restoreJob, handleAddJob, handleAddJobToColumn, handleEditJobSubmit, bulkDelete, bulkRestore, setViewMode, setShowFilters, showFilters, setFilters, savedViews, handleAddJobSubmit]);
+
+  // Show loading state when fetching from API
+  if (isLoading) {
+    return (
+      <div 
+        className="h-full flex items-center justify-center"
+        style={{ background: colors.background }}
+      >
+        <div className="text-center">
+          <div 
+            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
+            style={{
+              borderColor: colors.primaryBlue,
+              borderTopColor: 'transparent',
+            }}
+          />
+          <p style={{ color: colors.secondaryText }}>Loading jobs...</p>
+        </div>
       </div>
     );
-    }
-  };
+  }
 
   return (
     <div 
@@ -342,7 +342,7 @@ export default function JobTracker() {
             />
           </div>
         ) : (
-          renderJobs()
+          renderJobs
         )}
       </div>
 
