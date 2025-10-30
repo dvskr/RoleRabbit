@@ -27,13 +27,22 @@ export default function SidebarNew({
   const colors = theme.colors;
   const buttonRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
 
-  // Reset hover states when activeTab changes
+  // Reset hover states when activeTab changes, but preserve active state
   useEffect(() => {
-    Object.values(buttonRefs.current).forEach(button => {
+    Object.keys(buttonRefs.current).forEach(key => {
+      const button = buttonRefs.current[key];
       if (button) {
-        button.style.background = 'transparent';
-        button.style.color = colors.secondaryText;
-        button.style.boxShadow = 'none';
+        if (key === activeTab) {
+          // Keep active state styling
+          button.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
+          button.style.color = 'white';
+          button.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
+        } else {
+          // Reset non-active buttons
+          button.style.background = 'transparent';
+          button.style.color = colors.secondaryText;
+          button.style.boxShadow = 'none';
+        }
       }
     });
   }, [activeTab, colors.secondaryText]);
@@ -231,14 +240,22 @@ export default function SidebarNew({
                     }`}
                     style={{
                       background: isActive 
-                        ? 'rgba(168, 85, 247, 0.15)' 
+                        ? 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)'
                         : 'transparent',
                       color: isActive 
-                        ? colors.activeText 
+                        ? 'white'
                         : colors.secondaryText,
+                      boxShadow: isActive 
+                        ? '0 4px 12px rgba(236, 72, 153, 0.3)'
+                        : 'none',
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
+                      } else {
+                        // Ensure active state stays - reapply styles on hover
                         e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
                         e.currentTarget.style.color = 'white';
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
@@ -249,6 +266,11 @@ export default function SidebarNew({
                         e.currentTarget.style.background = 'transparent';
                         e.currentTarget.style.color = colors.secondaryText;
                         e.currentTarget.style.boxShadow = 'none';
+                      } else {
+                        // Immediately show active state after leaving hover
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(236, 72, 153, 0.3)';
                       }
                     }}
                     title={sidebarCollapsed ? item.label : ''}

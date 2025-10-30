@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Briefcase } from 'lucide-react';
 import EmptyState from './EmptyState';
-import { JobCard, JobMergedToolbar, JobKanban, JobStats, JobTable, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
+import { JobCard, JobMergedToolbar, JobKanban, JobStats, EditableJobTable, AddJobModal, EditJobModal, JobDetailView, ExportModal, SettingsModal } from './jobs';
 import { useJobsApi } from '../hooks/useJobsApi';
 import { Job, SavedView } from '../types/job';
 import { logger } from '../utils/logger';
@@ -13,7 +13,6 @@ export default function JobTracker() {
   
   const {
     jobs, // Already filtered and sorted - use this for ALL views
-    allJobs, // Unfiltered jobs for stats
     isLoading,
     filters,
     viewMode,
@@ -32,10 +31,8 @@ export default function JobTracker() {
     bulkRestore,
     bulkUpdateStatus,
     toggleJobSelection,
-    selectAllJobs,
     clearSelection,
-    toggleFavorite,
-    loadJobs
+    toggleFavorite
   } = useJobsApi();
 
   const [showAddJob, setShowAddJob] = useState(false);
@@ -190,7 +187,7 @@ export default function JobTracker() {
                 onToggleFavorite={toggleFavorite}
                 onToggleSelection={toggleJobSelection}
                 onEdit={handleEditJob}
-                onDelete={handleDeleteJobWrapper}
+                onDelete={deleteJob}
                 onView={handleViewJob}
                 onRestore={restoreJob}
                 showDeleted={filters.showDeleted || false}
@@ -288,7 +285,7 @@ export default function JobTracker() {
                 onToggleFavorite={toggleFavorite}
                 onToggleSelection={toggleJobSelection}
                 onEdit={handleEditJob}
-                onDelete={handleDeleteJobWrapper}
+                onDelete={deleteJob}
                 onView={handleViewJob}
                 onRestore={restoreJob}
                 showDeleted={filters.showDeleted || false}

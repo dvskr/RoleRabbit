@@ -380,11 +380,11 @@ export default function CredentialManager({
                     e.currentTarget.style.borderColor = colors.border;
                   }}
                 >
-                  <option value="certification" style={{ background: colors.background, color: colors.secondaryText }}>Certification</option>
-                  <option value="license" style={{ background: colors.background, color: colors.secondaryText }}>License</option>
-                  <option value="visa" style={{ background: colors.background, color: colors.secondaryText }}>Visa</option>
-                  <option value="degree" style={{ background: colors.background, color: colors.secondaryText }}>Degree</option>
-                  <option value="badge" style={{ background: colors.background, color: colors.secondaryText }}>Badge</option>
+                  <option value="certification" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Certification</option>
+                  <option value="license" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>License</option>
+                  <option value="visa" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Visa</option>
+                  <option value="degree" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Degree</option>
+                  <option value="badge" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Badge</option>
                 </select>
               </div>
               <div>

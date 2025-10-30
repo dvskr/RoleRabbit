@@ -23,16 +23,11 @@ const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterG
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents'), { ssr: false });
-import { Eye, EyeOff, Sparkles, GripVertical, Trash2, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Users, Home as HomeIcon } from 'lucide-react';
+import { EyeOff, Sparkles, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Home as HomeIcon } from 'lucide-react';
 import { 
   CustomField, 
-  ExperienceItem, 
-  ProjectItem, 
-  EducationItem, 
-  CertificationItem, 
   ResumeData, 
   CustomSection, 
-  AIMessage, 
   SectionVisibility 
 } from '../../types/resume';
 import { useResumeData } from '../../hooks/useResumeData';
@@ -40,7 +35,6 @@ import { useModals } from '../../hooks/useModals';
 import { useAI } from '../../hooks/useAI';
 // Keep utils lazy - import only when actually needed
 import { resumeHelpers } from '../../utils/resumeHelpers';
-import * as exportHelpers from '../../utils/exportHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
@@ -220,8 +214,6 @@ export default function DashboardPage() {
   const handleDuplicateResume = () => {
     logger.debug('Duplicating resume');
     
-    // Get current timestamp for unique filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const newFileName = `${resumeFileName} - Copy`;
     
     // Duplicate all resume state
@@ -1801,6 +1793,8 @@ function ResumeSaveToCloudModal({
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close"
+            aria-label="Close modal"
           >
             <X size={20} />
           </button>
@@ -1863,6 +1857,8 @@ function ResumeSaveToCloudModal({
                   <button
                     onClick={() => handleRemoveTag(tag)}
                     className="hover:text-indigo-600"
+                    title="Remove tag"
+                    aria-label={`Remove tag ${tag}`}
                   >
                     <X size={14} />
                   </button>
@@ -1928,6 +1924,8 @@ function ResumeImportFromCloudModal({
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg"
+            title="Close"
+            aria-label="Close modal"
           >
             <X size={20} />
           </button>
@@ -1952,8 +1950,7 @@ function ResumeImportFromCloudModal({
             filteredFiles.map(file => (
               <div
                 key={file.id}
-                onClick={() => onLoad(file)}
-                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -1965,7 +1962,15 @@ function ResumeImportFromCloudModal({
                       <span>Version: {file.version}</span>
                     </div>
                   </div>
-                  <button className="p-2 hover:bg-gray-100 rounded-lg">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onLoad(file);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg"
+                    title="Load resume"
+                    aria-label={`Load resume ${file.name}`}
+                  >
                     <Download size={18} className="text-purple-600" />
                   </button>
                 </div>

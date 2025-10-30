@@ -390,3 +390,43 @@
     opacity: 1;
   }
 }
+
+/* Dark mode select and option styling */
+[data-theme="dark"] select,
+.dark select {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] option,
+.dark option {
+  background-color: #1a1625 !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] option:hover,
+[data-theme="dark"] option:checked,
+.dark option:hover,
+.dark option:checked {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+/* Light mode select and option styling */
+[data-theme="light"] select,
+.light select {
+  color-scheme: light;
+}
+
+[data-theme="light"] option,
+.light option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+[data-theme="light"] option:hover,
+[data-theme="light"] option:checked,
+.light option:hover,
+.light option:checked {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}

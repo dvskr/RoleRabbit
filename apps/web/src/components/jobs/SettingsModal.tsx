@@ -131,10 +131,10 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                     e.currentTarget.style.borderColor = colors.border;
                   }}
                 >
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>Table</option>
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>Kanban</option>
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>List</option>
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>Grid</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Table</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Kanban</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>List</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Grid</option>
                 </select>
               </div>
               
@@ -159,10 +159,10 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                     e.currentTarget.style.borderColor = colors.border;
                   }}
                 >
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>10</option>
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>25</option>
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>50</option>
-                  <option style={{ background: colors.background, color: colors.secondaryText }}>100</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>10</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>25</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>50</option>
+                  <option style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>100</option>
                 </select>
               </div>
             </div>

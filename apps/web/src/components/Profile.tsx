@@ -12,7 +12,6 @@ import {
   Target,
   FileText,
   BarChart3,
-  LucideIcon,
   LogOut
 } from 'lucide-react';
 import apiService from '@/services/apiService';

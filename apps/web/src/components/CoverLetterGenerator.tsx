@@ -404,10 +404,20 @@ export default function CoverLetterGenerator() {
               AI Cover Letter Generator
             </h1>
           </div>
-          <p className="text-sm" style={{ color: theme.colors.secondaryText }}>
+          <p className="text-sm mb-3" style={{ color: theme.colors.secondaryText }}>
             Fill in your details and watch your cover letter generate in real-time
           </p>
         </div>
+        {/* Separator Line - Full Width */}
+        <div 
+          style={{ 
+            height: '1px',
+            background: theme.colors.border,
+            marginLeft: '-1.5rem',
+            marginRight: '-1.5rem',
+            marginBottom: '1rem'
+          }}
+        />
 
         {/* Navigation Tabs */}
         <CoverLetterTabs

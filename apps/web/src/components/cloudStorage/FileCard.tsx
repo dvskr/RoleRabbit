@@ -1568,10 +1568,10 @@ export default function FileCard({
                     e.currentTarget.style.borderColor = colors.border;
                   }}
                 >
-                  <option value="view" style={{ background: colors.background, color: colors.secondaryText }}>View only</option>
-                  <option value="comment" style={{ background: colors.background, color: colors.secondaryText }}>Can comment</option>
-                  <option value="edit" style={{ background: colors.background, color: colors.secondaryText }}>Can edit</option>
-                  <option value="admin" style={{ background: colors.background, color: colors.secondaryText }}>Admin access</option>
+                  <option value="view" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>View only</option>
+                  <option value="comment" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Can comment</option>
+                  <option value="edit" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Can edit</option>
+                  <option value="admin" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Admin access</option>
                 </select>
               </div>
 

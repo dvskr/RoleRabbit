@@ -103,11 +103,11 @@ export default function JobFiltersModal({
                 e.currentTarget.style.borderColor = colors.border;
               }}
             >
-              <option value="all" style={{ background: colors.background, color: colors.secondaryText }}>All Statuses</option>
-              <option value="applied" style={{ background: colors.background, color: colors.secondaryText }}>Applied</option>
-              <option value="interview" style={{ background: colors.background, color: colors.secondaryText }}>Interview</option>
-              <option value="offer" style={{ background: colors.background, color: colors.secondaryText }}>Offer</option>
-              <option value="rejected" style={{ background: colors.background, color: colors.secondaryText }}>Rejected</option>
+              <option value="all" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>All Statuses</option>
+              <option value="applied" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Applied</option>
+              <option value="interview" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Interview</option>
+              <option value="offer" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Offer</option>
+              <option value="rejected" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Rejected</option>
             </select>
           </div>
 
@@ -135,10 +135,10 @@ export default function JobFiltersModal({
                 e.currentTarget.style.borderColor = colors.border;
               }}
             >
-              <option value="all" style={{ background: colors.background, color: colors.secondaryText }}>All Priorities</option>
-              <option value="high" style={{ background: colors.background, color: colors.secondaryText }}>High</option>
-              <option value="medium" style={{ background: colors.background, color: colors.secondaryText }}>Medium</option>
-              <option value="low" style={{ background: colors.background, color: colors.secondaryText }}>Low</option>
+              <option value="all" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>All Priorities</option>
+              <option value="high" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>High</option>
+              <option value="medium" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Medium</option>
+              <option value="low" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Low</option>
             </select>
           </div>
 

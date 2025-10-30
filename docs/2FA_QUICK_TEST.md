@@ -11,7 +11,7 @@
 ```bash
 curl -X POST http://localhost:5000/api/auth/register \
   -H "Content-Type: application/json" \
-  -只'{"email":"test@roleready.com","password":"Test1234!","name":"Test"}'
+  -d '{"email":"test@roleready.com","password":"Test1234!","name":"Test"}'
 ```
 
 ### Step 2: Login

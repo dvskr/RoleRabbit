@@ -214,9 +214,9 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
                   e.currentTarget.style.borderColor = colors.border;
                 }}
               >
-                <option value="resume" style={{ background: colors.background, color: colors.secondaryText }}>Resume</option>
-                <option value="template" style={{ background: colors.background, color: colors.secondaryText }}>Template</option>
-                <option value="backup" style={{ background: colors.background, color: colors.secondaryText }}>Backup</option>
+                <option value="resume" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Resume</option>
+                <option value="template" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Template</option>
+                <option value="backup" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Backup</option>
               </select>
             </div>
 

@@ -870,7 +870,7 @@ export default function EditableJobTable({
               autoFocus
             >
               {statusOptions.map(status => (
-                <option key={status} value={status} style={{ background: colors.background, color: colors.primaryText }}>
+                <option key={status} value={status} style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>
                   {status}
                 </option>
               ))}
@@ -921,9 +921,9 @@ export default function EditableJobTable({
               aria-label="Job priority"
               autoFocus
             >
-              <option value="" style={{ background: colors.background, color: colors.primaryText }}>None</option>
+              <option value="" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>None</option>
               {priorityOptions.map(priority => (
-                <option key={priority} value={priority} style={{ background: colors.background, color: colors.primaryText }}>
+                <option key={priority} value={priority} style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>
                   {priority}
                 </option>
               ))}
