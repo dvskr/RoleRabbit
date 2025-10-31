@@ -113,6 +113,8 @@ const FileCard = React.memo(function FileCard({
               type="checkbox"
               checked={isSelected}
               onChange={() => onSelect(file.id)}
+              aria-label={`Select ${file.name}`}
+              title={`Select ${file.name}`}
               className="w-3.5 h-3.5 rounded focus:ring-2 transition-all"
               style={{
                 accentColor: colors.primaryBlue,
@@ -466,6 +468,8 @@ const FileCard = React.memo(function FileCard({
           type="checkbox"
           checked={isSelected}
           onChange={() => onSelect(file.id)}
+          aria-label={`Select ${file.name}`}
+          title={`Select ${file.name}`}
           className="w-3.5 h-3.5 rounded flex-shrink-0"
           style={{
             accentColor: colors.primaryBlue,
@@ -569,6 +573,8 @@ const FileCard = React.memo(function FileCard({
           type="checkbox"
           checked={isSelected}
           onChange={() => onSelect(file.id)}
+          aria-label={`Select ${file.name}`}
+          title={`Select ${file.name}`}
           className="w-4 h-4 rounded focus:ring-2 flex-shrink-0 transition-all"
           style={{
             accentColor: colors.primaryBlue,

@@ -207,19 +207,19 @@ export default function DashboardPage() {
     logger.debug('File selected:', file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
-        const text = e.target?.result as string;
+      const text = e.target?.result as string;
       const data = parseResumeFile(text);
       if (data) {
-          setResumeData(data.resumeData);
-          setCustomSections(data.customSections || []);
-          setResumeFileName(data.resumeFileName || file.name);
-          setFontFamily(data.fontFamily || 'Arial');
-          setFontSize(data.fontSize || '12pt');
-          setLineSpacing(data.lineSpacing || '1.5');
-          setSectionSpacing(data.sectionSpacing || 'normal');
-          setMargins(data.margins || 'medium');
-          setHeadingStyle(data.headingStyle || 'bold');
-          setBulletStyle(data.bulletStyle || 'disc');
+        setResumeData(data.resumeData);
+        setCustomSections(data.customSections || []);
+        setResumeFileName(data.resumeFileName || file.name);
+        setFontFamily(data.fontFamily || 'Arial');
+        setFontSize(data.fontSize || '12pt');
+        setLineSpacing(data.lineSpacing || '1.5');
+        setSectionSpacing(data.sectionSpacing || 'normal');
+        setMargins(data.margins || 'medium');
+        setHeadingStyle(data.headingStyle || 'bold');
+        setBulletStyle(data.bulletStyle || 'disc');
       }
     };
     reader.readAsText(file);
@@ -748,38 +748,38 @@ export default function DashboardPage() {
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'dashboard') ? 'block' : 'none' }}
               >
-                <DashboardFigma 
-                  onQuickAction={(actionId) => {
-                    logger.debug('Quick action:', actionId);
-                    switch (actionId) {
-                      case 'export':
-                        setShowExportModal(true);
-                        break;
-                      case 'customize':
-                        // Open customization modal
-                        break;
-                      case 'themes':
-                        // Open theme selector
-                        break;
-                      default:
-                        break;
-                    }
-                  }}
-                  onNavigateToTab={(tab) => handleTabChange(tab)}
-                />
-              </div>
+                  <DashboardFigma 
+                    onQuickAction={(actionId) => {
+                      logger.debug('Quick action:', actionId);
+                      switch (actionId) {
+                        case 'export':
+                          setShowExportModal(true);
+                          break;
+                        case 'customize':
+                          // Open customization modal
+                          break;
+                        case 'themes':
+                          // Open theme selector
+                          break;
+                        default:
+                          break;
+                      }
+                    }}
+                    onNavigateToTab={(tab) => handleTabChange(tab)}
+                  />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'profile') ? 'block' : 'none' }}
               >
-                <Profile />
-              </div>
+                  <Profile />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'storage') ? 'block' : 'none' }}
               >
-                <CloudStorage />
-              </div>
+                  <CloudStorage />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'tracker' || activeTab === 'jobs') ? 'block' : 'none' }}
@@ -796,53 +796,53 @@ export default function DashboardPage() {
                     </div>
                   }
                 >
-                <JobTracker />
+                  <JobTracker />
                 </ErrorBoundary>
-              </div>
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'templates') ? 'block' : 'none' }}
               >
-                <Templates 
-                  onAddToEditor={(templateId) => {
-                    setSelectedTemplateId(templateId);
-                    dashboardTemplates.addTemplate(templateId);
-                    logger.debug('Template added to editor:', templateId);
-                  }}
-                  addedTemplates={addedTemplates}
-                  onRemoveTemplate={dashboardTemplates.removeTemplate}
-                />
-              </div>
+                  <Templates 
+                    onAddToEditor={(templateId) => {
+                      setSelectedTemplateId(templateId);
+                      dashboardTemplates.addTemplate(templateId);
+                      logger.debug('Template added to editor:', templateId);
+                    }}
+                    addedTemplates={addedTemplates}
+                    onRemoveTemplate={dashboardTemplates.removeTemplate}
+                  />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'cover-letter') ? 'block' : 'none' }}
               >
-                <CoverLetterGenerator />
-              </div>
+                  <CoverLetterGenerator />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'portfolio') ? 'block' : 'none' }}
               >
-                <PortfolioGenerator />
-              </div>
+                  <PortfolioGenerator />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'discussion') ? 'block' : 'none' }}
               >
-                <Discussion />
-              </div>
+                  <Discussion />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'email') ? 'block' : 'none' }}
               >
-                <Email />
-              </div>
+                  <Email />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'learning') ? 'block' : 'none' }}
               >
-                <LearningHub />
-              </div>
+                  <LearningHub />
+                </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'agents' || activeTab === 'ai-agents') ? 'block' : 'none' }}
@@ -859,9 +859,9 @@ export default function DashboardPage() {
                     </div>
                   }
                 >
-                <AIAgents />
+                  <AIAgents />
                 </ErrorBoundary>
-              </div>
+                </div>
               {/* Editor is special and handles its own rendering */}
               <div 
                 className="absolute inset-0 h-full"
@@ -872,8 +872,8 @@ export default function DashboardPage() {
                   transition: 'right 0.3s ease, width 0.3s ease',
                 }}
               >
-                {renderActiveComponent()}
-              </div>
+                  {renderActiveComponent()}
+                </div>
             </div>
             {/* AI Panel */}
             {activeTab === 'editor' && showRightPanel && (

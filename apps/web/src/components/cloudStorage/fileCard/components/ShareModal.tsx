@@ -125,6 +125,8 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               <button
                 onClick={fileSharing.handleShareSubmit}
                 disabled={!fileSharing.shareEmail.trim()}
+                aria-label="Add user to share"
+                title="Add user to share"
                 className="px-4 py-2 rounded-lg transition-colors"
                 style={{
                   background: !fileSharing.shareEmail.trim() ? colors.inputBackground : colors.primaryBlue,

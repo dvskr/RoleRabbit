@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Filter, Grid, List, Columns } from 'lucide-react';
 import { FileType, SortBy, ViewMode } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -34,6 +34,28 @@ export default function StorageFilters({
 }: StorageFiltersProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Local state for search input to debounce
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+
+  // Debounce search updates
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(localSearchTerm);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [localSearchTerm, setSearchTerm]);
+
+  // Sync with external searchTerm changes
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
+
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalSearchTerm(e.target.value);
+  }, []);
+
   return (
     <div className="flex items-center gap-3 mb-2">
       {/* Unified compact search/filter bar */}
@@ -47,8 +69,8 @@ export default function StorageFilters({
           />
           <input
             type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={localSearchTerm}
+            onChange={handleSearchChange}
             placeholder="Search files..."
             className="pl-9 pr-3 py-1.5 rounded-lg focus:outline-none w-full text-sm transition-all"
             style={{

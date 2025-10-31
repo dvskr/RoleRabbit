@@ -316,6 +316,195 @@ export const generateSampleResumePreview = (
 };
 
 /**
+ * Generate HTML content for template download
+ */
+export const getTemplateDownloadHTML = (template: any): string => {
+  if (!template) return '';
+  
+  const sampleData = SAMPLE_RESUME_DATA;
+  
+  // Generate HTML based on template layout
+  let bodyContent = '';
+  
+  if (template.layout === 'single-column') {
+    bodyContent = `
+      <div style="max-width: 800px; margin: 0 auto; padding: 40px; font-family: Arial, sans-serif;">
+        <div style="text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px;">
+          <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 5px; color: #1f2937;">${sampleData.name}</h1>
+          <p style="color: #2563eb; font-weight: 600; font-size: 18px; margin-bottom: 10px;">${sampleData.title}</p>
+          <p style="font-size: 14px; color: #6b7280; margin: 0;">${sampleData.email} | ${sampleData.phone} | ${sampleData.location}</p>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Professional Summary</h2>
+          <p style="font-size: 14px; color: #374151; line-height: 1.6;">${sampleData.summary}</p>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Experience</h2>
+          ${sampleData.experiences.map((exp: any) => `
+            <div style="margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <div>
+                  <p style="font-weight: 600; font-size: 16px; margin: 0; color: #1f2937;">${exp.role}</p>
+                  <p style="color: #2563eb; font-size: 14px; margin: 0;">${exp.company}</p>
+                </div>
+                <span style="font-size: 12px; color: #6b7280;">${exp.period}</span>
+              </div>
+              <ul style="margin: 5px 0 0 20px; padding: 0; font-size: 14px; color: #374151; line-height: 1.6;">
+                ${exp.bullets.map((bullet: string) => `<li style="margin-bottom: 5px;">${bullet}</li>`).join('')}
+              </ul>
+            </div>
+          `).join('')}
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Skills</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${sampleData.skills.map((skill: string) => `
+              <span style="padding: 6px 12px; background: #f3f4f6; border-radius: 4px; font-size: 13px; color: #374151;">${skill}</span>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div>
+          <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Education</h2>
+          <p style="font-weight: 600; font-size: 16px; margin: 0; color: #1f2937;">${sampleData.education.degree}</p>
+          <p style="font-size: 14px; color: #374151; margin: 5px 0 0 0;">${sampleData.education.school} - ${sampleData.education.year}</p>
+        </div>
+      </div>
+    `;
+  } else if (template.layout === 'two-column') {
+    bodyContent = `
+      <div style="max-width: 900px; margin: 0 auto; padding: 40px; font-family: Arial, sans-serif; display: flex; gap: 30px;">
+        <div style="width: 30%; background: #f9fafb; padding: 25px; border-radius: 8px;">
+          <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #1f2937;">${sampleData.name}</h1>
+          <p style="font-size: 14px; color: #374151; margin-bottom: 20px;">${sampleData.title}</p>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-weight: 600; font-size: 14px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Contact</h3>
+            <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.email}</p>
+            <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.phone}</p>
+            <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.location}</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-weight: 600; font-size: 14px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Skills</h3>
+            ${sampleData.skills.map((skill: string) => `
+              <p style="font-size: 12px; color: #374151; margin: 3px 0;">${skill}</p>
+            `).join('')}
+          </div>
+          
+          <div>
+            <h3 style="font-weight: 600; font-size: 14px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Education</h3>
+            <p style="font-weight: 600; font-size: 12px; color: #1f2937; margin: 0;">${sampleData.education.degree}</p>
+            <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.education.school}</p>
+            <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.education.year}</p>
+          </div>
+        </div>
+        
+        <div style="width: 70%;">
+          <div style="margin-bottom: 25px;">
+            <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Summary</h2>
+            <p style="font-size: 14px; color: #374151; line-height: 1.6;">${sampleData.summary}</p>
+          </div>
+          
+          <div>
+            <h2 style="font-size: 20px; font-weight: 600; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 10px; color: #1f2937;">Experience</h2>
+            ${sampleData.experiences.map((exp: any) => `
+              <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <div>
+                    <p style="font-weight: 600; font-size: 14px; margin: 0; color: #1f2937;">${exp.role}</p>
+                    <p style="color: #2563eb; font-size: 12px; margin: 0;">${exp.company}</p>
+                  </div>
+                  <span style="font-size: 12px; color: #6b7280;">${exp.period}</span>
+                </div>
+                <ul style="margin: 5px 0 0 20px; padding: 0; font-size: 12px; color: #374151; line-height: 1.6;">
+                  ${exp.bullets.map((bullet: string) => `<li style="margin-bottom: 5px;">${bullet}</li>`).join('')}
+                </ul>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Default/hybrid layout
+    bodyContent = `
+      <div style="max-width: 800px; margin: 0 auto; padding: 40px; font-family: Arial, sans-serif;">
+        <div style="background: linear-gradient(to right, #2563eb, #1d4ed8); color: white; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h1 style="font-size: 32px; font-weight: bold; margin-bottom: 10px;">${sampleData.name}</h1>
+          <p style="font-size: 18px; margin-bottom: 15px;">${sampleData.title}</p>
+          <p style="font-size: 14px; opacity: 0.9;">${sampleData.email} | ${sampleData.phone} | ${sampleData.location}</p>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 25px; margin-bottom: 25px;">
+          <div>
+            <div style="margin-bottom: 20px;">
+              <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 10px; color: #1f2937;">Professional Summary</h2>
+              <p style="font-size: 14px; color: #374151; line-height: 1.6;">${sampleData.summary}</p>
+            </div>
+            
+            <div>
+              <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 10px; color: #1f2937;">Experience</h2>
+              ${sampleData.experiences.map((exp: any) => `
+                <div style="margin-bottom: 15px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <div>
+                      <p style="font-weight: 600; font-size: 14px; margin: 0; color: #1f2937;">${exp.role}</p>
+                      <p style="color: #2563eb; font-size: 12px; margin: 0;">${exp.company}</p>
+                    </div>
+                    <span style="font-size: 12px; color: #6b7280;">${exp.period}</span>
+                  </div>
+                  <ul style="margin: 5px 0 0 20px; padding: 0; font-size: 12px; color: #374151; line-height: 1.6;">
+                    ${exp.bullets.map((bullet: string) => `<li style="margin-bottom: 5px;">${bullet}</li>`).join('')}
+                  </ul>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div>
+            <div style="margin-bottom: 20px;">
+              <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: #1f2937;">Skills</h3>
+              ${sampleData.skills.map((skill: string) => `
+                <p style="font-size: 12px; padding: 6px 10px; background: #f3f4f6; border-radius: 4px; margin: 5px 0; color: #374151;">${skill}</p>
+              `).join('')}
+            </div>
+            
+            <div>
+              <h3 style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: #1f2937;">Education</h3>
+              <p style="font-weight: 600; font-size: 12px; color: #1f2937; margin: 0;">${sampleData.education.degree}</p>
+              <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.education.school}</p>
+              <p style="font-size: 12px; color: #374151; margin: 3px 0;">${sampleData.education.year}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${template.name} - Resume Template</title>
+  <style>
+    @media print {
+      body { margin: 0; }
+      @page { margin: 0.5in; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background: white;">
+  ${bodyContent}
+</body>
+</html>`;
+};
+
+/**
  * Download template as HTML file
  */
 export const downloadTemplateAsHTML = (
