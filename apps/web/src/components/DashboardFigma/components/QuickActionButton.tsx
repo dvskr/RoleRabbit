@@ -6,8 +6,33 @@ interface QuickActionButtonProps {
   colors: ThemeColors;
 }
 
+// Get icon color based on action ID
+const getIconColor = (actionId: string): string => {
+  switch (actionId) {
+    case 'resume':
+      return '#3b82f6'; // Blue
+    case 'jobs':
+      return '#10b981'; // Green
+    case 'target':
+      return '#f59e0b'; // Amber/Orange
+    case 'analytics':
+      return '#8b5cf6'; // Purple
+    case 'notifications':
+      return '#ef4444'; // Red
+    case 'settings':
+      return '#6b7280'; // Gray
+    case 'calendar':
+      return '#06b6d4'; // Cyan
+    case 'messages':
+      return '#6366f1'; // Indigo
+    default:
+      return '#6b7280'; // Default gray
+  }
+};
+
 export function QuickActionButton({ action, colors }: QuickActionButtonProps) {
   const Icon = action.icon;
+  const iconColor = getIconColor(action.id);
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -17,22 +42,25 @@ export function QuickActionButton({ action, colors }: QuickActionButtonProps) {
         style={{
           background: colors.inputBackground,
           border: `1px solid ${colors.border}`,
-          color: colors.secondaryText,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = colors.hoverBackground;
-          e.currentTarget.style.borderColor = colors.borderFocused;
-          e.currentTarget.style.color = colors.primaryText;
+          e.currentTarget.style.borderColor = iconColor;
+          e.currentTarget.style.transform = 'scale(1.1)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = colors.inputBackground;
           e.currentTarget.style.borderColor = colors.border;
-          e.currentTarget.style.color = colors.secondaryText;
+          e.currentTarget.style.transform = 'scale(1)';
         }}
         title={action.label}
         aria-label={action.label}
       >
-        <Icon size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
+        <Icon 
+          size={18} 
+          className="sm:w-5 sm:h-5 md:w-6 md:h-6" 
+          style={{ color: iconColor }}
+        />
       </button>
       <span className="text-[10px] sm:text-xs text-center truncate w-full" style={{ color: colors.secondaryText }}>
         {action.label}
