@@ -6,10 +6,11 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const logger = require('./utils/logger');
 
 function installDependencies() {
   return new Promise((resolve, reject) => {
-    console.log('📦 Installing Node.js dependencies...');
+    logger.info('📦 Installing Node.js dependencies...');
     const npm = spawn('npm', ['install'], {
       cwd: __dirname,
       stdio: 'inherit',
@@ -18,10 +19,10 @@ function installDependencies() {
 
     npm.on('close', (code) => {
       if (code === 0) {
-        console.log('✅ Node.js dependencies installed successfully');
+        logger.info('✅ Node.js dependencies installed successfully');
         resolve();
       } else {
-        console.log('❌ Failed to install Node.js dependencies');
+        logger.error('❌ Failed to install Node.js dependencies');
         reject(new Error(`npm install failed with code ${code}`));
       }
     });
@@ -29,7 +30,7 @@ function installDependencies() {
 }
 
 function startServer() {
-  console.log('🚀 Starting RoleReady Node.js Backend...');
+  logger.info('🚀 Starting RoleReady Node.js Backend...');
   
   // Set environment variables
   const env = {
@@ -47,32 +48,32 @@ function startServer() {
   });
 
   server.on('close', (code) => {
-    console.log(`\n🛑 Node.js backend stopped with code ${code}`);
+    logger.info(`\n🛑 Node.js backend stopped with code ${code}`);
   });
 
   server.on('error', (err) => {
-    console.error('❌ Failed to start Node.js server:', err);
+    logger.error('❌ Failed to start Node.js server:', err);
   });
 
   // Handle graceful shutdown
   process.on('SIGINT', () => {
-    console.log('\n🛑 Shutting down Node.js backend...');
+    logger.info('\n🛑 Shutting down Node.js backend...');
     server.kill('SIGINT');
   });
 
   process.on('SIGTERM', () => {
-    console.log('\n🛑 Shutting down Node.js backend...');
+    logger.info('\n🛑 Shutting down Node.js backend...');
     server.kill('SIGTERM');
   });
 }
 
 async function main() {
-  console.log('🟢 RoleReady Node.js Backend Startup');
-  console.log('=' * 50);
+  logger.info('🟢 RoleReady Node.js Backend Startup');
+  logger.info('='.repeat(50));
 
   // Check if package.json exists
   if (!fs.existsSync(path.join(__dirname, 'package.json'))) {
-    console.log('❌ package.json not found. Please run this script from the api directory.');
+    logger.error('❌ package.json not found. Please run this script from the api directory.');
     process.exit(1);
   }
 
@@ -80,7 +81,7 @@ async function main() {
     await installDependencies();
     startServer();
   } catch (error) {
-    console.error('❌ Startup failed:', error);
+    logger.error('❌ Startup failed:', error);
     process.exit(1);
   }
 }

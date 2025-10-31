@@ -4,6 +4,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all AI agents for a user
@@ -22,7 +23,7 @@ async function getAgentsByUserId(userId) {
     });
     return agents;
   } catch (error) {
-    console.error('Error fetching agents:', error);
+    logger.error('Error fetching agents:', error);
     throw error;
   }
 }
@@ -46,7 +47,7 @@ async function getAgentById(agentId, userId) {
     });
     return agent;
   } catch (error) {
-    console.error('Error fetching agent:', error);
+    logger.error('Error fetching agent:', error);
     throw error;
   }
 }
@@ -69,7 +70,7 @@ async function createAgent(userId, agentData) {
     });
     return agent;
   } catch (error) {
-    console.error('Error creating agent:', error);
+    logger.error('Error creating agent:', error);
     throw error;
   }
 }
@@ -96,7 +97,7 @@ async function updateAgent(agentId, userId, agentData) {
     });
     return agent;
   } catch (error) {
-    console.error('Error updating agent:', error);
+    logger.error('Error updating agent:', error);
     throw error;
   }
 }
@@ -114,7 +115,7 @@ async function deleteAgent(agentId, userId) {
     });
     return { success: true };
   } catch (error) {
-    console.error('Error deleting agent:', error);
+    logger.error('Error deleting agent:', error);
     throw error;
   }
 }
@@ -134,7 +135,7 @@ async function getAgentTasks(agentId, userId) {
     });
     return tasks;
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    logger.error('Error fetching tasks:', error);
     throw error;
   }
 }
@@ -157,7 +158,7 @@ async function createAgentTask(userId, taskData) {
     });
     return task;
   } catch (error) {
-    console.error('Error creating task:', error);
+    logger.error('Error creating task:', error);
     throw error;
   }
 }
@@ -181,7 +182,7 @@ async function updateAgentTask(taskId, userId, taskData) {
     });
     return task;
   } catch (error) {
-    console.error('Error updating task:', error);
+    logger.error('Error updating task:', error);
     throw error;
   }
 }
@@ -224,7 +225,7 @@ async function getAgentStats(userId) {
       pendingTasks: totalTasks - completedTasks - inProgressTasks
     };
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    logger.error('Error fetching stats:', error);
     throw error;
   }
 }

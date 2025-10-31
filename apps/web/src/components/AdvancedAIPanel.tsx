@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/aria-props */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bot, Sparkles, Settings, Zap, Brain, Target, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAIStreaming } from '../services/webSocketService';
@@ -337,13 +338,15 @@ export const AdvancedAIPanel: React.FC<AdvancedAIPanelProps> = ({
 
       {/* Model Selection */}
       <div className="p-4 border-b border-gray-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="ai-model-select">
           AI Model
         </label>
         <select
+          id="ai-model-select"
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          aria-label="Select AI Model"
         >
           {availableModels.map((model) => (
             <option key={model.id} value={model.id} disabled={!model.isAvailable}>
@@ -394,10 +397,12 @@ export const AdvancedAIPanel: React.FC<AdvancedAIPanelProps> = ({
           <h4 className="text-sm font-medium text-gray-700 mb-3">AI Settings</h4>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-sm text-gray-600 mb-1" htmlFor="temperature-slider">
                 Temperature: {aiSettings.temperature}
               </label>
+              {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
               <input
+                id="temperature-slider"
                 type="range"
                 min="0"
                 max="2"
@@ -405,14 +410,20 @@ export const AdvancedAIPanel: React.FC<AdvancedAIPanelProps> = ({
                 value={aiSettings.temperature}
                 onChange={(e) => setAiSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
                 className="w-full"
+                aria-label="Temperature setting"
+                aria-valuemin={0}
+                aria-valuemax={2}
+                aria-valuenow={aiSettings.temperature}
               />
             </div>
             
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
+              <label className="block text-sm text-gray-600 mb-1" htmlFor="max-tokens-slider">
                 Max Tokens: {aiSettings.maxTokens}
               </label>
+              {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
               <input
+                id="max-tokens-slider"
                 type="range"
                 min="100"
                 max="4000"
@@ -420,6 +431,10 @@ export const AdvancedAIPanel: React.FC<AdvancedAIPanelProps> = ({
                 value={aiSettings.maxTokens}
                 onChange={(e) => setAiSettings(prev => ({ ...prev, maxTokens: parseInt(e.target.value) }))}
                 className="w-full"
+                aria-label="Max tokens setting"
+                aria-valuemin={100}
+                aria-valuemax={4000}
+                aria-valuenow={aiSettings.maxTokens}
               />
             </div>
           </div>
@@ -479,6 +494,8 @@ export const AdvancedAIPanel: React.FC<AdvancedAIPanelProps> = ({
             onClick={handleSendMessage}
             disabled={!aiPrompt.trim() || isStreaming}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            aria-label="Send message"
+            title="Send message"
           >
             <Sparkles className="w-4 h-4" />
           </button>

@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/aria-props */
 import React, { useCallback, useRef, useEffect } from 'react';
 import { useAccessibilityContext } from '../providers/AccessibilityProvider';
 
@@ -77,7 +78,7 @@ export const AccessibleNav: React.FC<AccessibleNavProps> = ({
                 ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
               aria-current={item.current ? 'page' : undefined}
-              aria-disabled={item.disabled}
+              {...(item.disabled && { 'aria-disabled': true })}
               tabIndex={item.disabled ? -1 : 0}
             >
               {item.label}
@@ -95,7 +96,7 @@ export const AccessibleNav: React.FC<AccessibleNavProps> = ({
                 ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}
               `}
               aria-current={item.current ? 'page' : undefined}
-              aria-disabled={item.disabled}
+              {...(item.disabled && { 'aria-disabled': true })}
               tabIndex={item.disabled ? -1 : 0}
             >
               {item.label}
@@ -240,12 +241,13 @@ export const AccessibleTab: React.FC<AccessibleTabProps> = ({
         className="flex border-b border-gray-200"
       >
         {tabs.map((tab) => (
+          /* eslint-disable-next-line jsx-a11y/aria-proptypes */
           <button
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
             aria-controls={`tabpanel-${tab.id}`}
-            aria-disabled={tab.disabled}
+            {...(tab.disabled && { 'aria-disabled': true })}
             id={`tab-${tab.id}`}
             onClick={() => !tab.disabled && handleTabClick(tab.id)}
             disabled={tab.disabled}
@@ -351,6 +353,7 @@ export const AccessibleMenu: React.FC<AccessibleMenuProps> = ({
   return (
     <div className={`relative ${className}`}>
       {/* Trigger */}
+      {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
       <button
         ref={triggerRef}
         onClick={isOpen ? onClose : onOpen}

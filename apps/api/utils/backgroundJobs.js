@@ -5,12 +5,13 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Process background jobs
  */
 async function processBackgroundJobs() {
-  console.log('Processing background jobs...');
+  logger.info('Processing background jobs...');
   
   // Example: Clean up expired sessions
   await cleanupExpiredSessions();
@@ -18,7 +19,7 @@ async function processBackgroundJobs() {
   // Example: Clean up expired tokens
   await cleanupExpiredTokens();
   
-  console.log('Background jobs processed');
+  logger.info('Background jobs processed');
 }
 
 /**
@@ -36,7 +37,7 @@ async function cleanupExpiredSessions() {
   });
   
   if (result.count > 0) {
-    console.log(`Cleaned up ${result.count} expired sessions`);
+    logger.info(`Cleaned up ${result.count} expired sessions`);
   }
 }
 
@@ -56,7 +57,7 @@ async function cleanupExpiredTokens() {
   });
   
   if (resetTokens.count > 0) {
-    console.log(`Cleaned up ${resetTokens.count} expired password reset tokens`);
+    logger.info(`Cleaned up ${resetTokens.count} expired password reset tokens`);
   }
 }
 

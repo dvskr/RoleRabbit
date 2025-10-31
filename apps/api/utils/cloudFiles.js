@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all cloud files for a user
@@ -23,7 +24,7 @@ async function getCloudFilesByUserId(userId) {
     });
     return files;
   } catch (error) {
-    console.error('Error fetching cloud files:', error);
+    logger.error('Error fetching cloud files:', error);
     throw error;
   }
 }
@@ -42,7 +43,7 @@ async function getCloudFileById(fileId) {
     });
     return file;
   } catch (error) {
-    console.error('Error fetching cloud file:', error);
+    logger.error('Error fetching cloud file:', error);
     throw error;
   }
 }
@@ -73,7 +74,7 @@ async function createCloudFile(userId, fileData) {
     });
     return file;
   } catch (error) {
-    console.error('Error creating cloud file:', error);
+    logger.error('Error creating cloud file:', error);
     throw error;
   }
 }
@@ -106,7 +107,7 @@ async function updateCloudFile(fileId, updates) {
     });
     return file;
   } catch (error) {
-    console.error('Error updating cloud file:', error);
+    logger.error('Error updating cloud file:', error);
     throw error;
   }
 }
@@ -125,7 +126,7 @@ async function deleteCloudFile(fileId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting cloud file:', error);
+    logger.error('Error deleting cloud file:', error);
     throw error;
   }
 }
@@ -149,7 +150,7 @@ async function getCloudFilesByFolder(userId, folder) {
     });
     return files;
   } catch (error) {
-    console.error('Error fetching cloud files by folder:', error);
+    logger.error('Error fetching cloud files by folder:', error);
     throw error;
   }
 }

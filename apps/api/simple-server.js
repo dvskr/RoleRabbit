@@ -1,5 +1,6 @@
 const http = require('http');
 const url = require('url');
+const logger = require('./utils/logger');
 
 const server = http.createServer((req, res) => {
   // Enable CORS
@@ -275,24 +276,24 @@ const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || 'localhost';
 
 server.listen(PORT, HOST, () => {
-  console.log(`🚀 RoleReady Node.js API running on http://${HOST}:${PORT}`);
-  console.log(`📊 Health check: http://${HOST}:${PORT}/health`);
-  console.log(`📋 API status: http://${HOST}:${PORT}/api/status`);
+  logger.info(`🚀 RoleReady Node.js API running on http://${HOST}:${PORT}`);
+  logger.info(`📊 Health check: http://${HOST}:${PORT}/health`);
+  logger.info(`📋 API status: http://${HOST}:${PORT}/api/status`);
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Shutting down server...');
+  logger.info('\n🛑 Shutting down server...');
   server.close(() => {
-    console.log('✅ Server stopped');
+    logger.info('✅ Server stopped');
     process.exit(0);
   });
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Shutting down server...');
+  logger.info('\n🛑 Shutting down server...');
   server.close(() => {
-    console.log('✅ Server stopped');
+    logger.info('✅ Server stopped');
     process.exit(0);
   });
 });

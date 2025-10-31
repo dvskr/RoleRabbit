@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Agent Types Enum
@@ -44,7 +45,7 @@ const TASK_STATUS = {
  */
 async function executeAgentTask(agentId, taskType, userId, parameters = {}) {
   try {
-    console.log(`Executing agent task: ${taskType} for user: ${userId}`);
+    logger.info(`Executing agent task: ${taskType} for user: ${userId}`);
     
     // Create task record
     const task = await prisma.agentTask.create({
@@ -103,7 +104,7 @@ async function executeAgentTask(agentId, taskType, userId, parameters = {}) {
     return result;
     
   } catch (error) {
-    console.error(`Agent task execution error: ${error.message}`);
+    logger.error(`Agent task execution error: ${error.message}`);
     
     // Update task as failed
     if (task && task.id) {
@@ -173,7 +174,7 @@ async function executeJobDiscovery(userId, parameters) {
     };
     
   } catch (error) {
-    console.error('Job discovery error:', error);
+    logger.error('Job discovery error:', error);
     throw error;
   }
 }
@@ -239,7 +240,7 @@ async function executeResumeOptimization(userId, parameters) {
     };
     
   } catch (error) {
-    console.error('Resume optimization error:', error);
+    logger.error('Resume optimization error:', error);
     throw error;
   }
 }
@@ -291,7 +292,7 @@ async function executeApplicationTracking(userId, parameters) {
     };
     
   } catch (error) {
-    console.error('Application tracking error:', error);
+    logger.error('Application tracking error:', error);
     throw error;
   }
 }
@@ -340,7 +341,7 @@ async function executeInterviewPrep(userId, parameters) {
     };
     
   } catch (error) {
-    console.error('Interview prep error:', error);
+    logger.error('Interview prep error:', error);
     throw error;
   }
 }
@@ -370,7 +371,7 @@ async function executeNetworkDiscovery(userId, parameters) {
     };
     
   } catch (error) {
-    console.error('Network discovery error:', error);
+    logger.error('Network discovery error:', error);
     throw error;
   }
 }
@@ -403,7 +404,7 @@ async function executeSalaryNegotiation(userId, parameters) {
     };
     
   } catch (error) {
-    console.error('Salary negotiation error:', error);
+    logger.error('Salary negotiation error:', error);
     throw error;
   }
 }
@@ -429,7 +430,7 @@ async function getAgentTaskHistory(agentId, limit = 50) {
     
     return tasks;
   } catch (error) {
-    console.error('Error fetching task history:', error);
+    logger.error('Error fetching task history:', error);
     throw error;
   }
 }
@@ -452,7 +453,7 @@ async function getAgentStats(agentId) {
     
     return stats;
   } catch (error) {
-    console.error('Error fetching agent stats:', error);
+    logger.error('Error fetching agent stats:', error);
     throw error;
   }
 }

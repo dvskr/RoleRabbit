@@ -3,6 +3,7 @@
 
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
+import logger = require('../utils/logger');
 
 interface SocketData {
   userId: string;
@@ -36,7 +37,7 @@ class WebSocketManager {
 
   private setupEventHandlers() {
     this.io.on('connection', (socket) => {
-      console.log('User connected:', socket.id);
+      logger.info('User connected:', socket.id);
 
       // Resume collaboration events
       socket.on('join_resume_room', (data: { resumeId: string; userId: string }) => {
@@ -118,7 +119,7 @@ class WebSocketManager {
     
     socket.emit('collaborators_list', collaborators);
 
-    console.log(`User ${userId} joined resume room ${resumeId}`);
+    logger.info(`User ${userId} joined resume room ${resumeId}`);
   }
 
   private leaveResumeRoom(socket: any, resumeId: string, userId: string) {
@@ -139,7 +140,7 @@ class WebSocketManager {
     // Notify other collaborators
     socket.to(`resume:${resumeId}`).emit('user_left', { userId });
 
-    console.log(`User ${userId} left resume room ${resumeId}`);
+    logger.info(`User ${userId} left resume room ${resumeId}`);
   }
 
   private handleResumeUpdate(socket: any, data: { resumeId: string; changes: any; userId: string }) {
@@ -151,7 +152,7 @@ class WebSocketManager {
     });
 
     // In production, you would also save changes to database
-    console.log(`Resume ${data.resumeId} updated by ${data.userId}`);
+    logger.info(`Resume ${data.resumeId} updated by ${data.userId}`);
   }
 
   private handleCursorUpdate(socket: any, data: { resumeId: string; position: any; userId: string }) {
@@ -190,7 +191,7 @@ class WebSocketManager {
     }
     
     this.userRooms.get(userId)!.add(socket.id);
-    console.log(`User ${userId} joined user room`);
+    logger.info(`User ${userId} joined user room`);
   }
 
   private leaveUserRoom(socket: any, userId: string) {
@@ -205,7 +206,7 @@ class WebSocketManager {
       }
     }
     
-    console.log(`User ${userId} left user room`);
+    logger.info(`User ${userId} left user room`);
   }
 
   private handleUserTyping(socket: any, data: { isTyping: boolean; userId: string; username: string }) {
@@ -250,7 +251,7 @@ class WebSocketManager {
       });
 
     } catch (error) {
-      console.error('AI request error:', error);
+      logger.error('AI request error:', error);
       socket.emit('ai_error', {
         requestId: data.requestId,
         error: 'Failed to process AI request',
@@ -271,7 +272,7 @@ class WebSocketManager {
       this.leaveUserRoom(socket, userData.userId);
     }
 
-    console.log('User disconnected:', socket.id);
+    logger.info('User disconnected:', socket.id);
   }
 
   // Public methods for external use
@@ -305,6 +306,6 @@ const wsManager = new WebSocketManager(httpServer);
 
 // Add to your existing server setup
 httpServer.listen(3001, () => {
-  console.log('Server running on port 3001');
+  logger.info('Server running on port 3001');
 });
 */

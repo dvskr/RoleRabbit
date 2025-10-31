@@ -4,6 +4,7 @@
  */
 
 const cron = require('node-cron');
+const logger = require('./logger');
 
 const jobs = new Map();
 
@@ -34,7 +35,7 @@ function startTask(name) {
   
   job.task.start();
   job.running = true;
-  console.log(`✅ Task "${name}" started`);
+  logger.info(`✅ Task "${name}" started`);
 }
 
 function stopTask(name) {
@@ -45,7 +46,7 @@ function stopTask(name) {
   
   job.task.stop();
   job.running = false;
-  console.log(`⏸️ Task "${name}" stopped`);
+  logger.info(`⏸️ Task "${name}" stopped`);
 }
 
 function removeTask(name) {
@@ -57,7 +58,7 @@ function removeTask(name) {
   job.task.stop();
   job.task.destroy();
   jobs.delete(name);
-  console.log(`🗑️ Task "${name}" removed`);
+  logger.info(`🗑️ Task "${name}" removed`);
 }
 
 function getAllTasks() {

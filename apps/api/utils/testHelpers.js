@@ -4,6 +4,7 @@
  */
 
 const { PrismaClient } = require('@prisma/client');
+const logger = require('./logger');
 
 /**
  * Create test user
@@ -76,9 +77,9 @@ async function cleanupTestData(prisma) {
       prisma.job.deleteMany({ where: {} }),
       prisma.resume.deleteMany({ where: {} })
     ]);
-    console.log('✅ Test data cleaned up');
+    logger.info('✅ Test data cleaned up');
   } catch (error) {
-    console.error('❌ Error cleaning up test data:', error);
+    logger.error('❌ Error cleaning up test data:', error);
   }
 }
 

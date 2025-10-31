@@ -4,6 +4,7 @@
 
 const crypto = require('crypto');
 const { prisma } = require('./db');
+const logger = require('./logger');
 
 /**
  * Generate a secure random refresh token
@@ -64,7 +65,7 @@ async function verifyRefreshToken(token) {
       user: refreshToken.user,
     };
   } catch (error) {
-    console.error('Error decoding refresh token:', error);
+    logger.error('Error decoding refresh token:', error);
     return null;
   }
 }
@@ -79,7 +80,7 @@ async function deleteRefreshToken(token) {
       where: { token },
     });
   } catch (error) {
-    console.error('Error deleting refresh token:', error);
+    logger.error('Error deleting refresh token:', error);
   }
 }
 
@@ -93,7 +94,7 @@ async function deleteAllUserRefreshTokens(userId) {
       where: { userId },
     });
   } catch (error) {
-    console.error('Error deleting user refresh tokens:', error);
+    logger.error('Error deleting user refresh tokens:', error);
   }
 }
 
@@ -109,9 +110,9 @@ async function cleanupExpiredTokens() {
         },
       },
     });
-    console.log(`Cleaned up ${result.count} expired refresh tokens`);
+    logger.info(`Cleaned up ${result.count} expired refresh tokens`);
   } catch (error) {
-    console.error('Error cleaning up expired tokens:', error);
+    logger.error('Error cleaning up expired tokens:', error);
   }
 }
 

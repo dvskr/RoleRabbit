@@ -1,6 +1,7 @@
 const sgMail = require('@sendgrid/mail');
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
+const logger = require('./logger');
 
 // Initialize Resend (Primary)
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -45,7 +46,7 @@ async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.co
         throw new Error(error.message);
       }
       
-      console.log(`Email sent via Resend to ${to}:`, data.id);
+      logger.info(`Email sent via Resend to ${to}:`, data.id);
       return { success: true, provider: 'resend', id: data.id };
     }
     
@@ -60,7 +61,7 @@ async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.co
       };
       
       await sgMail.send(msg);
-      console.log(`Email sent via SendGrid to ${to}`);
+      logger.info(`Email sent via SendGrid to ${to}`);
       return { success: true, provider: 'sendgrid' };
     }
     
@@ -73,11 +74,11 @@ async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.co
       html,
     });
     
-    console.log(`Email sent via SMTP to ${to}:`, info.messageId);
+    logger.info(`Email sent via SMTP to ${to}:`, info.messageId);
     return { success: true, provider: 'smtp', messageId: info.messageId };
     
   } catch (error) {
-    console.error('Email sending error:', error);
+    logger.error('Email sending error:', error);
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }

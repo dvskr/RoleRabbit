@@ -5,6 +5,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const logger = require('./logger');
 
 class StaticSiteGenerator {
   /**
@@ -28,7 +29,7 @@ class StaticSiteGenerator {
     const js = this.generateJS();
     await fs.writeFile(path.join(outputDir, 'script.js'), js);
     
-    console.log(`Website generated in ${outputDir}`);
+    logger.info(`Website generated in ${outputDir}`);
   }
 
   /**

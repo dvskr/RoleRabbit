@@ -6,6 +6,7 @@
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 const BACKUP_DIR = path.join(__dirname, '../../backups');
 
@@ -36,12 +37,12 @@ async function createBackup() {
 
     exec(command, (error, stdout, stderr) => {
       if (error) {
-        console.error('Backup error:', error);
+        logger.error('Backup error:', error);
         reject(error);
         return;
       }
 
-      console.log(`✅ Backup created: ${backupFile}`);
+      logger.info(`✅ Backup created: ${backupFile}`);
       resolve({
         file: backupFile,
         size: fs.statSync(backupFile).size,
@@ -79,7 +80,7 @@ async function deleteOldBackups(daysToKeep = 7) {
 
   for (const backup of toDelete) {
     fs.unlinkSync(backup.path);
-    console.log(`🗑️ Deleted old backup: ${backup.file}`);
+      logger.info(`🗑️ Deleted old backup: ${backup.file}`);
   }
 
   return toDelete.length;
@@ -96,12 +97,12 @@ async function restoreBackup(backupFile) {
 
     exec(command, (error, stdout, stderr) => {
       if (error) {
-        console.error('Restore error:', error);
+        logger.error('Restore error:', error);
         reject(error);
         return;
       }
 
-      console.log(`✅ Database restored from: ${backupFile}`);
+      logger.info(`✅ Database restored from: ${backupFile}`);
       resolve(true);
     });
   });

@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all discussion posts
@@ -22,7 +23,7 @@ async function getDiscussionPosts(community) {
     });
     return posts;
   } catch (error) {
-    console.error('Error fetching discussion posts:', error);
+    logger.error('Error fetching discussion posts:', error);
     throw error;
   }
 }
@@ -41,7 +42,7 @@ async function getDiscussionPostById(postId) {
     });
     return post;
   } catch (error) {
-    console.error('Error fetching discussion post:', error);
+    logger.error('Error fetching discussion post:', error);
     throw error;
   }
 }
@@ -64,7 +65,7 @@ async function createDiscussionPost(userId, postData) {
     });
     return post;
   } catch (error) {
-    console.error('Error creating discussion post:', error);
+    logger.error('Error creating discussion post:', error);
     throw error;
   }
 }
@@ -93,7 +94,7 @@ async function updateDiscussionPost(postId, updates) {
     });
     return post;
   } catch (error) {
-    console.error('Error updating discussion post:', error);
+    logger.error('Error updating discussion post:', error);
     throw error;
   }
 }
@@ -112,7 +113,7 @@ async function deleteDiscussionPost(postId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting discussion post:', error);
+    logger.error('Error deleting discussion post:', error);
     throw error;
   }
 }
@@ -134,7 +135,7 @@ async function getCommentsByPostId(postId) {
     });
     return comments;
   } catch (error) {
-    console.error('Error fetching comments:', error);
+    logger.error('Error fetching comments:', error);
     throw error;
   }
 }
@@ -158,7 +159,7 @@ async function createComment(postId, userId, commentData) {
     });
     return comment;
   } catch (error) {
-    console.error('Error creating comment:', error);
+    logger.error('Error creating comment:', error);
     throw error;
   }
 }
@@ -186,7 +187,7 @@ async function updateComment(commentId, updates) {
     });
     return comment;
   } catch (error) {
-    console.error('Error updating comment:', error);
+    logger.error('Error updating comment:', error);
     throw error;
   }
 }
@@ -205,7 +206,7 @@ async function deleteComment(commentId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting comment:', error);
+    logger.error('Error deleting comment:', error);
     throw error;
   }
 }

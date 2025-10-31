@@ -1,5 +1,6 @@
 // Database connection and utilities
 const { PrismaClient } = require('@prisma/client');
+const logger = require('./logger');
 
 const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
@@ -9,10 +10,10 @@ const prisma = new PrismaClient({
 async function connectDB() {
   try {
     await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    logger.info('✅ Database connected successfully');
     return true;
   } catch (error) {
-    console.error('❌ Database connection error:', error);
+    logger.error('❌ Database connection error:', error);
     return false;
   }
 }
@@ -20,7 +21,7 @@ async function connectDB() {
 // Graceful shutdown
 async function disconnectDB() {
   await prisma.$disconnect();
-  console.log('🔌 Database disconnected');
+  logger.info('🔌 Database disconnected');
 }
 
 module.exports = {

@@ -350,7 +350,7 @@ fastify.post('/api/auth/register', async (request, reply) => {
     try {
       await sendWelcomeEmail(user);
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
+      logger.error('Failed to send welcome email:', emailError);
       // Don't fail registration if email fails
     }
     
@@ -556,7 +556,7 @@ fastify.post('/api/auth/logout', async (request, reply) => {
       await deactivateSession(sessionId);
     }
   } catch (error) {
-    console.error('Error during logout cleanup:', error);
+    logger.error('Error during logout cleanup:', error);
   }
   
   // Clear all auth-related cookies
@@ -706,7 +706,7 @@ fastify.post('/api/auth/forgot-password', async (request, reply) => {
     try {
       await sendPasswordResetEmail(email, resetToken);
     } catch (emailError) {
-      console.error('Failed to send password reset email:', emailError);
+      logger.error('Failed to send password reset email:', emailError);
       // In production, don't reveal this error
       return reply.send({
         success: true,
@@ -717,7 +717,7 @@ fastify.post('/api/auth/forgot-password', async (request, reply) => {
     // For development mode only - log the reset link
     if (process.env.NODE_ENV !== 'production') {
       const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-      console.log('Password reset link:', resetLink);
+      logger.info('Password reset link:', resetLink);
     }
     
     reply.send({
@@ -727,7 +727,7 @@ fastify.post('/api/auth/forgot-password', async (request, reply) => {
       ...(process.env.NODE_ENV !== 'production' && { resetLink })
     });
   } catch (error) {
-    console.error('Error in forgot password:', error);
+    logger.error('Error in forgot password:', error);
     reply.status(500).send({
       success: false,
       error: 'An error occurred while processing your request'
@@ -755,7 +755,7 @@ fastify.post('/api/auth/reset-password', async (request, reply) => {
       message: 'Password has been reset successfully'
     });
   } catch (error) {
-    console.error('Error in reset password:', error);
+    logger.error('Error in reset password:', error);
     reply.status(400).send({
       success: false,
       error: error.message
@@ -2341,7 +2341,7 @@ fastify.post('/api/agents/:id/execute', {
       result
     });
   } catch (error) {
-    console.error('Agent execution error:', error);
+    logger.error('Agent execution error:', error);
     reply.status(500).send({ error: error.message });
   }
 });
@@ -2504,9 +2504,9 @@ const start = async () => {
     
     await fastify.listen({ port, host });
     
-    console.log(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
-    console.log(`📊 Health check: http://${host}:${port}/health`);
-    console.log(`📋 API status: http://${host}:${port}/api/status`);
+    logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
+    logger.info(`📊 Health check: http://${host}:${port}/health`);
+    logger.info(`📋 API status: http://${host}:${port}/api/status`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
@@ -2515,14 +2515,14 @@ const start = async () => {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('🛑 Shutting down server...');
+  logger.info('🛑 Shutting down server...');
   await fastify.close();
   await disconnectDB();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('🛑 Shutting down server...');
+  logger.info('🛑 Shutting down server...');
   await fastify.close();
   await disconnectDB();
   process.exit(0);

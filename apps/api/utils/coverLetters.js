@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all cover letters for a user
@@ -23,7 +24,7 @@ async function getCoverLettersByUserId(userId) {
     });
     return coverLetters;
   } catch (error) {
-    console.error('Error fetching cover letters:', error);
+    logger.error('Error fetching cover letters:', error);
     throw error;
   }
 }
@@ -42,7 +43,7 @@ async function getCoverLetterById(coverLetterId) {
     });
     return coverLetter;
   } catch (error) {
-    console.error('Error fetching cover letter:', error);
+    logger.error('Error fetching cover letter:', error);
     throw error;
   }
 }
@@ -66,7 +67,7 @@ async function createCoverLetter(userId, coverLetterData) {
     });
     return coverLetter;
   } catch (error) {
-    console.error('Error creating cover letter:', error);
+    logger.error('Error creating cover letter:', error);
     throw error;
   }
 }
@@ -95,7 +96,7 @@ async function updateCoverLetter(coverLetterId, updates) {
     });
     return coverLetter;
   } catch (error) {
-    console.error('Error updating cover letter:', error);
+    logger.error('Error updating cover letter:', error);
     throw error;
   }
 }
@@ -114,7 +115,7 @@ async function deleteCoverLetter(coverLetterId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting cover letter:', error);
+    logger.error('Error deleting cover letter:', error);
     throw error;
   }
 }
@@ -136,7 +137,7 @@ async function getCoverLettersByJobId(jobId) {
     });
     return coverLetters;
   } catch (error) {
-    console.error('Error fetching cover letters by job:', error);
+    logger.error('Error fetching cover letters by job:', error);
     throw error;
   }
 }

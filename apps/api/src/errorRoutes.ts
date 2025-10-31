@@ -2,6 +2,7 @@
 // This would be added to apps/api/src/server.ts
 
 import { FastifyRequest, FastifyReply } from 'fastify';
+import logger = require('../utils/logger');
 
 interface ErrorReport {
   id: string;
@@ -50,7 +51,7 @@ export const errorRoutes = async (fastify: any) => {
       // 3. Send alerts for critical errors
       // 4. Aggregate error statistics
 
-      console.log('Error reported:', {
+      logger.info('Error reported:', {
         id: errorReport.id,
         message: errorReport.error.message,
         context: errorReport.context,
@@ -79,7 +80,7 @@ export const errorRoutes = async (fastify: any) => {
       });
 
     } catch (error) {
-      console.error('Failed to process error report:', error);
+      logger.error('Failed to process error report:', error);
       return reply.status(500).send({
         success: false,
         message: 'Failed to process error report'
@@ -128,7 +129,7 @@ export const errorRoutes = async (fastify: any) => {
       });
 
     } catch (error) {
-      console.error('Failed to get error statistics:', error);
+      logger.error('Failed to get error statistics:', error);
       return reply.status(500).send({
         success: false,
         message: 'Failed to get error statistics'
@@ -155,7 +156,7 @@ export const errorRoutes = async (fastify: any) => {
       });
 
     } catch (error) {
-      console.error('Failed to get error details:', error);
+      logger.error('Failed to get error details:', error);
       return reply.status(500).send({
         success: false,
         message: 'Failed to get error details'
@@ -184,7 +185,7 @@ export const errorRoutes = async (fastify: any) => {
       });
 
     } catch (error) {
-      console.error('Failed to delete error report:', error);
+      logger.error('Failed to delete error report:', error);
       return reply.status(500).send({
         success: false,
         message: 'Failed to delete error report'
@@ -198,7 +199,7 @@ export const errorMonitoringMiddleware = async (request: FastifyRequest, reply: 
   const startTime = Date.now();
   
   // Log request
-  console.log(`${request.method} ${request.url} - ${request.ip}`);
+  logger.info(`${request.method} ${request.url} - ${request.ip}`);
   
   // Monitor response time
   reply.addHook('onSend', async (request, reply, payload) => {
@@ -206,7 +207,7 @@ export const errorMonitoringMiddleware = async (request: FastifyRequest, reply: 
     
     // Log slow requests
     if (responseTime > 1000) {
-      console.warn(`Slow request: ${request.method} ${request.url} took ${responseTime}ms`);
+      logger.warn(`Slow request: ${request.method} ${request.url} took ${responseTime}ms`);
     }
     
     return payload;
@@ -214,7 +215,7 @@ export const errorMonitoringMiddleware = async (request: FastifyRequest, reply: 
   
   // Monitor errors
   reply.addHook('onError', async (request, reply, error) => {
-    console.error(`Request error: ${request.method} ${request.url}`, error);
+    logger.error(`Request error: ${request.method} ${request.url}`, error);
     
     // Report to error service
     if (process.env.NODE_ENV === 'production') {

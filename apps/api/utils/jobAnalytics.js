@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get job application analytics
@@ -65,7 +66,7 @@ async function getJobAnalytics(userId, dateRange = 30) {
       topPositions
     };
   } catch (error) {
-    console.error('Error getting job analytics:', error);
+    logger.error('Error getting job analytics:', error);
     throw error;
   }
 }
@@ -158,7 +159,7 @@ async function getApplicationTrends(userId, days = 30) {
 
     return Object.values(trends);
   } catch (error) {
-    console.error('Error getting trends:', error);
+    logger.error('Error getting trends:', error);
     throw error;
   }
 }
@@ -189,7 +190,7 @@ async function getSuccessMetrics(userId) {
 
     return metrics;
   } catch (error) {
-    console.error('Error getting metrics:', error);
+    logger.error('Error getting metrics:', error);
     throw error;
   }
 }

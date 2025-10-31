@@ -3,6 +3,8 @@
  * Handles scraping and parsing job listings from various job boards
  */
 
+const logger = require('./logger');
+
 class JobScraper {
   constructor() {
     this.supportedBoards = ['linkedin', 'indeed', 'glassdoor', 'monster', 'careerbuilder'];
@@ -16,7 +18,7 @@ class JobScraper {
       throw new Error(`Unsupported job board: ${boardName}`);
     }
 
-    console.log(`Scraping ${boardName} with params:`, searchParams);
+    logger.info(`Scraping ${boardName} with params:`, searchParams);
 
     // Mock implementation - would use Puppeteer or similar
     const mockJobs = this.generateMockJobs(searchParams);

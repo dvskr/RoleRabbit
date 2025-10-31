@@ -22,7 +22,7 @@ const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
-const AIAgents = dynamic(() => import('../../components/AIAgents'), { ssr: false });
+const AIAgents = dynamic(() => import('../../components/AIAgents/index'), { ssr: false });
 import { EyeOff, Sparkles, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Home as HomeIcon, GripVertical, Eye, Trash2 } from 'lucide-react';
 import { 
   CustomField, 

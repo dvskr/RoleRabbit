@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 const schema = {
   openapi: '3.0.0',
@@ -65,7 +66,7 @@ function registerEndpoint(method, path, options = {}) {
 function generateDocumentation() {
   const outputPath = path.join(__dirname, '../docs/api-spec.json');
   fs.writeFileSync(outputPath, JSON.stringify(schema, null, 2));
-  console.log('✅ API documentation generated at:', outputPath);
+  logger.info('✅ API documentation generated at:', outputPath);
   
   // Also generate HTML using redoc-cli if available
   // npx redoc-cli bundle docs/api-spec.json -o docs/api-docs.html

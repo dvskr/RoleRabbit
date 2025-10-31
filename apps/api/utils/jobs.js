@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all jobs for a user
@@ -23,7 +24,7 @@ async function getJobsByUserId(userId) {
     });
     return jobs;
   } catch (error) {
-    console.error('Error fetching jobs:', error);
+    logger.error('Error fetching jobs:', error);
     throw error;
   }
 }
@@ -42,7 +43,7 @@ async function getJobById(jobId) {
     });
     return job;
   } catch (error) {
-    console.error('Error fetching job:', error);
+    logger.error('Error fetching job:', error);
     throw error;
   }
 }
@@ -71,7 +72,7 @@ async function createJob(userId, jobData) {
     });
     return job;
   } catch (error) {
-    console.error('Error creating job:', error);
+    logger.error('Error creating job:', error);
     throw error;
   }
 }
@@ -104,7 +105,7 @@ async function updateJob(jobId, updates) {
     });
     return job;
   } catch (error) {
-    console.error('Error updating job:', error);
+    logger.error('Error updating job:', error);
     throw error;
   }
 }
@@ -123,7 +124,7 @@ async function deleteJob(jobId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting job:', error);
+    logger.error('Error deleting job:', error);
     throw error;
   }
 }
@@ -147,7 +148,7 @@ async function getJobsByStatus(userId, status) {
     });
     return jobs;
   } catch (error) {
-    console.error('Error fetching jobs by status:', error);
+    logger.error('Error fetching jobs by status:', error);
     throw error;
   }
 }

@@ -2,6 +2,7 @@ const PDFDocument = require('pdfkit');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = require('docx');
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 /**
  * Generate PDF from resume data
@@ -442,7 +443,7 @@ async function exportResume(resumeData, format = 'pdf') {
         throw new Error(`Unsupported export format: ${format}`);
     }
   } catch (error) {
-    console.error('Export error:', error);
+    logger.error('Export error:', error);
     throw error;
   }
 }

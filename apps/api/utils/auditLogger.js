@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 const AuditActions = {
   // User actions
@@ -53,7 +54,7 @@ async function logAuditEvent({ userId, action, resource, resourceId, details, ip
       }
     });
   } catch (error) {
-    console.error('Failed to log audit event:', error);
+    logger.error('Failed to log audit event:', error);
     // Don't throw - audit logging should never break the application
   }
 }
@@ -69,7 +70,7 @@ async function getUserAuditLogs(userId, limit = 100) {
       take: limit
     });
   } catch (error) {
-    console.error('Failed to get audit logs:', error);
+    logger.error('Failed to get audit logs:', error);
     throw error;
   }
 }
@@ -85,7 +86,7 @@ async function getResourceAuditLogs(resource, resourceId, limit = 100) {
       take: limit
     });
   } catch (error) {
-    console.error('Failed to get resource audit logs:', error);
+    logger.error('Failed to get resource audit logs:', error);
     throw error;
   }
 }

@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all emails for a user
@@ -23,7 +24,7 @@ async function getEmailsByUserId(userId) {
     });
     return emails;
   } catch (error) {
-    console.error('Error fetching emails:', error);
+    logger.error('Error fetching emails:', error);
     throw error;
   }
 }
@@ -42,7 +43,7 @@ async function getEmailById(emailId) {
     });
     return email;
   } catch (error) {
-    console.error('Error fetching email:', error);
+    logger.error('Error fetching email:', error);
     throw error;
   }
 }
@@ -68,7 +69,7 @@ async function createEmail(userId, emailData) {
     });
     return email;
   } catch (error) {
-    console.error('Error creating email:', error);
+    logger.error('Error creating email:', error);
     throw error;
   }
 }
@@ -97,7 +98,7 @@ async function updateEmail(emailId, updates) {
     });
     return email;
   } catch (error) {
-    console.error('Error updating email:', error);
+    logger.error('Error updating email:', error);
     throw error;
   }
 }
@@ -116,7 +117,7 @@ async function deleteEmail(emailId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting email:', error);
+    logger.error('Error deleting email:', error);
     throw error;
   }
 }
@@ -138,7 +139,7 @@ async function getEmailsByJobId(jobId) {
     });
     return emails;
   } catch (error) {
-    console.error('Error fetching emails by job:', error);
+    logger.error('Error fetching emails by job:', error);
     throw error;
   }
 }

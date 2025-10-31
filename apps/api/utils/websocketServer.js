@@ -4,6 +4,7 @@
  */
 
 const { Server } = require('@fastify/websocket');
+const logger = require('./logger');
 
 class WebSocketServer {
   constructor(server) {
@@ -56,7 +57,7 @@ class WebSocketServer {
           this.sendError(connection, 'Unknown message type');
       }
     } catch (error) {
-      console.error('Error handling WebSocket message:', error);
+      logger.error('Error handling WebSocket message:', error);
       this.sendError(connection, error.message);
     }
   }

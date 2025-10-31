@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const logger = require('./logger');
 
 const prisma = new PrismaClient();
 
@@ -12,7 +13,7 @@ const prisma = new PrismaClient();
  * Seed users
  */
 async function seedUsers() {
-  console.log('🌱 Seeding users...');
+  logger.info('🌱 Seeding users...');
 
   const hashedPassword = await bcrypt.hash('password123', 10);
 
@@ -49,7 +50,7 @@ async function seedUsers() {
     })
   ]);
 
-  console.log(`✅ Seeded ${users.length} users`);
+  logger.info(`✅ Seeded ${users.length} users`);
   return users;
 }
 
@@ -57,7 +58,7 @@ async function seedUsers() {
  * Seed resumes
  */
 async function seedResumes(userId) {
-  console.log('🌱 Seeding resumes...');
+  logger.info('🌱 Seeding resumes...');
 
   const resumeData = {
     name: 'John Doe',
@@ -118,7 +119,7 @@ async function seedResumes(userId) {
     ]
   });
 
-  console.log(`✅ Seeded ${resumes.count} resumes`);
+  logger.info(`✅ Seeded ${resumes.count} resumes`);
   return resumes;
 }
 
@@ -126,7 +127,7 @@ async function seedResumes(userId) {
  * Seed jobs
  */
 async function seedJobs(userId) {
-  console.log('🌱 Seeding jobs...');
+  logger.info('🌱 Seeding jobs...');
 
   const jobs = [
     {
@@ -180,7 +181,7 @@ async function seedJobs(userId) {
     data: jobs
   });
 
-  console.log(`✅ Seeded ${createdJobs.count} jobs`);
+  logger.info(`✅ Seeded ${createdJobs.count} jobs`);
   return createdJobs;
 }
 
@@ -188,7 +189,7 @@ async function seedJobs(userId) {
  * Seed cover letters
  */
 async function seedCoverLetters(userId, jobId) {
-  console.log('🌱 Seeding cover letters...');
+  logger.info('🌱 Seeding cover letters...');
 
   const coverLetters = await prisma.coverLetter.createMany({
     data: [
@@ -202,7 +203,7 @@ async function seedCoverLetters(userId, jobId) {
     ]
   });
 
-  console.log(`✅ Seeded ${coverLetters.count} cover letters`);
+  logger.info(`✅ Seeded ${coverLetters.count} cover letters`);
   return coverLetters;
 }
 
@@ -210,7 +211,7 @@ async function seedCoverLetters(userId, jobId) {
  * Seed cloud files
  */
 async function seedCloudFiles(userId) {
-  console.log('🌱 Seeding cloud files...');
+  logger.info('🌱 Seeding cloud files...');
 
   const files = await prisma.cloudFile.createMany({
     data: [
@@ -235,7 +236,7 @@ async function seedCloudFiles(userId) {
     ]
   });
 
-  console.log(`✅ Seeded ${files.count} cloud files`);
+  logger.info(`✅ Seeded ${files.count} cloud files`);
   return files;
 }
 
@@ -243,7 +244,7 @@ async function seedCloudFiles(userId) {
  * Seed AI agents
  */
 async function seedAIAgents(userId) {
-  console.log('🌱 Seeding AI agents...');
+  logger.info('🌱 Seeding AI agents...');
 
   const agents = await prisma.aiAgent.createMany({
     data: [
@@ -275,7 +276,7 @@ async function seedAIAgents(userId) {
     ]
   });
 
-  console.log(`✅ Seeded ${agents.count} AI agents`);
+  logger.info(`✅ Seeded ${agents.count} AI agents`);
   return agents;
 }
 
@@ -284,7 +285,7 @@ async function seedAIAgents(userId) {
  */
 async function seed() {
   try {
-    console.log('🚀 Starting database seed...\n');
+    logger.info('🚀 Starting database seed...\n');
 
     // Seed users
     const users = await seedUsers();
@@ -313,9 +314,9 @@ async function seed() {
     // Seed AI agents
     await seedAIAgents(testUser.id);
 
-    console.log('\n✅ Database seeded successfully!');
+    logger.info('\n✅ Database seeded successfully!');
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    logger.error('❌ Error seeding database:', error);
     throw error;
   } finally {
     await prisma.$disconnect();

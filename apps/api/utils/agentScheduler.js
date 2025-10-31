@@ -4,6 +4,7 @@
  */
 
 const cron = require('node-cron');
+const logger = require('./logger');
 
 class AgentScheduler {
   constructor(prisma) {
@@ -24,7 +25,7 @@ class AgentScheduler {
       try {
         await this.executeAgentTask(agentId, userId, taskType, config);
       } catch (error) {
-        console.error(`Error executing agent ${agentId}:`, error);
+        logger.error(`Error executing agent ${agentId}:`, error);
       }
     }, {
       scheduled: false,
@@ -34,7 +35,7 @@ class AgentScheduler {
     this.jobs.set(jobName, task);
     task.start();
     
-    console.log(`Scheduled agent ${agentId} to run ${schedule}`);
+    logger.info(`Scheduled agent ${agentId} to run ${schedule}`);
     return task;
   }
 
@@ -130,7 +131,7 @@ class AgentScheduler {
    */
   async executeJobDiscoveryAgent(config) {
     // Mock implementation - would integrate with job board APIs
-    console.log('Executing job discovery agent with config:', config);
+    logger.info('Executing job discovery agent with config:', config);
     
     return {
       success: true,
@@ -146,7 +147,7 @@ class AgentScheduler {
    * Execute resume optimization agent
    */
   async executeResumeOptimizationAgent(config) {
-    console.log('Executing resume optimization agent with config:', config);
+    logger.info('Executing resume optimization agent with config:', config);
     
     return {
       success: true,
@@ -161,7 +162,7 @@ class AgentScheduler {
    * Execute interview prep agent
    */
   async executeInterviewPrepAgent(config) {
-    console.log('Executing interview prep agent with config:', config);
+    logger.info('Executing interview prep agent with config:', config);
     
     return {
       success: true,
@@ -183,7 +184,7 @@ class AgentScheduler {
     if (task) {
       task.stop();
       this.jobs.delete(jobName);
-      console.log(`Stopped agent ${agentId}`);
+      logger.info(`Stopped agent ${agentId}`);
     }
   }
 

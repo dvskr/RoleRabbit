@@ -5,6 +5,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('./logger');
 
 /**
  * Get all resumes for a user
@@ -23,7 +24,7 @@ async function getResumesByUserId(userId) {
     });
     return resumes;
   } catch (error) {
-    console.error('Error fetching resumes:', error);
+    logger.error('Error fetching resumes:', error);
     throw error;
   }
 }
@@ -42,7 +43,7 @@ async function getResumeById(resumeId) {
     });
     return resume;
   } catch (error) {
-    console.error('Error fetching resume:', error);
+    logger.error('Error fetching resume:', error);
     throw error;
   }
 }
@@ -68,7 +69,7 @@ async function createResume(userId, resumeData) {
     });
     return resume;
   } catch (error) {
-    console.error('Error creating resume:', error);
+    logger.error('Error creating resume:', error);
     throw error;
   }
 }
@@ -101,7 +102,7 @@ async function updateResume(resumeId, updates) {
     });
     return resume;
   } catch (error) {
-    console.error('Error updating resume:', error);
+    logger.error('Error updating resume:', error);
     throw error;
   }
 }
@@ -120,7 +121,7 @@ async function deleteResume(resumeId) {
     });
     return true;
   } catch (error) {
-    console.error('Error deleting resume:', error);
+    logger.error('Error deleting resume:', error);
     throw error;
   }
 }

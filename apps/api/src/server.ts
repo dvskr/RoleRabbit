@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import { PrismaClient } from '@prisma/client';
+import logger = require('../utils/logger');
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -210,9 +211,9 @@ const start = async () => {
     
     await server.listen({ port, host });
     
-    console.log(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
-    console.log(`📊 Health check: http://${host}:${port}/health`);
-    console.log(`📋 API status: http://${host}:${port}/api/status`);
+    logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
+    logger.info(`📊 Health check: http://${host}:${port}/health`);
+    logger.info(`📋 API status: http://${host}:${port}/api/status`);
   } catch (err) {
     server.log.error(err);
     process.exit(1);
@@ -221,14 +222,14 @@ const start = async () => {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('🛑 Shutting down server...');
+  logger.info('🛑 Shutting down server...');
   await server.close();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('🛑 Shutting down server...');
+  logger.info('🛑 Shutting down server...');
   await server.close();
   await prisma.$disconnect();
   process.exit(0);

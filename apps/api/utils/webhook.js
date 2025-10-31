@@ -4,6 +4,7 @@
  */
 
 const crypto = require('crypto');
+const logger = require('./logger');
 
 const webhooks = new Map();
 
@@ -58,10 +59,10 @@ async function triggerWebhook(name, event, data) {
     });
 
     if (!response.ok) {
-      console.error(`Webhook ${name} failed:`, response.statusText);
+      logger.error(`Webhook ${name} failed:`, response.statusText);
     }
   } catch (error) {
-    console.error(`Webhook ${name} error:`, error);
+    logger.error(`Webhook ${name} error:`, error);
   }
 }
 
