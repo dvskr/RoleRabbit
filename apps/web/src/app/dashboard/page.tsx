@@ -58,6 +58,7 @@ const ResumeImportFromCloudModal = dynamic(() => import('../../components/modals
 
 import { ResumeFile } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
+import ErrorBoundary from '../../components/ErrorBoundary';
 // Import dashboard constants
 import {
   DEFAULT_TAB,
@@ -519,31 +520,6 @@ export default function DashboardPage() {
 
   const renderActiveComponent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return (
-          <DashboardFigma 
-            onQuickAction={(actionId) => {
-              logger.debug('Quick action:', actionId);
-              // Handle quick actions
-              switch (actionId) {
-                case 'export':
-                  // Trigger export functionality
-                  break;
-                case 'customize':
-                  // Open customization modal
-                  break;
-                case 'themes':
-                  // Open theme selector
-                  break;
-                default:
-                  break;
-              }
-            }}
-            onNavigateToTab={(tab) => {
-              handleTabChange(tab);
-            }}
-          />
-        );
       case 'profile':
         return <Profile />;
       case 'storage':
@@ -833,7 +809,22 @@ export default function DashboardPage() {
         />;
       case 'tracker':
       case 'jobs':
-        return <JobTracker />;
+        return (
+          <ErrorBoundary
+            fallback={
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-600 mb-4">Error loading Job Tracker</p>
+                  <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
+                    Refresh Page
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            <JobTracker />
+          </ErrorBoundary>
+        );
       case 'discussion':
         return <Discussion />;
       case 'email':
@@ -846,7 +837,22 @@ export default function DashboardPage() {
         return <LearningHub />;
       case 'agents':
       case 'ai-agents':
-        return <AIAgents />;
+        return (
+          <ErrorBoundary
+            fallback={
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-600 mb-4">Error loading AI Auto-Apply</p>
+                  <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
+                    Refresh Page
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            <AIAgents />
+          </ErrorBoundary>
+        );
       default:
         return <DashboardFigma onNavigateToTab={handleTabChange} />;
     }
@@ -914,62 +920,94 @@ export default function DashboardPage() {
           {/* Main Content */}
           <div className="flex-1 flex overflow-hidden relative">
             <div className="absolute inset-0 h-full w-full overflow-y-auto">
-              {/* Render all tabs but hide inactive ones - mounted but hidden */}
-              <div className={`absolute inset-0 h-full ${activeTab === 'dashboard' ? '' : 'hidden'}`}>
-                <DashboardFigma 
-                  onQuickAction={(actionId) => {
-                    logger.debug('Quick action:', actionId);
-                    switch (actionId) {
-                      case 'export':
-                        // Trigger export functionality
-                        break;
-                      case 'customize':
-                        // Open customization modal
-                        break;
-                      case 'themes':
-                        // Open theme selector
-                        break;
-                      default:
-                        break;
-                    }
-                  }}
-                  onNavigateToTab={(tab) => handleTabChange(tab)}
-                />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'profile' ? '' : 'hidden'}`}>
-                <Profile />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'storage' ? '' : 'hidden'}`}>
-                <CloudStorage />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'tracker' ? '' : 'hidden'}`}>
-                <JobTracker />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'templates' ? '' : 'hidden'}`}>
-                <Templates />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'cover-letter' ? '' : 'hidden'}`}>
-                <CoverLetterGenerator />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'portfolio' ? '' : 'hidden'}`}>
-                <PortfolioGenerator />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'discussion' ? '' : 'hidden'}`}>
-                <Discussion />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'email' ? '' : 'hidden'}`}>
-                <Email />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'learning' ? '' : 'hidden'}`}>
-                <LearningHub />
-              </div>
-              <div className={`absolute inset-0 h-full ${activeTab === 'agents' ? '' : 'hidden'}`}>
-                <AIAgents />
-              </div>
+              {/* Render all tabs conditionally - only render active tab */}
+              {activeTab === 'dashboard' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <DashboardFigma 
+                    onQuickAction={(actionId) => {
+                      logger.debug('Quick action:', actionId);
+                      switch (actionId) {
+                        case 'export':
+                          setShowExportModal(true);
+                          break;
+                        case 'customize':
+                          // Open customization modal
+                          break;
+                        case 'themes':
+                          // Open theme selector
+                          break;
+                        default:
+                          break;
+                      }
+                    }}
+                    onNavigateToTab={(tab) => handleTabChange(tab)}
+                  />
+                </div>
+              )}
+              {activeTab === 'profile' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <Profile />
+                </div>
+              )}
+              {activeTab === 'storage' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <CloudStorage />
+                </div>
+              )}
+              {(activeTab === 'tracker' || activeTab === 'jobs') && (
+                <div className="absolute inset-0 h-full w-full">
+                  <JobTracker />
+                </div>
+              )}
+              {activeTab === 'templates' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <Templates 
+                    onAddToEditor={(templateId) => {
+                      setSelectedTemplateId(templateId);
+                      dashboardTemplates.addTemplate(templateId);
+                      logger.debug('Template added to editor:', templateId);
+                    }}
+                    addedTemplates={addedTemplates}
+                    onRemoveTemplate={dashboardTemplates.removeTemplate}
+                  />
+                </div>
+              )}
+              {activeTab === 'cover-letter' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <CoverLetterGenerator />
+                </div>
+              )}
+              {activeTab === 'portfolio' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <PortfolioGenerator />
+                </div>
+              )}
+              {activeTab === 'discussion' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <Discussion />
+                </div>
+              )}
+              {activeTab === 'email' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <Email />
+                </div>
+              )}
+              {activeTab === 'learning' && (
+                <div className="absolute inset-0 h-full w-full">
+                  <LearningHub />
+                </div>
+              )}
+              {(activeTab === 'agents' || activeTab === 'ai-agents') && (
+                <div className="absolute inset-0 h-full w-full">
+                  <AIAgents />
+                </div>
+              )}
               {/* Editor is special and handles its own rendering */}
-              <div className={`absolute inset-0 h-full ${activeTab === 'editor' ? '' : 'hidden'} ${showRightPanel && activeTab === 'editor' ? 'right-80' : ''}`}>
-                {renderActiveComponent()}
-              </div>
+              {activeTab === 'editor' && (
+                <div className={`absolute inset-0 h-full w-full ${showRightPanel ? 'right-80' : ''}`}>
+                  {renderActiveComponent()}
+                </div>
+              )}
             </div>
             {/* AI Panel */}
             {activeTab === 'editor' && showRightPanel && (

@@ -8,9 +8,10 @@ export { default as JobDetailView } from './JobDetailView';
 export { default as ExportModal } from './ExportModal';
 export { default as SettingsModal } from './SettingsModal';
 
+// Modals - Export individually to avoid issues
+export { default as AddJobModal } from './modals/AddJobModal';
+export { default as EditJobModal } from './modals/EditJobModal';
+
 // Enhanced Trackers
 export * from './trackers';
 export * from './panels';
-
-// Modals
-export * from './modals';

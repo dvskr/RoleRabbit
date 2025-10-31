@@ -57,11 +57,21 @@ interface HistoryTask {
 }
 
 export default function AIAgents() {
-  const { theme } = useTheme();
-  const colors = theme.colors;
-  const [activeTab, setActiveTab] = useState<TabType>('chat');
-  const [activeTasksCount] = useState(2);
-  const [isAgentEnabled, setIsAgentEnabled] = useState(true);
+  try {
+    const { theme } = useTheme();
+    const colors = theme?.colors;
+    const [activeTab, setActiveTab] = useState<TabType>('chat');
+    const [activeTasksCount] = useState(2);
+    const [isAgentEnabled, setIsAgentEnabled] = useState(true);
+
+    // Safety check for theme
+    if (!colors) {
+      return (
+        <div className="h-full flex items-center justify-center bg-white">
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      );
+    }
 
   // Mock data for active tasks
   const [activeTasks] = useState<ActiveTask[]>([
@@ -176,12 +186,12 @@ export default function AIAgents() {
   ]);
 
   const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages] = useState([
+  const [chatMessages, setChatMessages] = useState([
     {
       id: '1',
       sender: 'ai',
       message: "Hi! I'm your AI Job Application Assistant. I can help you automate your entire job search process - from tailoring resumes to researching companies. What would you like me to do?",
-      timestamp: '10:30 AM'
+      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
     }
   ]);
 
@@ -193,7 +203,26 @@ export default function AIAgents() {
 
   const handleSendMessage = () => {
     if (chatMessage.trim()) {
-      // Handle message sending
+      // Add user message
+      const userMsg = {
+        id: Date.now().toString(),
+        sender: 'user',
+        message: chatMessage,
+        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      };
+      setChatMessages(prev => [...prev, userMsg]);
+      
+      // Simulate AI response
+      setTimeout(() => {
+        const aiMsg = {
+          id: (Date.now() + 1).toString(),
+          sender: 'ai',
+          message: "I understand you'd like help with that. Let me work on it for you. This feature is currently in development - your request has been noted!",
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+        };
+        setChatMessages(prev => [...prev, aiMsg]);
+      }, 1000);
+      
       setChatMessage('');
     }
   };
@@ -259,7 +288,7 @@ export default function AIAgents() {
                 border: `1px solid ${isAgentEnabled ? colors.primaryBlue : colors.border}`,
               }}
               role="switch"
-              aria-checked={isAgentEnabled}
+              aria-checked={isAgentEnabled ? "true" : "false"}
               aria-label={isAgentEnabled ? "Disable AI Agent" : "Enable AI Agent"}
               title={isAgentEnabled ? "Disable AI Agent" : "Enable AI Agent"}
             >
@@ -404,24 +433,36 @@ export default function AIAgents() {
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 {chatMessages.map(msg => (
-                  <div key={msg.id} className="flex gap-3 mb-4">
-                    <div 
-                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ background: colors.badgePurpleBg }}
-                    >
-                      <Bot size={16} style={{ color: colors.badgePurpleText }} />
-                    </div>
-                    <div className="flex-1">
+                  <div 
+                    key={msg.id} 
+                    className={`flex gap-3 mb-4 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
+                  >
+                    {msg.sender === 'ai' ? (
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: colors.badgePurpleBg }}
+                      >
+                        <Bot size={16} style={{ color: colors.badgePurpleText }} />
+                      </div>
+                    ) : (
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: colors.primaryBlue }}
+                      >
+                        <span className="text-xs font-bold text-white">U</span>
+                      </div>
+                    )}
+                    <div className={`flex-1 ${msg.sender === 'user' ? 'flex flex-col items-end' : ''}`}>
                       <div 
                         className="rounded-lg px-4 py-3 mb-1"
                         style={{ 
-                          background: colors.cardBackground,
-                          border: `1px solid ${colors.border}`
+                          background: msg.sender === 'user' ? colors.primaryBlue : colors.cardBackground,
+                          border: msg.sender === 'user' ? 'none' : `1px solid ${colors.border}`
                         }}
                       >
                         <p 
                           className="text-sm"
-                          style={{ color: colors.primaryText }}
+                          style={{ color: msg.sender === 'user' ? 'white' : colors.primaryText }}
                         >
                           {msg.message}
                         </p>
@@ -1087,5 +1128,21 @@ export default function AIAgents() {
         )}
       </div>
     </div>
-  );
+    );
+  } catch (error) {
+    console.error('Critical error in AIAgents:', error);
+    return (
+      <div className="h-full flex items-center justify-center bg-white">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading AI Auto-Apply</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
