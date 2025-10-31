@@ -241,11 +241,10 @@ export const AccessibleTab: React.FC<AccessibleTabProps> = ({
         className="flex border-b border-gray-200"
       >
         {tabs.map((tab) => (
-          /* eslint-disable-next-line jsx-a11y/aria-proptypes */
           <button
             key={tab.id}
             role="tab"
-            aria-selected={activeTab === tab.id}
+            aria-selected={activeTab === tab.id ? "true" : "false"}
             aria-controls={`tabpanel-${tab.id}`}
             {...(tab.disabled && { 'aria-disabled': true })}
             id={`tab-${tab.id}`}
@@ -353,12 +352,11 @@ export const AccessibleMenu: React.FC<AccessibleMenuProps> = ({
   return (
     <div className={`relative ${className}`}>
       {/* Trigger */}
-      {/* eslint-disable-next-line jsx-a11y/aria-proptypes */}
       <button
         ref={triggerRef}
         onClick={isOpen ? onClose : onOpen}
         aria-haspopup="menu"
-        aria-expanded={isOpen}
+        aria-expanded={isOpen ? "true" : "false"}
         className="focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
       >
         {trigger}
