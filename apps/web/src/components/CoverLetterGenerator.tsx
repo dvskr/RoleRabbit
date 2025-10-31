@@ -12,12 +12,14 @@ import {
 import { logger } from '../utils/logger';
 import { CoverLetterTemplate } from './coverletter/types/coverletter';
 import { ResumeFile } from '../types/cloudStorage';
-import { Cloud, X, Download, TrendingUp } from 'lucide-react';
+import { Cloud, X, Download, Sparkles } from 'lucide-react';
 import ExportModal from './coverletter/ExportModal';
 import ImportModal from './coverletter/ImportModal';
 import CoverLetterAnalytics from './CoverLetterAnalytics';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function CoverLetterGenerator() {
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<'templates' | 'ai' | 'custom' | 'preview'>('templates');
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
@@ -392,32 +394,42 @@ export default function CoverLetterGenerator() {
   };
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20 flex flex-col overflow-hidden">
-      <CoverLetterHeader
-        onSave={handleSave}
-        onExport={() => handleExport('pdf')}
-        onPrint={handlePrint}
-        wordCount={wordCount}
-        isSaving={isSaving}
-        onImport={handleImportClick}
-        onExportClick={handleExportClick}
-        onAnalytics={() => setShowAnalyticsModal(true)}
-      />
-
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="px-4 py-3 flex-shrink-0">
-          <CoverLetterTabs
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-          />
-            </div>
-
-        <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="p-4">
-            <div className="max-w-7xl mx-auto">
-              {renderTabContent()}
-            </div>
+    <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: theme.colors.background }}>
+      {/* Header with Title and Subtitle */}
+      <div className="flex-shrink-0 px-6 pt-6 pb-3" style={{ background: theme.colors.headerBackground }}>
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Sparkles size={24} style={{ color: theme.colors.primaryBlue }} />
+            <h1 className="text-3xl font-bold" style={{ color: theme.colors.primaryText }}>
+              AI Cover Letter Generator
+            </h1>
           </div>
+          <p className="text-sm mb-3" style={{ color: theme.colors.secondaryText }}>
+            Fill in your details and watch your cover letter generate in real-time
+          </p>
+        </div>
+        {/* Separator Line - Full Width */}
+        <div 
+          style={{ 
+            height: '1px',
+            background: theme.colors.border,
+            marginLeft: '-1.5rem',
+            marginRight: '-1.5rem',
+            marginBottom: '1rem'
+          }}
+        />
+
+        {/* Navigation Tabs */}
+        <CoverLetterTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <div className={`flex-1 ${activeTab === 'ai' ? 'overflow-hidden' : 'overflow-y-auto'} scroll-smooth`}>
+        <div className={activeTab === 'ai' ? 'h-full' : 'p-6'}>
+          {renderTabContent()}
         </div>
       </div>
 
@@ -498,6 +510,8 @@ function SaveToCloudModal({
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Close modal"
+            title="Close modal"
           >
             <X size={20} />
           </button>
@@ -560,6 +574,8 @@ function SaveToCloudModal({
                   <button
                     onClick={() => handleRemoveTag(tag)}
                     className="hover:text-indigo-600"
+                    aria-label={`Remove tag ${tag}`}
+                    title={`Remove tag ${tag}`}
                   >
                     <X size={14} />
                   </button>

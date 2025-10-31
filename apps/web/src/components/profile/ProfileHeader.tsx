@@ -1,10 +1,11 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { Save, Edit, LogOut } from 'lucide-react';
+import { Save, Edit, LogOut, UserCircle } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
   resumeImportButton?: ReactNode;
@@ -20,6 +21,8 @@ export default function ProfileHeader({
 }: ExtendedProfileHeaderProps) {
   const { logout } = useAuth();
   const router = useRouter();
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const handleLogout = async () => {
     await logout();
@@ -27,42 +30,131 @@ export default function ProfileHeader({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200/50 px-4 py-2 flex-shrink-0 shadow-sm">
+    <div 
+      className="backdrop-blur-sm px-6 py-3 flex-shrink-0 shadow-sm"
+      style={{
+        background: colors.headerBackground,
+        borderBottom: `1px solid ${colors.border}`,
+      }}
+    >
       <div className="flex items-center justify-between">
-        <div></div>
-        <div className="flex items-center gap-3">
-          {/* Resume Import Button */}
-          {resumeImportButton && !isEditing && resumeImportButton}
-          {isEditing && (
+        {/* Left: Title and Description */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl"
+            style={{
+              background: colors.badgeInfoBg,
+              border: `1px solid ${colors.badgeInfoBorder}`,
+            }}
+          >
+            <UserCircle size={24} style={{ color: colors.primaryBlue }} />
+          </div>
+          <div>
+            <h1 
+              className="text-2xl font-bold"
+              style={{ color: colors.primaryText }}
+            >
+              Personal Information
+            </h1>
+            <p 
+              className="text-sm"
+              style={{ color: colors.secondaryText }}
+            >
+              Update your personal details and profile information
+            </p>
+          </div>
+        </div>
+        
+        {/* Right: All Action Buttons in One Bar */}
+        <div className="flex items-center gap-2">
+          {/* Unified Button Group */}
+          {isEditing ? (
             <>
               <button
                 onClick={onCancel}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-all duration-200 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium"
+                style={{
+                  color: colors.secondaryText,
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                  e.currentTarget.style.color = colors.primaryText;
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                  e.currentTarget.style.color = colors.secondaryText;
+                  e.currentTarget.style.borderColor = colors.border;
+                }}
               >
                 Cancel
               </button>
               <button
                 onClick={onSave}
                 disabled={isSaving}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="px-5 py-2 rounded-lg disabled:opacity-50 transition-all duration-200 flex items-center gap-2 text-sm font-medium"
+                style={{
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSaving) {
+                    e.currentTarget.style.background = colors.primaryBlueHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlue;
+                }}
               >
                 <Save size={16} />
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </>
-          )}
-          {!isEditing && (
+          ) : (
             <>
+              {/* Resume Import Button */}
+              {resumeImportButton}
+              
+              {/* Edit Profile Button */}
               <button
                 onClick={onEdit}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.primaryText,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                  e.currentTarget.style.borderColor = colors.borderFocused;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                  e.currentTarget.style.borderColor = colors.border;
+                }}
               >
                 <Edit size={16} />
                 Edit Profile
               </button>
+              
+              {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 flex items-center gap-2 shadow-lg"
+                className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.errorRed,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgeErrorBg;
+                  e.currentTarget.style.borderColor = colors.badgeErrorBorder;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.inputBackground;
+                  e.currentTarget.style.borderColor = colors.border;
+                }}
               >
                 <LogOut size={16} />
                 Logout

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  User, 
+  UserCircle, 
   Shield, 
   Settings, 
   CreditCard, 
@@ -12,13 +12,13 @@ import {
   Target,
   FileText,
   BarChart3,
-  LucideIcon,
   LogOut
 } from 'lucide-react';
 import apiService from '@/services/apiService';
 import { logger } from '@/utils/logger';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/contexts/ThemeContext';
 
 import {
   ProfileHeader,
@@ -39,6 +39,9 @@ import {
 } from './profile/index';
 
 export default function Profile() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -57,8 +60,23 @@ export default function Profile() {
     try {
       const response = await apiService.getUserProfile();
       if (response && response.user) {
-        // Map API response to UserData format
-        setUserData(response.user as UserData);
+        // Map API response to UserData format and ensure analytics properties exist
+        const userProfile = response.user as UserData;
+        
+        // Ensure analytics properties have default values if missing
+        const userDataWithDefaults: UserData = {
+          ...userProfile,
+          profileViews: userProfile.profileViews || 0,
+          applicationsSent: userProfile.applicationsSent || 0,
+          interviewsScheduled: userProfile.interviewsScheduled || 0,
+          offersReceived: userProfile.offersReceived || 0,
+          successRate: userProfile.successRate || 0,
+          profileCompleteness: userProfile.profileCompleteness || 0,
+          skillMatchRate: userProfile.skillMatchRate || 0,
+          avgResponseTime: userProfile.avgResponseTime || 0,
+        };
+        
+        setUserData(userDataWithDefaults);
       }
     } catch (error) {
       logger.error('Failed to load user profile:', error);
@@ -196,7 +214,7 @@ export default function Profile() {
   };
 
   const tabs: ProfileTabConfig[] = [
-    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'profile', label: 'Personal Information', icon: UserCircle },
     { id: 'professional', label: 'Professional', icon: Briefcase },
     { id: 'skills', label: 'Skills & Expertise', icon: Award },
     { id: 'career', label: 'Career Goals', icon: Target },
@@ -319,7 +337,10 @@ export default function Profile() {
   };
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20 flex flex-col overflow-hidden">
+    <div 
+      className="w-full h-full flex flex-col overflow-hidden"
+      style={{ background: colors.background }}
+    >
       {/* Enhanced Header */}
       <ProfileHeader
         isEditing={isEditing}

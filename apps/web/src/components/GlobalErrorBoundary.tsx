@@ -1,3 +1,5 @@
+'use client';
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw, Home, Bug, X } from 'lucide-react';
 
@@ -251,6 +253,8 @@ class GlobalErrorBoundary extends Component<Props, State> {
           <button
             onClick={this.handleDismiss}
             className="text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Dismiss error"
+            title="Dismiss"
           >
             <X className="w-4 h-4" />
           </button>

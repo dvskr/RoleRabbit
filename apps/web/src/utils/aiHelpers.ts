@@ -3,7 +3,7 @@ import { aiService } from '../services/aiService';
 
 // AI helper functions
 export const aiHelpers = {
-  generateAIContent: async (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void, setShowAIGenerateModal: (show: boolean) => void) => {
+  generateAIContent: async (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void, setShowAIGenerateModal: (show: boolean) => void, setCustomSectionContent?: (content: string) => void) => {
     if (!aiPrompt.trim()) return;
     
     try {
@@ -53,6 +53,12 @@ export const aiHelpers = {
             customFields: []
           };
           setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
+          break;
+        case 'custom':
+          // Handle custom sections
+          if (setCustomSectionContent) {
+            setCustomSectionContent(response.content);
+          }
           break;
       }
       

@@ -254,6 +254,8 @@ export const AccessibleButton = forwardRef<HTMLButtonElement, AccessibleButtonPr
       lg: 'px-6 py-3 text-base'
     };
 
+    const isDisabled = disabled || loading;
+
     return (
       <button
         ref={ref}
@@ -266,8 +268,7 @@ export const AccessibleButton = forwardRef<HTMLButtonElement, AccessibleButtonPr
           ${sizeClasses[size]}
           ${className}
         `}
-        disabled={disabled || loading}
-        aria-disabled={disabled || loading}
+        disabled={isDisabled}
         {...buttonProps}
         {...props}
       >

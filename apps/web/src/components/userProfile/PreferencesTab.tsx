@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Settings, Palette, Globe, Clock, Mail, Bell, Eye, EyeOff } from 'lucide-react';
+import { Settings, Palette, Globe, Mail, Bell, Eye } from 'lucide-react';
 import { UserPreferences } from '../../types/userProfile';
 
 interface PreferencesTabProps {

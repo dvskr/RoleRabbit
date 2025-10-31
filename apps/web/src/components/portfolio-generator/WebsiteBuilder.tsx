@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Building2, GripVertical, Eye, Settings, Palette, Trash2, Plus, Edit, PlusCircle, Home, User, Briefcase, FileText, Award, Mail, Sparkles, X } from 'lucide-react';
+import { Building2, Palette, Plus, Edit, Home, User, Briefcase, FileText, Award, Mail, Sparkles, X } from 'lucide-react';
 import { WebsiteConfig, Theme, Section } from '../../types/portfolio';
 import SectionEditor from './SectionEditor';
 import AIPromptPanel from './AIPromptPanel';
@@ -274,6 +274,8 @@ export default function WebsiteBuilder({ onNext, onBack, config, onUpdate, portf
                     className={`w-10 h-6 rounded-full transition-colors ${
                       section.enabled ? 'bg-blue-500' : 'bg-gray-300'
                     }`}
+                    aria-label={`Toggle ${section.title} section`}
+                    title={section.enabled ? 'Disable section' : 'Enable section'}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full transform transition-transform ${
                       section.enabled ? 'translate-x-5' : 'translate-x-1'

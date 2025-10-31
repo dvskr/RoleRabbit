@@ -5,7 +5,7 @@ import { DashboardConfig, DashboardWidget } from './types/dashboard';
 import { useDashboard } from '../../hooks/useDashboard';
 import { DashboardHeader } from './components/DashboardHeader';
 import { DashboardGrid } from './components/DashboardGrid';
-import { Lightbulb, Target, Clock, TrendingUp, Settings, Download, BarChart3, Eye, X, Palette, Sparkles, Search, Bell, Keyboard } from 'lucide-react';
+import { Target, TrendingUp, Settings, Download, BarChart3, Eye, X, Palette, Sparkles, Search, Bell } from 'lucide-react';
 import { DashboardCustomizer } from './components/DashboardCustomizer';
 import { DataExport } from './components/DataExport';
 import { GoalSetting } from './components/GoalSetting';
@@ -360,6 +360,8 @@ export default function MissionControlDashboard({
                   <button
                     onClick={() => setShowSearch(false)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    aria-label="Close search"
+                    title="Close"
                   >
                     <X size={20} className="text-gray-600" />
                   </button>
@@ -400,6 +402,8 @@ export default function MissionControlDashboard({
                 <button
                   onClick={() => setShowNotifications(false)}
                   className="p-1 hover:bg-gray-100 rounded transition-colors"
+                  aria-label="Close notifications"
+                  title="Close"
                 >
                   <X size={16} className="text-gray-600" />
                 </button>

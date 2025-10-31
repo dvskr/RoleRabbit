@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { 
   ThumbsUp, 
@@ -21,6 +23,7 @@ import {
   Award
 } from 'lucide-react';
 import { Post } from '../../types/discussion';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface PostCardProps {
   post: Post;
@@ -36,7 +39,7 @@ interface PostCardProps {
   animatingAction?: string;
 }
 
-export default function PostCard({
+const PostCard = React.memo(function PostCard({
   post,
   onVote,
   onComment,
@@ -49,6 +52,8 @@ export default function PostCard({
   isFlagged,
   animatingAction
 }: PostCardProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'general': return <MessageSquare size={16} />;
@@ -60,15 +65,6 @@ export default function PostCard({
       case 'ai-help': return <Bot size={16} />;
       case 'feedback': return <Heart size={16} />;
       default: return <MessageSquare size={16} />;
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'text-red-600 bg-red-100';
-      case 'moderator': return 'text-blue-600 bg-blue-100';
-      case 'ai': return 'text-purple-600 bg-purple-100';
-      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -90,25 +86,51 @@ export default function PostCard({
     return date.toLocaleDateString();
   };
 
+  const getRoleColorStyles = (role: string): React.CSSProperties => {
+    switch (role) {
+      case 'admin': return { backgroundColor: colors.badgeErrorBg, color: colors.badgeErrorText };
+      case 'moderator': return { backgroundColor: colors.badgeInfoBg, color: colors.badgeInfoText };
+      case 'ai': return { backgroundColor: colors.badgePurpleBg, color: colors.badgePurpleText };
+      default: return { backgroundColor: colors.inputBackground, color: colors.secondaryText };
+    }
+  };
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-all duration-300">
+    <div
+      className="rounded-lg p-6 transition-all duration-300 border"
+      style={{
+        background: colors.cardBackground,
+        borderColor: colors.border,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
       {/* Post Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+            style={{
+              background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+            }}
+          >
             {post.author.name.charAt(0)}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-900">{post.author.name}</span>
+              <span className="font-semibold" style={{ color: colors.primaryText }}>{post.author.name}</span>
               {post.author.verified && (
-                <Award size={14} className="text-blue-500" />
+                <Award size={14} style={{ color: colors.primaryBlue }} />
               )}
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(post.author.role)}`}>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={getRoleColorStyles(post.author.role)}>
                 {post.author.role}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm" style={{ color: colors.tertiaryText }}>
               <span>{formatKarma(post.author.karma)} karma</span>
               <span>•</span>
               <span>{formatTime(post.timestamp)}</span>
@@ -120,21 +142,28 @@ export default function PostCard({
         
         <div className="flex items-center gap-2">
           {post.isPinned && (
-            <Pin size={16} className="text-orange-500" />
+            <Pin size={16} style={{ color: colors.badgeWarningText }} />
           )}
           {post.isLocked && (
-            <Lock size={16} className="text-red-500" />
+            <Lock size={16} style={{ color: colors.badgeErrorText }} />
           )}
-          <button className="p-1 hover:bg-gray-100 rounded">
-            <MoreHorizontal size={16} className="text-gray-400" />
+          <button
+            className="p-1 rounded transition-colors"
+            style={{ color: colors.tertiaryText }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            aria-label="More options"
+            title="More options"
+          >
+            <MoreHorizontal size={16} />
           </button>
         </div>
       </div>
 
       {/* Post Content */}
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{post.title}</h3>
-        <p className="text-gray-700 leading-relaxed">{post.content}</p>
+        <h3 className="text-lg font-semibold mb-2" style={{ color: colors.primaryText }}>{post.title}</h3>
+        <p className="leading-relaxed" style={{ color: colors.secondaryText }}>{post.content}</p>
         
         {/* Tags */}
         {post.tags.length > 0 && (
@@ -142,7 +171,11 @@ export default function PostCard({
             {post.tags.map((tag, index) => (
               <span
                 key={index}
-                className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                className="px-2 py-1 text-xs rounded-full"
+                style={{
+                  background: colors.inputBackground,
+                  color: colors.secondaryText,
+                }}
               >
                 #{tag}
               </span>
@@ -157,87 +190,146 @@ export default function PostCard({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onVote(post.id, 'up')}
-              className="p-1 hover:bg-gray-100 rounded"
+              className="p-1 rounded transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              aria-label="Upvote post"
+              title="Upvote"
             >
-              <ThumbsUp size={16} className="text-gray-500" />
+              <ThumbsUp size={16} />
             </button>
-            <span className="text-sm font-medium text-gray-700">{post.votes}</span>
+            <span className="text-sm font-medium" style={{ color: colors.primaryText }}>{post.votes}</span>
             <button
               onClick={() => onVote(post.id, 'down')}
-              className="p-1 hover:bg-gray-100 rounded"
+              aria-label="Downvote post"
+              title="Downvote"
+              className="p-1 rounded transition-colors"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
-              <ThumbsDown size={16} className="text-gray-500" />
+              <ThumbsDown size={16} />
             </button>
           </div>
           
           <button
             onClick={() => onView(post.id)}
-            className="flex items-center gap-2 p-1 hover:bg-gray-100 rounded"
+            className="flex items-center gap-2 p-1 rounded transition-colors"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             title="View post and comments"
+            aria-label="View post and comments"
           >
             <div className="flex items-center gap-1">
-              <Eye size={16} className="text-gray-500" />
-              <MessageSquare size={16} className="text-gray-500" />
+              <Eye size={16} />
+              <MessageSquare size={16} />
             </div>
-            <span className="text-sm text-gray-600">{post.views}</span>
-            <span className="text-sm text-gray-600">•</span>
-            <span className="text-sm text-gray-600">{post.comments}</span>
+            <span className="text-sm">{post.views}</span>
+            <span className="text-sm">•</span>
+            <span className="text-sm">{post.comments}</span>
           </button>
           
           <button
             onClick={() => onShare(post.id)}
-            className="flex items-center gap-1 p-1 hover:bg-gray-100 rounded"
+            className="flex items-center gap-1 p-1 rounded transition-colors"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            title="Share post"
+            aria-label="Share post"
           >
-            <Share2 size={16} className="text-gray-500" />
-            <span className="text-sm text-gray-600">Share</span>
+            <Share2 size={16} />
+            <span className="text-sm">Share</span>
           </button>
         </div>
         
         <div className="flex items-center gap-2">
           <button
             onClick={() => onBookmark(post.id)}
-            className={`p-1 hover:bg-gray-100 rounded transition-all ${
-              isBookmarked ? 'bg-blue-50' : ''
-            } ${
+            className={`p-1 rounded transition-all ${
               animatingAction === 'bookmark' ? 'animate-bounce' : ''
             }`}
+            style={{
+              background: isBookmarked ? `${colors.primaryBlue}20` : 'transparent',
+              color: isBookmarked ? colors.primaryBlue : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (!isBookmarked) {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isBookmarked) {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
             title={isBookmarked ? 'Remove bookmark' : 'Bookmark this post'}
+            aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this post'}
           >
             <Bookmark 
               size={16} 
-              className={isBookmarked ? 'text-blue-600 fill-blue-600' : 'text-gray-500'}
+              className={isBookmarked ? 'fill-current' : ''}
             />
           </button>
           <button
             onClick={() => onFlag(post.id)}
-            className={`p-1 hover:bg-gray-100 rounded transition-all ${
-              isFlagged ? 'bg-red-50' : ''
-            } ${
+            className={`p-1 rounded transition-all ${
               animatingAction === 'flag' ? 'animate-bounce' : ''
             }`}
+            style={{
+              background: isFlagged ? `${colors.badgeErrorBg}20` : 'transparent',
+              color: isFlagged ? colors.badgeErrorText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (!isFlagged) {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isFlagged) {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
             title={isFlagged ? 'Remove report' : 'Report this post'}
+            aria-label={isFlagged ? 'Remove report' : 'Report this post'}
           >
-            <Flag 
-              size={16} 
-              className={isFlagged ? 'text-red-600' : 'text-gray-500'}
-            />
+            <Flag size={16} />
           </button>
           <button
             onClick={() => onPin(post.id)}
-            className={`p-1 hover:bg-gray-100 rounded transition-all ${
-              post.isPinned ? 'bg-yellow-50' : ''
-            } ${
+            className={`p-1 rounded transition-all ${
               animatingAction === 'pin' ? 'animate-bounce' : ''
             }`}
+            style={{
+              background: post.isPinned ? `${colors.badgeWarningBg}20` : 'transparent',
+              color: post.isPinned ? colors.badgeWarningText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (!post.isPinned) {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!post.isPinned) {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
             title={post.isPinned ? 'Unpin this post' : 'Pin this post'}
+            aria-label={post.isPinned ? 'Unpin this post' : 'Pin this post'}
           >
-            <Pin 
-              size={16} 
-              className={post.isPinned ? 'text-yellow-600' : 'text-gray-500'}
-            />
+            <Pin size={16} />
           </button>
         </div>
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.post.id === nextProps.post.id &&
+         prevProps.isBookmarked === nextProps.isBookmarked &&
+         prevProps.isFlagged === nextProps.isFlagged &&
+         prevProps.animatingAction === nextProps.animatingAction;
+});
+
+export default PostCard;

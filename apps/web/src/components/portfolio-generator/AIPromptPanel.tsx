@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Sparkles, Send, Wand2, Loader, Check, X, RotateCcw, Paperclip, FileText, Image } from 'lucide-react';
+import { Sparkles, Send, Wand2, Loader, Check, X, Paperclip, FileText, Image } from 'lucide-react';
 
 interface AIPromptPanelProps {
   onPromptSubmit: (prompt: string, attachments?: File[]) => Promise<any>;
@@ -92,6 +92,7 @@ export default function AIPromptPanel({ onPromptSubmit, isLoading, onReset, onCl
               accept="image/*,application/pdf,application/msword"
               onChange={handleFileSelect}
               className="hidden"
+              aria-label="Attach files to prompt"
             />
             
             <div className="absolute bottom-3 right-3 flex gap-1">
@@ -132,6 +133,8 @@ export default function AIPromptPanel({ onPromptSubmit, isLoading, onReset, onCl
                       type="button"
                       onClick={() => handleRemoveAttachment(index)}
                       className="text-red-500 hover:text-red-700"
+                      aria-label={`Remove attachment ${file.name}`}
+                      title="Remove attachment"
                     >
                       <X size={14} />
                     </button>

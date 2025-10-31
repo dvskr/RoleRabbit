@@ -8,6 +8,7 @@ import InboxTab from './tabs/InboxTab';
 import TemplatesTab from './tabs/TemplatesTab';
 import SettingsTab from './tabs/SettingsTab';
 import AnalyticsTab from './tabs/AnalyticsTab';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export type EmailHubTab = 'contacts' | 'composer' | 'inbox' | 'templates' | 'settings' | 'analytics';
 
@@ -22,6 +23,8 @@ const tabs: Array<{ id: EmailHubTab; label: string; icon: any }> = [
 
 export default function EmailHub() {
   const [activeTab, setActiveTab] = useState<EmailHubTab>('contacts');
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -43,12 +46,12 @@ export default function EmailHub() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: colors.background }}>
       {/* Header - Removed title here */}
 
       <div className="flex-1 flex min-h-0">
         {/* Sidebar Tabs */}
-        <div className="w-64 bg-white border-r border-gray-200 flex-shrink-0 overflow-y-auto">
+        <div className="w-64 flex-shrink-0 overflow-y-auto" style={{ background: colors.sidebarBackground, borderRight: `1px solid ${colors.border}` }}>
           <nav className="p-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -56,11 +59,22 @@ export default function EmailHub() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
+                  style={{
+                    background: activeTab === tab.id ? `${colors.primaryBlue}20` : 'transparent',
+                    color: activeTab === tab.id ? colors.activeBlueText : colors.primaryText,
+                    border: activeTab === tab.id ? `1px solid ${colors.primaryBlue}40` : 'none',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
                 >
                   <Icon size={20} />
                   <span className="font-medium">{tab.label}</span>
@@ -71,7 +85,7 @@ export default function EmailHub() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden" style={{ background: colors.background }}>
           {renderTabContent()}
         </div>
       </div>

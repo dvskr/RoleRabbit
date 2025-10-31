@@ -1,6 +1,9 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Users, MessageSquare, Lock, Globe, Settings, Plus, Edit, Trash2, UserCog, Shield } from 'lucide-react';
 import { Community } from '../../types/discussion';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface CommunityCardProps {
   community: Community;
@@ -15,7 +18,7 @@ interface CommunityCardProps {
   isAnimating: boolean;
 }
 
-export default function CommunityCard({
+const CommunityCard = React.memo(function CommunityCard({
   community,
   onJoin,
   onView,
@@ -27,6 +30,9 @@ export default function CommunityCard({
   isJoined,
   isAnimating
 }: CommunityCardProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -67,22 +73,39 @@ export default function CommunityCard({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+    <div
+      className="rounded-lg p-6 transition-shadow border"
+      style={{
+        background: colors.cardBackground,
+        borderColor: colors.border,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'none';
+      }}
+    >
       {/* Community Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">
+          <div
+            className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+            style={{
+              background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+            }}
+          >
             {community.name.charAt(0)}
           </div>
           <div>
-            <h3 className="font-bold text-gray-900 text-sm">{community.name}</h3>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <h3 className="font-bold text-sm" style={{ color: colors.primaryText }}>{community.name}</h3>
+            <div className="flex items-center gap-2 text-xs" style={{ color: colors.tertiaryText }}>
               {getCategoryIcon(community.category)}
               <span>{community.category}</span>
               {community.isPrivate ? (
-                <Lock size={12} className="text-red-500" />
+                <Lock size={12} style={{ color: colors.badgeErrorText }} />
               ) : (
-                <Globe size={12} className="text-green-500" />
+                <Globe size={12} style={{ color: colors.badgeSuccessText }} />
               )}
             </div>
           </div>
@@ -91,20 +114,35 @@ export default function CommunityCard({
         <div className="relative" ref={settingsRef}>
           <button
             onClick={handleSettingsClick}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            className="p-1 rounded transition-colors"
+            style={{ color: colors.tertiaryText }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            title="Settings"
+            aria-label="Community settings"
           >
-            <Settings size={16} className="text-gray-400 hover:text-gray-600" />
+            <Settings size={16} />
           </button>
           
           {/* Settings Dropdown */}
           {showSettingsMenu && (
-            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-2 z-50 min-w-[180px]">
+            <div
+              className="absolute right-0 top-full mt-1 rounded-lg shadow-xl py-2 z-50 min-w-[180px] border"
+              style={{
+                background: colors.cardBackground,
+                borderColor: colors.border,
+                boxShadow: `0 10px 25px ${colors.border}40`,
+              }}
+            >
               <button
                 onClick={() => {
                   onEditCommunity(community);
                   setShowSettingsMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors"
+                style={{ color: colors.primaryText }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <Edit size={14} />
                 Edit Community
@@ -114,7 +152,10 @@ export default function CommunityCard({
                   onManageMembers(community);
                   setShowSettingsMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors"
+                style={{ color: colors.primaryText }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <UserCog size={14} />
                 Manage Members
@@ -124,18 +165,24 @@ export default function CommunityCard({
                   onModerationTools(community);
                   setShowSettingsMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors"
+                style={{ color: colors.primaryText }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <Shield size={14} />
                 Moderation Tools
               </button>
-              <div className="border-t border-gray-200 my-1"></div>
+              <div className="my-1" style={{ borderTop: `1px solid ${colors.border}` }}></div>
               <button
                 onClick={() => {
                   onDeleteCommunity(community);
                   setShowSettingsMenu(false);
                 }}
-                className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 transition-colors"
+                style={{ color: colors.badgeErrorText }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = `${colors.badgeErrorBg}20`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <Trash2 size={14} />
                 Delete Community
@@ -146,17 +193,17 @@ export default function CommunityCard({
       </div>
 
       {/* Community Description */}
-      <p className="text-gray-600 text-sm mb-4">{community.description}</p>
+      <p className="text-sm mb-4" style={{ color: colors.secondaryText }}>{community.description}</p>
 
       {/* Community Stats */}
       <div className="flex items-center gap-4 mb-4">
         <div className="flex items-center gap-1">
-          <Users size={14} className="text-gray-400" />
-          <span className="text-xs text-gray-600">{formatMemberCount(community.memberCount)} members</span>
+          <Users size={14} style={{ color: colors.tertiaryText }} />
+          <span className="text-xs" style={{ color: colors.secondaryText }}>{formatMemberCount(community.memberCount)} members</span>
         </div>
         <div className="flex items-center gap-1">
-          <MessageSquare size={14} className="text-gray-400" />
-          <span className="text-xs text-gray-600">{community.postCount} posts</span>
+          <MessageSquare size={14} style={{ color: colors.tertiaryText }} />
+          <span className="text-xs" style={{ color: colors.secondaryText }}>{community.postCount} posts</span>
         </div>
       </div>
 
@@ -166,13 +213,23 @@ export default function CommunityCard({
           {community.tags.slice(0, 3).map((tag, index) => (
             <span
               key={index}
-              className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+              className="px-2 py-1 text-xs rounded-full"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+              }}
             >
               #{tag}
             </span>
           ))}
           {community.tags.length > 3 && (
-            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+            <span
+              className="px-2 py-1 text-xs rounded-full"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+              }}
+            >
               +{community.tags.length - 3}
             </span>
           )}
@@ -184,29 +241,58 @@ export default function CommunityCard({
         <button
           onClick={() => onJoin(community.id)}
           className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-            isJoined 
-              ? 'bg-green-600 text-white hover:bg-green-700' 
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          } ${
             isAnimating ? 'animate-bounce' : ''
           }`}
+          style={{
+            background: isJoined ? colors.badgeSuccessText : colors.primaryBlue,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = isJoined ? colors.badgeSuccessText + 'dd' : colors.primaryBlueHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = isJoined ? colors.badgeSuccessText : colors.primaryBlue;
+          }}
         >
           {isJoined ? '✓ Joined' : 'Join Community'}
         </button>
         <button
           onClick={() => onPost(community.id)}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center gap-1"
+          className="px-4 py-2 rounded-lg transition-colors text-sm flex items-center gap-1"
+          style={{
+            background: colors.badgePurpleText,
+            color: 'white',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.badgePurpleText + 'dd';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = colors.badgePurpleText;
+          }}
         >
           <Plus size={14} />
           Post
         </button>
         <button
           onClick={() => onView(community.id)}
-          className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          className="px-4 py-2 rounded-lg transition-colors text-sm"
+          style={{
+            background: 'transparent',
+            border: `1px solid ${colors.border}`,
+            color: colors.primaryText,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = colors.hoverBackground; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
         >
           View
         </button>
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.community.id === nextProps.community.id &&
+         prevProps.isJoined === nextProps.isJoined &&
+         prevProps.isAnimating === nextProps.isAnimating;
+});
+
+export default CommunityCard;

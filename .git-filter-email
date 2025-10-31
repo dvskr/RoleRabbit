@@ -1,0 +1,9 @@
+#!/bin/sh
+if [ "$GIT_COMMITTER_EMAIL" = "Sathish.Kumar@propper.com" ]; then
+    export GIT_COMMITTER_EMAIL="daggulasatish143@gmail.com"
+    export GIT_COMMITTER_NAME="Sathish Kumar"
+fi
+if [ "$GIT_AUTHOR_EMAIL" = "Sathish.Kumar@propper.com" ]; then
+    export GIT_AUTHOR_EMAIL="daggulasatish143@gmail.com"
+    export GIT_AUTHOR_NAME="Sathish Kumar"
+fi

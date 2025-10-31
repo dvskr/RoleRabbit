@@ -103,7 +103,7 @@ export interface CloudStorageProps {
 
 export type FileType = 'all' | 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample';
 export type SortBy = 'name' | 'date' | 'size';
-export type ViewMode = 'grid' | 'list';
+export type ViewMode = 'grid' | 'list' | 'compact';
 
 export interface StorageInfo {
   used: number;

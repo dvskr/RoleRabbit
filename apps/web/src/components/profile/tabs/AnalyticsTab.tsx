@@ -3,163 +3,426 @@
 import React from 'react';
 import { Eye, FileText, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
 import { UserData } from '../types/profile';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 interface AnalyticsTabProps {
   userData: UserData;
 }
 
 export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   return (
     <div className="max-w-4xl">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-800 bg-clip-text text-transparent mb-2">
+        <h2 
+          className="text-3xl font-bold mb-2"
+          style={{ color: colors.primaryText }}
+        >
           Profile Analytics
         </h2>
-        <p className="text-gray-600">Track your profile performance and job search metrics</p>
+        <p 
+          style={{ color: colors.secondaryText }}
+        >
+          Track your profile performance and job search metrics
+        </p>
       </div>
       
       {/* Enhanced Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6 rounded-2xl border border-blue-200/50 shadow-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgeInfoBg,
+            border: `1px solid ${colors.badgeInfoBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Eye size={24} className="text-blue-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgeInfoBg }}
+            >
+              <Eye size={20} className="sm:w-6 sm:h-6" style={{ color: colors.primaryBlue }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-blue-900">{userData.profileViews.toLocaleString()}</p>
-              <p className="text-sm text-blue-600 font-medium">+12% this month</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={(userData.profileViews || 0).toLocaleString()}
+              >
+                {(userData.profileViews || 0).toLocaleString()}
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.primaryBlue }}
+              >
+                +12% this month
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Profile Views</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Profile Views
+          </p>
         </div>
         
-        <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-6 rounded-2xl border border-green-200/50 shadow-lg">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgeSuccessBg,
+            border: `1px solid ${colors.badgeSuccessBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-100 rounded-xl">
-              <FileText size={24} className="text-green-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgeSuccessBg }}
+            >
+              <FileText size={20} className="sm:w-6 sm:h-6" style={{ color: colors.successGreen }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-green-900">{userData.applicationsSent}</p>
-              <p className="text-sm text-green-600 font-medium">+3 this week</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={(userData.applicationsSent || 0).toString()}
+              >
+                {userData.applicationsSent || 0}
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.successGreen }}
+              >
+                +3 this week
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Applications Sent</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Applications Sent
+          </p>
         </div>
         
-        <div className="bg-gradient-to-br from-yellow-50 to-orange-100 p-6 rounded-2xl border border-yellow-200/50 shadow-lg">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgeWarningBg,
+            border: `1px solid ${colors.badgeWarningBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-yellow-100 rounded-xl">
-              <Calendar size={24} className="text-yellow-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgeWarningBg }}
+            >
+              <Calendar size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgeWarningText }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-yellow-900">{userData.interviewsScheduled}</p>
-              <p className="text-sm text-yellow-600 font-medium">2 upcoming</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={(userData.interviewsScheduled || 0).toString()}
+              >
+                {userData.interviewsScheduled || 0}
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.badgeWarningText }}
+              >
+                2 upcoming
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Interviews</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Interviews
+          </p>
         </div>
         
-        <div className="bg-gradient-to-br from-purple-50 to-violet-100 p-6 rounded-2xl border border-purple-200/50 shadow-lg">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgePurpleBg,
+            border: `1px solid ${colors.badgePurpleBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-100 rounded-xl">
-              <TrendingUp size={24} className="text-purple-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgePurpleBg }}
+            >
+              <TrendingUp size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgePurpleText }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-purple-900">{userData.successRate}%</p>
-              <p className="text-sm text-purple-600 font-medium">Above average</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={`${userData.successRate || 0}%`}
+              >
+                {userData.successRate || 0}%
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.badgePurpleText }}
+              >
+                Above average
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Success Rate</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Success Rate
+          </p>
         </div>
       </div>
 
       {/* Additional Enhanced Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-cyan-50 to-blue-100 p-6 rounded-2xl border border-cyan-200/50 shadow-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgeInfoBg,
+            border: `1px solid ${colors.badgeInfoBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-cyan-100 rounded-xl">
-              <CheckCircle size={24} className="text-cyan-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgeInfoBg }}
+            >
+              <CheckCircle size={20} className="sm:w-6 sm:h-6" style={{ color: colors.primaryBlue }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-cyan-900">{userData.profileCompleteness}%</p>
-              <p className="text-sm text-cyan-600 font-medium">Complete</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={`${userData.profileCompleteness || 0}%`}
+              >
+                {userData.profileCompleteness || 0}%
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.primaryBlue }}
+              >
+                Complete
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Profile Completeness</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Profile Completeness
+          </p>
         </div>
         
-        <div className="bg-gradient-to-br from-emerald-50 to-green-100 p-6 rounded-2xl border border-emerald-200/50 shadow-lg">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgeSuccessBg,
+            border: `1px solid ${colors.badgeSuccessBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-emerald-100 rounded-xl">
-              <TrendingUp size={24} className="text-emerald-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgeSuccessBg }}
+            >
+              <TrendingUp size={20} className="sm:w-6 sm:h-6" style={{ color: colors.successGreen }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-emerald-900">{userData.skillMatchRate}%</p>
-              <p className="text-sm text-emerald-600 font-medium">Match Rate</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={`${userData.skillMatchRate || 0}%`}
+              >
+                {userData.skillMatchRate || 0}%
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.successGreen }}
+              >
+                Match Rate
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Skills Match</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Skills Match
+          </p>
         </div>
         
-        <div className="bg-gradient-to-br from-orange-50 to-red-100 p-6 rounded-2xl border border-orange-200/50 shadow-lg">
+        <div 
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
+          style={{
+            background: colors.badgeWarningBg,
+            border: `1px solid ${colors.badgeWarningBorder}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-orange-100 rounded-xl">
-              <Calendar size={24} className="text-orange-600" />
+            <div 
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
+              style={{ background: colors.badgeWarningBg }}
+            >
+              <Calendar size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgeWarningText }} />
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-orange-900">{userData.avgResponseTime}d</p>
-              <p className="text-sm text-orange-600 font-medium">Avg Response</p>
+            <div className="text-right min-w-0 flex-1 ml-2">
+              <p 
+                className="text-xl sm:text-2xl font-bold truncate"
+                style={{ color: colors.primaryText }}
+                title={`${userData.avgResponseTime || 0}d`}
+              >
+                {userData.avgResponseTime || 0}d
+              </p>
+              <p 
+                className="text-xs sm:text-sm font-medium truncate"
+                style={{ color: colors.badgeWarningText }}
+              >
+                Avg Response
+              </p>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-700">Response Time</p>
+          <p 
+            className="text-xs sm:text-sm font-semibold truncate"
+            style={{ color: colors.secondaryText }}
+          >
+            Response Time
+          </p>
         </div>
       </div>
 
       {/* Enhanced Performance Metrics */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Profile Performance</h3>
+      <div 
+        className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+        style={{
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+        }}
+      >
+        <h3 
+          className="text-xl font-semibold mb-6"
+          style={{ color: colors.primaryText }}
+        >
+          Profile Performance
+        </h3>
         <div className="space-y-6">
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold text-gray-700">Profile Completeness</span>
-              <span className="text-sm font-bold text-cyan-600">{userData.profileCompleteness}%</span>
+              <span 
+                className="text-sm font-semibold"
+                style={{ color: colors.primaryText }}
+              >
+                Profile Completeness
+              </span>
+              <span 
+                className="text-sm font-bold"
+                style={{ color: colors.primaryBlue }}
+              >
+                {userData.profileCompleteness || 0}%
+              </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${userData.profileCompleteness}%` }}></div>
+            <div 
+              className="w-full rounded-full h-3"
+              style={{ background: colors.inputBackground }}
+            >
+              <div 
+                className="h-3 rounded-full transition-all duration-1000" 
+                style={{ 
+                  width: `${userData.profileCompleteness || 0}%`,
+                  background: `linear-gradient(90deg, ${colors.primaryBlue}, ${colors.badgeInfoText})`
+                }}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {userData.profileCompleteness < 70 ? 'Complete your profile to increase visibility by 40%' :
-               userData.profileCompleteness < 85 ? 'Your profile is looking good! Complete a few more sections for optimal results.' :
+            <p 
+              className="text-xs mt-2"
+              style={{ color: colors.tertiaryText }}
+            >
+              {(userData.profileCompleteness || 0) < 70 ? 'Complete your profile to increase visibility by 40%' :
+               (userData.profileCompleteness || 0) < 85 ? 'Your profile is looking good! Complete a few more sections for optimal results.' :
                'Excellent! Your profile is complete and optimized'}
             </p>
           </div>
           
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold text-gray-700">Skills Match Rate</span>
-              <span className="text-sm font-bold text-emerald-600">{userData.skillMatchRate}%</span>
+              <span 
+                className="text-sm font-semibold"
+                style={{ color: colors.primaryText }}
+              >
+                Skills Match Rate
+              </span>
+              <span 
+                className="text-sm font-bold"
+                style={{ color: colors.successGreen }}
+              >
+                {userData.skillMatchRate || 0}%
+              </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div className="bg-gradient-to-r from-emerald-500 to-green-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${userData.skillMatchRate}%` }}></div>
+            <div 
+              className="w-full rounded-full h-3"
+              style={{ background: colors.inputBackground }}
+            >
+              <div 
+                className="h-3 rounded-full transition-all duration-1000" 
+                style={{ 
+                  width: `${userData.skillMatchRate || 0}%`,
+                  background: `linear-gradient(90deg, ${colors.successGreen}, ${colors.badgeSuccessText})`
+                }}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {userData.skillMatchRate >= 90 ? 'Your skills match excellently with current job openings!' :
-               userData.skillMatchRate >= 75 ? 'Your skills match well with current opportunities' :
+            <p 
+              className="text-xs mt-2"
+              style={{ color: colors.tertiaryText }}
+            >
+              {(userData.skillMatchRate || 0) >= 90 ? 'Your skills match excellently with current job openings!' :
+               (userData.skillMatchRate || 0) >= 75 ? 'Your skills match well with current opportunities' :
                'Consider adding more in-demand skills to improve your match rate'}
             </p>
           </div>
           
           <div>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-sm font-semibold text-gray-700">Average Response Time</span>
-              <span className="text-sm font-bold text-orange-600">{userData.avgResponseTime} days</span>
+              <span 
+                className="text-sm font-semibold"
+                style={{ color: colors.primaryText }}
+              >
+                Average Response Time
+              </span>
+              <span 
+                className="text-sm font-bold"
+                style={{ color: colors.badgeWarningText }}
+              >
+                {userData.avgResponseTime || 0} days
+              </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, userData.avgResponseTime * 10)}%` }}></div>
+            <div 
+              className="w-full rounded-full h-3"
+              style={{ background: colors.inputBackground }}
+            >
+              <div 
+                className="h-3 rounded-full transition-all duration-1000" 
+                style={{ 
+                  width: `${Math.min(100, (userData.avgResponseTime || 0) * 10)}%`,
+                  background: `linear-gradient(90deg, ${colors.badgeWarningText}, ${colors.errorRed})`
+                }}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {userData.avgResponseTime <= 2 ? 'Recruiters are responding quickly to your applications!' :
-               userData.avgResponseTime <= 5 ? 'Response time is reasonable' :
+            <p 
+              className="text-xs mt-2"
+              style={{ color: colors.tertiaryText }}
+            >
+              {(userData.avgResponseTime || 0) <= 2 ? 'Recruiters are responding quickly to your applications!' :
+               (userData.avgResponseTime || 0) <= 5 ? 'Response time is reasonable' :
                'Consider optimizing your applications for faster responses'}
             </p>
           </div>
@@ -167,36 +430,104 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50 mt-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Recent Activity</h3>
+      <div 
+        className="backdrop-blur-sm rounded-2xl p-8 shadow-lg mt-8"
+        style={{
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+        }}
+      >
+        <h3 
+          className="text-xl font-semibold mb-6"
+          style={{ color: colors.primaryText }}
+        >
+          Recent Activity
+        </h3>
         <div className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-200/50">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Eye size={16} className="text-blue-600" />
+          <div 
+            className="flex items-center gap-4 p-4 rounded-xl"
+            style={{
+              background: colors.badgeInfoBg,
+              border: `1px solid ${colors.badgeInfoBorder}`,
+            }}
+          >
+            <div 
+              className="p-2 rounded-lg"
+              style={{ background: colors.badgeInfoBg }}
+            >
+              <Eye size={16} style={{ color: colors.primaryBlue }} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Profile viewed by TechCorp recruiter</p>
-              <p className="text-xs text-gray-500">2 hours ago</p>
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.primaryText }}
+              >
+                Profile viewed by TechCorp recruiter
+              </p>
+              <p 
+                className="text-xs"
+                style={{ color: colors.tertiaryText }}
+              >
+                2 hours ago
+              </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 p-4 bg-green-50 rounded-xl border border-green-200/50">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <FileText size={16} className="text-green-600" />
+          <div 
+            className="flex items-center gap-4 p-4 rounded-xl"
+            style={{
+              background: colors.badgeSuccessBg,
+              border: `1px solid ${colors.badgeSuccessBorder}`,
+            }}
+          >
+            <div 
+              className="p-2 rounded-lg"
+              style={{ background: colors.badgeSuccessBg }}
+            >
+              <FileText size={16} style={{ color: colors.successGreen }} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Application sent to Google</p>
-              <p className="text-xs text-gray-500">1 day ago</p>
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.primaryText }}
+              >
+                Application sent to Google
+              </p>
+              <p 
+                className="text-xs"
+                style={{ color: colors.tertiaryText }}
+              >
+                1 day ago
+              </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-xl border border-yellow-200/50">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Calendar size={16} className="text-yellow-600" />
+          <div 
+            className="flex items-center gap-4 p-4 rounded-xl"
+            style={{
+              background: colors.badgeWarningBg,
+              border: `1px solid ${colors.badgeWarningBorder}`,
+            }}
+          >
+            <div 
+              className="p-2 rounded-lg"
+              style={{ background: colors.badgeWarningBg }}
+            >
+              <Calendar size={16} style={{ color: colors.badgeWarningText }} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Interview scheduled with Microsoft</p>
-              <p className="text-xs text-gray-500">3 days ago</p>
+              <p 
+                className="text-sm font-medium"
+                style={{ color: colors.primaryText }}
+              >
+                Interview scheduled with Microsoft
+              </p>
+              <p 
+                className="text-xs"
+                style={{ color: colors.tertiaryText }}
+              >
+                3 days ago
+              </p>
             </div>
           </div>
         </div>

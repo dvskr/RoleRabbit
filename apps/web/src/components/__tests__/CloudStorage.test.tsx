@@ -3,7 +3,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import CloudStorage from '../cloudStorage/CloudStorage';
+import CloudStorage from '../CloudStorage';
 
 jest.mock('@/contexts/AuthContext', () => ({
   useAuth: () => ({

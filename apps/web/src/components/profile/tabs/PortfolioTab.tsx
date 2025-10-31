@@ -1,8 +1,18 @@
+/* eslint-disable react/forbid-dom-props */
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { FileText, ExternalLink, Github, Award, Trophy, Link2, Plus, Edit, Trash2, X, Check } from 'lucide-react';
 import { UserData } from '../types/profile';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { usePortfolioLinks } from './portfolio/hooks/usePortfolioLinks';
+import { usePortfolioProjects } from './portfolio/hooks/usePortfolioProjects';
+import { usePortfolioAchievements } from './portfolio/hooks/usePortfolioAchievements';
+import { getAchievementIcon } from './portfolio/portfolioHelpers';
+import LinkCard from './portfolio/components/LinkCard';
+import AddLinkModal from './portfolio/components/AddLinkModal';
+import { usePortfolioStyles } from './portfolio/usePortfolioStyles';
+import styles from './portfolio/portfolio.module.css';
 
 interface PortfolioTabProps {
   userData: UserData;
@@ -15,139 +25,50 @@ export default function PortfolioTab({
   isEditing,
   onUserDataChange
 }: PortfolioTabProps) {
-  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
-  const [editingProjectIndex, setEditingProjectIndex] = useState<number | null>(null);
-  const [editingAchievementIndex, setEditingAchievementIndex] = useState<number | null>(null);
-  const [showAddLinkModal, setShowAddLinkModal] = useState(false);
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [showAddAchievementModal, setShowAddAchievementModal] = useState(false);
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const portfolioStyles = usePortfolioStyles(colors);
 
-  // Temp state for editing
-  const [tempLink, setTempLink] = useState<{ platform: string; url: string }>({ platform: 'LinkedIn', url: '' });
-  const [tempProject, setTempProject] = useState<{ title: string; description: string; technologies: string[]; date: string; link?: string; github?: string }>({ 
-    title: '', description: '', technologies: [], date: '', link: '', github: '' 
+  // Use custom hooks for state management
+  const linksHook = usePortfolioLinks({
+    links: userData.socialLinks || [],
+    onLinksChange: (links) => onUserDataChange({ socialLinks: links })
   });
-  const [tempAchievement, setTempAchievement] = useState<{ type: string; title: string; description: string; date: string; link?: string }>({
-    type: 'Award', title: '', description: '', date: '', link: ''
+
+  const projectsHook = usePortfolioProjects({
+    projects: userData.projects || [],
+    onProjectsChange: (projects) => onUserDataChange({ projects })
   });
-  const [newTech, setNewTech] = useState('');
 
-  const getPlatformIcon = (platform: string) => {
-    const iconClass = "w-5 h-5";
-    switch (platform) {
-      case 'LinkedIn': return <Link2 className={iconClass} />;
-      case 'GitHub': return <Github className={iconClass} />;
-      case 'Twitter': return <FileText className={iconClass} />;
-      case 'Medium': return <FileText className={iconClass} />;
-      default: return <ExternalLink className={iconClass} />;
-    }
-  };
-
-  const getAchievementIcon = (type: string) => {
-    switch (type) {
-      case 'Award': return <Trophy className="text-yellow-500" size={20} />;
-      case 'Publication': return <FileText className="text-blue-500" size={20} />;
-      case 'Speaking': return <FileText className="text-purple-500" size={20} />;
-      case 'Certification': return <Award className="text-green-500" size={20} />;
-      default: return <Trophy className="text-gray-500" size={20} />;
-    }
-  };
-
-  const handleAddLink = () => {
-    if (tempLink.url.trim()) {
-      const links = [...(userData.socialLinks || []), tempLink];
-      onUserDataChange({ socialLinks: links });
-      setTempLink({ platform: 'LinkedIn', url: '' });
-      setShowAddLinkModal(false);
-    }
-  };
-
-  const handleEditLink = (index: number) => {
-    const links = [...(userData.socialLinks || [])];
-    links[index] = tempLink;
-    onUserDataChange({ socialLinks: links });
-    setEditingLinkIndex(null);
-  };
-
-  const handleDeleteLink = (index: number) => {
-    const links = userData.socialLinks?.filter((_, i) => i !== index) || [];
-    onUserDataChange({ socialLinks: links });
-  };
-
-  const handleAddProject = () => {
-    if (tempProject.title.trim()) {
-      const projects = [...(userData.projects || []), tempProject];
-      onUserDataChange({ projects });
-      setTempProject({ title: '', description: '', technologies: [], date: '', link: '', github: '' });
-      setShowAddProjectModal(false);
-    }
-  };
-
-  const handleEditProject = (index: number) => {
-    const projects = [...(userData.projects || [])];
-    projects[index] = tempProject;
-    onUserDataChange({ projects });
-    setEditingProjectIndex(null);
-  };
-
-  const handleDeleteProject = (index: number) => {
-    const projects = userData.projects?.filter((_, i) => i !== index) || [];
-    onUserDataChange({ projects });
-  };
-
-  const handleAddAchievement = () => {
-    if (tempAchievement.title.trim()) {
-      const achievements = [...(userData.achievements || []), tempAchievement];
-      onUserDataChange({ achievements });
-      setTempAchievement({ type: 'Award', title: '', description: '', date: '', link: '' });
-      setShowAddAchievementModal(false);
-    }
-  };
-
-  const handleEditAchievement = (index: number) => {
-    const achievements = [...(userData.achievements || [])];
-    achievements[index] = tempAchievement;
-    onUserDataChange({ achievements });
-    setEditingAchievementIndex(null);
-  };
-
-  const handleDeleteAchievement = (index: number) => {
-    const achievements = userData.achievements?.filter((_, i) => i !== index) || [];
-    onUserDataChange({ achievements });
-  };
-
-  const addTechnology = () => {
-    if (newTech.trim()) {
-      setTempProject({ ...tempProject, technologies: [...tempProject.technologies, newTech.trim()] });
-      setNewTech('');
-    }
-  };
-
-  const removeTechnology = (index: number) => {
-    setTempProject({ ...tempProject, technologies: tempProject.technologies.filter((_, i) => i !== index) });
-  };
+  const achievementsHook = usePortfolioAchievements({
+    achievements: userData.achievements || [],
+    onAchievementsChange: (achievements) => onUserDataChange({ achievements })
+  });
 
   return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-indigo-800 to-purple-800 bg-clip-text text-transparent mb-2">
+    // eslint-disable-next-line react/forbid-dom-props
+    <div className={styles.portfolioContainer} style={portfolioStyles}>
+      <div className={styles.portfolioHeader}>
+        <h2 className={styles.portfolioTitle}>
           Portfolio & Achievements
         </h2>
-        <p className="text-gray-600">Showcase your work, projects, and professional achievements</p>
+        <p className={styles.portfolioDescription}>
+          Showcase your work, projects, and professional achievements
+        </p>
       </div>
       
       <div className="space-y-8">
         {/* Social Links */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Link2 className="text-indigo-600" />
+        <div className={styles.portfolioCard}>
+          <div className={styles.portfolioSectionHeader}>
+            <h3 className={styles.portfolioSectionTitle}>
+              <Link2 style={{ color: 'var(--portfolio-primary-blue)' }} />
               Professional Links
             </h3>
             {isEditing && (
               <button
-                onClick={() => setShowAddLinkModal(true)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2"
+                onClick={() => linksHook.setShowAddLinkModal(true)}
+                className={`${styles.portfolioButton} ${styles.portfolioButton}`}
               >
                 <Plus size={16} />
                 Add Link
@@ -155,108 +76,43 @@ export default function PortfolioTab({
             )}
           </div>
           {userData.socialLinks && userData.socialLinks.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {userData.socialLinks.map((link, index) => (
-                <div
+                <LinkCard
                   key={index}
-                  className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
-                    editingLinkIndex === index 
-                      ? 'bg-indigo-50 border-indigo-300' 
-                      : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200/50 hover:shadow-md'
-                  }`}
-                >
-                  {editingLinkIndex === index ? (
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="text"
-                        value={tempLink.platform}
-                        onChange={(e) => setTempLink({ ...tempLink, platform: e.target.value })}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        placeholder="Platform"
-                      />
-                      <input
-                        type="url"
-                        value={tempLink.url}
-                        onChange={(e) => setTempLink({ ...tempLink, url: e.target.value })}
-                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                        placeholder="URL"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditLink(index)}
-                          className="flex-1 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
-                        >
-                          <Check size={12} />
-                        </button>
-                        <button
-                          onClick={() => setEditingLinkIndex(null)}
-                          className="flex-1 px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {getPlatformIcon(link.platform)}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900">{link.platform}</p>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs text-gray-500 truncate hover:text-indigo-600"
-                        >
-                          {link.url}
-                        </a>
-                      </div>
-                      <ExternalLink size={16} className="text-gray-400" />
-                      {isEditing && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => {
-                              setTempLink(link);
-                              setEditingLinkIndex(index);
-                            }}
-                            className="p-1 hover:bg-blue-100 rounded"
-                            title="Edit"
-                          >
-                            <Edit size={14} className="text-blue-600" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Delete this link?')) handleDeleteLink(index);
-                            }}
-                            className="p-1 hover:bg-red-100 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} className="text-red-600" />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                  link={link}
+                  index={index}
+                  isEditing={isEditing}
+                  isEditable={true}
+                  editingLinkIndex={linksHook.editingLinkIndex}
+                  tempLink={linksHook.tempLink}
+                  colors={colors}
+                  onEdit={() => linksHook.startEditingLink(index, link)}
+                  onSave={() => linksHook.handleEditLink(index)}
+                  onCancel={linksHook.cancelEditingLink}
+                  onDelete={() => linksHook.handleDeleteLink(index)}
+                  onTempLinkChange={linksHook.setTempLink}
+                />
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className={styles.portfolioEmptyState}>
               No professional links yet
             </div>
           )}
         </div>
 
         {/* Projects Showcase */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="text-blue-600" />
+        <div className={styles.portfolioCard}>
+          <div className={styles.portfolioSectionHeader}>
+            <h3 className={styles.portfolioSectionTitle}>
+              <FileText style={{ color: 'var(--portfolio-primary-blue)' }} />
               Featured Projects
             </h3>
             {isEditing && (
               <button
-                onClick={() => setShowAddProjectModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                onClick={() => projectsHook.setShowAddProjectModal(true)}
+                className={styles.portfolioButton}
               >
                 <Plus size={16} />
                 Add Project
@@ -266,74 +122,104 @@ export default function PortfolioTab({
           {userData.projects && userData.projects.length > 0 ? (
             <div className="space-y-6">
               {userData.projects.map((project, index) => (
-                <div key={index} className={`p-6 rounded-xl border transition-all ${
-                  editingProjectIndex === index 
-                    ? 'bg-blue-50 border-blue-300' 
-                    : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200/50 hover:shadow-md'
-                }`}>
-                  {editingProjectIndex === index ? (
+                <div 
+                  key={index} 
+                  className={`${styles.portfolioCardItem}`}
+                  data-editing={projectsHook.editingProjectIndex === index ? 'true' : undefined}
+                  onMouseEnter={(e) => {
+                    if (projectsHook.editingProjectIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border-focused)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (projectsHook.editingProjectIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-input-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border)';
+                    }
+                  }}
+                >
+                  {projectsHook.editingProjectIndex === index ? (
                     <div className="space-y-3">
                       <input
                         type="text"
-                        value={tempProject.title}
-                        onChange={(e) => setTempProject({ ...tempProject, title: e.target.value })}
+                        value={projectsHook.tempProject.title}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, title: e.target.value })}
                         placeholder="Project Title"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <textarea
-                        value={tempProject.description}
-                        onChange={(e) => setTempProject({ ...tempProject, description: e.target.value })}
+                        value={projectsHook.tempProject.description}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, description: e.target.value })}
                         placeholder="Description"
                         rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioTextarea}`}
                       />
                       <div className="flex flex-wrap gap-2">
-                        {tempProject.technologies.map((tech, i) => (
-                          <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 rounded flex items-center gap-1 text-xs">
+                        {projectsHook.tempProject.technologies.map((tech: string, i: number) => (
+                          <span 
+                            key={i} 
+                            className={`px-2 py-1 rounded flex items-center gap-1 text-xs ${styles.portfolioBadge}`}
+                          >
                             {tech}
-                            <button onClick={() => removeTechnology(i)}>
-                              <X size={12} className="text-red-600" />
+                            <button 
+                              onClick={() => projectsHook.removeTechnology(i)}
+                              style={{ color: 'var(--portfolio-error-red)' }}
+                              title="Remove technology"
+                              aria-label={`Remove ${tech}`}
+                            >
+                              <X size={12} />
                             </button>
                           </span>
                         ))}
                         <input
                           type="text"
-                          value={newTech}
-                          onChange={(e) => setNewTech(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
+                          value={projectsHook.newTech}
+                          onChange={(e) => projectsHook.setNewTech(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && projectsHook.addTechnology()}
                           placeholder="Add tech"
-                          className="px-2 py-1 border border-gray-300 rounded text-xs"
+                          className={`px-2 py-1 rounded text-xs ${styles.portfolioInput}`}
                         />
-                        <button onClick={addTechnology} className="px-2 py-1 bg-blue-600 text-white rounded text-xs">
+                        <button 
+                          onClick={projectsHook.addTechnology} 
+                          className={`px-2 py-1 text-white rounded text-xs ${styles.portfolioButton}`}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                        >
                           Add
                         </button>
                       </div>
                       <input
                         type="text"
-                        value={tempProject.date}
-                        onChange={(e) => setTempProject({ ...tempProject, date: e.target.value })}
+                        value={projectsHook.tempProject.date}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, date: e.target.value })}
                         placeholder="Date (YYYY-MM)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
                         type="url"
-                        value={tempProject.link || ''}
-                        onChange={(e) => setTempProject({ ...tempProject, link: e.target.value })}
+                        value={projectsHook.tempProject.link || ''}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, link: e.target.value })}
                         placeholder="Live Demo URL (optional)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
                         type="url"
-                        value={tempProject.github || ''}
-                        onChange={(e) => setTempProject({ ...tempProject, github: e.target.value })}
+                        value={projectsHook.tempProject.github || ''}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, github: e.target.value })}
                         placeholder="GitHub URL (optional)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <div className="flex gap-2">
-                        <button onClick={() => handleEditProject(index)} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => projectsHook.handleEditProject(index)} 
+                          className={`flex-1 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSuccess}`}
+                        >
                           <Check size={16} /> Save
                         </button>
-                        <button onClick={() => setEditingProjectIndex(null)} className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => projectsHook.setEditingProjectIndex(null)} 
+                          className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSecondary}`}
+                        >
                           <X size={16} /> Cancel
                         </button>
                       </div>
@@ -342,16 +228,23 @@ export default function PortfolioTab({
                     <>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-2">{project.title}</h4>
-                          <p className="text-sm text-gray-600 mb-3">{project.description}</p>
+                          <h4 className={`font-semibold mb-2 ${styles.portfolioTextPrimary}`}>
+                            {project.title}
+                          </h4>
+                          <p className={`text-sm mb-3 ${styles.portfolioTextSecondary}`}>
+                            {project.description}
+                          </p>
                           <div className="flex flex-wrap gap-2 mb-3">
                             {project.technologies.map((tech, techIndex) => (
-                              <span key={techIndex} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                              <span 
+                                key={techIndex} 
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${styles.portfolioBadge}`}
+                              >
                                 {tech}
                               </span>
                             ))}
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                          <div className={`flex items-center gap-4 text-xs ${styles.portfolioTextTertiary}`}>
                             <span>{project.date}</span>
                           </div>
                         </div>
@@ -359,22 +252,37 @@ export default function PortfolioTab({
                           <div className="flex gap-1">
                             <button
                               onClick={() => {
-                                setTempProject(project);
-                                setEditingProjectIndex(index);
+                                projectsHook.startEditingProject(index, project);
                               }}
-                              className="p-2 hover:bg-blue-100 rounded"
+                              className="p-2 rounded transition-colors"
+                              style={{ color: 'var(--portfolio-primary-blue)' }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--portfolio-badge-info-bg)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
                               title="Edit"
+                              aria-label={`Edit ${project.title}`}
                             >
-                              <Edit size={16} className="text-blue-600" />
+                              <Edit size={16} />
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm('Delete this project?')) handleDeleteProject(index);
+                                if (confirm('Delete this project?')) projectsHook.handleDeleteProject(index);
                               }}
-                              className="p-2 hover:bg-red-100 rounded"
+                              className="p-2 rounded transition-colors"
+                              style={{ color: 'var(--portfolio-error-red)' }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--portfolio-badge-error-bg)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
                               title="Delete"
+                              aria-label={`Delete ${project.title}`}
                             >
-                              <Trash2 size={16} className="text-red-600" />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         )}
@@ -386,7 +294,7 @@ export default function PortfolioTab({
                               href={project.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm ${styles.portfolioButton}`}
                             >
                               <ExternalLink size={14} />
                               Live Demo
@@ -397,7 +305,7 @@ export default function PortfolioTab({
                               href={project.github}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors text-sm"
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm ${styles.portfolioButtonSecondary}`}
                             >
                               <Github size={14} />
                               View Code
@@ -411,23 +319,24 @@ export default function PortfolioTab({
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className={styles.portfolioEmptyState}>
               No projects yet
             </div>
           )}
         </div>
 
         {/* Achievements */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Trophy className="text-yellow-600" />
+        <div className={styles.portfolioCard}>
+          <div className={styles.portfolioSectionHeader}>
+            <h3 className={styles.portfolioSectionTitle}>
+              <Trophy style={{ color: 'var(--portfolio-badge-warning-text)' }} />
               Awards & Achievements
             </h3>
             {isEditing && (
               <button
-                onClick={() => setShowAddAchievementModal(true)}
-                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 flex items-center gap-2"
+                onClick={() => achievementsHook.setShowAddAchievementModal(true)}
+                className={styles.portfolioButton}
+                style={{ background: 'var(--portfolio-badge-warning-text)' }}
               >
                 <Plus size={16} />
                 Add Achievement
@@ -437,59 +346,86 @@ export default function PortfolioTab({
           {userData.achievements && userData.achievements.length > 0 ? (
             <div className="space-y-4">
               {userData.achievements.map((achievement, index) => (
-                <div key={index} className={`flex items-start gap-4 p-4 rounded-xl border transition-all ${
-                  editingAchievementIndex === index 
-                    ? 'bg-yellow-50 border-yellow-300' 
-                    : 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200/50 hover:shadow-md'
-                }`}>
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    {getAchievementIcon(achievement.type)}
+                <div 
+                  key={index} 
+                  className={styles.portfolioAchievementCard}
+                  data-editing={achievementsHook.editingAchievementIndex === index ? 'true' : undefined}
+                  onMouseEnter={(e) => {
+                    if (achievementsHook.editingAchievementIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border-focused)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (achievementsHook.editingAchievementIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-input-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border)';
+                    }
+                  }}
+                >
+                  <div 
+                    className="p-2 rounded-lg"
+                    style={{ background: 'var(--portfolio-badge-warning-bg)' }}
+                  >
+                    {getAchievementIcon(achievement.type, colors)}
                   </div>
-                  {editingAchievementIndex === index ? (
+                  {achievementsHook.editingAchievementIndex === index ? (
                     <div className="flex-1 space-y-2">
                       <select
-                        value={tempAchievement.type}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        value={achievementsHook.tempAchievement.type}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
+                        className={`w-full ${styles.portfolioSelect}`}
+                        title="Achievement type"
+                        aria-label="Select achievement type"
                       >
-                        <option value="Award">Award</option>
-                        <option value="Publication">Publication</option>
-                        <option value="Speaking">Speaking Engagement</option>
-                        <option value="Certification">Certification</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Award" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Award</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Publication" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Publication</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Speaking" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Speaking Engagement</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Certification" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Certification</option>
                       </select>
                       <input
                         type="text"
-                        value={tempAchievement.title}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, title: e.target.value })}
+                        value={achievementsHook.tempAchievement.title}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, title: e.target.value })}
                         placeholder="Achievement Title"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <textarea
-                        value={tempAchievement.description}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, description: e.target.value })}
+                        value={achievementsHook.tempAchievement.description}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, description: e.target.value })}
                         placeholder="Description"
                         rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioTextarea}`}
                       />
                       <input
                         type="text"
-                        value={tempAchievement.date}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, date: e.target.value })}
+                        value={achievementsHook.tempAchievement.date}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, date: e.target.value })}
                         placeholder="Date (YYYY-MM)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
                         type="url"
-                        value={tempAchievement.link || ''}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, link: e.target.value })}
+                        value={achievementsHook.tempAchievement.link || ''}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, link: e.target.value })}
                         placeholder="Link (optional)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <div className="flex gap-2">
-                        <button onClick={() => handleEditAchievement(index)} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => achievementsHook.handleEditAchievement(index)} 
+                          className={`flex-1 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSuccess}`}
+                        >
                           <Check size={16} /> Save
                         </button>
-                        <button onClick={() => setEditingAchievementIndex(null)} className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => achievementsHook.setEditingAchievementIndex(null)} 
+                          className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSecondary}`}
+                        >
                           <X size={16} /> Cancel
                         </button>
                       </div>
@@ -497,11 +433,24 @@ export default function PortfolioTab({
                   ) : (
                     <>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">{achievement.title}</h4>
-                        <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
+                        <h4 className={`font-semibold mb-1 ${styles.portfolioTextPrimary}`}>
+                          {achievement.title}
+                        </h4>
+                        <p className={`text-sm mb-2 ${styles.portfolioTextSecondary}`}>
+                          {achievement.description}
+                        </p>
                         <div className="flex items-center gap-4">
-                          <span className="text-xs text-gray-500">{achievement.date}</span>
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                          <span className={`text-xs ${styles.portfolioTextTertiary}`}>
+                            {achievement.date}
+                          </span>
+                          <span 
+                            className={`px-2 py-1 rounded text-xs font-medium`}
+                            style={{
+                              background: 'var(--portfolio-badge-warning-bg)',
+                              color: 'var(--portfolio-badge-warning-text)',
+                              border: '1px solid var(--portfolio-badge-warning-border)',
+                            }}
+                          >
                             {achievement.type}
                           </span>
                           {achievement.link && (
@@ -509,7 +458,14 @@ export default function PortfolioTab({
                               href={achievement.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-blue-600 hover:underline"
+                              className="text-xs transition-colors"
+                              style={{ color: 'var(--portfolio-primary-blue)' }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = 'var(--portfolio-primary-blue-hover)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--portfolio-primary-blue)';
+                              }}
                             >
                               View Details
                             </a>
@@ -520,22 +476,37 @@ export default function PortfolioTab({
                         <div className="flex gap-1">
                           <button
                             onClick={() => {
-                              setTempAchievement(achievement);
-                              setEditingAchievementIndex(index);
+                              achievementsHook.startEditingAchievement(index, achievement);
                             }}
-                            className="p-2 hover:bg-blue-100 rounded"
+                            className="p-2 rounded transition-colors"
+                            style={{ color: 'var(--portfolio-primary-blue)' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--portfolio-badge-info-bg)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
                             title="Edit"
+                            aria-label={`Edit ${achievement.title}`}
                           >
-                            <Edit size={16} className="text-blue-600" />
+                            <Edit size={16} />
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm('Delete this achievement?')) handleDeleteAchievement(index);
+                              if (confirm('Delete this achievement?')) achievementsHook.handleDeleteAchievement(index);
                             }}
-                            className="p-2 hover:bg-red-100 rounded"
+                            className="p-2 rounded transition-colors"
+                            style={{ color: 'var(--portfolio-error-red)' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--portfolio-badge-error-bg)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
                             title="Delete"
+                            aria-label={`Delete ${achievement.title}`}
                           >
-                            <Trash2 size={16} className="text-red-600" />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       )}
@@ -545,60 +516,70 @@ export default function PortfolioTab({
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className={styles.portfolioEmptyState}>
               No achievements yet
             </div>
           )}
         </div>
 
         {/* Basic Portfolio Links (Backward Compatibility) */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-gray-200/50">
-          <h3 className="text-xl font-semibold text-gray-900 mb-6">Quick Links</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <div className={styles.portfolioCard}>
+          <h3 className={`text-xl font-semibold mb-6 ${styles.portfolioTextPrimary}`}>
+            Quick Links
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Portfolio Website</label>
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                Portfolio Website
+              </label>
               <input
                 type="url"
                 value={userData.portfolio}
                 onChange={(e) => onUserDataChange({ portfolio: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-200 hover:border-gray-400"
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://yourportfolio.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn</label>
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                LinkedIn
+              </label>
               <input
                 type="url"
                 value={userData.linkedin}
                 onChange={(e) => onUserDataChange({ linkedin: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-200 hover:border-gray-400"
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://linkedin.com/in/yourname"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">GitHub</label>
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                GitHub
+              </label>
               <input
                 type="url"
                 value={userData.github}
                 onChange={(e) => onUserDataChange({ github: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-200 hover:border-gray-400"
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://github.com/yourusername"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Personal Website</label>
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                Personal Website
+              </label>
               <input
                 type="url"
                 value={userData.website}
                 onChange={(e) => onUserDataChange({ website: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-50 disabled:text-gray-500 transition-all duration-200 hover:border-gray-400"
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://yourwebsite.com"
               />
             </div>
@@ -607,88 +588,70 @@ export default function PortfolioTab({
       </div>
 
       {/* Add Link Modal */}
-      {showAddLinkModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Add Professional Link</h3>
-              <button onClick={() => setShowAddLinkModal(false)} className="p-2 hover:bg-gray-100 rounded">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Platform</label>
-                <input
-                  type="text"
-                  value={tempLink.platform}
-                  onChange={(e) => setTempLink({ ...tempLink, platform: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="e.g., LinkedIn, GitHub"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">URL</label>
-                <input
-                  type="url"
-                  value={tempLink.url}
-                  onChange={(e) => setTempLink({ ...tempLink, url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="https://"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowAddLinkModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddLink}
-                disabled={!tempLink.url.trim()}
-                className={`flex-1 px-4 py-2 rounded-lg text-white ${!tempLink.url.trim() ? 'bg-gray-300' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-              >
-                Add Link
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddLinkModal
+        isOpen={linksHook.showAddLinkModal}
+        tempLink={linksHook.tempLink}
+        colors={colors}
+        onClose={() => linksHook.setShowAddLinkModal(false)}
+        onSave={linksHook.handleAddLink}
+        onTempLinkChange={linksHook.setTempLink}
+      />
 
       {/* Add Project Modal */}
-      {showAddProjectModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Add Project</h3>
-              <button onClick={() => setShowAddProjectModal(false)} className="p-2 hover:bg-gray-100 rounded">
+      {projectsHook.showAddProjectModal && (
+        <div className={styles.portfolioModalOverlay}>
+          <div className={`${styles.portfolioModal} ${styles.portfolioModalLarge}`}>
+            <div className={styles.portfolioModalHeader}>
+              <h3 className={styles.portfolioModalTitle}>
+                Add Project
+              </h3>
+              <button 
+                onClick={() => projectsHook.setShowAddProjectModal(false)} 
+                className={styles.portfolioCloseButton}
+                title="Close modal"
+                aria-label="Close add project modal"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-4">
               <input
                 type="text"
-                value={tempProject.title}
-                onChange={(e) => setTempProject({ ...tempProject, title: e.target.value })}
+                value={projectsHook.tempProject.title}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, title: e.target.value })}
                 placeholder="Project Title"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
               <textarea
-                value={tempProject.description}
-                onChange={(e) => setTempProject({ ...tempProject, description: e.target.value })}
+                value={projectsHook.tempProject.description}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, description: e.target.value })}
                 placeholder="Description"
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioTextarea}`}
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Technologies</label>
+                <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                  Technologies
+                </label>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {tempProject.technologies.map((tech, i) => (
-                    <span key={i} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full flex items-center gap-1 text-sm">
+                  {projectsHook.tempProject.technologies.map((tech: string, i: number) => (
+                    <span 
+                      key={i} 
+                      className={`px-3 py-1 rounded-full flex items-center gap-1 text-sm ${styles.portfolioBadge}`}
+                    >
                       {tech}
-                      <button onClick={() => removeTechnology(i)}>
+                      <button 
+                        onClick={() => projectsHook.removeTechnology(i)}
+                        style={{ color: 'var(--portfolio-error-red)' }}
+                        title="Remove technology"
+                        aria-label={`Remove ${tech}`}
+                      >
                         <X size={14} />
                       </button>
                     </span>
@@ -697,50 +660,59 @@ export default function PortfolioTab({
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={newTech}
-                    onChange={(e) => setNewTech(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTechnology())}
+                    value={projectsHook.newTech}
+                    onChange={(e) => projectsHook.setNewTech(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), projectsHook.addTechnology())}
                     placeholder="Add technology"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className={`flex-1 text-sm ${styles.portfolioInput}`}
                   />
-                  <button onClick={addTechnology} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+                  <button 
+                    onClick={projectsHook.addTechnology} 
+                    className={`px-4 py-2 rounded-lg text-sm ${styles.portfolioButton}`}
+                  >
                     Add
                   </button>
                 </div>
               </div>
               <input
                 type="text"
-                value={tempProject.date}
-                onChange={(e) => setTempProject({ ...tempProject, date: e.target.value })}
+                value={projectsHook.tempProject.date}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, date: e.target.value })}
                 placeholder="Date (YYYY-MM)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
               <input
                 type="url"
-                value={tempProject.link || ''}
-                onChange={(e) => setTempProject({ ...tempProject, link: e.target.value })}
+                value={projectsHook.tempProject.link || ''}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, link: e.target.value })}
                 placeholder="Live Demo URL (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
               <input
                 type="url"
-                value={tempProject.github || ''}
-                onChange={(e) => setTempProject({ ...tempProject, github: e.target.value })}
+                value={projectsHook.tempProject.github || ''}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, github: e.target.value })}
                 placeholder="GitHub URL (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className={styles.portfolioModalActions}>
               <button
-                onClick={() => setShowAddProjectModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                onClick={() => projectsHook.setShowAddProjectModal(false)}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButtonSecondary}`}
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddProject}
-                disabled={!tempProject.title.trim()}
-                className={`flex-1 px-4 py-2 rounded-lg text-white ${!tempProject.title.trim() ? 'bg-gray-300' : 'bg-blue-600 hover:bg-blue-700'}`}
+                onClick={projectsHook.handleAddProject}
+                disabled={!projectsHook.tempProject.title.trim()}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButton}`}
+                style={{
+                  opacity: !projectsHook.tempProject.title.trim() ? 0.5 : 1,
+                  cursor: !projectsHook.tempProject.title.trim() ? 'not-allowed' : 'pointer',
+                  background: !projectsHook.tempProject.title.trim() ? 'var(--portfolio-input-bg)' : 'var(--portfolio-primary-blue)',
+                  color: !projectsHook.tempProject.title.trim() ? 'var(--portfolio-tertiary-text)' : 'white',
+                }}
               >
                 Add Project
               </button>
@@ -750,69 +722,96 @@ export default function PortfolioTab({
       )}
 
       {/* Add Achievement Modal */}
-      {showAddAchievementModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Add Achievement</h3>
-              <button onClick={() => setShowAddAchievementModal(false)} className="p-2 hover:bg-gray-100 rounded">
+      {achievementsHook.showAddAchievementModal && (
+        <div className={styles.portfolioModalOverlay}>
+          <div className={styles.portfolioModal}>
+            <div className={styles.portfolioModalHeader}>
+              <h3 className={styles.portfolioModalTitle}>
+                Add Achievement
+              </h3>
+              <button 
+                onClick={() => achievementsHook.setShowAddAchievementModal(false)} 
+                className={styles.portfolioCloseButton}
+                title="Close modal"
+                aria-label="Close add achievement modal"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
                 <X size={20} />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                  Type
+                </label>
                 <select
-                  value={tempAchievement.type}
-                  onChange={(e) => setTempAchievement({ ...tempAchievement, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="Award">Award</option>
-                  <option value="Publication">Publication</option>
-                  <option value="Speaking">Speaking Engagement</option>
-                  <option value="Certification">Certification</option>
-                </select>
+                  value={achievementsHook.tempAchievement.type}
+                  onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
+                        className={`w-full ${styles.portfolioSelect}`}
+                        title="Achievement type"
+                        aria-label="Select achievement type"
+                      >
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Award" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Award</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Publication" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Publication</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Speaking" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Speaking Engagement</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Certification" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Certification</option>
+                      </select>
               </div>
               <input
                 type="text"
-                value={tempAchievement.title}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, title: e.target.value })}
+                value={achievementsHook.tempAchievement.title}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, title: e.target.value })}
                 placeholder="Achievement Title"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
               <textarea
-                value={tempAchievement.description}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, description: e.target.value })}
+                value={achievementsHook.tempAchievement.description}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, description: e.target.value })}
                 placeholder="Description"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioTextarea}`}
               />
               <input
                 type="text"
-                value={tempAchievement.date}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, date: e.target.value })}
+                value={achievementsHook.tempAchievement.date}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, date: e.target.value })}
                 placeholder="Date (YYYY-MM)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
               <input
                 type="url"
-                value={tempAchievement.link || ''}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, link: e.target.value })}
+                value={achievementsHook.tempAchievement.link || ''}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, link: e.target.value })}
                 placeholder="Link (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className={`w-full ${styles.portfolioInput}`}
               />
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className={styles.portfolioModalActions}>
               <button
-                onClick={() => setShowAddAchievementModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                onClick={() => achievementsHook.setShowAddAchievementModal(false)}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButtonSecondary}`}
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddAchievement}
-                disabled={!tempAchievement.title.trim()}
-                className={`flex-1 px-4 py-2 rounded-lg text-white ${!tempAchievement.title.trim() ? 'bg-gray-300' : 'bg-yellow-600 hover:bg-yellow-700'}`}
+                onClick={achievementsHook.handleAddAchievement}
+                disabled={!achievementsHook.tempAchievement.title.trim()}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButton}`}
+                style={{
+                  background: !achievementsHook.tempAchievement.title.trim() ? 'var(--portfolio-input-bg)' : 'var(--portfolio-badge-warning-text)',
+                  color: !achievementsHook.tempAchievement.title.trim() ? 'var(--portfolio-tertiary-text)' : 'white',
+                  opacity: !achievementsHook.tempAchievement.title.trim() ? 0.5 : 1,
+                  cursor: !achievementsHook.tempAchievement.title.trim() ? 'not-allowed' : 'pointer',
+                }}
               >
                 Add Achievement
               </button>

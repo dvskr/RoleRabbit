@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -100,6 +100,8 @@ export default function HeaderNew({
           <button 
             onClick={onShowMobileMenu}
             className="p-2 hover:bg-[#1A1F26] rounded-lg transition-colors"
+            aria-label="Toggle mobile menu"
+            title="Toggle mobile menu"
           >
             <Menu size={20} className="text-[#A0A0A0]" />
           </button>

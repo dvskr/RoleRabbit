@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Github, Linkedin, Mail, MapPin, Briefcase, Award, Code, ExternalLink, Sparkles } from 'lucide-react';
+import { Github, Linkedin, Mail, Briefcase, Award, Code, ExternalLink, Sparkles } from 'lucide-react';
 
 interface AnimatedPreviewProps {
   portfolioData: any;
@@ -61,12 +61,12 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
               )}
               <div className="flex items-center justify-center gap-6">
                 {portfolioData.linkedin && (
-                  <a href={portfolioData.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">
+                  <a href={portfolioData.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors" aria-label="LinkedIn profile" title="LinkedIn">
                     <Linkedin size={20} />
                   </a>
                 )}
                 {portfolioData.github && (
-                  <a href={portfolioData.github} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">
+                  <a href={portfolioData.github} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors" aria-label="GitHub profile" title="GitHub">
                     <Github size={20} />
                   </a>
                 )}

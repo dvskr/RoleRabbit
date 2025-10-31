@@ -66,10 +66,22 @@ Write-Host "`n📡 Backend API: http://localhost:3001" -ForegroundColor Cyan
 Write-Host "🌐 Frontend: http://localhost:3000" -ForegroundColor Cyan
 Write-Host "`nPress Ctrl+C to stop all servers`n" -ForegroundColor Yellow
 
-# Start both servers concurrently
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd apps/api; Write-Host '🚀 Backend Server Starting...' -ForegroundColor Green; node server.js"
+# Get the current directory (project root)
+$projectRoot = $PWD
+
+# Start Node.js API
+$apiScript = "-NoExit", "-Command", "cd '$projectRoot\apps\api'; Write-Host '🚀 Backend Server Starting...' -ForegroundColor Green; if (Test-Path 'simple-server.js') { node simple-server.js } else { node server.js }"
+Start-Process powershell -ArgumentList $apiScript -WindowStyle Normal
 Start-Sleep -Seconds 2
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd apps/web; Write-Host '🚀 Frontend Server Starting...' -ForegroundColor Green; npm run dev"
+
+# Start Python API
+$pythonScript = "-NoExit", "-Command", "cd '$projectRoot\apps\api-python'; Write-Host '🐍 Python API Starting...' -ForegroundColor Green; python start.py"
+Start-Process powershell -ArgumentList $pythonScript -WindowStyle Normal
+Start-Sleep -Seconds 1
+
+# Start Next.js Web
+$webScript = "-NoExit", "-Command", "cd '$projectRoot\apps\web'; Write-Host '🌐 Frontend Server Starting...' -ForegroundColor Green; npm run dev"
+Start-Process powershell -ArgumentList $webScript -WindowStyle Normal
 
 Write-Host "`n✅ Servers started! Check the terminal windows for output." -ForegroundColor Green
 Write-Host "==========================================`n" -ForegroundColor Cyan

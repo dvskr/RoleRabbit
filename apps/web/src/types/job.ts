@@ -5,6 +5,8 @@ export interface Job {
   location: string;
   status: 'applied' | 'interview' | 'offer' | 'rejected';
   appliedDate: string;
+  lastUpdated?: string;
+  deletedAt?: string; // For recycle bin functionality
   salary?: string;
   description?: string;
   url?: string;
@@ -20,6 +22,8 @@ export interface Job {
   remote?: boolean;
   companySize?: string;
   industry?: string;
+  nextStep?: string;
+  nextStepDate?: string;
 }
 
 export interface JobFilters {
@@ -28,6 +32,18 @@ export interface JobFilters {
   sortBy: string;
   groupBy: 'status' | 'company' | 'priority' | 'date';
   showArchived: boolean;
+  priority?: 'all' | 'high' | 'medium' | 'low';
+  location?: string;
+  dateRange?: { start?: string; end?: string };
+  showDeleted?: boolean;
+}
+
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: JobFilters;
+  columns: string[];
+  createdAt: string;
 }
 
 export interface JobStats {

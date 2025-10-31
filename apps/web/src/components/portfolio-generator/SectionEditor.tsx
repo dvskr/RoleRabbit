@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Save, Image, Link as LinkIcon, Plus, Trash2 } from 'lucide-react';
+import { X, Save, Image, Plus, Trash2 } from 'lucide-react';
 import { Section } from '../../types/portfolio';
 
 interface SectionEditorProps {
@@ -52,21 +52,25 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Primary CTA Text</label>
+              <label htmlFor="primary-cta-text" className="block text-sm font-medium text-gray-700 mb-2">Primary CTA Text</label>
               <input
+                id="primary-cta-text"
                 type="text"
                 value={editedSection.config.ctaText || 'Contact Me'}
                 onChange={(e) => updateConfig({ ctaText: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                aria-label="Primary CTA Text"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Secondary CTA Text</label>
+              <label htmlFor="secondary-cta-text" className="block text-sm font-medium text-gray-700 mb-2">Secondary CTA Text</label>
               <input
+                id="secondary-cta-text"
                 type="text"
                 value={editedSection.config.secondaryCta || 'View Resume'}
                 onChange={(e) => updateConfig({ secondaryCta: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                aria-label="Secondary CTA Text"
               />
             </div>
           </div>
@@ -229,6 +233,8 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
                           updateConfig({ items: newItems });
                         }}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        aria-label={`Remove project ${index + 1}`}
+                        title="Remove project"
                       >
                         <Trash2 size={18} />
                       </button>
@@ -298,6 +304,8 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
                         updateConfig({ items: newSkills });
                       }}
                       className="text-blue-700 hover:text-red-600"
+                      aria-label={`Remove skill ${skill}`}
+                      title="Remove skill"
                     >
                       <X size={14} />
                     </button>
@@ -451,6 +459,8 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
                         updateConfig({ socialLinks: newLinks });
                       }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                      aria-label={`Remove social link ${index + 1}`}
+                      title="Remove social link"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -489,6 +499,8 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
           <button
             onClick={onClose}
             className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+            aria-label="Close section editor"
+            title="Close"
           >
             <X size={20} />
           </button>

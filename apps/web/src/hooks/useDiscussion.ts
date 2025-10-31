@@ -344,12 +344,13 @@ export const useDiscussion = () => {
     setPosts(prev => [newPost, ...prev]);
   };
   
-  const addCommunity = (community: Omit<Community, 'id'>) => {
+  const addCommunity = (community: Omit<Community, 'id'>): Community => {
     const newCommunity: Community = {
       ...community,
       id: `community_${Date.now()}`
     };
     setCommunities(prev => [...prev, newCommunity]);
+    return newCommunity;
   };
   
   const addComment = (comment: Omit<Comment, 'id'>) => {

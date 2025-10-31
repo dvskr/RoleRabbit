@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Contact } from '../types';
 import ContactCard from './ContactCard';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 // Mock data
 const mockContacts: Contact[] = [
@@ -78,12 +79,15 @@ export default function ContactList({ viewMode, searchTerm, onContactClick }: Co
     );
   }, [contacts, searchTerm]);
 
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   if (filteredContacts.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 text-lg">No contacts found</p>
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="text-lg" style={{ color: colors.secondaryText }}>No contacts found</p>
+          <p className="text-sm mt-2" style={{ color: colors.tertiaryText }}>
             {searchTerm ? 'Try adjusting your search' : 'Add your first contact to get started'}
           </p>
         </div>

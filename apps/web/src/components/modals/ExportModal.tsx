@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import { X, Download, FileText, Printer, Cloud } from 'lucide-react';
 import { ResumeData, CustomSection } from '../../types/resume';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ExportModalProps {
   showExportModal: boolean;
@@ -35,83 +38,147 @@ export default function ExportModal({
   onExport,
   onSaveToCloud
 }: ExportModalProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   if (!showExportModal) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50" style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0,
-      width: '100vw',
-      height: '100vh',
-      overflow: 'hidden'
-    }}>
-      <div className="absolute top-20 right-4 bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" style={{ 
-        position: 'absolute', 
-        top: '5rem', 
-        right: '1rem',
-        maxHeight: '80vh',
-        overflow: 'auto'
-      }}>
+    <div 
+      className="fixed inset-0 z-50 pointer-events-none"
+      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
+    >
+      <div 
+        className="absolute top-20 right-4 border rounded-2xl p-6 w-full max-w-md shadow-2xl transition-all pointer-events-auto"
+        style={{ 
+          position: 'absolute', 
+          top: '5rem', 
+          right: '1rem',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          background: theme.mode === 'light' ? '#ffffff' : colors.badgePurpleBg,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        }}
+      >
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl">
+            <div 
+              className="p-2 rounded-xl"
+              style={{
+                background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+              }}
+            >
               <Download className="text-white" size={18} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800">Export Resume</h2>
+            <h2 className="text-xl font-bold" style={{ color: colors.primaryText }}>Export Resume</h2>
           </div>
           <button
             onClick={() => setShowExportModal(false)}
-            className="p-2 hover:bg-gray-100 rounded-xl  duration-200 group"
+            className="p-2 rounded-xl transition-colors"
+            style={{ color: colors.tertiaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+              e.currentTarget.style.color = colors.secondaryText;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = colors.tertiaryText;
+            }}
+            title="Close modal"
+            aria-label="Close export modal"
           >
-            <X size={18} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
+            <X size={18} />
           </button>
         </div>
         
         <div className="grid grid-cols-1 gap-3">
           <button
             onClick={() => onExport('pdf')}
-            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-red-300 hover:bg-red-50  duration-300 hover:shadow-lg hover:shadow-red-500/20"
+            className="group p-4 rounded-xl border-2 transition-all"
+            style={{
+              border: `2px solid ${colors.border}`,
+              background: colors.cardBackground,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = colors.errorRed;
+              e.currentTarget.style.background = colors.badgeErrorBg;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.background = colors.cardBackground;
+            }}
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500 rounded-lg group-hover:bg-red-600 transition-colors">
+              <div 
+                className="p-2 rounded-lg transition-colors"
+                style={{ background: colors.errorRed }}
+              >
                 <FileText className="text-white" size={20} />
               </div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-800 group-hover:text-red-700 transition-colors">Export as PDF</h3>
-                <p className="text-sm text-gray-600">Professional document format</p>
+                <h3 className="font-semibold transition-colors" style={{ color: colors.primaryText }}>Export as PDF</h3>
+                <p className="text-sm" style={{ color: colors.secondaryText }}>Professional document format</p>
               </div>
             </div>
           </button>
           
           <button
             onClick={() => onExport('word')}
-            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50  duration-300 hover:shadow-lg hover:shadow-blue-500/20"
+            className="group p-4 rounded-xl border-2 transition-all"
+            style={{
+              border: `2px solid ${colors.border}`,
+              background: colors.cardBackground,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = colors.primaryBlue;
+              e.currentTarget.style.background = colors.badgeInfoBg;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.background = colors.cardBackground;
+            }}
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500 rounded-lg group-hover:bg-blue-600 transition-colors">
+              <div 
+                className="p-2 rounded-lg transition-colors"
+                style={{ background: colors.primaryBlue }}
+              >
                 <FileText className="text-white" size={20} />
               </div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-800 group-hover:text-blue-700 transition-colors">Export as Word</h3>
-                <p className="text-sm text-gray-600">Editable Microsoft Word document</p>
+                <h3 className="font-semibold transition-colors" style={{ color: colors.primaryText }}>Export as Word</h3>
+                <p className="text-sm" style={{ color: colors.secondaryText }}>Editable Microsoft Word document</p>
               </div>
             </div>
           </button>
           
           <button
             onClick={() => onExport('print')}
-            className="group p-4 rounded-xl border-2 border-gray-200 hover:border-gray-400 hover:bg-gray-50  duration-300 hover:shadow-lg hover:shadow-gray-500/20"
+            className="group p-4 rounded-xl border-2 transition-all"
+            style={{
+              border: `2px solid ${colors.border}`,
+              background: colors.cardBackground,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = colors.borderFocused;
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.background = colors.cardBackground;
+            }}
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-500 rounded-lg group-hover:bg-gray-600 transition-colors">
+              <div 
+                className="p-2 rounded-lg transition-colors"
+                style={{ background: colors.tertiaryText }}
+              >
                 <Printer className="text-white" size={20} />
               </div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-800 group-hover:text-gray-700 transition-colors">Print Resume</h3>
-                <p className="text-sm text-gray-600">Send directly to printer</p>
+                <h3 className="font-semibold transition-colors" style={{ color: colors.primaryText }}>Print Resume</h3>
+                <p className="text-sm" style={{ color: colors.secondaryText }}>Send directly to printer</p>
               </div>
             </div>
           </button>
@@ -122,15 +189,30 @@ export default function ExportModal({
                 onSaveToCloud();
                 setShowExportModal(false);
               }}
-              className="group p-4 rounded-xl border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50  duration-300 hover:shadow-lg hover:shadow-indigo-500/20"
+              className="group p-4 rounded-xl border-2 transition-all"
+              style={{
+                border: `2px solid ${colors.border}`,
+                background: colors.cardBackground,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = colors.badgePurpleBorder;
+                e.currentTarget.style.background = colors.badgePurpleBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.background = colors.cardBackground;
+              }}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500 rounded-lg group-hover:bg-indigo-600 transition-colors">
+                <div 
+                  className="p-2 rounded-lg transition-colors"
+                  style={{ background: colors.badgePurpleText }}
+                >
                   <Cloud className="text-white" size={20} />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-semibold text-gray-800 group-hover:text-indigo-700 transition-colors">Save to Cloud</h3>
-                  <p className="text-sm text-gray-600">Store resume in cloud storage</p>
+                  <h3 className="font-semibold transition-colors" style={{ color: colors.primaryText }}>Save to Cloud</h3>
+                  <p className="text-sm" style={{ color: colors.secondaryText }}>Store resume in cloud storage</p>
                 </div>
               </div>
             </button>

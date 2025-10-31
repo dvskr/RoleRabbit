@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, Target, CheckCircle, Clock, FileText, Calendar, Download, X } from 'lucide-react';
+import { TrendingUp, Target, CheckCircle, Clock, FileText, Calendar, X } from 'lucide-react';
 
 interface CoverLetterAnalyticsProps {
   isOpen: boolean;
@@ -60,8 +60,11 @@ export default function CoverLetterAnalytics({ isOpen, onClose }: CoverLetterAna
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      <div className="rounded-2xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto shadow-2xl pointer-events-auto" style={{ 
+        background: '#2a1b4d',
+        border: '1px solid #3d2a5f'
+      }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -76,6 +79,8 @@ export default function CoverLetterAnalytics({ isOpen, onClose }: CoverLetterAna
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Close cover letter analytics"
+            title="Close"
           >
             <X size={20} />
           </button>

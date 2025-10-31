@@ -46,18 +46,11 @@ export default function ImportModal({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50" style={{ 
-      position: 'fixed', 
-      top: 0, 
-      left: 0, 
-      right: 0, 
-      bottom: 0,
-      width: '100vw',
-      height: '100vh',
-      overflow: 'hidden'
-    }}>
-      <div className="absolute top-20 right-4 bg-white border border-gray-200 rounded-2xl p-6 w-full max-w-md shadow-2xl" style={{ 
-        position: 'absolute', 
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      <div className="absolute top-20 right-4 rounded-2xl p-6 w-full max-w-md shadow-2xl pointer-events-auto" style={{ 
+        position: 'absolute',
+        background: '#2a1b4d',
+        border: '1px solid #3d2a5f', 
         top: '5rem', 
         right: '1rem',
         maxHeight: '80vh',

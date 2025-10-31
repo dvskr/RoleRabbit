@@ -12,6 +12,7 @@ import {
   NotesPanel, 
   RemindersPanel 
 } from './index';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface JobDetailViewProps {
   job: Job;
@@ -21,6 +22,9 @@ interface JobDetailViewProps {
 type TabType = 'interview' | 'salary' | 'company' | 'referral' | 'notes' | 'reminders';
 
 export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  
   const [activeTab, setActiveTab] = useState<TabType>('notes');
 
   const tabs = [
@@ -98,42 +102,93 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div 
+      className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none"
+    >
+      <div 
+        className="rounded-lg w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col pointer-events-auto shadow-2xl"
+        style={{
+          background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
+          backdropFilter: 'blur(20px)',
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 60px rgba(0, 0, 0, 0.5)',
+        }}
+      >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex-shrink-0">
+        <div 
+          className="p-4 flex-shrink-0"
+          style={{
+            background: theme.mode === 'light' ? '#ffffff' : `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+            color: theme.mode === 'light' ? colors.primaryText : 'white',
+            borderBottom: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
+          }}
+        >
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-2xl font-bold">{job.title}</h2>
+            <h2 
+              className="text-lg font-bold"
+              style={{ color: theme.mode === 'light' ? colors.primaryText : 'white' }}
+            >
+              {job.title}
+            </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 rounded transition-all"
+              style={{ color: 'white' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
             >
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
-          <p className="text-blue-100">{job.company} • {job.location || 'Location not specified'}</p>
-          <p className="text-blue-200 text-sm mt-1">
+          <p style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+            {job.company} • {job.location || 'Location not specified'}
+          </p>
+          <p style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px', marginTop: '4px' }}>
             {job.salary ? `Salary: ${job.salary}` : 'Salary not specified'}
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 px-6 bg-gray-50 flex-shrink-0">
+        <div 
+          className="px-6 flex-shrink-0"
+          style={{
+            background: colors.toolbarBackground,
+            borderBottom: `1px solid ${colors.border}`,
+          }}
+        >
           <div className="flex space-x-1 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 flex items-center gap-2 border-b-2 transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600 font-medium bg-white'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
+                  className="px-4 py-2.5 flex items-center gap-2 transition-all"
+                  style={{
+                    borderBottom: `2px solid ${isActive ? colors.primaryBlue : 'transparent'}`,
+                    color: isActive ? colors.primaryBlue : colors.secondaryText,
+                    fontWeight: isActive ? 500 : 400,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = colors.primaryText;
+                      e.currentTarget.style.background = colors.hoverBackground;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = colors.secondaryText;
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
                 >
-                  <Icon size={18} />
-                  <span className="whitespace-nowrap">{tab.label}</span>
+                  <Icon size={16} />
+                  <span className="whitespace-nowrap text-sm">{tab.label}</span>
                 </button>
               );
             })}
@@ -141,7 +196,10 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <div 
+          className="flex-1 overflow-y-auto p-6"
+          style={{ background: colors.background }}
+        >
           {activeTab === 'interview' && (
             <InterviewTracker
               jobId={job.id}
