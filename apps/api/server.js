@@ -1,6 +1,35 @@
 const fastify = require('fastify')({
   logger: {
-    level: 'info'
+    level: 'info',
+    serializers: {
+      req: (req) => {
+        // Suppress logging for frontend routes that shouldn't be on API server
+        const frontendRoutes = ['/dashboard', '/login', '/register', '/profile'];
+        const path = req.url?.split('?')[0];
+        if (frontendRoutes.includes(path)) {
+          // Return minimal info to suppress detailed logging
+          return { method: req.method, url: '[Frontend Route - Not an API endpoint]' };
+        }
+        return {
+          method: req.method,
+          url: req.url,
+          hostname: req.hostname,
+          remoteAddress: req.ip,
+          remotePort: req.socket?.remotePort
+        };
+      },
+      res: (res) => {
+        // Suppress 404 logging for frontend routes
+        const frontendRoutes = ['/dashboard', '/login', '/register', '/profile'];
+        const path = res.request?.url?.split('?')[0];
+        if (frontendRoutes.includes(path) && res.statusCode === 404) {
+          return { statusCode: '[Suppressed - Frontend Route]' };
+        }
+        return {
+          statusCode: res.statusCode
+        };
+      }
+    }
   }
 });
 
@@ -2366,6 +2395,41 @@ fastify.post('/api/agents/run-all', {
 // Global error handler
 const { globalErrorHandler } = require('./utils/errorHandler');
 fastify.setErrorHandler(globalErrorHandler);
+
+
+// 404 Not Found handler - handles routes that don't exist
+fastify.setNotFoundHandler(async (request, reply) => {
+  const path = request.url.split('?')[0];
+  
+  // Silently handle known frontend routes that shouldn't be on API server
+  const frontendRoutes = ['/dashboard', '/login', '/register', '/profile'];
+  if (frontendRoutes.includes(path)) {
+    // This is a Next.js route, not an API route - return 404 without logging
+    return reply.status(404).send({
+      success: false,
+      error: 'Not Found',
+      message: 'This is a frontend route. Access it via the Next.js server (http://localhost:3000) instead of the API server (http://localhost:3001).',
+      path: request.url,
+      hint: 'Frontend routes are served by Next.js on port 3000, not the API server on port 3001'
+    });
+  }
+  
+  // For other 404s, provide helpful error message
+  return reply.status(404).send({
+    success: false,
+    error: 'Not Found',
+    message: `API endpoint not found: ${request.method} ${request.url}`,
+    availableEndpoints: {
+      health: 'GET /health',
+      status: 'GET /api/status',
+      auth: '/api/auth/*',
+      users: '/api/users/*',
+      resumes: '/api/resumes/*',
+      jobs: '/api/jobs/*',
+      cloud: '/api/cloud/*'
+    }
+  });
+});
 
 // File upload endpoints
 fastify.post('/api/files/upload', {

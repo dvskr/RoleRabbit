@@ -90,7 +90,7 @@ export default function ResumeEditor({
     <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden" style={{ height: '100%', width: '100%', maxHeight: '100%', background: colors.background }}>
       {/* Left Sidebar - Section Controls */}
       <div 
-        className="backdrop-blur-xl overflow-y-auto hidden lg:flex flex-col"
+        className="backdrop-blur-xl overflow-y-auto hidden lg:flex flex-col sidebar-scroller"
         style={{ 
           width: sidebarWidth, 
           minWidth: sidebarWidth,
@@ -110,7 +110,7 @@ export default function ResumeEditor({
         {isSidebarCollapsed ? (
           <CollapsedSidebar colors={colors} onToggleSidebar={onToggleSidebar} />
         ) : (
-          <div className="flex flex-col h-full w-full">
+          <div className="flex flex-col w-full">
             {/* File Name Configuration */}
             <FileNameSection
               resumeFileName={resumeFileName}

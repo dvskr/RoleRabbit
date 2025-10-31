@@ -479,3 +479,62 @@ body,
 .nav-item-active .nav-item-content {
   transform: translateX(8px) !important;
 }
+
+/* Template Scroller - Visible horizontal scrollbar */
+.template-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af rgba(55, 65, 81, 0.3);
+  -webkit-overflow-scrolling: touch;
+}
+
+.template-scroller::-webkit-scrollbar {
+  height: 10px;
+  display: block;
+}
+
+.template-scroller::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.2);
+  border-radius: 5px;
+}
+
+.template-scroller::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 5px;
+  border: 2px solid rgba(55, 65, 81, 0.2);
+}
+
+.template-scroller::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Ensure templates don't shrink when scrolling */
+.template-scroller > * {
+  flex-shrink: 0;
+}
+
+/* Sidebar Panel - Visible vertical scrollbar */
+.sidebar-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.6) rgba(55, 65, 81, 0.2);
+  -webkit-overflow-scrolling: touch;
+}
+
+.sidebar-scroller::-webkit-scrollbar {
+  width: 10px;
+  display: block;
+}
+
+.sidebar-scroller::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.2);
+  border-radius: 5px;
+}
+
+.sidebar-scroller::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.6);
+  border-radius: 5px;
+  border: 2px solid rgba(55, 65, 81, 0.2);
+}
+
+.sidebar-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}
