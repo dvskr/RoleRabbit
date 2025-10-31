@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Target, Plus, Edit, Trash2, Calendar, TrendingUp, CheckCircle, Clock, AlertCircle, X } from 'lucide-react';
+import { Target, Plus, Edit, Trash2, Calendar, TrendingUp, CheckCircle, AlertCircle, X } from 'lucide-react';
 
 interface Goal {
   id: string;

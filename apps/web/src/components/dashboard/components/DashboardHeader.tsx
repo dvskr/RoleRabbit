@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RefreshCw, Settings, TrendingUp, Users, Briefcase, Award } from 'lucide-react';
+import { RefreshCw, TrendingUp, Users, Briefcase, Award } from 'lucide-react';
 import { DashboardMetrics, DashboardConfig } from '../types/dashboard';
 
 interface DashboardHeaderProps {

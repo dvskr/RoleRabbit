@@ -1,0 +1,23 @@
+# Exclude from ESLint
+node_modules/
+.next/
+out/
+dist/
+build/
+
+# Config files
+*.config.js
+*.config.ts
+
+# Test files  
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+__tests__/
+e2e/
+tests/
+
+# Generated files
+.next/
+.vercel/
+

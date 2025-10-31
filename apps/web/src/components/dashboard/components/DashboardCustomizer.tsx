@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { Settings, Eye, EyeOff, GripVertical, Plus, X } from 'lucide-react';
+import { Settings, Eye, EyeOff, GripVertical, X } from 'lucide-react';
 import { DashboardWidget } from '../types/dashboard';
 
 interface DashboardCustomizerProps {

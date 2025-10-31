@@ -5,3 +5,5 @@ export { default as AddFieldModal } from './AddFieldModal';
 export { default as NewResumeModal } from './NewResumeModal';
 export { default as MobileMenuModal } from './MobileMenuModal';
 export { default as AIGenerateModal } from './AIGenerateModal';
+export { default as ResumeSaveToCloudModal } from './ResumeSaveToCloudModal';
+export { default as ResumeImportFromCloudModal } from './ResumeImportFromCloudModal';

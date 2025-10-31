@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, FileText, FileSpreadsheet, Calendar, Filter, CheckCircle, X } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, CheckCircle, X } from 'lucide-react';
 import { DashboardData } from '../types/dashboard';
 
 interface DataExportProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Palette, Moon, Sun, Monitor, Settings, Eye, EyeOff, X, Check } from 'lucide-react';
+import { Palette, Monitor, Settings, Eye, X, Check } from 'lucide-react';
 
 interface ThemeConfig {
   id: string;

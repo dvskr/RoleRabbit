@@ -22,7 +22,9 @@
     "react/no-unescaped-entities": "off",
     "@next/next/no-css-tags": "off",
     "@next/next/no-img-element": "off",
-    "react/no-danger": "off"
+    "react/no-danger": "off",
+    "@next/next/no-unused-vars": "off",
+    "@next/next/no-inline-styles": "off"
   },
   "env": {
     "browser": true,
