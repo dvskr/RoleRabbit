@@ -1,4 +1,4 @@
-// Authentication endpoints for RoleReady API
+﻿// Authentication endpoints for RoleReady API
 const { hashPassword, verifyPassword, sanitizeInput, isValidEmail, isStrongPassword } = require('./utils/security');
 const { prisma } = require('./utils/db');
 

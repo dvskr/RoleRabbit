@@ -1,11 +1,18 @@
 /**
- * Cover Letters API utilities
+ * Cover Letters API utilities - REFACTORED with Generic CRUD Service
  * Handles database operations for cover letter management
+ * 
+ * Uses CrudService base class to eliminate duplicate code
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const logger = require('./logger');
+const CrudService = require('./crudService');
+
+// Create cover letters CRUD service instance
+const coverLettersService = new CrudService('coverLetter', {
+  userIdField: 'userId',
+  orderBy: 'createdAt',
+  orderDirection: 'desc'
+});
 
 /**
  * Get all cover letters for a user
@@ -13,20 +20,7 @@ const logger = require('./logger');
  * @returns {Promise<Array>} Array of cover letters
  */
 async function getCoverLettersByUserId(userId) {
-  try {
-    const coverLetters = await prisma.coverLetter.findMany({
-      where: {
-        userId: userId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    return coverLetters;
-  } catch (error) {
-    logger.error('Error fetching cover letters:', error);
-    throw error;
-  }
+  return coverLettersService.getAllByUserId(userId);
 }
 
 /**
@@ -35,17 +29,7 @@ async function getCoverLettersByUserId(userId) {
  * @returns {Promise<Object>} Cover letter object
  */
 async function getCoverLetterById(coverLetterId) {
-  try {
-    const coverLetter = await prisma.coverLetter.findUnique({
-      where: {
-        id: coverLetterId
-      }
-    });
-    return coverLetter;
-  } catch (error) {
-    logger.error('Error fetching cover letter:', error);
-    throw error;
-  }
+  return coverLettersService.getById(coverLetterId);
 }
 
 /**
@@ -55,21 +39,15 @@ async function getCoverLetterById(coverLetterId) {
  * @returns {Promise<Object>} Created cover letter
  */
 async function createCoverLetter(userId, coverLetterData) {
-  try {
-    const coverLetter = await prisma.coverLetter.create({
-      data: {
-        userId,
-        title: coverLetterData.title || 'Untitled Cover Letter',
-        content: coverLetterData.content || '',
-        jobId: coverLetterData.jobId || null,
-        templateId: coverLetterData.templateId
-      }
-    });
-    return coverLetter;
-  } catch (error) {
-    logger.error('Error creating cover letter:', error);
-    throw error;
-  }
+  return coverLettersService.create(userId, coverLetterData, (userId, data) => {
+    return {
+      userId,
+      title: data.title || 'Untitled Cover Letter',
+      content: data.content || '',
+      jobId: data.jobId || null,
+      templateId: data.templateId
+    };
+  });
 }
 
 /**
@@ -79,45 +57,16 @@ async function createCoverLetter(userId, coverLetterData) {
  * @returns {Promise<Object>} Updated cover letter
  */
 async function updateCoverLetter(coverLetterId, updates) {
-  try {
-    // Filter out undefined fields
-    const cleanUpdates = {};
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        cleanUpdates[key] = updates[key];
-      }
-    });
-
-    const coverLetter = await prisma.coverLetter.update({
-      where: {
-        id: coverLetterId
-      },
-      data: cleanUpdates
-    });
-    return coverLetter;
-  } catch (error) {
-    logger.error('Error updating cover letter:', error);
-    throw error;
-  }
+  return coverLettersService.update(coverLetterId, updates);
 }
 
 /**
  * Delete a cover letter
  * @param {string} coverLetterId - Cover Letter ID
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<void>}
  */
 async function deleteCoverLetter(coverLetterId) {
-  try {
-    await prisma.coverLetter.delete({
-      where: {
-        id: coverLetterId
-      }
-    });
-    return true;
-  } catch (error) {
-    logger.error('Error deleting cover letter:', error);
-    throw error;
-  }
+  return coverLettersService.delete(coverLetterId);
 }
 
 /**
@@ -126,20 +75,7 @@ async function deleteCoverLetter(coverLetterId) {
  * @returns {Promise<Array>} Array of cover letters
  */
 async function getCoverLettersByJobId(jobId) {
-  try {
-    const coverLetters = await prisma.coverLetter.findMany({
-      where: {
-        jobId: jobId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    return coverLetters;
-  } catch (error) {
-    logger.error('Error fetching cover letters by job:', error);
-    throw error;
-  }
+  return coverLettersService.getByField('jobId', jobId);
 }
 
 module.exports = {

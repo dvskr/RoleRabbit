@@ -314,14 +314,16 @@ export default function PortfolioGenerator({ userData, onClose }: PortfolioGener
         )}
 
         {activeStep === 'publish' && (
-          <div className="p-8">Publish step (HostingConfig temporarily disabled)</div>
-          {/* <HostingConfig
-            onNext={() => {}}
-            onBack={() => setActiveStep('preview')}
-            config={portfolioConfig as WebsiteConfig}
-            onUpdate={handleConfigUpdate}
-            portfolioData={effectiveUserData}
-          /> */}
+          <div className="p-8">
+            Publish step (HostingConfig temporarily disabled)
+            {/* <HostingConfig
+              onNext={() => {}}
+              onBack={() => setActiveStep('preview')}
+              config={portfolioConfig as WebsiteConfig}
+              onUpdate={handleConfigUpdate}
+              portfolioData={effectiveUserData}
+            /> */}
+          </div>
         )}
       </div>
 

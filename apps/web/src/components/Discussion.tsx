@@ -2,25 +2,21 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, MessageSquare, RefreshCw, X, Reply, ThumbsUp, Clock, User, Bookmark, Flag, Users, Shield, Trash2 } from 'lucide-react';
 import { useDiscussion } from '../hooks/useDiscussion';
 import { useTheme } from '../contexts/ThemeContext';
 import DiscussionHeader from './discussion/DiscussionHeader';
 import DiscussionTabs from './discussion/DiscussionTabs';
 import PostCard from './discussion/PostCard';
-import CommunityCard from './discussion/CommunityCard';
 import DiscussionFilters from './discussion/DiscussionFilters';
 import { logger } from '../utils/logger';
 import type { Comment, Post, Community } from '../types/discussion';
-import { debounce } from '../utils/performance';
 import type { CommentWithChildren, NewPost } from './discussion/types';
-import { DEFAULT_NEW_POST, DEBOUNCE_DELAY_MS, ANIMATION_DURATION_MS } from './discussion/constants';
+import { DEFAULT_NEW_POST } from './discussion/constants';
 import { 
   buildCommentTree, 
   filterPostsByTab, 
   filterBookmarkedPosts, 
   filterFlaggedPosts,
-  filterCommunitiesByQuery,
   calculateVoteIncrement,
   sharePost
 } from './discussion/discussionHelpers';
@@ -28,7 +24,6 @@ import { useDiscussionBookmarks } from './discussion/hooks/useDiscussionBookmark
 import { useDiscussionCommunities } from './discussion/hooks/useDiscussionCommunities';
 import { useDiscussionComments } from './discussion/hooks/useDiscussionComments';
 import { useDiscussionAnimation } from './discussion/hooks/useDiscussionAnimation';
-import CommentTree from './discussion/components/CommentTree';
 import CommentModal from './discussion/components/CommentModal';
 import PostDetailView from './discussion/components/PostDetailView';
 import CreatePostModal from './discussion/components/CreatePostModal';
@@ -36,6 +31,10 @@ import CreateCommunityModal from './discussion/components/CreateCommunityModal';
 import CommunitySettingsModal from './discussion/components/CommunitySettingsModal';
 import ManageMembersModal from './discussion/components/ManageMembersModal';
 import ModerationToolsModal from './discussion/components/ModerationToolsModal';
+import CommunitiesList from './discussion/components/CommunitiesList';
+import FilterToggleButtons from './discussion/components/FilterToggleButtons';
+import PostsEmptyState from './discussion/components/PostsEmptyState';
+import FloatingActionButtons from './discussion/components/FloatingActionButtons';
 
 export default function Discussion() {
   const { theme } = useTheme();
@@ -50,13 +49,8 @@ export default function Discussion() {
     showCommunitySettings,
     showModerationTools,
     showFilters,
-    showAIFeatures,
     selectedCommunityForSettings,
-    selectedPost,
-    aiMode,
     newCommunity,
-    newTag,
-    newRule,
     communities,
     posts,
     comments,
@@ -72,13 +66,8 @@ export default function Discussion() {
     setShowCommunitySettings,
     setShowModerationTools,
     setShowFilters,
-    setShowAIFeatures,
     setSelectedCommunityForSettings,
-    setSelectedPost,
-    setAiMode,
     setNewCommunity,
-    setNewTag,
-    setNewRule,
     
     // Actions
     updateFilters,
@@ -118,12 +107,8 @@ export default function Discussion() {
     setJoinedCommunities,
     communitySearchQuery,
     setCommunitySearchQuery,
-    debouncedCommunitySearchQuery,
     debouncedSetCommunitySearch,
-    showCommunityDropdown,
-    setShowCommunityDropdown,
     animatingCommunityId,
-    filteredCommunitiesForPost,
     handleJoinCommunity,
     handleViewCommunity: handleViewCommunityBase,
     handlePostToCommunity: handlePostToCommunityBase,
@@ -256,12 +241,6 @@ export default function Discussion() {
     handleViewPostBase(postId, posts, setPosts);
   }, [handleViewPostBase, posts, setPosts]);
 
-  const handleJoinCommunityWithAnimation = useCallback((communityId: string) => {
-    logger.debug(`Join/Leave community ${communityId}`);
-    animation.animateCommunity(communityId);
-    handleJoinCommunity(communityId);
-  }, [animation, handleJoinCommunity]);
-
   const handleViewCommunityWithLogging = useCallback((communityId: string) => {
     logger.debug(`View community ${communityId}`);
     handleViewCommunityBase(communityId, updateFilters, (tab: string) => setActiveTab(tab as any));
@@ -271,11 +250,6 @@ export default function Discussion() {
     logger.debug(`Post to community ${communityId}`);
     handlePostToCommunityBase(communityId, setNewPost, setShowCreatePost);
   }, [handlePostToCommunityBase, setNewPost, setShowCreatePost]);
-
-  const handleCommunitySettings = useCallback((community: any) => {
-    setSelectedCommunityForSettings(community);
-    setShowCommunitySettings(true);
-  }, [setSelectedCommunityForSettings, setShowCommunitySettings]);
 
   const handleEditCommunity = useCallback((community: Community) => {
     setSelectedCommunityForSettings(community);
@@ -309,15 +283,6 @@ export default function Discussion() {
     window.location.reload();
   }, []);
 
-  // Submit comment handler - wrapped to add logging
-  const handleSubmitCommentWithLogging = useCallback((e?: React.MouseEvent) => {
-    e?.preventDefault();
-    logger.debug('Submitting comment');
-    handleSubmitComment(setPosts);
-  }, [handleSubmitComment, setPosts]);
-
-  // Saved state loading is now handled by hooks
-
   // Build comment tree structure - using helper function
   const getCommentTree = useCallback((postId: string): CommentWithChildren[] => {
     return buildCommentTree(comments, postId);
@@ -348,133 +313,41 @@ export default function Discussion() {
             <div className="p-6">
               {/* Communities Tab */}
               {activeTab === 'communities' && (
-                <div className="space-y-6">
-                  {/* Professional Network Overview */}
-                  <div
-                    className="rounded-xl p-6 border"
-                    style={{
-                      background: `linear-gradient(to right, ${colors.primaryBlue}15, ${colors.badgePurpleBg}15)`,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h2 className="text-lg font-bold mb-1" style={{ color: colors.primaryText }}>Professional Networks</h2>
-                        <p className="text-sm" style={{ color: colors.secondaryText }}>Join communities and connect with professionals</p>
-                      </div>
-                      <button
-                        onClick={() => setShowCreateCommunity(true)}
-                        className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                        style={{
-                          background: colors.primaryBlue,
-                          color: 'white',
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
-                      >
-                        <Plus size={16} />
-                        Create Network
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {filteredCommunities.map(community => (
-                        <CommunityCard
-                          key={community.id}
-                          community={community}
-                          onJoin={handleJoinCommunity}
-                          onView={handleViewCommunityWithLogging}
-                          onPost={handlePostToCommunityWithLogging}
-                          onEditCommunity={handleEditCommunity}
-                          onManageMembers={handleManageMembers}
-                          onModerationTools={handleModerationTools}
-                          onDeleteCommunity={handleDeleteCommunity}
-                          isJoined={joinedCommunities.includes(community.id)}
-                          isAnimating={animatingCommunityId === community.id}
-                        />
-                      ))}
-                    </div>
-                    
-                    {filteredCommunities.length === 0 && (
-                      <div className="text-center py-8">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: colors.inputBackground }}>
-                          <MessageSquare size={20} style={{ color: colors.tertiaryText }} />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-1" style={{ color: colors.primaryText }}>No Professional Networks Found</h3>
-                        <p className="mb-4" style={{ color: colors.secondaryText }}>Create your first professional network to get started</p>
-                        <button
-                          onClick={() => setShowCreateCommunity(true)}
-                          className="px-4 py-2 rounded-lg transition-colors"
-                          style={{
-                            background: colors.primaryBlue,
-                            color: 'white',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
-                        >
-                          Create Network
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <CommunitiesList
+                  colors={colors}
+                  filteredCommunities={filteredCommunities}
+                  joinedCommunities={joinedCommunities}
+                  animatingCommunityId={animatingCommunityId}
+                  onShowCreateCommunity={() => setShowCreateCommunity(true)}
+                  onJoinCommunity={handleJoinCommunity}
+                  onViewCommunity={handleViewCommunityWithLogging}
+                  onPostToCommunity={handlePostToCommunityWithLogging}
+                  onEditCommunity={handleEditCommunity}
+                  onManageMembers={handleManageMembers}
+                  onModerationTools={handleModerationTools}
+                  onDeleteCommunity={handleDeleteCommunity}
+                />
               )}
 
               {/* Posts Tab */}
               {activeTab !== 'communities' && (
                 <div className="space-y-4">
-
                   {/* Filter Toggle Buttons */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <button
-                      onClick={() => {
-                        setShowBookmarkedOnly(!showBookmarkedOnly);
-                        setShowReportedOnly(false);
-                      }}
-                      className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                      style={{
-                        background: showBookmarkedOnly ? colors.primaryBlue : colors.inputBackground,
-                        color: showBookmarkedOnly ? 'white' : colors.primaryText,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!showBookmarkedOnly) {
-                          e.currentTarget.style.background = colors.hoverBackground;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!showBookmarkedOnly) {
-                          e.currentTarget.style.background = colors.inputBackground;
-                        }
-                      }}
-                    >
-                      <Bookmark size={16} />
-                      <span>Bookmarked ({bookmarkedPosts.length})</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowReportedOnly(!showReportedOnly);
-                        setShowBookmarkedOnly(false);
-                      }}
-                      className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
-                      style={{
-                        background: showReportedOnly ? colors.badgeErrorText : colors.inputBackground,
-                        color: showReportedOnly ? 'white' : colors.primaryText,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!showReportedOnly) {
-                          e.currentTarget.style.background = colors.hoverBackground;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!showReportedOnly) {
-                          e.currentTarget.style.background = colors.inputBackground;
-                        }
-                      }}
-                    >
-                      <Flag size={16} />
-                      <span>Reported ({Object.keys(flaggedPosts).length})</span>
-                    </button>
-                  </div>
+                  <FilterToggleButtons
+                    colors={colors}
+                    showBookmarkedOnly={showBookmarkedOnly}
+                    showReportedOnly={showReportedOnly}
+                    bookmarkedPostsCount={bookmarkedPosts.length}
+                    flaggedPostsCount={Object.keys(flaggedPosts).length}
+                    onToggleBookmarked={() => {
+                      setShowBookmarkedOnly(!showBookmarkedOnly);
+                      setShowReportedOnly(false);
+                    }}
+                    onToggleReported={() => {
+                      setShowReportedOnly(!showReportedOnly);
+                      setShowBookmarkedOnly(false);
+                    }}
+                  />
 
                   {/* Posts List */}
                   {displayPosts.length > 0 ? (
@@ -497,33 +370,12 @@ export default function Discussion() {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12 rounded-lg border border-dashed" style={{ background: colors.cardBackground, borderColor: colors.border }}>
-                      <MessageSquare size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText }} />
-                      <h3 className="text-lg font-semibold mb-2" style={{ color: colors.primaryText }}>
-                        {showBookmarkedOnly ? 'No bookmarked posts yet' : showReportedOnly ? 'No reported posts' : 'No discussions found'}
-                      </h3>
-                      <p className="mb-4" style={{ color: colors.secondaryText }}>
-                        {showBookmarkedOnly 
-                          ? 'Bookmark posts to save them for later' 
-                          : showReportedOnly 
-                          ? 'No posts have been reported' 
-                          : 'Start a new discussion or adjust your filters'}
-                      </p>
-                      {!showBookmarkedOnly && !showReportedOnly && (
-                        <button
-                          onClick={() => setShowCreatePost(true)}
-                          className="px-4 py-2 rounded-lg transition-colors"
-                          style={{
-                            background: colors.primaryBlue,
-                            color: 'white',
-                          }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = colors.primaryBlueHover; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = colors.primaryBlue; }}
-                        >
-                          Create Discussion
-                        </button>
-                      )}
-                    </div>
+                    <PostsEmptyState
+                      colors={colors}
+                      showBookmarkedOnly={showBookmarkedOnly}
+                      showReportedOnly={showReportedOnly}
+                      onShowCreatePost={() => setShowCreatePost(true)}
+                    />
                   )}
                 </div>
               )}
@@ -533,78 +385,13 @@ export default function Discussion() {
       </div>
 
       {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-        {/* Create Post Button */}
-        {activeTab !== 'communities' && (
-          <button
-            onClick={() => setShowCreatePost(true)}
-            className="w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
-            style={{
-              background: colors.primaryBlue,
-              color: 'white',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.primaryBlueHover;
-              e.currentTarget.style.boxShadow = `0 10px 25px ${colors.primaryBlue}40`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = colors.primaryBlue;
-              e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
-            }}
-            title="Create Post"
-            aria-label="Create Post"
-          >
-            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
-          </button>
-        )}
-        
-        {/* Create Community Button */}
-        {activeTab === 'communities' && (
-          <button
-            onClick={() => setShowCreateCommunity(true)}
-            className="w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
-            style={{
-              background: colors.badgePurpleText,
-              color: 'white',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.badgePurpleText + 'dd';
-              e.currentTarget.style.boxShadow = `0 10px 25px ${colors.badgePurpleText}40`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = colors.badgePurpleText;
-              e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
-            }}
-            title="Create Community"
-            aria-label="Create Community"
-          >
-            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-200" />
-          </button>
-        )}
-        
-        {/* Refresh Button */}
-        <button
-          onClick={handleRefresh}
-          className="w-12 h-12 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center group"
-          style={{
-            background: colors.inputBackground,
-            color: colors.primaryText,
-            border: `1px solid ${colors.border}`,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = colors.hoverBackground;
-            e.currentTarget.style.boxShadow = `0 10px 25px ${colors.border}40`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = colors.inputBackground;
-            e.currentTarget.style.boxShadow = `0 4px 12px ${colors.border}20`;
-          }}
-          title="Refresh"
-          aria-label="Refresh discussions"
-        >
-          <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-200" />
-        </button>
-      </div>
+      <FloatingActionButtons
+        colors={colors}
+        activeTab={activeTab}
+        onShowCreatePost={() => setShowCreatePost(true)}
+        onShowCreateCommunity={() => setShowCreateCommunity(true)}
+        onRefresh={handleRefresh}
+      />
 
       {/* Modals */}
       {showFilters && (

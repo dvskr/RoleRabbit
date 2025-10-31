@@ -1,11 +1,18 @@
 /**
- * Emails API utilities
+ * Emails API utilities - REFACTORED with Generic CRUD Service
  * Handles database operations for email management
+ * 
+ * Uses CrudService base class to eliminate duplicate code
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const logger = require('./logger');
+const CrudService = require('./crudService');
+
+// Create emails CRUD service instance
+const emailsService = new CrudService('email', {
+  userIdField: 'userId',
+  orderBy: 'createdAt',
+  orderDirection: 'desc'
+});
 
 /**
  * Get all emails for a user
@@ -13,20 +20,7 @@ const logger = require('./logger');
  * @returns {Promise<Array>} Array of emails
  */
 async function getEmailsByUserId(userId) {
-  try {
-    const emails = await prisma.email.findMany({
-      where: {
-        userId: userId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    return emails;
-  } catch (error) {
-    logger.error('Error fetching emails:', error);
-    throw error;
-  }
+  return emailsService.getAllByUserId(userId);
 }
 
 /**
@@ -35,17 +29,7 @@ async function getEmailsByUserId(userId) {
  * @returns {Promise<Object>} Email object
  */
 async function getEmailById(emailId) {
-  try {
-    const email = await prisma.email.findUnique({
-      where: {
-        id: emailId
-      }
-    });
-    return email;
-  } catch (error) {
-    logger.error('Error fetching email:', error);
-    throw error;
-  }
+  return emailsService.getById(emailId);
 }
 
 /**
@@ -55,23 +39,17 @@ async function getEmailById(emailId) {
  * @returns {Promise<Object>} Created email
  */
 async function createEmail(userId, emailData) {
-  try {
-    const email = await prisma.email.create({
-      data: {
-        userId,
-        to: emailData.to,
-        subject: emailData.subject,
-        body: emailData.body,
-        type: emailData.type || 'followup',
-        status: emailData.status || 'draft',
-        jobId: emailData.jobId || null
-      }
-    });
-    return email;
-  } catch (error) {
-    logger.error('Error creating email:', error);
-    throw error;
-  }
+  return emailsService.create(userId, emailData, (userId, data) => {
+    return {
+      userId,
+      to: data.to,
+      subject: data.subject,
+      body: data.body,
+      type: data.type || 'followup',
+      status: data.status || 'draft',
+      jobId: data.jobId || null
+    };
+  });
 }
 
 /**
@@ -81,45 +59,16 @@ async function createEmail(userId, emailData) {
  * @returns {Promise<Object>} Updated email
  */
 async function updateEmail(emailId, updates) {
-  try {
-    // Filter out undefined fields
-    const cleanUpdates = {};
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        cleanUpdates[key] = updates[key];
-      }
-    });
-
-    const email = await prisma.email.update({
-      where: {
-        id: emailId
-      },
-      data: cleanUpdates
-    });
-    return email;
-  } catch (error) {
-    logger.error('Error updating email:', error);
-    throw error;
-  }
+  return emailsService.update(emailId, updates);
 }
 
 /**
  * Delete an email
  * @param {string} emailId - Email ID
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<void>}
  */
 async function deleteEmail(emailId) {
-  try {
-    await prisma.email.delete({
-      where: {
-        id: emailId
-      }
-    });
-    return true;
-  } catch (error) {
-    logger.error('Error deleting email:', error);
-    throw error;
-  }
+  return emailsService.delete(emailId);
 }
 
 /**
@@ -128,20 +77,7 @@ async function deleteEmail(emailId) {
  * @returns {Promise<Array>} Array of emails
  */
 async function getEmailsByJobId(jobId) {
-  try {
-    const emails = await prisma.email.findMany({
-      where: {
-        jobId: jobId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    return emails;
-  } catch (error) {
-    logger.error('Error fetching emails by job:', error);
-    throw error;
-  }
+  return emailsService.getByField('jobId', jobId);
 }
 
 module.exports = {

@@ -4,12 +4,14 @@
   "description": "RoleReady Fastify API for user data and resume management",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "node simple-server.js",
-    "start": "node simple-server.js",
+    "dev": "node server.js",
+    "start": "node server.js",
     "lint": "eslint . --ext .js",
     "type-check": "echo 'TypeScript check skipped for JS version'",
     "seed": "node utils/seeder.js",
-    "db:seed": "node utils/seeder.js"
+    "db:seed": "node utils/seeder.js",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev"
   },
   "dependencies": {
     "@fastify/compress": "^8.1.0",
