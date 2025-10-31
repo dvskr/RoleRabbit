@@ -123,7 +123,7 @@ export default function SkillsTab({
           >
             Technical Skills
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {(userData.skills || []).map((skill, index) => {
               const badgeStyle = getProficiencyBadgeStyle(skill.proficiency);
               return (

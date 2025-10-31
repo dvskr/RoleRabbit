@@ -14,7 +14,7 @@
 - ✅ All job components - Used
 - ✅ `useJobsApi` - Used
 - ✅ `Job, SavedView` types - Used
-- ✅ `logger체 - Used (4 times)
+- ✅ `logger` - Used (4 times)
 - ✅ `useTheme` - Used
 
 #### ⚠️ Potentially Unused Variables from useJobsApi

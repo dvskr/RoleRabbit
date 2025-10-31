@@ -6,6 +6,21 @@ import { LogoIcon, Logo } from '../common/Logo';
 import { useTheme } from '../../contexts/ThemeContext';
 import NavigationItem from './NavigationItem';
 
+// Map to handle both original IDs and mapped tab names for active state checking
+const getActiveTabId = (itemId: string, activeTab: string): boolean => {
+  // Direct match
+  if (activeTab === itemId) return true;
+  
+  // Handle mapped names
+  const tabMapping: Record<string, string[]> = {
+    'tracker': ['jobs', 'tracker'],
+    'agents': ['ai-agents', 'agents'],
+  };
+  
+  const mappedVariants = tabMapping[itemId] || [itemId];
+  return mappedVariants.includes(activeTab);
+};
+
 interface SidebarProps {
   activeTab: string;
   sidebarCollapsed: boolean;
@@ -224,7 +239,8 @@ export default function SidebarNew({
               )}
               <div className="space-y-0.5">
                 {section.items.map((item) => {
-                  const isActive = activeTab === item.id;
+                  // Check both original ID and mapped tab names for active state
+                  const isActive = getActiveTabId(item.id, activeTab);
                   
                   return (
                     <NavigationItem

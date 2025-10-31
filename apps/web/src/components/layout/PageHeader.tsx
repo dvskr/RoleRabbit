@@ -65,7 +65,7 @@ export default function PageHeader({
 
   return (
     <div 
-      className="px-6 py-3 border-b flex items-center gap-4 flex-shrink-0"
+      className="px-6 py-4 sm:py-5 border-b flex items-center gap-4 flex-shrink-0"
       style={{
         background: colors.headerBackground,
         borderBottom: `1px solid ${colors.border}`,

@@ -142,35 +142,35 @@ export default function SupportTab() {
           >
             Contact Us
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div 
-              className="text-center p-6 rounded-xl"
+              className="text-center p-4 sm:p-6 rounded-xl"
               style={{
                 background: colors.inputBackground,
                 border: `1px solid ${colors.border}`,
               }}
             >
               <div 
-                className="p-3 rounded-lg w-fit mx-auto mb-4"
+                className="p-2 sm:p-3 rounded-lg w-fit mx-auto mb-3 sm:mb-4"
                 style={{ background: colors.badgeInfoBg }}
               >
-                <Mail size={24} style={{ color: colors.primaryBlue }} />
+                <Mail size={20} className="sm:w-6 sm:h-6" style={{ color: colors.primaryBlue }} />
               </div>
               <h4 
-                className="text-lg font-semibold mb-2"
+                className="text-base sm:text-lg font-semibold mb-2"
                 style={{ color: colors.primaryText }}
               >
                 Email Support
               </h4>
               <p 
-                className="mb-4"
+                className="mb-3 sm:mb-4 text-sm sm:text-base"
                 style={{ color: colors.secondaryText }}
               >
                 Send us an email and we'll get back to you within 24 hours.
               </p>
               <a 
                 href="mailto:support@roleready.com" 
-                className="font-medium transition-colors"
+                className="font-medium transition-colors text-sm sm:text-base break-all"
                 style={{ color: colors.primaryBlue }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = colors.primaryBlueHover;
@@ -184,39 +184,39 @@ export default function SupportTab() {
             </div>
             
             <div 
-              className="text-center p-6 rounded-xl"
+              className="text-center p-4 sm:p-6 rounded-xl"
               style={{
                 background: colors.inputBackground,
                 border: `1px solid ${colors.border}`,
               }}
             >
               <div 
-                className="p-3 rounded-lg w-fit mx-auto mb-4"
+                className="p-2 sm:p-3 rounded-lg w-fit mx-auto mb-3 sm:mb-4"
                 style={{ background: colors.badgeSuccessBg }}
               >
-                <Phone size={24} style={{ color: colors.successGreen }} />
+                <Phone size={20} className="sm:w-6 sm:h-6" style={{ color: colors.successGreen }} />
               </div>
               <h4 
-                className="text-lg font-semibold mb-2"
+                className="text-base sm:text-lg font-semibold mb-2"
                 style={{ color: colors.primaryText }}
               >
                 Phone Support
               </h4>
               <p 
-                className="mb-4"
+                className="mb-3 sm:mb-4 text-sm sm:text-base"
                 style={{ color: colors.secondaryText }}
               >
                 Call us for urgent issues or complex questions.
               </p>
               <a 
                 href="tel:+1-555-0123" 
-                className="font-medium transition-colors"
+                className="font-medium transition-colors text-sm sm:text-base break-all"
                 style={{ color: colors.successGreen }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = colors.successGreen;
+                  e.currentTarget.style.opacity = '0.8';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.color = colors.successGreen;
+                  e.currentTarget.style.opacity = '1';
                 }}
               >
                 +1 (555) 012-3456
@@ -224,32 +224,32 @@ export default function SupportTab() {
             </div>
             
             <div 
-              className="text-center p-6 rounded-xl"
+              className="text-center p-4 sm:p-6 rounded-xl"
               style={{
                 background: colors.inputBackground,
                 border: `1px solid ${colors.border}`,
               }}
             >
               <div 
-                className="p-3 rounded-lg w-fit mx-auto mb-4"
+                className="p-2 sm:p-3 rounded-lg w-fit mx-auto mb-3 sm:mb-4"
                 style={{ background: colors.badgePurpleBg }}
               >
-                <BookOpen size={24} style={{ color: colors.badgePurpleText }} />
+                <BookOpen size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgePurpleText }} />
               </div>
               <h4 
-                className="text-lg font-semibold mb-2"
+                className="text-base sm:text-lg font-semibold mb-2"
                 style={{ color: colors.primaryText }}
               >
                 Documentation
               </h4>
               <p 
-                className="mb-4"
+                className="mb-3 sm:mb-4 text-sm sm:text-base"
                 style={{ color: colors.secondaryText }}
               >
                 Browse our comprehensive documentation and guides.
               </p>
               <button 
-                className="font-medium transition-colors"
+                className="font-medium transition-colors text-sm sm:text-base"
                 style={{ color: colors.badgePurpleText }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = colors.primaryBlue;

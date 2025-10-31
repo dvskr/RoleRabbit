@@ -108,7 +108,7 @@
 **Would you like me to:**
 1. **Start systematic checking now** - Go through all files methodically
 2. **Check specific directories first** - Focus on high-impact areas
-3. **Create automated checks** - Gedスクリプト to find unused imports
+3. **Create automated checks** - Script to find unused imports
 
 **Which approach would you prefer?**
 

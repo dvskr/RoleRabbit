@@ -288,7 +288,7 @@ export default function AIAgents() {
                 border: `1px solid ${isAgentEnabled ? colors.primaryBlue : colors.border}`,
               }}
               role="switch"
-              aria-checked={isAgentEnabled ? "true" : "false"}
+              aria-checked={isAgentEnabled}
               aria-label={isAgentEnabled ? "Disable AI Agent" : "Enable AI Agent"}
               title={isAgentEnabled ? "Disable AI Agent" : "Enable AI Agent"}
             >
@@ -579,6 +579,8 @@ export default function AIAgents() {
                       e.currentTarget.style.background = colors.badgePurpleBg;
                       e.currentTarget.style.color = colors.badgePurpleText;
                     }}
+                    title="Send message"
+                    aria-label="Send message"
                   >
                     <Send size={18} />
                   </button>
@@ -936,6 +938,8 @@ export default function AIAgents() {
                       cap.enabled ? 'bg-green-500' : 'bg-gray-400'
                     }`}
                     style={{ background: cap.enabled ? '#10b981' : colors.border }}
+                    title={cap.enabled ? `Disable ${cap.title}` : `Enable ${cap.title}`}
+                    aria-label={cap.enabled ? `Disable ${cap.title}` : `Enable ${cap.title}`}
                   >
                     <div
                       className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-all bg-white shadow-sm`}

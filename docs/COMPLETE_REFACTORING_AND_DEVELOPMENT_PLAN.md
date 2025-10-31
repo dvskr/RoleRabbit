@@ -259,7 +259,7 @@ const pool = new Pool({
   max: 20, // Maximum pool size
   min: 5,  // Minimum pool size
   idleTimeoutMillis: 30000,
-つまり connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 2000,
 });
 
 const prisma = new PrismaClient({

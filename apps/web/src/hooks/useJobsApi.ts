@@ -71,9 +71,32 @@ export function useJobsApi() {
     }
   }, []);
 
-  // Load jobs from API on mount
+  // Load jobs from API on mount - only once
   useEffect(() => {
-    loadJobs();
+    // Check localStorage first for cached data
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('jobs');
+      if (cached) {
+        try {
+          const parsedJobs = JSON.parse(cached);
+          if (Array.isArray(parsedJobs) && parsedJobs.length > 0) {
+            // Use cached data immediately
+            setJobs(parsedJobs);
+            setIsLoading(false);
+            // Still try to fetch fresh data in background
+            loadJobs();
+            return;
+          }
+        } catch (e) {
+          // Cache invalid, proceed with normal load
+        }
+      }
+    }
+    
+    // Only load if jobs array is empty (first load)
+    if (jobs.length === 0) {
+      loadJobs();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

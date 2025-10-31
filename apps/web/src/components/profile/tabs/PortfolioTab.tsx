@@ -1,9 +1,18 @@
+/* eslint-disable react/forbid-dom-props */
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { FileText, ExternalLink, Github, Award, Trophy, Link2, Plus, Edit, Trash2, X, Check } from 'lucide-react';
 import { UserData } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { usePortfolioLinks } from './portfolio/hooks/usePortfolioLinks';
+import { usePortfolioProjects } from './portfolio/hooks/usePortfolioProjects';
+import { usePortfolioAchievements } from './portfolio/hooks/usePortfolioAchievements';
+import { getAchievementIcon } from './portfolio/portfolioHelpers';
+import LinkCard from './portfolio/components/LinkCard';
+import AddLinkModal from './portfolio/components/AddLinkModal';
+import { usePortfolioStyles } from './portfolio/usePortfolioStyles';
+import styles from './portfolio/portfolio.module.css';
 
 interface PortfolioTabProps {
   userData: UserData;
@@ -18,165 +27,48 @@ export default function PortfolioTab({
 }: PortfolioTabProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null);
-  const [editingProjectIndex, setEditingProjectIndex] = useState<number | null>(null);
-  const [editingAchievementIndex, setEditingAchievementIndex] = useState<number | null>(null);
-  const [showAddLinkModal, setShowAddLinkModal] = useState(false);
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
-  const [showAddAchievementModal, setShowAddAchievementModal] = useState(false);
+  const portfolioStyles = usePortfolioStyles(colors);
 
-  // Temp state for editing
-  const [tempLink, setTempLink] = useState<{ platform: string; url: string }>({ platform: 'LinkedIn', url: '' });
-  const [tempProject, setTempProject] = useState<{ title: string; description: string; technologies: string[]; date: string; link?: string; github?: string }>({ 
-    title: '', description: '', technologies: [], date: '', link: '', github: '' 
+  // Use custom hooks for state management
+  const linksHook = usePortfolioLinks({
+    links: userData.socialLinks || [],
+    onLinksChange: (links) => onUserDataChange({ socialLinks: links })
   });
-  const [tempAchievement, setTempAchievement] = useState<{ type: string; title: string; description: string; date: string; link?: string }>({
-    type: 'Award', title: '', description: '', date: '', link: ''
+
+  const projectsHook = usePortfolioProjects({
+    projects: userData.projects || [],
+    onProjectsChange: (projects) => onUserDataChange({ projects })
   });
-  const [newTech, setNewTech] = useState('');
 
-  const getPlatformIcon = (platform: string) => {
-    const iconClass = "w-5 h-5";
-    switch (platform) {
-      case 'LinkedIn': return <Link2 className={iconClass} />;
-      case 'GitHub': return <Github className={iconClass} />;
-      case 'Twitter': return <FileText className={iconClass} />;
-      case 'Medium': return <FileText className={iconClass} />;
-      default: return <ExternalLink className={iconClass} />;
-    }
-  };
-
-  const getAchievementIcon = (type: string) => {
-    switch (type) {
-      case 'Award': return <Trophy size={20} style={{ color: colors.badgeWarningText }} />;
-      case 'Publication': return <FileText size={20} style={{ color: colors.primaryBlue }} />;
-      case 'Speaking': return <FileText size={20} style={{ color: colors.badgePurpleText }} />;
-      case 'Certification': return <Award size={20} style={{ color: colors.successGreen }} />;
-      default: return <Trophy size={20} style={{ color: colors.tertiaryText }} />;
-    }
-  };
-
-  const handleAddLink = () => {
-    if (tempLink.url.trim()) {
-      const links = [...(userData.socialLinks || []), tempLink];
-      onUserDataChange({ socialLinks: links });
-      setTempLink({ platform: 'LinkedIn', url: '' });
-      setShowAddLinkModal(false);
-    }
-  };
-
-  const handleEditLink = (index: number) => {
-    const links = [...(userData.socialLinks || [])];
-    links[index] = tempLink;
-    onUserDataChange({ socialLinks: links });
-    setEditingLinkIndex(null);
-  };
-
-  const handleDeleteLink = (index: number) => {
-    const links = userData.socialLinks?.filter((_, i) => i !== index) || [];
-    onUserDataChange({ socialLinks: links });
-  };
-
-  const handleAddProject = () => {
-    if (tempProject.title.trim()) {
-      const projects = [...(userData.projects || []), tempProject];
-      onUserDataChange({ projects });
-      setTempProject({ title: '', description: '', technologies: [], date: '', link: '', github: '' });
-      setShowAddProjectModal(false);
-    }
-  };
-
-  const handleEditProject = (index: number) => {
-    const projects = [...(userData.projects || [])];
-    projects[index] = tempProject;
-    onUserDataChange({ projects });
-    setEditingProjectIndex(null);
-  };
-
-  const handleDeleteProject = (index: number) => {
-    const projects = userData.projects?.filter((_, i) => i !== index) || [];
-    onUserDataChange({ projects });
-  };
-
-  const handleAddAchievement = () => {
-    if (tempAchievement.title.trim()) {
-      const achievements = [...(userData.achievements || []), tempAchievement];
-      onUserDataChange({ achievements });
-      setTempAchievement({ type: 'Award', title: '', description: '', date: '', link: '' });
-      setShowAddAchievementModal(false);
-    }
-  };
-
-  const handleEditAchievement = (index: number) => {
-    const achievements = [...(userData.achievements || [])];
-    achievements[index] = tempAchievement;
-    onUserDataChange({ achievements });
-    setEditingAchievementIndex(null);
-  };
-
-  const handleDeleteAchievement = (index: number) => {
-    const achievements = userData.achievements?.filter((_, i) => i !== index) || [];
-    onUserDataChange({ achievements });
-  };
-
-  const addTechnology = () => {
-    if (newTech.trim()) {
-      setTempProject({ ...tempProject, technologies: [...tempProject.technologies, newTech.trim()] });
-      setNewTech('');
-    }
-  };
-
-  const removeTechnology = (index: number) => {
-    setTempProject({ ...tempProject, technologies: tempProject.technologies.filter((_, i) => i !== index) });
-  };
+  const achievementsHook = usePortfolioAchievements({
+    achievements: userData.achievements || [],
+    onAchievementsChange: (achievements) => onUserDataChange({ achievements })
+  });
 
   return (
-    <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
+    // eslint-disable-next-line react/forbid-dom-props
+    <div className={styles.portfolioContainer} style={portfolioStyles}>
+      <div className={styles.portfolioHeader}>
+        <h2 className={styles.portfolioTitle}>
           Portfolio & Achievements
         </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
+        <p className={styles.portfolioDescription}>
           Showcase your work, projects, and professional achievements
         </p>
       </div>
       
       <div className="space-y-8">
         {/* Social Links */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold flex items-center gap-2"
-              style={{ color: colors.primaryText }}
-            >
-              <Link2 style={{ color: colors.primaryBlue }} />
+        <div className={styles.portfolioCard}>
+          <div className={styles.portfolioSectionHeader}>
+            <h3 className={styles.portfolioSectionTitle}>
+              <Link2 style={{ color: 'var(--portfolio-primary-blue)' }} />
               Professional Links
             </h3>
             {isEditing && (
               <button
-                onClick={() => setShowAddLinkModal(true)}
-                className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
-                style={{
-                  background: colors.primaryBlue,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlueHover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlue;
-                }}
+                onClick={() => linksHook.setShowAddLinkModal(true)}
+                className={`${styles.portfolioButton} ${styles.portfolioButton}`}
               >
                 <Plus size={16} />
                 Add Link
@@ -184,218 +76,43 @@ export default function PortfolioTab({
             )}
           </div>
           {userData.socialLinks && userData.socialLinks.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {userData.socialLinks.map((link, index) => (
-                <div
+                <LinkCard
                   key={index}
-                  className="flex items-center gap-3 p-4 rounded-xl border transition-all"
-                  style={{
-                    background: editingLinkIndex === index ? colors.badgeInfoBg : colors.inputBackground,
-                    border: `1px solid ${editingLinkIndex === index ? colors.badgeInfoBorder : colors.border}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (editingLinkIndex !== index) {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (editingLinkIndex !== index) {
-                      e.currentTarget.style.background = colors.inputBackground;
-                      e.currentTarget.style.borderColor = colors.border;
-                    }
-                  }}
-                >
-                  {editingLinkIndex === index ? (
-                    <div className="flex-1 space-y-2">
-                      <input
-                        type="text"
-                        value={tempLink.platform}
-                        onChange={(e) => setTempLink({ ...tempLink, platform: e.target.value })}
-                        className="w-full px-2 py-1 rounded text-sm transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
-                        placeholder="Platform"
-                      />
-                      <input
-                        type="url"
-                        value={tempLink.url}
-                        onChange={(e) => setTempLink({ ...tempLink, url: e.target.value })}
-                        className="w-full px-2 py-1 rounded text-sm transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
-                        placeholder="URL"
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditLink(index)}
-                          className="flex-1 px-2 py-1 text-white text-xs rounded transition-all"
-                          style={{
-                            background: colors.successGreen,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
-                          aria-label="Save link"
-                          title="Save link"
-                        >
-                          <Check size={12} />
-                        </button>
-                        <button
-                          onClick={() => setEditingLinkIndex(null)}
-                          className="flex-1 px-2 py-1 text-xs rounded transition-all"
-                          style={{
-                            background: colors.inputBackground,
-                            color: colors.secondaryText,
-                            border: `1px solid ${colors.border}`,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = colors.inputBackground;
-                          }}
-                          aria-label="Cancel editing link"
-                          title="Cancel editing link"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div style={{ color: colors.tertiaryText }}>
-                      {getPlatformIcon(link.platform)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p 
-                          className="font-medium"
-                          style={{ color: colors.primaryText }}
-                        >
-                          {link.platform}
-                        </p>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs truncate transition-colors"
-                          style={{ color: colors.secondaryText }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.color = colors.primaryBlue;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.color = colors.secondaryText;
-                          }}
-                        >
-                          {link.url}
-                        </a>
-                      </div>
-                      <ExternalLink size={16} style={{ color: colors.tertiaryText }} />
-                      {isEditing && (
-                        <div className="flex gap-1">
-                          <button
-                            onClick={() => {
-                              setTempLink(link);
-                              setEditingLinkIndex(index);
-                            }}
-                            className="p-1 rounded transition-colors"
-                            style={{ color: colors.primaryBlue }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = colors.badgeInfoBg;
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
-                            }}
-                            title="Edit"
-                            aria-label={`Edit ${link.platform}`}
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (confirm('Delete this link?')) handleDeleteLink(index);
-                            }}
-                            className="p-1 rounded transition-colors"
-                            style={{ color: colors.errorRed }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = colors.badgeErrorBg;
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
-                            }}
-                            title="Delete"
-                            aria-label={`Delete ${link.platform}`}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                  link={link}
+                  index={index}
+                  isEditing={isEditing}
+                  isEditable={true}
+                  editingLinkIndex={linksHook.editingLinkIndex}
+                  tempLink={linksHook.tempLink}
+                  colors={colors}
+                  onEdit={() => linksHook.startEditingLink(index, link)}
+                  onSave={() => linksHook.handleEditLink(index)}
+                  onCancel={linksHook.cancelEditingLink}
+                  onDelete={() => linksHook.handleDeleteLink(index)}
+                  onTempLinkChange={linksHook.setTempLink}
+                />
               ))}
             </div>
           ) : (
-            <div 
-              className="text-center py-8"
-              style={{ color: colors.tertiaryText }}
-            >
+            <div className={styles.portfolioEmptyState}>
               No professional links yet
             </div>
           )}
         </div>
 
         {/* Projects Showcase */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold flex items-center gap-2"
-              style={{ color: colors.primaryText }}
-            >
-              <FileText style={{ color: colors.primaryBlue }} />
+        <div className={styles.portfolioCard}>
+          <div className={styles.portfolioSectionHeader}>
+            <h3 className={styles.portfolioSectionTitle}>
+              <FileText style={{ color: 'var(--portfolio-primary-blue)' }} />
               Featured Projects
             </h3>
             {isEditing && (
               <button
-                onClick={() => setShowAddProjectModal(true)}
-                className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
-                style={{
-                  background: colors.primaryBlue,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlueHover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlue;
-                }}
+                onClick={() => projectsHook.setShowAddProjectModal(true)}
+                className={styles.portfolioButton}
               >
                 <Plus size={16} />
                 Add Project
@@ -407,77 +124,49 @@ export default function PortfolioTab({
               {userData.projects.map((project, index) => (
                 <div 
                   key={index} 
-                  className="p-6 rounded-xl border transition-all"
-                  style={{
-                    background: editingProjectIndex === index ? colors.badgeInfoBg : colors.inputBackground,
-                    border: `1px solid ${editingProjectIndex === index ? colors.badgeInfoBorder : colors.border}`,
-                  }}
+                  className={`${styles.portfolioCardItem}`}
+                  data-editing={projectsHook.editingProjectIndex === index ? 'true' : undefined}
                   onMouseEnter={(e) => {
-                    if (editingProjectIndex !== index) {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    if (projectsHook.editingProjectIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border-focused)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (editingProjectIndex !== index) {
-                      e.currentTarget.style.background = colors.inputBackground;
-                      e.currentTarget.style.borderColor = colors.border;
+                    if (projectsHook.editingProjectIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-input-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border)';
                     }
                   }}
                 >
-                  {editingProjectIndex === index ? (
+                  {projectsHook.editingProjectIndex === index ? (
                     <div className="space-y-3">
                       <input
                         type="text"
-                        value={tempProject.title}
-                        onChange={(e) => setTempProject({ ...tempProject, title: e.target.value })}
+                        value={projectsHook.tempProject.title}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, title: e.target.value })}
                         placeholder="Project Title"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <textarea
-                        value={tempProject.description}
-                        onChange={(e) => setTempProject({ ...tempProject, description: e.target.value })}
+                        value={projectsHook.tempProject.description}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, description: e.target.value })}
                         placeholder="Description"
                         rows={3}
-                        className="w-full px-3 py-2 rounded-lg transition-all resize-none"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioTextarea}`}
                       />
                       <div className="flex flex-wrap gap-2">
-                        {tempProject.technologies.map((tech, i) => (
+                        {projectsHook.tempProject.technologies.map((tech: string, i: number) => (
                           <span 
                             key={i} 
-                            className="px-2 py-1 rounded flex items-center gap-1 text-xs"
-                            style={{
-                              background: colors.badgeInfoBg,
-                              color: colors.badgeInfoText,
-                              border: `1px solid ${colors.badgeInfoBorder}`,
-                            }}
+                            className={`px-2 py-1 rounded flex items-center gap-1 text-xs ${styles.portfolioBadge}`}
                           >
                             {tech}
                             <button 
-                              onClick={() => removeTechnology(i)}
-                              style={{ color: colors.errorRed }}
+                              onClick={() => projectsHook.removeTechnology(i)}
+                              style={{ color: 'var(--portfolio-error-red)' }}
+                              title="Remove technology"
+                              aria-label={`Remove ${tech}`}
                             >
                               <X size={12} />
                             </button>
@@ -485,123 +174,51 @@ export default function PortfolioTab({
                         ))}
                         <input
                           type="text"
-                          value={newTech}
-                          onChange={(e) => setNewTech(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
+                          value={projectsHook.newTech}
+                          onChange={(e) => projectsHook.setNewTech(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && projectsHook.addTechnology()}
                           placeholder="Add tech"
-                          className="px-2 py-1 rounded text-xs transition-all"
-                          style={{
-                            background: colors.inputBackground,
-                            border: `1px solid ${colors.border}`,
-                            color: colors.primaryText,
-                          }}
-                          onFocus={(e) => {
-                            e.currentTarget.style.borderColor = colors.borderFocused;
-                          }}
-                          onBlur={(e) => {
-                            e.currentTarget.style.borderColor = colors.border;
-                          }}
+                          className={`px-2 py-1 rounded text-xs ${styles.portfolioInput}`}
                         />
                         <button 
-                          onClick={addTechnology} 
-                          className="px-2 py-1 text-white rounded text-xs transition-all"
-                          style={{
-                            background: colors.primaryBlue,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
+                          onClick={projectsHook.addTechnology} 
+                          className={`px-2 py-1 text-white rounded text-xs ${styles.portfolioButton}`}
+                          style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
                         >
                           Add
                         </button>
                       </div>
                       <input
                         type="text"
-                        value={tempProject.date}
-                        onChange={(e) => setTempProject({ ...tempProject, date: e.target.value })}
+                        value={projectsHook.tempProject.date}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, date: e.target.value })}
                         placeholder="Date (YYYY-MM)"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
                         type="url"
-                        value={tempProject.link || ''}
-                        onChange={(e) => setTempProject({ ...tempProject, link: e.target.value })}
+                        value={projectsHook.tempProject.link || ''}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, link: e.target.value })}
                         placeholder="Live Demo URL (optional)"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
                         type="url"
-                        value={tempProject.github || ''}
-                        onChange={(e) => setTempProject({ ...tempProject, github: e.target.value })}
+                        value={projectsHook.tempProject.github || ''}
+                        onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, github: e.target.value })}
                         placeholder="GitHub URL (optional)"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => handleEditProject(index)} 
-                          className="flex-1 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 transition-all"
-                          style={{
-                            background: colors.successGreen,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
+                          onClick={() => projectsHook.handleEditProject(index)} 
+                          className={`flex-1 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSuccess}`}
                         >
                           <Check size={16} /> Save
                         </button>
                         <button 
-                          onClick={() => setEditingProjectIndex(null)} 
-                          className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all"
-                          style={{
-                            background: colors.inputBackground,
-                            color: colors.secondaryText,
-                            border: `1px solid ${colors.border}`,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = colors.inputBackground;
-                          }}
+                          onClick={() => projectsHook.setEditingProjectIndex(null)} 
+                          className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSecondary}`}
                         >
                           <X size={16} /> Cancel
                         </button>
@@ -611,37 +228,23 @@ export default function PortfolioTab({
                     <>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
-                          <h4 
-                            className="font-semibold mb-2"
-                            style={{ color: colors.primaryText }}
-                          >
+                          <h4 className={`font-semibold mb-2 ${styles.portfolioTextPrimary}`}>
                             {project.title}
                           </h4>
-                          <p 
-                            className="text-sm mb-3"
-                            style={{ color: colors.secondaryText }}
-                          >
+                          <p className={`text-sm mb-3 ${styles.portfolioTextSecondary}`}>
                             {project.description}
                           </p>
                           <div className="flex flex-wrap gap-2 mb-3">
                             {project.technologies.map((tech, techIndex) => (
                               <span 
                                 key={techIndex} 
-                                className="px-3 py-1 rounded-full text-xs font-medium"
-                                style={{
-                                  background: colors.badgeInfoBg,
-                                  color: colors.badgeInfoText,
-                                  border: `1px solid ${colors.badgeInfoBorder}`,
-                                }}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${styles.portfolioBadge}`}
                               >
                                 {tech}
                               </span>
                             ))}
                           </div>
-                          <div 
-                            className="flex items-center gap-4 text-xs"
-                            style={{ color: colors.tertiaryText }}
-                          >
+                          <div className={`flex items-center gap-4 text-xs ${styles.portfolioTextTertiary}`}>
                             <span>{project.date}</span>
                           </div>
                         </div>
@@ -649,13 +252,12 @@ export default function PortfolioTab({
                           <div className="flex gap-1">
                             <button
                               onClick={() => {
-                                setTempProject(project);
-                                setEditingProjectIndex(index);
+                                projectsHook.startEditingProject(index, project);
                               }}
                               className="p-2 rounded transition-colors"
-                              style={{ color: colors.primaryBlue }}
+                              style={{ color: 'var(--portfolio-primary-blue)' }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = colors.badgeInfoBg;
+                                e.currentTarget.style.background = 'var(--portfolio-badge-info-bg)';
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.background = 'transparent';
@@ -667,12 +269,12 @@ export default function PortfolioTab({
                             </button>
                             <button
                               onClick={() => {
-                                if (confirm('Delete this project?')) handleDeleteProject(index);
+                                if (confirm('Delete this project?')) projectsHook.handleDeleteProject(index);
                               }}
                               className="p-2 rounded transition-colors"
-                              style={{ color: colors.errorRed }}
+                              style={{ color: 'var(--portfolio-error-red)' }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.background = colors.badgeErrorBg;
+                                e.currentTarget.style.background = 'var(--portfolio-badge-error-bg)';
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.background = 'transparent';
@@ -692,17 +294,7 @@ export default function PortfolioTab({
                               href={project.link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm"
-                              style={{
-                                background: colors.primaryBlue,
-                                color: 'white',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = colors.primaryBlueHover;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = colors.primaryBlue;
-                              }}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm ${styles.portfolioButton}`}
                             >
                               <ExternalLink size={14} />
                               Live Demo
@@ -713,20 +305,7 @@ export default function PortfolioTab({
                               href={project.github}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm"
-                              style={{
-                                background: colors.inputBackground,
-                                color: colors.primaryText,
-                                border: `1px solid ${colors.border}`,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                                e.currentTarget.style.borderColor = colors.borderFocused;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = colors.inputBackground;
-                                e.currentTarget.style.borderColor = colors.border;
-                              }}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-sm ${styles.portfolioButtonSecondary}`}
                             >
                               <Github size={14} />
                               View Code
@@ -740,45 +319,24 @@ export default function PortfolioTab({
               ))}
             </div>
           ) : (
-            <div 
-              className="text-center py-8"
-              style={{ color: colors.tertiaryText }}
-            >
+            <div className={styles.portfolioEmptyState}>
               No projects yet
             </div>
           )}
         </div>
 
         {/* Achievements */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold flex items-center gap-2"
-              style={{ color: colors.primaryText }}
-            >
-              <Trophy style={{ color: colors.badgeWarningText }} />
+        <div className={styles.portfolioCard}>
+          <div className={styles.portfolioSectionHeader}>
+            <h3 className={styles.portfolioSectionTitle}>
+              <Trophy style={{ color: 'var(--portfolio-badge-warning-text)' }} />
               Awards & Achievements
             </h3>
             {isEditing && (
               <button
-                onClick={() => setShowAddAchievementModal(true)}
-                className="px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
-                style={{
-                  background: colors.badgeWarningText,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
+                onClick={() => achievementsHook.setShowAddAchievementModal(true)}
+                className={styles.portfolioButton}
+                style={{ background: 'var(--portfolio-badge-warning-text)' }}
               >
                 <Plus size={16} />
                 Add Achievement
@@ -790,155 +348,83 @@ export default function PortfolioTab({
               {userData.achievements.map((achievement, index) => (
                 <div 
                   key={index} 
-                  className="flex items-start gap-4 p-4 rounded-xl border transition-all"
-                  style={{
-                    background: editingAchievementIndex === index ? colors.badgeWarningBg : colors.inputBackground,
-                    border: `1px solid ${editingAchievementIndex === index ? colors.badgeWarningBorder : colors.border}`,
-                  }}
+                  className={styles.portfolioAchievementCard}
+                  data-editing={achievementsHook.editingAchievementIndex === index ? 'true' : undefined}
                   onMouseEnter={(e) => {
-                    if (editingAchievementIndex !== index) {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    if (achievementsHook.editingAchievementIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border-focused)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (editingAchievementIndex !== index) {
-                      e.currentTarget.style.background = colors.inputBackground;
-                      e.currentTarget.style.borderColor = colors.border;
+                    if (achievementsHook.editingAchievementIndex !== index) {
+                      e.currentTarget.style.background = 'var(--portfolio-input-bg)';
+                      e.currentTarget.style.borderColor = 'var(--portfolio-border)';
                     }
                   }}
                 >
                   <div 
                     className="p-2 rounded-lg"
-                    style={{ background: colors.badgeWarningBg }}
+                    style={{ background: 'var(--portfolio-badge-warning-bg)' }}
                   >
-                    {getAchievementIcon(achievement.type)}
+                    {getAchievementIcon(achievement.type, colors)}
                   </div>
-                  {editingAchievementIndex === index ? (
+                  {achievementsHook.editingAchievementIndex === index ? (
                     <div className="flex-1 space-y-2">
                       <select
-                        value={tempAchievement.type}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, type: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        value={achievementsHook.tempAchievement.type}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
+                        className={`w-full ${styles.portfolioSelect}`}
+                        title="Achievement type"
+                        aria-label="Select achievement type"
                       >
-                        <option value="Award" style={{ background: colors.background, color: colors.secondaryText }}>Award</option>
-                        <option value="Publication" style={{ background: colors.background, color: colors.secondaryText }}>Publication</option>
-                        <option value="Speaking" style={{ background: colors.background, color: colors.secondaryText }}>Speaking Engagement</option>
-                        <option value="Certification" style={{ background: colors.background, color: colors.secondaryText }}>Certification</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Award" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Award</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Publication" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Publication</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Speaking" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Speaking Engagement</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Certification" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Certification</option>
                       </select>
                       <input
                         type="text"
-                        value={tempAchievement.title}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, title: e.target.value })}
+                        value={achievementsHook.tempAchievement.title}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, title: e.target.value })}
                         placeholder="Achievement Title"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <textarea
-                        value={tempAchievement.description}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, description: e.target.value })}
+                        value={achievementsHook.tempAchievement.description}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, description: e.target.value })}
                         placeholder="Description"
                         rows={2}
-                        className="w-full px-3 py-2 rounded-lg transition-all resize-none"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioTextarea}`}
                       />
                       <input
                         type="text"
-                        value={tempAchievement.date}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, date: e.target.value })}
+                        value={achievementsHook.tempAchievement.date}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, date: e.target.value })}
                         placeholder="Date (YYYY-MM)"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
                         type="url"
-                        value={tempAchievement.link || ''}
-                        onChange={(e) => setTempAchievement({ ...tempAchievement, link: e.target.value })}
+                        value={achievementsHook.tempAchievement.link || ''}
+                        onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, link: e.target.value })}
                         placeholder="Link (optional)"
-                        className="w-full px-3 py-2 rounded-lg transition-all"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        onFocus={(e) => {
-                          e.currentTarget.style.borderColor = colors.borderFocused;
-                        }}
-                        onBlur={(e) => {
-                          e.currentTarget.style.borderColor = colors.border;
-                        }}
+                        className={`w-full ${styles.portfolioInput}`}
                       />
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => handleEditAchievement(index)} 
-                          className="flex-1 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 transition-all"
-                          style={{
-                            background: colors.successGreen,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                          }}
+                          onClick={() => achievementsHook.handleEditAchievement(index)} 
+                          className={`flex-1 px-4 py-2 text-white rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSuccess}`}
                         >
                           <Check size={16} /> Save
                         </button>
                         <button 
-                          onClick={() => setEditingAchievementIndex(null)} 
-                          className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all"
-                          style={{
-                            background: colors.inputBackground,
-                            color: colors.secondaryText,
-                            border: `1px solid ${colors.border}`,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = colors.inputBackground;
-                          }}
+                          onClick={() => achievementsHook.setEditingAchievementIndex(null)} 
+                          className={`flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 ${styles.portfolioButtonSecondary}`}
                         >
                           <X size={16} /> Cancel
                         </button>
@@ -947,31 +433,22 @@ export default function PortfolioTab({
                   ) : (
                     <>
                       <div className="flex-1">
-                        <h4 
-                          className="font-semibold mb-1"
-                          style={{ color: colors.primaryText }}
-                        >
+                        <h4 className={`font-semibold mb-1 ${styles.portfolioTextPrimary}`}>
                           {achievement.title}
                         </h4>
-                        <p 
-                          className="text-sm mb-2"
-                          style={{ color: colors.secondaryText }}
-                        >
+                        <p className={`text-sm mb-2 ${styles.portfolioTextSecondary}`}>
                           {achievement.description}
                         </p>
                         <div className="flex items-center gap-4">
-                          <span 
-                            className="text-xs"
-                            style={{ color: colors.tertiaryText }}
-                          >
+                          <span className={`text-xs ${styles.portfolioTextTertiary}`}>
                             {achievement.date}
                           </span>
                           <span 
-                            className="px-2 py-1 rounded text-xs font-medium"
+                            className={`px-2 py-1 rounded text-xs font-medium`}
                             style={{
-                              background: colors.badgeWarningBg,
-                              color: colors.badgeWarningText,
-                              border: `1px solid ${colors.badgeWarningBorder}`,
+                              background: 'var(--portfolio-badge-warning-bg)',
+                              color: 'var(--portfolio-badge-warning-text)',
+                              border: '1px solid var(--portfolio-badge-warning-border)',
                             }}
                           >
                             {achievement.type}
@@ -982,12 +459,12 @@ export default function PortfolioTab({
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs transition-colors"
-                              style={{ color: colors.primaryBlue }}
+                              style={{ color: 'var(--portfolio-primary-blue)' }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.color = colors.primaryBlueHover;
+                                e.currentTarget.style.color = 'var(--portfolio-primary-blue-hover)';
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.color = colors.primaryBlue;
+                                e.currentTarget.style.color = 'var(--portfolio-primary-blue)';
                               }}
                             >
                               View Details
@@ -999,13 +476,12 @@ export default function PortfolioTab({
                         <div className="flex gap-1">
                           <button
                             onClick={() => {
-                              setTempAchievement(achievement);
-                              setEditingAchievementIndex(index);
+                              achievementsHook.startEditingAchievement(index, achievement);
                             }}
                             className="p-2 rounded transition-colors"
-                            style={{ color: colors.primaryBlue }}
+                            style={{ color: 'var(--portfolio-primary-blue)' }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = colors.badgeInfoBg;
+                              e.currentTarget.style.background = 'var(--portfolio-badge-info-bg)';
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = 'transparent';
@@ -1017,12 +493,12 @@ export default function PortfolioTab({
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm('Delete this achievement?')) handleDeleteAchievement(index);
+                              if (confirm('Delete this achievement?')) achievementsHook.handleDeleteAchievement(index);
                             }}
                             className="p-2 rounded transition-colors"
-                            style={{ color: colors.errorRed }}
+                            style={{ color: 'var(--portfolio-error-red)' }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = colors.badgeErrorBg;
+                              e.currentTarget.style.background = 'var(--portfolio-badge-error-bg)';
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.background = 'transparent';
@@ -1040,35 +516,20 @@ export default function PortfolioTab({
               ))}
             </div>
           ) : (
-            <div 
-              className="text-center py-8"
-              style={{ color: colors.tertiaryText }}
-            >
+            <div className={styles.portfolioEmptyState}>
               No achievements yet
             </div>
           )}
         </div>
 
         {/* Basic Portfolio Links (Backward Compatibility) */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <h3 
-            className="text-xl font-semibold mb-6"
-            style={{ color: colors.primaryText }}
-          >
+        <div className={styles.portfolioCard}>
+          <h3 className={`text-xl font-semibold mb-6 ${styles.portfolioTextPrimary}`}>
             Quick Links
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label 
-                className="block text-sm font-medium mb-2"
-                style={{ color: colors.primaryText }}
-              >
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                 Portfolio Website
               </label>
               <input
@@ -1076,26 +537,12 @@ export default function PortfolioTab({
                 value={userData.portfolio}
                 onChange={(e) => onUserDataChange({ portfolio: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://yourportfolio.com"
               />
             </div>
             <div>
-              <label 
-                className="block text-sm font-medium mb-2"
-                style={{ color: colors.primaryText }}
-              >
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                 LinkedIn
               </label>
               <input
@@ -1103,29 +550,15 @@ export default function PortfolioTab({
                 value={userData.linkedin}
                 onChange={(e) => onUserDataChange({ linkedin: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://linkedin.com/in/yourname"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label 
-                className="block text-sm font-medium mb-2"
-                style={{ color: colors.primaryText }}
-              >
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                 GitHub
               </label>
               <input
@@ -1133,26 +566,12 @@ export default function PortfolioTab({
                 value={userData.github}
                 onChange={(e) => onUserDataChange({ github: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://github.com/yourusername"
               />
             </div>
             <div>
-              <label 
-                className="block text-sm font-medium mb-2"
-                style={{ color: colors.primaryText }}
-              >
+              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                 Personal Website
               </label>
               <input
@@ -1160,18 +579,7 @@ export default function PortfolioTab({
                 value={userData.website}
                 onChange={(e) => onUserDataChange({ website: e.target.value })}
                 disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
                 placeholder="https://yourwebsite.com"
               />
             </div>
@@ -1180,165 +588,30 @@ export default function PortfolioTab({
       </div>
 
       {/* Add Link Modal */}
-      {showAddLinkModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
-        >
-          <div 
-            className="rounded-2xl p-6 w-full max-w-md"
-            style={{
-              background: colors.cardBackground,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 
-                className="text-xl font-semibold"
-                style={{ color: colors.primaryText }}
-              >
-                Add Professional Link
-              </h3>
-              <button 
-                onClick={() => setShowAddLinkModal(false)} 
-                className="p-2 rounded transition-colors"
-                style={{ color: colors.secondaryText }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
-                  Platform
-                </label>
-                <input
-                  type="text"
-                  value={tempLink.platform}
-                  onChange={(e) => setTempLink({ ...tempLink, platform: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                  placeholder="e.g., LinkedIn, GitHub"
-                />
-              </div>
-              <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
-                  URL
-                </label>
-                <input
-                  type="url"
-                  value={tempLink.url}
-                  onChange={(e) => setTempLink({ ...tempLink, url: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                  placeholder="https://"
-                />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowAddLinkModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: colors.inputBackground,
-                  color: colors.secondaryText,
-                  border: `1px solid ${colors.border}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.inputBackground;
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddLink}
-                disabled={!tempLink.url.trim()}
-                className="flex-1 px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: !tempLink.url.trim() ? colors.inputBackground : colors.primaryBlue,
-                  color: !tempLink.url.trim() ? colors.tertiaryText : 'white',
-                  opacity: !tempLink.url.trim() ? 0.5 : 1,
-                  cursor: !tempLink.url.trim() ? 'not-allowed' : 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  if (tempLink.url.trim()) {
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (tempLink.url.trim()) {
-                    e.currentTarget.style.opacity = '1';
-                  }
-                }}
-              >
-                Add Link
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AddLinkModal
+        isOpen={linksHook.showAddLinkModal}
+        tempLink={linksHook.tempLink}
+        colors={colors}
+        onClose={() => linksHook.setShowAddLinkModal(false)}
+        onSave={linksHook.handleAddLink}
+        onTempLinkChange={linksHook.setTempLink}
+      />
 
       {/* Add Project Modal */}
-      {showAddProjectModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
-        >
-          <div 
-            className="rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-            style={{
-              background: colors.cardBackground,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 
-                className="text-xl font-semibold"
-                style={{ color: colors.primaryText }}
-              >
+      {projectsHook.showAddProjectModal && (
+        <div className={styles.portfolioModalOverlay}>
+          <div className={`${styles.portfolioModal} ${styles.portfolioModalLarge}`}>
+            <div className={styles.portfolioModalHeader}>
+              <h3 className={styles.portfolioModalTitle}>
                 Add Project
               </h3>
               <button 
-                onClick={() => setShowAddProjectModal(false)} 
-                className="p-2 rounded transition-colors"
-                style={{ color: colors.secondaryText }}
+                onClick={() => projectsHook.setShowAddProjectModal(false)} 
+                className={styles.portfolioCloseButton}
+                title="Close modal"
+                aria-label="Close add project modal"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
@@ -1350,62 +623,34 @@ export default function PortfolioTab({
             <div className="space-y-4">
               <input
                 type="text"
-                value={tempProject.title}
-                onChange={(e) => setTempProject({ ...tempProject, title: e.target.value })}
+                value={projectsHook.tempProject.title}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, title: e.target.value })}
                 placeholder="Project Title"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
               <textarea
-                value={tempProject.description}
-                onChange={(e) => setTempProject({ ...tempProject, description: e.target.value })}
+                value={projectsHook.tempProject.description}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, description: e.target.value })}
                 placeholder="Description"
                 rows={4}
-                className="w-full px-3 py-2 rounded-lg transition-all resize-none"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioTextarea}`}
               />
               <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
+                <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                   Technologies
                 </label>
                 <div className="flex flex-wrap gap-2 mb-2">
-                  {tempProject.technologies.map((tech, i) => (
+                  {projectsHook.tempProject.technologies.map((tech: string, i: number) => (
                     <span 
                       key={i} 
-                      className="px-3 py-1 rounded-full flex items-center gap-1 text-sm"
-                      style={{
-                        background: colors.badgeInfoBg,
-                        color: colors.badgeInfoText,
-                        border: `1px solid ${colors.badgeInfoBorder}`,
-                      }}
+                      className={`px-3 py-1 rounded-full flex items-center gap-1 text-sm ${styles.portfolioBadge}`}
                     >
                       {tech}
                       <button 
-                        onClick={() => removeTechnology(i)}
-                        style={{ color: colors.errorRed }}
+                        onClick={() => projectsHook.removeTechnology(i)}
+                        style={{ color: 'var(--portfolio-error-red)' }}
+                        title="Remove technology"
+                        aria-label={`Remove ${tech}`}
                       >
                         <X size={14} />
                       </button>
@@ -1415,36 +660,15 @@ export default function PortfolioTab({
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={newTech}
-                    onChange={(e) => setNewTech(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTechnology())}
+                    value={projectsHook.newTech}
+                    onChange={(e) => projectsHook.setNewTech(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), projectsHook.addTechnology())}
                     placeholder="Add technology"
-                    className="flex-1 px-3 py-2 rounded-lg text-sm transition-all"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.primaryText,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
+                    className={`flex-1 text-sm ${styles.portfolioInput}`}
                   />
                   <button 
-                    onClick={addTechnology} 
-                    className="px-4 py-2 rounded-lg text-sm transition-all"
-                    style={{
-                      background: colors.primaryBlue,
-                      color: 'white',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '0.9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                    }}
+                    onClick={projectsHook.addTechnology} 
+                    className={`px-4 py-2 rounded-lg text-sm ${styles.portfolioButton}`}
                   >
                     Add
                   </button>
@@ -1452,96 +676,42 @@ export default function PortfolioTab({
               </div>
               <input
                 type="text"
-                value={tempProject.date}
-                onChange={(e) => setTempProject({ ...tempProject, date: e.target.value })}
+                value={projectsHook.tempProject.date}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, date: e.target.value })}
                 placeholder="Date (YYYY-MM)"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
               <input
                 type="url"
-                value={tempProject.link || ''}
-                onChange={(e) => setTempProject({ ...tempProject, link: e.target.value })}
+                value={projectsHook.tempProject.link || ''}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, link: e.target.value })}
                 placeholder="Live Demo URL (optional)"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
               <input
                 type="url"
-                value={tempProject.github || ''}
-                onChange={(e) => setTempProject({ ...tempProject, github: e.target.value })}
+                value={projectsHook.tempProject.github || ''}
+                onChange={(e) => projectsHook.setTempProject({ ...projectsHook.tempProject, github: e.target.value })}
                 placeholder="GitHub URL (optional)"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className={styles.portfolioModalActions}>
               <button
-                onClick={() => setShowAddProjectModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: colors.inputBackground,
-                  color: colors.secondaryText,
-                  border: `1px solid ${colors.border}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.inputBackground;
-                }}
+                onClick={() => projectsHook.setShowAddProjectModal(false)}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButtonSecondary}`}
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddProject}
-                disabled={!tempProject.title.trim()}
-                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                onClick={projectsHook.handleAddProject}
+                disabled={!projectsHook.tempProject.title.trim()}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButton}`}
                 style={{
-                  background: !tempProject.title.trim() ? colors.inputBackground : colors.primaryBlue,
-                  color: !tempProject.title.trim() ? colors.tertiaryText : 'white',
-                  opacity: !tempProject.title.trim() ? 0.5 : 1,
-                  cursor: !tempProject.title.trim() ? 'not-allowed' : 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  if (tempProject.title.trim()) {
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (tempProject.title.trim()) {
-                    e.currentTarget.style.opacity = '1';
-                  }
+                  opacity: !projectsHook.tempProject.title.trim() ? 0.5 : 1,
+                  cursor: !projectsHook.tempProject.title.trim() ? 'not-allowed' : 'pointer',
+                  background: !projectsHook.tempProject.title.trim() ? 'var(--portfolio-input-bg)' : 'var(--portfolio-primary-blue)',
+                  color: !projectsHook.tempProject.title.trim() ? 'var(--portfolio-tertiary-text)' : 'white',
                 }}
               >
                 Add Project
@@ -1552,31 +722,20 @@ export default function PortfolioTab({
       )}
 
       {/* Add Achievement Modal */}
-      {showAddAchievementModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
-        >
-          <div 
-            className="rounded-2xl p-6 w-full max-w-md"
-            style={{
-              background: colors.cardBackground,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 
-                className="text-xl font-semibold"
-                style={{ color: colors.primaryText }}
-              >
+      {achievementsHook.showAddAchievementModal && (
+        <div className={styles.portfolioModalOverlay}>
+          <div className={styles.portfolioModal}>
+            <div className={styles.portfolioModalHeader}>
+              <h3 className={styles.portfolioModalTitle}>
                 Add Achievement
               </h3>
               <button 
-                onClick={() => setShowAddAchievementModal(false)} 
-                className="p-2 rounded transition-colors"
-                style={{ color: colors.secondaryText }}
+                onClick={() => achievementsHook.setShowAddAchievementModal(false)} 
+                className={styles.portfolioCloseButton}
+                title="Close modal"
+                aria-label="Close add achievement modal"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
+                  e.currentTarget.style.background = 'var(--portfolio-hover-bg)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
@@ -1587,144 +746,71 @@ export default function PortfolioTab({
             </div>
             <div className="space-y-4">
               <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
+                <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                   Type
                 </label>
                 <select
-                  value={tempAchievement.type}
-                  onChange={(e) => setTempAchievement({ ...tempAchievement, type: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                >
-                  <option value="Award" style={{ background: colors.background, color: colors.secondaryText }}>Award</option>
-                  <option value="Publication" style={{ background: colors.background, color: colors.secondaryText }}>Publication</option>
-                  <option value="Speaking" style={{ background: colors.background, color: colors.secondaryText }}>Speaking Engagement</option>
-                  <option value="Certification" style={{ background: colors.background, color: colors.secondaryText }}>Certification</option>
-                </select>
+                  value={achievementsHook.tempAchievement.type}
+                  onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
+                        className={`w-full ${styles.portfolioSelect}`}
+                        title="Achievement type"
+                        aria-label="Select achievement type"
+                      >
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Award" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Award</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Publication" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Publication</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Speaking" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Speaking Engagement</option>
+                        {/* eslint-disable-next-line react/forbid-dom-props */}
+                        <option value="Certification" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Certification</option>
+                      </select>
               </div>
               <input
                 type="text"
-                value={tempAchievement.title}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, title: e.target.value })}
+                value={achievementsHook.tempAchievement.title}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, title: e.target.value })}
                 placeholder="Achievement Title"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
               <textarea
-                value={tempAchievement.description}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, description: e.target.value })}
+                value={achievementsHook.tempAchievement.description}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, description: e.target.value })}
                 placeholder="Description"
                 rows={3}
-                className="w-full px-3 py-2 rounded-lg transition-all resize-none"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioTextarea}`}
               />
               <input
                 type="text"
-                value={tempAchievement.date}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, date: e.target.value })}
+                value={achievementsHook.tempAchievement.date}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, date: e.target.value })}
                 placeholder="Date (YYYY-MM)"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
               <input
                 type="url"
-                value={tempAchievement.link || ''}
-                onChange={(e) => setTempAchievement({ ...tempAchievement, link: e.target.value })}
+                value={achievementsHook.tempAchievement.link || ''}
+                onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, link: e.target.value })}
                 placeholder="Link (optional)"
-                className="w-full px-3 py-2 rounded-lg transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
+                className={`w-full ${styles.portfolioInput}`}
               />
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className={styles.portfolioModalActions}>
               <button
-                onClick={() => setShowAddAchievementModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: colors.inputBackground,
-                  color: colors.secondaryText,
-                  border: `1px solid ${colors.border}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.inputBackground;
-                }}
+                onClick={() => achievementsHook.setShowAddAchievementModal(false)}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButtonSecondary}`}
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddAchievement}
-                disabled={!tempAchievement.title.trim()}
-                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                onClick={achievementsHook.handleAddAchievement}
+                disabled={!achievementsHook.tempAchievement.title.trim()}
+                className={`${styles.portfolioModalButton} ${styles.portfolioButton}`}
                 style={{
-                  background: !tempAchievement.title.trim() ? colors.inputBackground : colors.badgeWarningText,
-                  color: !tempAchievement.title.trim() ? colors.tertiaryText : 'white',
-                  opacity: !tempAchievement.title.trim() ? 0.5 : 1,
-                  cursor: !tempAchievement.title.trim() ? 'not-allowed' : 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  if (tempAchievement.title.trim()) {
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (tempAchievement.title.trim()) {
-                    e.currentTarget.style.opacity = '1';
-                  }
+                  background: !achievementsHook.tempAchievement.title.trim() ? 'var(--portfolio-input-bg)' : 'var(--portfolio-badge-warning-text)',
+                  color: !achievementsHook.tempAchievement.title.trim() ? 'var(--portfolio-tertiary-text)' : 'white',
+                  opacity: !achievementsHook.tempAchievement.title.trim() ? 0.5 : 1,
+                  cursor: !achievementsHook.tempAchievement.title.trim() ? 'not-allowed' : 'pointer',
                 }}
               >
                 Add Achievement

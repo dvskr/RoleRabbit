@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { 
   FileText, 
   Download, 
@@ -12,34 +12,47 @@ import {
   MoreVertical,
   Calendar,
   Tag,
+  Copy,
   Star,
   Archive,
-  Users,
   MessageCircle,
-  Copy,
   TrendingUp,
   UserPlus,
-  X
+  X,
+  Users
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
 import { useTheme } from '../../contexts/ThemeContext';
-
-interface FileCardProps {
-  file: ResumeFile;
-  isSelected: boolean;
-  viewMode: 'grid' | 'list' | 'compact';
-  onSelect: (fileId: string) => void;
-  onDownload: (file: ResumeFile, format?: 'pdf' | 'doc') => void;
-  onShare: (file: ResumeFile) => void;
-  onDelete: (fileId: string) => void;
-  onTogglePublic: (fileId: string) => void;
-  onEdit: (fileId: string) => void;
-  onStar: (fileId: string) => void;
-  onArchive: (fileId: string) => void;
-  onAddComment: (fileId: string, content: string) => void;
-  onShareWithUser: (fileId: string, userEmail: string, permission: 'view' | 'comment' | 'edit' | 'admin') => void;
-}
+import { FileCardProps, SharePermission, DownloadFormat } from './fileCard/types';
+import {
+  MODAL_OVERLAY_STYLE,
+  SHARE_MODAL,
+  SHARE_PERMISSIONS,
+  COMMENTS,
+  DOWNLOAD_FORMATS,
+  MORE_MENU_OPTIONS,
+  FILE_ACTIONS,
+} from './fileCard/constants';
+import {
+  getFileIcon,
+  getTypeColor,
+  getPermissionColor,
+} from './fileCard/fileCardHelpers';
+import {
+  useFileSharing,
+  useComments,
+  useMoreMenu,
+  useFileActions,
+} from './fileCard/hooks';
+import {
+  FileActionsMenu,
+  DownloadFormatMenu,
+  FileTags,
+  SharedUsers,
+  ShareModal,
+  CommentsModal,
+} from './fileCard/components';
 
 const FileCard = React.memo(function FileCard({
   file,
@@ -59,112 +72,22 @@ const FileCard = React.memo(function FileCard({
   const { theme } = useTheme();
   const colors = theme.colors;
   
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [shareEmail, setShareEmail] = useState('');
-  const [sharePermission, setSharePermission] = useState<'view' | 'comment' | 'edit' | 'admin'>('view');
-  const [shareExpiresAt, setShareExpiresAt] = useState('');
-  const [maxDownloads, setMaxDownloads] = useState('');
-  const [requirePassword, setRequirePassword] = useState(false);
-  const [sharePassword, setSharePassword] = useState('');
-  const [showDownloadFormat, setShowDownloadFormat] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
+  // Custom hooks for state management
+  const fileSharing = useFileSharing({
+    fileId: file.id,
+    onShareWithUser,
+  });
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
-        setShowMoreMenu(false);
-      }
-    };
+  const comments = useComments({
+    fileId: file.id,
+    onAddComment,
+  });
 
-    if (showMoreMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showMoreMenu]);
-
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'resume':
-        return <FileText size={20} style={{ color: colors.primaryBlue }} />;
-      case 'template':
-        return <FileText size={20} style={{ color: colors.successGreen }} />;
-      case 'backup':
-        return <FileText size={20} style={{ color: colors.badgeWarningText }} />;
-      default:
-        return <FileText size={20} style={{ color: colors.tertiaryText }} />;
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'resume':
-        return { bg: colors.badgeInfoBg, text: colors.badgeInfoText };
-      case 'template':
-        return { bg: colors.badgeSuccessBg, text: colors.badgeSuccessText };
-      case 'backup':
-        return { bg: colors.badgeWarningBg, text: colors.badgeWarningText };
-      default:
-        return { bg: colors.inputBackground, text: colors.secondaryText };
-    }
-  };
-
-  const getPermissionColor = (permission: string) => {
-    switch (permission) {
-      case 'admin':
-        return { bg: colors.badgeErrorBg, text: colors.errorRed };
-      case 'edit':
-        return { bg: colors.badgeWarningBg, text: colors.badgeWarningText };
-      case 'comment':
-        return { bg: colors.badgeInfoBg, text: colors.badgeInfoText };
-      case 'view':
-        return { bg: colors.inputBackground, text: colors.secondaryText };
-      default:
-        return { bg: colors.inputBackground, text: colors.secondaryText };
-    }
-  };
-
-  const handleShareSubmit = () => {
-    if (shareEmail.trim()) {
-      // Create share link with time limits
-      const shareOptions: any = {
-        email: shareEmail.trim(),
-        permission: sharePermission,
-        expiresAt: shareExpiresAt || undefined,
-        maxDownloads: maxDownloads ? parseInt(maxDownloads) : undefined,
-        password: requirePassword && sharePassword ? sharePassword : undefined
-      };
-      
-      // Store the share link data
-      logger.debug('Sharing with options:', shareOptions);
-      onShareWithUser(file.id, shareEmail.trim(), sharePermission);
-      
-      // Reset form
-      setShareEmail('');
-      setSharePassword('');
-      setShareExpiresAt('');
-      setMaxDownloads('');
-      setRequirePassword(false);
-      setShowShareModal(false);
-    }
-  };
-
-  const handleCommentSubmit = () => {
-    if (newComment.trim()) {
-      onAddComment(file.id, newComment.trim());
-      setNewComment('');
-      logger.debug('Comment submitted for file:', file.id);
-    }
-  };
+  const { showMoreMenu, setShowMoreMenu, moreMenuRef } = useMoreMenu();
+  const { showDownloadFormat, setShowDownloadFormat } = useFileActions();
 
   if (viewMode === 'grid') {
-    const typeColorStyle = getTypeColor(file.type);
+    const typeColorStyle = getTypeColor(file.type, colors);
     return (
       <div 
         className="group rounded-lg p-3 hover:shadow-lg transition-all duration-300 cursor-pointer"
@@ -202,7 +125,7 @@ const FileCard = React.memo(function FileCard({
                 background: colors.inputBackground,
               }}
             >
-              {getFileIcon(file.type)}
+              {getFileIcon(file.type, colors)}
             </div>
           </div>
           <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -247,95 +170,12 @@ const FileCard = React.memo(function FileCard({
                 <MoreVertical size={14} />
               </button>
               {showMoreMenu && (
-                <div 
-                  ref={moreMenuRef} 
-                  className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-20"
-                  style={{
-                    background: colors.cardBackground,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(file.id);
-                      setShowMoreMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm transition-colors rounded-t-lg flex items-center space-x-2"
-                    style={{
-                      color: colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.color = colors.primaryBlue;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = colors.primaryText;
-                    }}
-                  >
-                    <Copy size={14} />
-                    <span>Copy ID</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
-                    style={{
-                      color: colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.color = colors.primaryBlue;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = colors.primaryText;
-                    }}
-                  >
-                    <Calendar size={14} />
-                    <span>View History</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
-                    style={{
-                      color: colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.color = colors.primaryBlue;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = colors.primaryText;
-                    }}
-                  >
-                    <Tag size={14} />
-                    <span>Manage Tags</span>
-                  </button>
-                  <div style={{ borderTop: `1px solid ${colors.border}` }}></div>
-                  <button
-                    onClick={() => {
-                      setShowMoreMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm transition-colors rounded-b-lg flex items-center space-x-2"
-                    style={{
-                      color: colors.errorRed,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.badgeErrorBg;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <Trash2 size={14} />
-                    <span>Delete Permanently</span>
-                  </button>
-                </div>
+                <FileActionsMenu
+                  fileId={file.id}
+                  colors={colors}
+                  moreMenuRef={moreMenuRef}
+                  onClose={() => setShowMoreMenu(false)}
+                />
               )}
             </div>
           </div>
@@ -424,80 +264,10 @@ const FileCard = React.memo(function FileCard({
         </div>
 
         {/* Tags */}
-        {file.tags.length > 0 && (
-          <div className="mb-2">
-            <div className="flex flex-wrap gap-0.5">
-              {file.tags.slice(0, 3).map((tag, index) => (
-                <span 
-                  key={index} 
-                  className="inline-flex items-center px-2 py-1 text-xs rounded-lg"
-                  style={{
-                    background: colors.inputBackground,
-                    color: colors.primaryText,
-                  }}
-                >
-                  <Tag size={10} className="mr-1" />
-                  {tag}
-                </span>
-              ))}
-              {file.tags.length > 3 && (
-                <span 
-                  className="text-xs px-2 py-1"
-                  style={{ color: colors.secondaryText }}
-                >
-                  +{file.tags.length - 3} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+        <FileTags tags={file.tags} colors={colors} />
 
         {/* Shared Users */}
-        {file.sharedWith.length > 0 && (
-          <div className="mb-2">
-            <div className="flex items-center space-x-1.5">
-              <Users size={12} style={{ color: colors.tertiaryText }} />
-              <div className="flex -space-x-2">
-                {file.sharedWith.slice(0, 3).map((share) => (
-                  <div 
-                    key={share.id} 
-                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center"
-                    style={{
-                      background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-                      borderColor: colors.cardBackground,
-                    }}
-                  >
-                    <span className="text-xs text-white font-medium">
-                      {share.userName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                ))}
-                {file.sharedWith.length > 3 && (
-                  <div 
-                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center"
-                    style={{
-                      background: colors.inputBackground,
-                      borderColor: colors.cardBackground,
-                    }}
-                  >
-                    <span 
-                      className="text-xs font-medium"
-                      style={{ color: colors.secondaryText }}
-                    >
-                      +{file.sharedWith.length - 3}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <span 
-                className="text-xs"
-                style={{ color: colors.secondaryText }}
-              >
-                {file.sharedWith.length} shared
-              </span>
-            </div>
-          </div>
-        )}
+        <SharedUsers sharedWith={file.sharedWith} colors={colors} />
 
         {/* Comments */}
         {file.comments.length > 0 && (
@@ -561,58 +331,15 @@ const FileCard = React.memo(function FileCard({
                 <Download size={12} />
               </button>
               {showDownloadFormat && (
-                <div 
-                  className="absolute right-0 mt-2 w-32 rounded-lg shadow-lg z-10"
-                  style={{
-                    background: colors.cardBackground,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      onDownload(file, 'pdf');
-                      setShowDownloadFormat(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-t-lg"
-                    style={{
-                      color: colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.color = colors.primaryBlue;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = colors.primaryText;
-                    }}
-                  >
-                    📄 Download PDF
-                  </button>
-                  <button
-                    onClick={() => {
-                      onDownload(file, 'doc');
-                      setShowDownloadFormat(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-b-lg"
-                    style={{
-                      color: colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.color = colors.primaryBlue;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = colors.primaryText;
-                    }}
-                  >
-                    📝 Download DOC
-                  </button>
-                </div>
+                <DownloadFormatMenu
+                  colors={colors}
+                  onDownload={(format) => onDownload(file, format)}
+                  onClose={() => setShowDownloadFormat(false)}
+                />
               )}
             </div>
             <button
-              onClick={() => setShowShareModal(true)}
+              onClick={() => fileSharing.setShowShareModal(true)}
               className="p-1.5 rounded-lg transition-colors"
               style={{ color: colors.secondaryText }}
               onMouseEnter={(e) => {
@@ -629,22 +356,22 @@ const FileCard = React.memo(function FileCard({
             </button>
             <button
               onClick={() => {
-                logger.debug('Comment button clicked! Current state:', showComments);
-                setShowComments(!showComments);
+                  logger.debug('Comment button clicked! Current state:', comments.showComments);
+                  comments.setShowComments(!comments.showComments);
               }}
               className="p-1.5 rounded-lg transition-colors"
               style={{
-                color: showComments ? colors.badgePurpleText : colors.secondaryText,
-                background: showComments ? colors.badgePurpleBg : 'transparent',
+                color: comments.showComments ? colors.badgePurpleText : colors.secondaryText,
+                background: comments.showComments ? colors.badgePurpleBg : 'transparent',
               }}
               onMouseEnter={(e) => {
-                if (!showComments) {
+                if (!comments.showComments) {
                   e.currentTarget.style.color = colors.badgePurpleText;
                   e.currentTarget.style.background = colors.badgePurpleBg;
                 }
               }}
               onMouseLeave={(e) => {
-                if (!showComments) {
+                if (!comments.showComments) {
                   e.currentTarget.style.color = colors.secondaryText;
                   e.currentTarget.style.background = 'transparent';
                 }
@@ -705,150 +432,18 @@ const FileCard = React.memo(function FileCard({
         </div>
 
         {/* Comments Section */}
-        {showComments && (
-          <div 
-            className="mt-4 pt-4 w-full max-w-full overflow-hidden"
-            style={{ borderTop: `1px solid ${colors.border}` }}
-          >
-            <div className="space-y-3 max-w-full">
-              {/* Existing Comments */}
-              {file.comments && file.comments.length > 0 ? (
-                file.comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3 max-w-full">
-                    <div 
-                      className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-                      }}
-                    >
-                      <span className="text-xs text-white font-medium">
-                        {comment.userName?.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span 
-                          className="text-sm font-medium"
-                          style={{ color: colors.primaryText }}
-                        >
-                          {comment.userName || 'User'}
-                        </span>
-                        <span 
-                          className="text-xs"
-                          style={{ color: colors.secondaryText }}
-                        >
-                          {new Date(comment.timestamp).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p 
-                        className="text-sm break-words"
-                        style={{ color: colors.primaryText }}
-                      >
-                        {comment.content}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div 
-                  className="text-center py-4 text-sm"
-                  style={{ color: colors.secondaryText }}
-                >
-                  No comments yet. Be the first to comment!
-                </div>
-              )}
-              
-              {/* Add Comment */}
-              <div className="flex space-x-3 max-w-full">
-                <div 
-                  className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: colors.inputBackground,
-                  }}
-                >
-                  <span 
-                    className="text-xs font-medium"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    U
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0 max-w-full">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Add a comment..."
-                    className="w-full max-w-full px-3 py-2 rounded-lg focus:outline-none resize-none text-sm box-border transition-all"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.primaryText,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
-                    rows={2}
-                  />
-                  <div className="flex justify-end mt-2 space-x-2">
-                    <button
-                      onClick={handleCommentSubmit}
-                      disabled={!newComment.trim()}
-                      className="px-3 py-1 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
-                      style={{
-                        background: !newComment.trim() ? colors.inputBackground : colors.primaryBlue,
-                        color: !newComment.trim() ? colors.tertiaryText : 'white',
-                        opacity: !newComment.trim() ? 0.5 : 1,
-                        cursor: !newComment.trim() ? 'not-allowed' : 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (newComment.trim()) {
-                          e.currentTarget.style.opacity = '0.9';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (newComment.trim()) {
-                          e.currentTarget.style.opacity = '1';
-                        }
-                      }}
-                    >
-                      Comment
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNewComment('');
-                        setShowComments(false);
-                      }}
-                      className="px-3 py-1 text-sm rounded-lg transition-colors whitespace-nowrap"
-                      style={{
-                        background: colors.inputBackground,
-                        color: colors.secondaryText,
-                        border: `1px solid ${colors.border}`,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = colors.inputBackground;
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <CommentsModal
+          comments={file.comments}
+          colors={colors}
+          commentsState={comments}
+        />
       </div>
     );
   }
 
   // Compact view - Dense table-like layout
   if (viewMode === 'compact') {
-    const typeColorStyleCompact = getTypeColor(file.type);
+    const typeColorStyleCompact = getTypeColor(file.type, colors);
     return (
       <div 
         className="group flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-opacity-50 transition-all"
@@ -879,7 +474,7 @@ const FileCard = React.memo(function FileCard({
         />
         
         <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
-          {getFileIcon(file.type)}
+          {getFileIcon(file.type, colors)}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -905,12 +500,12 @@ const FileCard = React.memo(function FileCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs flex-shrink-0" style={{ color: colors.secondaryText }}>
-          <span>{file.size}</span>
-          <span>{file.lastModified}</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-xs flex-shrink-0" style={{ color: colors.secondaryText }}>
+          <span className="truncate">{file.size}</span>
+          <span className="truncate">{file.lastModified}</span>
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 flex-wrap">
           <button
             onClick={() => onDownload(file)}
             className="p-1.5 rounded transition-colors"
@@ -928,7 +523,7 @@ const FileCard = React.memo(function FileCard({
             <Download size={14} />
           </button>
           <button
-            onClick={() => setShowShareModal(true)}
+            onClick={() => fileSharing.setShowShareModal(true)}
             className="p-1.5 rounded transition-colors"
             style={{ color: colors.secondaryText }}
             onMouseEnter={(e) => {
@@ -949,10 +544,10 @@ const FileCard = React.memo(function FileCard({
   }
 
   // List view - Enhanced version
-  const typeColorStyleList = getTypeColor(file.type);
+    const typeColorStyleList = getTypeColor(file.type, colors);
   return (
     <div 
-      className="group flex flex-col p-3 rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full"
+      className="group flex flex-col p-2 sm:p-3 rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full"
       style={{
         border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
         background: isSelected ? colors.badgeInfoBg : colors.cardBackground,
@@ -968,8 +563,8 @@ const FileCard = React.memo(function FileCard({
         }
       }}
     >
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center space-x-4 flex-1 min-w-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full min-w-0 gap-2 sm:gap-0">
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0 w-full sm:w-auto">
         <input
           type="checkbox"
           checked={isSelected}
@@ -982,18 +577,18 @@ const FileCard = React.memo(function FileCard({
         />
         
         <div 
-          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+          className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
             background: colors.inputBackground,
           }}
         >
-          {getFileIcon(file.type)}
+          {getFileIcon(file.type, colors)}
         </div>
 
         <div className="flex-1 min-w-0 max-w-full">
-          <div className="flex items-center space-x-3 mb-1">
+          <div className="flex flex-wrap items-center gap-1.5 sm:space-x-3 mb-1">
             <h3 
-              className="font-semibold truncate transition-colors"
+              className="font-semibold truncate transition-colors text-sm sm:text-base"
               style={{ color: colors.primaryText }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = colors.primaryBlue;
@@ -1001,11 +596,12 @@ const FileCard = React.memo(function FileCard({
               onMouseLeave={(e) => {
                 e.currentTarget.style.color = colors.primaryText;
               }}
+              title={file.name}
             >
               {file.name}
             </h3>
             <span 
-              className="px-2 py-1 rounded-full text-xs font-medium"
+              className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium"
               style={{
                 background: typeColorStyleList.bg,
                 color: typeColorStyleList.text,
@@ -1014,7 +610,7 @@ const FileCard = React.memo(function FileCard({
               {file.type}
             </span>
             <span 
-              className="text-xs px-2 py-1 rounded-full"
+              className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
               style={{
                 background: colors.inputBackground,
                 color: colors.secondaryText,
@@ -1023,11 +619,11 @@ const FileCard = React.memo(function FileCard({
               v{file.version}
             </span>
             {file.isStarred && (
-              <Star size={14} style={{ color: colors.badgeWarningText }} className="fill-current" />
+              <Star size={12} className="sm:w-4 sm:h-4 fill-current" style={{ color: colors.badgeWarningText }} />
             )}
             {file.isArchived && (
               <span 
-                className="text-xs px-2 py-1 rounded-full"
+                className="text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
                 style={{
                   background: colors.badgeWarningBg,
                   color: colors.badgeWarningText,
@@ -1040,39 +636,40 @@ const FileCard = React.memo(function FileCard({
           
           {file.description && (
             <p 
-              className="text-sm mb-2 line-clamp-1"
+              className="text-xs sm:text-sm mb-2 line-clamp-1 truncate"
               style={{ color: colors.secondaryText }}
+              title={file.description}
             >
               {file.description}
             </p>
           )}
           
           <div 
-            className="flex items-center space-x-4 text-sm"
+            className="flex flex-wrap items-center gap-2 sm:space-x-4 text-xs sm:text-sm"
             style={{ color: colors.secondaryText }}
           >
             <div className="flex items-center space-x-1">
-              <Calendar size={12} />
-              <span>{file.lastModified}</span>
+              <Calendar size={10} className="sm:w-3 sm:h-3" />
+              <span className="truncate">{file.lastModified}</span>
             </div>
-            <span>{file.size}</span>
+            <span className="truncate">{file.size}</span>
             <div className="flex items-center space-x-1">
-              <TrendingUp size={12} />
+              <TrendingUp size={10} className="sm:w-3 sm:h-3" />
               <span>{file.viewCount}</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Download size={12} />
+              <Download size={10} className="sm:w-3 sm:h-3" />
               <span>{file.downloadCount}</span>
             </div>
             {file.sharedWith.length > 0 && (
               <div className="flex items-center space-x-1">
-                <Users size={12} />
+                <Users size={10} className="sm:w-3 sm:h-3" />
                 <span>{file.sharedWith.length}</span>
               </div>
             )}
             {file.comments.length > 0 && (
               <div className="flex items-center space-x-1">
-                <MessageCircle size={12} />
+                <MessageCircle size={10} className="sm:w-3 sm:h-3" />
                 <span>{file.comments.length}</span>
               </div>
             )}
@@ -1080,7 +677,7 @@ const FileCard = React.memo(function FileCard({
         </div>
       </div>
 
-      <div className="flex items-center space-x-1 flex-shrink-0 ml-2">
+      <div className="flex items-center space-x-1 flex-shrink-0 ml-0 sm:ml-2 flex-wrap gap-1 sm:gap-0">
         <button
           onClick={() => onStar(file.id)}
           className="p-2 rounded-lg transition-colors flex-shrink-0"
@@ -1196,7 +793,7 @@ const FileCard = React.memo(function FileCard({
           )}
         </div>
         <button
-          onClick={() => setShowShareModal(true)}
+          onClick={() => fileSharing.setShowShareModal(true)}
           className="p-2 rounded-lg transition-colors flex-shrink-0"
           style={{ color: colors.secondaryText }}
           onMouseEnter={(e) => {
@@ -1213,22 +810,22 @@ const FileCard = React.memo(function FileCard({
         </button>
         <button
           onClick={() => {
-            logger.debug('Comment button clicked (list view)! Current state:', showComments);
-            setShowComments(!showComments);
+            logger.debug('Comment button clicked (list view)! Current state:', comments.showComments);
+            comments.setShowComments(!comments.showComments);
           }}
           className="p-2 rounded-lg transition-colors flex-shrink-0"
           style={{
-            color: showComments ? colors.badgePurpleText : colors.secondaryText,
-            background: showComments ? colors.badgePurpleBg : 'transparent',
+            color: comments.showComments ? colors.badgePurpleText : colors.secondaryText,
+            background: comments.showComments ? colors.badgePurpleBg : 'transparent',
           }}
           onMouseEnter={(e) => {
-            if (!showComments) {
+            if (!comments.showComments) {
               e.currentTarget.style.color = colors.badgePurpleText;
               e.currentTarget.style.background = colors.badgePurpleBg;
             }
           }}
           onMouseLeave={(e) => {
-            if (!showComments) {
+            if (!comments.showComments) {
               e.currentTarget.style.color = colors.secondaryText;
               e.currentTarget.style.background = 'transparent';
             }
@@ -1398,512 +995,19 @@ const FileCard = React.memo(function FileCard({
     </div>
 
     {/* Comments Section - List View */}
-      {showComments && (
-        <div 
-          className="mt-4 pt-4 w-full max-w-full overflow-hidden"
-          style={{ borderTop: `1px solid ${colors.border}` }}
-        >
-          <div className="space-y-3 max-w-full">
-            {/* Existing Comments */}
-            {file.comments && file.comments.length > 0 ? (
-              file.comments.map((comment) => (
-                <div key={comment.id} className="flex space-x-3 max-w-full">
-                  <div 
-                    className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-                    }}
-                  >
-                    <span className="text-xs text-white font-medium">
-                      {comment.userName?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span 
-                        className="text-sm font-medium"
-                        style={{ color: colors.primaryText }}
-                      >
-                        {comment.userName || 'User'}
-                      </span>
-                      <span 
-                        className="text-xs"
-                        style={{ color: colors.secondaryText }}
-                      >
-                        {new Date(comment.timestamp).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <p 
-                      className="text-sm break-words"
-                      style={{ color: colors.primaryText }}
-                    >
-                      {comment.content}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div 
-                className="text-center py-4 text-sm"
-                style={{ color: colors.secondaryText }}
-              >
-                No comments yet. Be the first to comment!
-              </div>
-            )}
-            
-            {/* Add Comment */}
-            <div className="flex space-x-3 max-w-full">
-              <div 
-                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: colors.inputBackground,
-                }}
-              >
-                <span 
-                  className="text-xs font-medium"
-                  style={{ color: colors.secondaryText }}
-                >
-                  U
-                </span>
-              </div>
-              <div className="flex-1 min-w-0 max-w-full">
-                <textarea
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder="Add a comment..."
-                  className="w-full max-w-full px-3 py-2 rounded-lg focus:outline-none resize-none text-sm box-border transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                  rows={2}
-                />
-                <div className="flex justify-end mt-2 space-x-2">
-                  <button
-                    onClick={handleCommentSubmit}
-                    disabled={!newComment.trim()}
-                    className="px-3 py-1 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
-                    style={{
-                      background: !newComment.trim() ? colors.inputBackground : colors.primaryBlue,
-                      color: !newComment.trim() ? colors.tertiaryText : 'white',
-                      opacity: !newComment.trim() ? 0.5 : 1,
-                      cursor: !newComment.trim() ? 'not-allowed' : 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (newComment.trim()) {
-                        e.currentTarget.style.opacity = '0.9';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (newComment.trim()) {
-                        e.currentTarget.style.opacity = '1';
-                      }
-                    }}
-                  >
-                    Comment
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNewComment('');
-                      setShowComments(false);
-                    }}
-                    className="px-3 py-1 text-sm rounded-lg transition-colors whitespace-nowrap"
-                    style={{
-                      background: colors.inputBackground,
-                      color: colors.secondaryText,
-                      border: `1px solid ${colors.border}`,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = colors.inputBackground;
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CommentsModal
+        comments={file.comments}
+        colors={colors}
+        commentsState={comments}
+      />
 
       {/* Share Modal */}
-      {showShareModal && (
-        <div 
-          className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          style={{ background: 'rgba(0, 0, 0, 0.5)' }}
-        >
-          <div 
-            className="rounded-xl p-6 w-full max-w-md"
-            style={{
-              background: colors.cardBackground,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: colors.badgeSuccessBg,
-                  }}
-                >
-                  <Share2 size={20} style={{ color: colors.successGreen }} />
-                </div>
-                <div>
-                  <h2 
-                    className="text-xl font-semibold"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Share File
-                  </h2>
-                  <p 
-                    className="text-sm"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    {file.name}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="p-2 transition-colors"
-                style={{ color: colors.secondaryText }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = colors.primaryText;
-                  e.currentTarget.style.background = colors.hoverBackground;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = colors.secondaryText;
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
-                  Share with
-                </label>
-                <div className="flex space-x-2">
-                  <input
-                    type="email"
-                    value={shareEmail}
-                    onChange={(e) => setShareEmail(e.target.value)}
-                    placeholder="Enter email address"
-                    className="flex-1 px-3 py-2 rounded-lg focus:outline-none transition-all"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.primaryText,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
-                  />
-                  <button
-                    onClick={handleShareSubmit}
-                    disabled={!shareEmail.trim()}
-                    className="px-4 py-2 rounded-lg transition-colors"
-                    style={{
-                      background: !shareEmail.trim() ? colors.inputBackground : colors.primaryBlue,
-                      color: !shareEmail.trim() ? colors.tertiaryText : 'white',
-                      opacity: !shareEmail.trim() ? 0.5 : 1,
-                      cursor: !shareEmail.trim() ? 'not-allowed' : 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (shareEmail.trim()) {
-                        e.currentTarget.style.opacity = '0.9';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (shareEmail.trim()) {
-                        e.currentTarget.style.opacity = '1';
-                      }
-                    }}
-                  >
-                    <UserPlus size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
-                  Permission
-                </label>
-                <select
-                  value={sharePermission}
-                  onChange={(e) => setSharePermission(e.target.value as any)}
-                  className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                >
-                  <option value="view" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>View only</option>
-                  <option value="comment" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Can comment</option>
-                  <option value="edit" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Can edit</option>
-                  <option value="admin" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Admin access</option>
-                </select>
-              </div>
-
-              {/* SharePoint-style Access Controls */}
-              <div 
-                className="pt-4 space-y-4"
-                style={{ borderTop: `1px solid ${colors.border}` }}
-              >
-                <h3 
-                  className="text-sm font-semibold"
-                  style={{ color: colors.primaryText }}
-                >
-                  Access Settings
-                </h3>
-                
-                <div>
-                  <label 
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Expiration Date (Optional)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={shareExpiresAt}
-                    onChange={(e) => setShareExpiresAt(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.primaryText,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
-                  />
-                  <p 
-                    className="text-xs mt-1"
-                    style={{ color: colors.tertiaryText }}
-                  >
-                    Link will expire after this date
-                  </p>
-                </div>
-
-                <div>
-                  <label 
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Max Downloads (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    value={maxDownloads}
-                    onChange={(e) => setMaxDownloads(e.target.value)}
-                    placeholder="Unlimited"
-                    min="1"
-                    className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      color: colors.primaryText,
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
-                  />
-                  <p 
-                    className="text-xs mt-1"
-                    style={{ color: colors.tertiaryText }}
-                  >
-                    Maximum number of downloads allowed
-                  </p>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="requirePassword"
-                    checked={requirePassword}
-                    onChange={(e) => setRequirePassword(e.target.checked)}
-                    className="w-4 h-4 rounded focus:ring-2 transition-all"
-                    style={{
-                      accentColor: colors.primaryBlue,
-                      borderColor: colors.border,
-                    }}
-                  />
-                  <label 
-                    htmlFor="requirePassword" 
-                    className="text-sm font-medium"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Require password to access
-                  </label>
-                </div>
-
-                {requirePassword && (
-                  <div>
-                    <label 
-                      className="block text-sm font-medium mb-2"
-                      style={{ color: colors.primaryText }}
-                    >
-                      Password
-                    </label>
-                    <input
-                      type="password"
-                      value={sharePassword}
-                      onChange={(e) => setSharePassword(e.target.value)}
-                      placeholder="Enter password"
-                      className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
-                      style={{
-                        background: colors.inputBackground,
-                        border: `1px solid ${colors.border}`,
-                        color: colors.primaryText,
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = colors.borderFocused;
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = colors.border;
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Current Shares */}
-              {file.sharedWith.length > 0 && (
-                <div>
-                  <label 
-                    className="block text-sm font-medium mb-2"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Currently shared with
-                  </label>
-                  <div className="space-y-2">
-                    {file.sharedWith.map((share) => {
-                      const permissionColorStyle = getPermissionColor(share.permission);
-                      return (
-                        <div 
-                          key={share.id} 
-                          className="flex items-center justify-between p-3 rounded-lg"
-                          style={{
-                            background: colors.inputBackground,
-                          }}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div 
-                              className="w-8 h-8 rounded-full flex items-center justify-center"
-                              style={{
-                                background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-                              }}
-                            >
-                              <span className="text-xs text-white font-medium">
-                                {share.userName.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                            <div>
-                              <p 
-                                className="text-sm font-medium"
-                                style={{ color: colors.primaryText }}
-                              >
-                                {share.userName}
-                              </p>
-                              <p 
-                                className="text-xs"
-                                style={{ color: colors.secondaryText }}
-                              >
-                                {share.userEmail}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span 
-                              className="px-2 py-1 rounded-full text-xs font-medium"
-                              style={{
-                                background: permissionColorStyle.bg,
-                                color: permissionColorStyle.text,
-                              }}
-                            >
-                              {share.permission}
-                            </span>
-                            <button 
-                              className="p-1 transition-colors"
-                              style={{ color: colors.tertiaryText }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.color = colors.errorRed;
-                                e.currentTarget.style.background = colors.badgeErrorBg;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.color = colors.tertiaryText;
-                                e.currentTarget.style.background = 'transparent';
-                              }}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: colors.inputBackground,
-                  color: colors.secondaryText,
-                  border: `1px solid ${colors.border}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.inputBackground;
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ShareModal
+        file={file}
+        colors={colors}
+        theme={theme}
+        fileSharing={fileSharing}
+      />
     </div>
   );
 }, (prevProps, nextProps) => {

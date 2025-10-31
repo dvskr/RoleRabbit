@@ -44,17 +44,7 @@ const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterA
 const EmailAnalytics = dynamic(() => import('../../components/email/EmailAnalytics'), { ssr: false });
 const ApplicationAnalytics = dynamic(() => import('../../components/ApplicationAnalytics'), { ssr: false });
 
-// Lazy load modals individually when they're actually opened
-// Using named exports properly
-const ExportModal = dynamic(() => import('../../components/modals').then(mod => mod.ExportModal), { ssr: false });
-const ImportModal = dynamic(() => import('../../components/modals').then(mod => mod.ImportModal), { ssr: false });
-const AddSectionModal = dynamic(() => import('../../components/modals').then(mod => mod.AddSectionModal), { ssr: false });
-const AddFieldModal = dynamic(() => import('../../components/modals').then(mod => mod.AddFieldModal), { ssr: false });
-const NewResumeModal = dynamic(() => import('../../components/modals').then(mod => mod.NewResumeModal), { ssr: false });
-const MobileMenuModal = dynamic(() => import('../../components/modals').then(mod => mod.MobileMenuModal), { ssr: false });
-const AIGenerateModal = dynamic(() => import('../../components/modals').then(mod => mod.AIGenerateModal), { ssr: false });
-const ResumeSaveToCloudModal = dynamic(() => import('../../components/modals').then(mod => mod.ResumeSaveToCloudModal), { ssr: false });
-const ResumeImportFromCloudModal = dynamic(() => import('../../components/modals').then(mod => mod.ResumeImportFromCloudModal), { ssr: false });
+// Modals are now loaded in DashboardModals component
 
 import { ResumeFile } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -96,7 +86,10 @@ import {
   duplicateResumeState,
 } from './utils/resumeDataHelpers';
 import { getTemplateClasses } from './utils/templateClassesHelper';
+import { ResumePreview } from './components/ResumePreview';
+import { generateResumeHTML } from './utils/exportHtmlGenerator';
 import { CustomSectionEditor } from './components/CustomSectionEditor';
+import { DashboardModals } from './components/DashboardModals';
 // Import dashboard hooks
 import { useDashboardUI } from './hooks/useDashboardUI';
 import { useDashboardTemplates } from './hooks/useDashboardTemplates';
@@ -214,19 +207,19 @@ export default function DashboardPage() {
     logger.debug('File selected:', file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = e.target?.result as string;
+        const text = e.target?.result as string;
       const data = parseResumeFile(text);
       if (data) {
-        setResumeData(data.resumeData);
-        setCustomSections(data.customSections || []);
-        setResumeFileName(data.resumeFileName || file.name);
-        setFontFamily(data.fontFamily || 'Arial');
-        setFontSize(data.fontSize || '12pt');
-        setLineSpacing(data.lineSpacing || '1.5');
-        setSectionSpacing(data.sectionSpacing || 'normal');
-        setMargins(data.margins || 'medium');
-        setHeadingStyle(data.headingStyle || 'bold');
-        setBulletStyle(data.bulletStyle || 'disc');
+          setResumeData(data.resumeData);
+          setCustomSections(data.customSections || []);
+          setResumeFileName(data.resumeFileName || file.name);
+          setFontFamily(data.fontFamily || 'Arial');
+          setFontSize(data.fontSize || '12pt');
+          setLineSpacing(data.lineSpacing || '1.5');
+          setSectionSpacing(data.sectionSpacing || 'normal');
+          setMargins(data.margins || 'medium');
+          setHeadingStyle(data.headingStyle || 'bold');
+          setBulletStyle(data.bulletStyle || 'disc');
       }
     };
     reader.readAsText(file);
@@ -525,188 +518,18 @@ export default function DashboardPage() {
       case 'storage':
         return <CloudStorage />;
       case 'editor':
-        const templateClasses = getTemplateClasses(selectedTemplateId);
-
         return isPreviewMode ? (
-          // Preview Mode - Document-style resume
-          <div className="h-full bg-gray-100 overflow-auto">
-            {/* Sticky Preview Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-300 px-6 py-3 z-10 flex items-center justify-between shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">Preview: {resumeFileName}</h2>
-              <button
-                onClick={() => setIsPreviewMode(false)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                <EyeOff size={16} />
-                Exit Preview
-              </button>
-            </div>
-            
-            {/* Document Preview */}
-            <div 
-              className={`max-w-[8.5in] mx-auto mt-8 mb-12 shadow-2xl p-[1in] print:p-0 ${templateClasses.container}`} 
-              style={{ minHeight: '11in' }}
-            >
-              {/* Document Header */}
-              <div className={`mb-6 pb-4 ${templateClasses.header}`}>
-                <h1 className={`text-3xl font-bold mb-1 ${templateClasses.nameColor}`} style={{ fontFamily: fontFamily === 'arial' ? 'Arial' : fontFamily === 'times' ? 'Times New Roman' : fontFamily === 'verdana' ? 'Verdana' : 'Arial' }}>
-                  {resumeData.name}
-                </h1>
-                <p className={`text-lg font-medium ${templateClasses.titleColor}`}>{resumeData.title}</p>
-                <div className="flex gap-3 mt-2 text-sm text-gray-600">
-                  <span>{resumeData.email}</span>
-                  <span>•</span>
-                  <span>{resumeData.phone}</span>
-                  <span>•</span>
-                  <span>{resumeData.location}</span>
-                </div>
-              </div>
-
-              {/* Render sections based on sectionOrder */}
-              {sectionOrder.map((sectionId) => {
-                if (!sectionVisibility[sectionId]) return null;
-                
-                const sectionMap: any = {
-                  summary: (
-                    <div className="mb-4">
-                      <h2 className={`text-xl font-bold uppercase mb-1 ${templateClasses.sectionColor}`} style={{ fontSize: fontSize }}>
-                        {resumeData.summary ? 'Professional Summary' : 'Summary'}
-                      </h2>
-                      <p className="text-gray-800" style={{ lineHeight: lineSpacing, fontSize: fontSize }}>
-                        {resumeData.summary}
-                      </p>
-                    </div>
-                  ),
-                  skills: (
-                    <div className="mb-4">
-                      <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize: fontSize }}>
-                        Skills
-                      </h2>
-                      <div className="flex flex-wrap gap-2">
-                        {resumeData.skills?.map((skill: string, idx: number) => (
-                          <span key={idx} className="px-3 py-1 bg-gray-100 rounded text-sm text-gray-800">
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ),
-                  experience: (
-                    <div className="mb-4">
-                      <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize: fontSize }}>
-                        Professional Experience
-                      </h2>
-                      <div className="space-y-3">
-                        {resumeData.experience?.map((exp: any, idx: number) => (
-                          <div key={idx} className="mb-3">
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
-                                {exp.position}
-                              </span>
-                              <span className="text-sm text-gray-600">{exp.period} - {exp.endPeriod}</span>
-                            </div>
-                            <p className="text-gray-700 mb-1" style={{ fontSize: fontSize }}>
-                              {exp.company} {exp.location && `• ${exp.location}`}
-                            </p>
-                            {exp.bullets && exp.bullets.length > 0 && (
-                              <ul className="list-disc list-inside ml-2 text-gray-700" style={{ fontSize: fontSize }}>
-                                {exp.bullets.map((bullet: string, i: number) => (
-                                  <li key={i} className="mb-1">{bullet}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ),
-                  education: (
-                    <div className="mb-4">
-                      <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize: fontSize }}>
-                        Education
-                      </h2>
-                      <div className="space-y-2">
-                        {resumeData.education?.map((edu: any, idx: number) => (
-                          <div key={idx}>
-                            <div className="flex justify-between">
-                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
-                                {edu.degree}
-                              </span>
-                              <span className="text-sm text-gray-600">{edu.startDate} - {edu.endDate}</span>
-                            </div>
-                            <p className="text-gray-700" style={{ fontSize: fontSize }}>
-                              {edu.school}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ),
-                  projects: (
-                    <div className="mb-4">
-                      <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize: fontSize }}>
-                        Projects
-                      </h2>
-                      <div className="space-y-3">
-                        {resumeData.projects?.map((project: any, idx: number) => (
-                          <div key={idx}>
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
-                                {project.name}
-                              </span>
-                              {project.link && (
-                                <a href={project.link} className="text-sm text-blue-600 hover:underline">
-                                  View Project
-                                </a>
-                              )}
-                            </div>
-                            <p className="text-gray-700 mb-1" style={{ fontSize: fontSize }}>
-                              {project.description}
-                            </p>
-                            {project.bullets && project.bullets.length > 0 && (
-                              <ul className="list-disc list-inside ml-2 text-gray-700" style={{ fontSize: fontSize }}>
-                                {project.bullets.map((bullet: string, i: number) => (
-                                  <li key={i} className="mb-1">{bullet}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ),
-                  certifications: (
-                    <div className="mb-4">
-                      <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize: fontSize }}>
-                        Certifications
-                      </h2>
-                      <div className="space-y-2">
-                        {resumeData.certifications?.map((cert: any, idx: number) => (
-                          <div key={idx}>
-                            <div className="flex justify-between">
-                              <span className="font-semibold text-gray-900" style={{ fontSize: fontSize }}>
-                                {cert.name}
-                              </span>
-                              {cert.link && (
-                                <a href={cert.link} className="text-sm text-blue-600 hover:underline">
-                                  Verify
-                                </a>
-                              )}
-                            </div>
-                            <p className="text-gray-700" style={{ fontSize: fontSize }}>
-                              {cert.issuer}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                };
-                
-                return sectionMap[sectionId] || null;
-              })}
-            </div>
-          </div>
+          <ResumePreview
+            resumeFileName={resumeFileName}
+            resumeData={resumeData}
+            sectionOrder={sectionOrder}
+            sectionVisibility={sectionVisibility}
+            selectedTemplateId={selectedTemplateId || DEFAULT_TEMPLATE_ID}
+            fontFamily={fontFamily}
+            fontSize={fontSize}
+            lineSpacing={lineSpacing}
+            onExitPreview={() => setIsPreviewMode(false)}
+          />
         ) : (
           <ResumeEditor
             resumeFileName={resumeFileName}
@@ -747,7 +570,7 @@ export default function DashboardPage() {
             newFieldIcon={newFieldIcon}
             setNewFieldIcon={setNewFieldIcon}
             onAddCustomField={addCustomField}
-            selectedTemplateId={selectedTemplateId}
+            selectedTemplateId={selectedTemplateId || DEFAULT_TEMPLATE_ID}
             onTemplateApply={(templateId) => {
               // Apply template styling
               setSelectedTemplateId(templateId);
@@ -920,94 +743,137 @@ export default function DashboardPage() {
           {/* Main Content */}
           <div className="flex-1 flex overflow-hidden relative">
             <div className="absolute inset-0 h-full w-full overflow-y-auto">
-              {/* Render all tabs conditionally - only render active tab */}
-              {activeTab === 'dashboard' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <DashboardFigma 
-                    onQuickAction={(actionId) => {
-                      logger.debug('Quick action:', actionId);
-                      switch (actionId) {
-                        case 'export':
-                          setShowExportModal(true);
-                          break;
-                        case 'customize':
-                          // Open customization modal
-                          break;
-                        case 'themes':
-                          // Open theme selector
-                          break;
-                        default:
-                          break;
-                      }
-                    }}
-                    onNavigateToTab={(tab) => handleTabChange(tab)}
-                  />
-                </div>
-              )}
-              {activeTab === 'profile' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <Profile />
-                </div>
-              )}
-              {activeTab === 'storage' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <CloudStorage />
-                </div>
-              )}
-              {(activeTab === 'tracker' || activeTab === 'jobs') && (
-                <div className="absolute inset-0 h-full w-full">
-                  <JobTracker />
-                </div>
-              )}
-              {activeTab === 'templates' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <Templates 
-                    onAddToEditor={(templateId) => {
-                      setSelectedTemplateId(templateId);
-                      dashboardTemplates.addTemplate(templateId);
-                      logger.debug('Template added to editor:', templateId);
-                    }}
-                    addedTemplates={addedTemplates}
-                    onRemoveTemplate={dashboardTemplates.removeTemplate}
-                  />
-                </div>
-              )}
-              {activeTab === 'cover-letter' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <CoverLetterGenerator />
-                </div>
-              )}
-              {activeTab === 'portfolio' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <PortfolioGenerator />
-                </div>
-              )}
-              {activeTab === 'discussion' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <Discussion />
-                </div>
-              )}
-              {activeTab === 'email' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <Email />
-                </div>
-              )}
-              {activeTab === 'learning' && (
-                <div className="absolute inset-0 h-full w-full">
-                  <LearningHub />
-                </div>
-              )}
-              {(activeTab === 'agents' || activeTab === 'ai-agents') && (
-                <div className="absolute inset-0 h-full w-full">
-                  <AIAgents />
-                </div>
-              )}
+              {/* Render all tabs but hide inactive ones - keeps components mounted to preserve state */}
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'dashboard') ? 'block' : 'none' }}
+              >
+                <DashboardFigma 
+                  onQuickAction={(actionId) => {
+                    logger.debug('Quick action:', actionId);
+                    switch (actionId) {
+                      case 'export':
+                        setShowExportModal(true);
+                        break;
+                      case 'customize':
+                        // Open customization modal
+                        break;
+                      case 'themes':
+                        // Open theme selector
+                        break;
+                      default:
+                        break;
+                    }
+                  }}
+                  onNavigateToTab={(tab) => handleTabChange(tab)}
+                />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'profile') ? 'block' : 'none' }}
+              >
+                <Profile />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'storage') ? 'block' : 'none' }}
+              >
+                <CloudStorage />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'tracker' || activeTab === 'jobs') ? 'block' : 'none' }}
+              >
+                <ErrorBoundary
+                  fallback={
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-red-600 mb-4">Error loading Job Tracker</p>
+                        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
+                          Refresh Page
+                        </button>
+                      </div>
+                    </div>
+                  }
+                >
+                <JobTracker />
+                </ErrorBoundary>
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'templates') ? 'block' : 'none' }}
+              >
+                <Templates 
+                  onAddToEditor={(templateId) => {
+                    setSelectedTemplateId(templateId);
+                    dashboardTemplates.addTemplate(templateId);
+                    logger.debug('Template added to editor:', templateId);
+                  }}
+                  addedTemplates={addedTemplates}
+                  onRemoveTemplate={dashboardTemplates.removeTemplate}
+                />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'cover-letter') ? 'block' : 'none' }}
+              >
+                <CoverLetterGenerator />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'portfolio') ? 'block' : 'none' }}
+              >
+                <PortfolioGenerator />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'discussion') ? 'block' : 'none' }}
+              >
+                <Discussion />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'email') ? 'block' : 'none' }}
+              >
+                <Email />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'learning') ? 'block' : 'none' }}
+              >
+                <LearningHub />
+              </div>
+              <div 
+                className="absolute inset-0 h-full w-full"
+                style={{ display: (activeTab === 'agents' || activeTab === 'ai-agents') ? 'block' : 'none' }}
+              >
+                <ErrorBoundary
+                  fallback={
+                    <div className="h-full flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-red-600 mb-4">Error loading AI Auto-Apply</p>
+                        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
+                          Refresh Page
+                        </button>
+                      </div>
+                    </div>
+                  }
+                >
+                <AIAgents />
+                </ErrorBoundary>
+              </div>
               {/* Editor is special and handles its own rendering */}
-              {activeTab === 'editor' && (
-                <div className={`absolute inset-0 h-full w-full ${showRightPanel ? 'right-80' : ''}`}>
-                  {renderActiveComponent()}
-                </div>
-              )}
+              <div 
+                className="absolute inset-0 h-full"
+                style={{ 
+                  display: (activeTab === 'editor') ? 'block' : 'none',
+                  right: showRightPanel ? '320px' : '0',
+                  width: showRightPanel ? 'calc(100% - 320px)' : '100%',
+                  transition: 'right 0.3s ease, width 0.3s ease',
+                }}
+              >
+                {renderActiveComponent()}
+              </div>
             </div>
             {/* AI Panel */}
             {activeTab === 'editor' && showRightPanel && (
@@ -1063,13 +929,59 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Export Resume Modal */}
-      <ExportModal
+      {/* All Modals */}
+      <DashboardModals
         showExportModal={showExportModal}
         setShowExportModal={setShowExportModal}
+        showImportModal={showImportModal}
+        setShowImportModal={setShowImportModal}
+        showAddSectionModal={showAddSectionModal}
+        setShowAddSectionModal={setShowAddSectionModal}
+        showAddFieldModal={showAddFieldModal}
+        setShowAddFieldModal={setShowAddFieldModal}
+        showNewResumeModal={showNewResumeModal}
+        setShowNewResumeModal={setShowNewResumeModal}
+        showMobileMenu={showMobileMenu}
+        setShowMobileMenu={setShowMobileMenu}
+        showAIGenerateModal={showAIGenerateModal}
+        setShowAIGenerateModal={setShowAIGenerateModal}
+        showSaveToCloudModal={showSaveToCloudModal}
+        setShowSaveToCloudModal={setShowSaveToCloudModal}
+        showImportFromCloudModal={showImportFromCloudModal}
+        setShowImportFromCloudModal={setShowImportFromCloudModal}
+        showResumeSharing={showResumeSharing}
+        setShowResumeSharing={setShowResumeSharing}
+        showCoverLetterAnalytics={showCoverLetterAnalytics}
+        setShowCoverLetterAnalytics={setShowCoverLetterAnalytics}
+        showEmailAnalytics={showEmailAnalytics}
+        setShowEmailAnalytics={setShowEmailAnalytics}
+        showApplicationAnalytics={showApplicationAnalytics}
+        setShowApplicationAnalytics={setShowApplicationAnalytics}
+        importMethod={importMethod}
+        setImportMethod={setImportMethod}
+        importJsonData={importJsonData}
+        setImportJsonData={setImportJsonData}
+        newSectionName={newSectionName}
+        setNewSectionName={setNewSectionName}
+        newSectionContent={newSectionContent}
+        setNewSectionContent={setNewSectionContent}
+        newFieldName={newFieldName}
+        setNewFieldName={setNewFieldName}
+        newFieldIcon={newFieldIcon}
+        setNewFieldIcon={setNewFieldIcon}
+        aiGenerateSection={aiGenerateSection}
+        aiPrompt={aiPrompt}
+        setAiPrompt={setAiPrompt}
+        writingTone={writingTone}
+        setWritingTone={setWritingTone}
+        contentLength={contentLength}
+        setContentLength={setContentLength}
+        resumeFileName={resumeFileName}
         resumeData={resumeData}
         customSections={customSections}
-        resumeFileName={resumeFileName}
+        sectionOrder={sectionOrder}
+        sectionVisibility={sectionVisibility}
+        selectedTemplateId={selectedTemplateId}
         fontFamily={fontFamily}
         fontSize={fontSize}
         lineSpacing={lineSpacing}
@@ -1077,298 +989,31 @@ export default function DashboardPage() {
         margins={margins}
         headingStyle={headingStyle}
         bulletStyle={bulletStyle}
+        customFields={customFields}
+        setCustomFields={setCustomFields}
+        cloudResumes={cloudResumes}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
         onExport={(format) => {
           logger.debug('Export format:', format);
           
-          // Helper function to generate HTML content
-          const generateResumeHTML = () => {
-            const getTemplateClasses = () => {
-              const template = resumeTemplates.find(t => t.id === selectedTemplateId);
-              if (!template) {
-                return {
-                  container: 'bg-white border-gray-300',
-                  header: 'border-b border-gray-300',
-                  nameColor: 'text-gray-900',
-                  titleColor: 'text-gray-700',
-                  sectionColor: 'text-gray-900',
-                  accentColor: 'text-gray-700'
-                };
-              }
-
-              const colorScheme = template.colorScheme;
-              let containerClass = 'bg-white';
-              let headerClass = 'border-b-2';
-              let nameColor = 'text-gray-900';
-              let titleColor = 'text-gray-700';
-              let sectionColor = 'text-gray-900';
-              let accentColor = 'text-gray-700';
-
-              switch (colorScheme) {
-                case 'blue':
-                  containerClass = 'bg-white';
-                  headerClass = 'border-b-2 border-blue-500';
-                  titleColor = 'text-blue-600';
-                  sectionColor = 'text-blue-600';
-                  accentColor = 'text-blue-600';
-                  break;
-                case 'green':
-                  containerClass = 'bg-white';
-                  headerClass = 'border-b-2 border-green-500';
-                  titleColor = 'text-green-600';
-                  sectionColor = 'text-green-600';
-                  accentColor = 'text-green-600';
-                  break;
-                default:
-                  containerClass = 'bg-white';
-                  headerClass = 'border-b border-gray-300';
-                  break;
-              }
-
-              return {
-                container: containerClass,
-                header: headerClass,
-                nameColor,
-                titleColor,
-                sectionColor,
-                accentColor
-              };
-            };
-
-            const classes = getTemplateClasses();
-            const fontMap: Record<string, string> = {
-              arial: 'Arial',
-              calibri: 'Calibri',
-              times: 'Times New Roman',
-              helvetica: 'Helvetica'
-            };
-            const selectedFont = fontMap[fontFamily] || 'Arial';
-
-            let html = `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="UTF-8">
-                <title>${resumeFileName}</title>
-                <style>
-                  * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                  }
-                  body {
-                    font-family: '${selectedFont}', sans-serif;
-                    font-size: ${fontSize};
-                    line-height: ${lineSpacing};
-                    color: #333;
-                    max-width: 8.5in;
-                    margin: 0 auto;
-                    padding: 1in;
-                    background: white;
-                  }
-                  .header {
-                    border-bottom: 2px solid #ddd;
-                    padding-bottom: 1rem;
-                    margin-bottom: 1.5rem;
-                  }
-                  .name {
-                    font-size: 2em;
-                    font-weight: bold;
-                    margin-bottom: 0.5rem;
-                  }
-                  .title {
-                    font-size: 1.2em;
-                    margin-bottom: 0.5rem;
-                  }
-                  .contact {
-                    display: flex;
-                    gap: 1rem;
-                    font-size: 0.9em;
-                    margin-top: 0.5rem;
-                  }
-                  .section {
-                    margin-bottom: 1.5rem;
-                  }
-                  .section-title {
-                    font-size: 1.2em;
-                    font-weight: bold;
-                    text-transform: uppercase;
-                    border-bottom: 1px solid #ddd;
-                    padding-bottom: 0.5rem;
-                    margin-bottom: 1rem;
-                  }
-                  .experience-item, .project-item, .education-item, .cert-item {
-                    margin-bottom: 1rem;
-                  }
-                  .item-header {
-                    display: flex;
-                    justify-content: space-between;
-                    font-weight: bold;
-                  }
-                  .item-date {
-                    color: #666;
-                    font-weight: normal;
-                  }
-                  .bullets {
-                    margin-left: 1.5rem;
-                    margin-top: 0.5rem;
-                  }
-                  .skills {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.5rem;
-                  }
-                  .skill-tag {
-                    background: #f0f0f0;
-                    padding: 0.3rem 0.8rem;
-                    border-radius: 4px;
-                  }
-                  @media print {
-                    body { padding: 0; }
-                  }
-                </style>
-              </head>
-              <body>
-            `;
-
-            // Header
-            html += `
-              <div class="header">
-                <div class="name">${resumeData.name || 'Your Name'}</div>
-                <div class="title">${resumeData.title || 'Your Title'}</div>
-                <div class="contact">
-                  <span>${resumeData.email || ''}</span>
-                  <span>${resumeData.phone || ''}</span>
-                  <span>${resumeData.location || ''}</span>
-                </div>
-              </div>
-            `;
-
-            // Render visible sections
-            sectionOrder.forEach(sectionId => {
-              if (!sectionVisibility[sectionId]) return;
-
-              switch(sectionId) {
-                case 'summary':
-                  if (resumeData.summary) {
-                    html += `
-                      <div class="section">
-                        <div class="section-title">Professional Summary</div>
-                        <p>${resumeData.summary}</p>
-                      </div>
-                    `;
-                  }
-                  break;
-
-                case 'skills':
-                  if (resumeData.skills && resumeData.skills.length > 0) {
-                    html += `
-                      <div class="section">
-                        <div class="section-title">Skills</div>
-                        <div class="skills">
-                          ${resumeData.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
-                        </div>
-                      </div>
-                    `;
-                  }
-                  break;
-
-                case 'experience':
-                  if (resumeData.experience && resumeData.experience.length > 0) {
-                    html += `
-                      <div class="section">
-                        <div class="section-title">Experience</div>
-                        ${resumeData.experience.map(exp => `
-                          <div class="experience-item">
-                            <div class="item-header">
-                              <span>${exp.position}</span>
-                              <span class="item-date">${exp.period}</span>
-                            </div>
-                            <div>${exp.company} ${exp.location ? `• ${exp.location}` : ''}</div>
-                            ${exp.bullets && exp.bullets.length > 0 ? `
-                              <div class="bullets">
-                                ${exp.bullets.map(bullet => `• ${bullet}<br>`).join('')}
-                              </div>
-                            ` : ''}
-                          </div>
-                        `).join('')}
-                      </div>
-                    `;
-                  }
-                  break;
-
-                case 'education':
-                  if (resumeData.education && resumeData.education.length > 0) {
-                    html += `
-                      <div class="section">
-                        <div class="section-title">Education</div>
-                        ${resumeData.education.map(edu => `
-                          <div class="education-item">
-                            <div class="item-header">
-                              <span>${edu.degree}</span>
-                              <span class="item-date">${edu.startDate} - ${edu.endDate}</span>
-                            </div>
-                            <div>${edu.school}</div>
-                          </div>
-                        `).join('')}
-                      </div>
-                    `;
-                  }
-                  break;
-
-                case 'projects':
-                  if (resumeData.projects && resumeData.projects.length > 0) {
-                    html += `
-                      <div class="section">
-                        <div class="section-title">Projects</div>
-                        ${resumeData.projects.map(project => `
-                          <div class="project-item">
-                            <div class="item-header">
-                              <span>${project.name}</span>
-                              ${project.link ? `<a href="${project.link}">View Project</a>` : ''}
-                            </div>
-                            <div>${project.description}</div>
-                            ${project.bullets && project.bullets.length > 0 ? `
-                              <div class="bullets">
-                                ${project.bullets.map(bullet => `• ${bullet}<br>`).join('')}
-                              </div>
-                            ` : ''}
-                          </div>
-                        `).join('')}
-                      </div>
-                    `;
-                  }
-                  break;
-
-                case 'certifications':
-                  if (resumeData.certifications && resumeData.certifications.length > 0) {
-                    html += `
-                      <div class="section">
-                        <div class="section-title">Certifications</div>
-                        ${resumeData.certifications.map(cert => `
-                          <div class="cert-item">
-                            <div class="item-header">
-                              <span>${cert.name}</span>
-                              ${cert.link ? `<a href="${cert.link}">Verify</a>` : ''}
-                            </div>
-                            <div>${cert.issuer}</div>
-                          </div>
-                        `).join('')}
-                      </div>
-                    `;
-                  }
-                  break;
-              }
-            });
-
-            html += `</body></html>`;
-            return html;
-          };
+          // Generate HTML content using extracted utility
+          const htmlContent = generateResumeHTML({
+            resumeFileName,
+            resumeData,
+            customSections,
+            sectionOrder,
+            sectionVisibility,
+            selectedTemplateId: selectedTemplateId || DEFAULT_TEMPLATE_ID,
+            fontFamily,
+            fontSize,
+            lineSpacing,
+          });
 
           // Handle different export formats
           switch(format) {
             case 'pdf':
-              // Generate HTML content
-              const htmlContent = generateResumeHTML();
+              // Generate PDF via print dialog
               const newWindow = window.open('', '_blank');
               if (newWindow) {
                 newWindow.document.write(htmlContent);
@@ -1383,8 +1028,7 @@ export default function DashboardPage() {
 
             case 'word':
               // Export as HTML (Word can open HTML files)
-              const wordContent = generateResumeHTML();
-              const blob = new Blob([wordContent], { type: 'application/msword' });
+              const blob = new Blob([htmlContent], { type: 'application/msword' });
               const url = URL.createObjectURL(blob);
               const link = document.createElement('a');
               link.href = url;
@@ -1398,10 +1042,9 @@ export default function DashboardPage() {
 
             case 'print':
               // Open print dialog
-              const printContent = generateResumeHTML();
               const printWindow = window.open('', '_blank');
               if (printWindow) {
-                printWindow.document.write(printContent);
+                printWindow.document.write(htmlContent);
                 printWindow.document.close();
                 setTimeout(() => {
                   printWindow.print();
@@ -1417,32 +1060,8 @@ export default function DashboardPage() {
           setShowExportModal(false);
         }}
         onSaveToCloud={handleSaveToCloud}
-      />
-
-      {/* Import Resume Modal */}
-      <ImportModal
-        showImportModal={showImportModal}
-        setShowImportModal={setShowImportModal}
-        importMethod={importMethod}
-        setImportMethod={setImportMethod}
-        importJsonData={importJsonData}
-        setImportJsonData={setImportJsonData}
-        onImport={() => {
-          logger.debug('Import triggered');
-          // TODO: Implement import functionality
-        }}
         onImportFromCloud={handleImportFromCloud}
         onFileSelected={handleFileSelected}
-      />
-
-      {/* Add Custom Section Modal */}
-      <AddSectionModal
-        showAddSectionModal={showAddSectionModal}
-        setShowAddSectionModal={setShowAddSectionModal}
-        newSectionName={newSectionName}
-        setNewSectionName={setNewSectionName}
-        newSectionContent={newSectionContent}
-        setNewSectionContent={setNewSectionContent}
         onAddSection={() => resumeHelpers.addCustomSection(
           newSectionName,
           newSectionContent,
@@ -1455,23 +1074,7 @@ export default function DashboardPage() {
           setShowAddSectionModal
         )}
         onOpenAIGenerateModal={openAIGenerateModal}
-      />
-
-      {/* Add Custom Field Modal */}
-      <AddFieldModal
-        showAddFieldModal={showAddFieldModal}
-        setShowAddFieldModal={setShowAddFieldModal}
-        newFieldName={newFieldName}
-        setNewFieldName={setNewFieldName}
-        newFieldIcon={newFieldIcon}
-        setNewFieldIcon={setNewFieldIcon}
         onAddField={addCustomField}
-      />
-
-      {/* New Resume Modal */}
-      <NewResumeModal
-        showNewResumeModal={showNewResumeModal}
-        setShowNewResumeModal={setShowNewResumeModal}
         onNewResume={() => {
           setResumeData({
             name: '',
@@ -1488,28 +1091,7 @@ export default function DashboardPage() {
           });
           setShowNewResumeModal(false);
         }}
-      />
-
-      {/* Mobile Menu Modal */}
-      <MobileMenuModal
-        showMobileMenu={showMobileMenu}
-        setShowMobileMenu={setShowMobileMenu}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
-
-      {/* AI Generate Modal */}
-      <AIGenerateModal
-        showAIGenerateModal={showAIGenerateModal}
-        setShowAIGenerateModal={setShowAIGenerateModal}
-        aiGenerateSection={aiGenerateSection}
-        aiPrompt={aiPrompt}
-        setAiPrompt={setAiPrompt}
-        writingTone={writingTone}
-        setWritingTone={setWritingTone}
-        contentLength={contentLength}
-        setContentLength={setContentLength}
-        onGenerate={() => aiHelpers.generateAIContent(
+        onGenerateAIContent={() => aiHelpers.generateAIContent(
           aiGenerateSection,
           aiPrompt,
           writingTone,
@@ -1519,59 +1101,10 @@ export default function DashboardPage() {
           setShowAIGenerateModal,
           aiGenerateSection === 'custom' ? setNewSectionContent : undefined
         )}
+        onConfirmSaveToCloud={handleConfirmSaveToCloud}
+        onLoadFromCloud={handleLoadFromCloud}
+        DEFAULT_TEMPLATE_ID={DEFAULT_TEMPLATE_ID}
       />
-
-      {/* Save to Cloud Modal */}
-      {showSaveToCloudModal && (
-        <ResumeSaveToCloudModal
-          onClose={() => setShowSaveToCloudModal(false)}
-          onConfirm={handleConfirmSaveToCloud}
-          defaultFileName={resumeFileName}
-        />
-      )}
-
-      {/* Import from Cloud Modal */}
-      {showImportFromCloudModal && (
-        <ResumeImportFromCloudModal
-          files={cloudResumes}
-          onClose={() => setShowImportFromCloudModal(false)}
-          onLoad={handleLoadFromCloud}
-        />
-      )}
-
-      {/* Resume Sharing Modal */}
-      {showResumeSharing && (
-        <ResumeSharing
-          resumeId={`resume_${Date.now()}`}
-          resumeName={resumeFileName}
-          isOpen={showResumeSharing}
-          onClose={() => setShowResumeSharing(false)}
-        />
-      )}
-
-      {/* Cover Letter Analytics Modal */}
-      {showCoverLetterAnalytics && (
-        <CoverLetterAnalytics
-          isOpen={showCoverLetterAnalytics}
-          onClose={() => setShowCoverLetterAnalytics(false)}
-        />
-      )}
-
-      {/* Email Analytics Modal */}
-      {showEmailAnalytics && (
-        <EmailAnalytics
-          isOpen={showEmailAnalytics}
-          onClose={() => setShowEmailAnalytics(false)}
-        />
-      )}
-
-      {/* Application Analytics Modal */}
-      {showApplicationAnalytics && (
-        <ApplicationAnalytics
-          isOpen={showApplicationAnalytics}
-          onClose={() => setShowApplicationAnalytics(false)}
-        />
-      )}
     </>
   );
 }

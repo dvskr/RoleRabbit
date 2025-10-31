@@ -190,20 +190,28 @@ export default function ResumeEditor({
     }
   };
 
-  // Calculate sidebar width and padding based on collapse state
+  // Calculate sidebar width and padding based on collapse state - responsive
   const sidebarWidth = isSidebarCollapsed ? '48px' : '288px';
   const sidebarPadding = isSidebarCollapsed ? '8px' : '24px';
 
   return (
-    <div className="flex flex-1 h-full overflow-hidden" style={{ height: '100%', maxHeight: '100%', background: colors.background }}>
+    <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden" style={{ height: '100%', width: '100%', maxHeight: '100%', background: colors.background }}>
       {/* Left Sidebar - Section Controls */}
       <div 
-        className="backdrop-blur-xl overflow-y-auto flex-shrink-0"
+        className="backdrop-blur-xl overflow-y-auto hidden lg:flex flex-col"
         style={{ 
           width: sidebarWidth, 
+          minWidth: sidebarWidth,
+          maxWidth: sidebarWidth,
           padding: sidebarPadding,
           background: colors.sidebarBackground,
           borderRight: `1px solid ${colors.border}`,
+          flexShrink: 0,
+          flexGrow: 0,
+          height: '100%',
+          maxHeight: '100%',
+          overflowY: 'auto',
+          overflowX: 'hidden',
         }}
       >
         {/* Collapsed View - Just Icons */}
@@ -259,9 +267,9 @@ export default function ResumeEditor({
             </button>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col h-full w-full">
             {/* File Name Configuration */}
-            <div className="mb-6">
+            <div className="mb-6 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold flex items-center gap-2 text-sm" style={{ color: colors.primaryText }}>
               <FileText size={16} style={{ color: colors.primaryBlue }} />
@@ -311,7 +319,7 @@ export default function ResumeEditor({
         </div>
 
         {/* Templates Horizontal Scroller */}
-        <div className="mb-6">
+        <div className="mb-6 flex-shrink-0">
           <MultiResumeManager
             onSwitchResume={() => {}}
             onSelectTemplate={(templateId) => {
@@ -327,7 +335,7 @@ export default function ResumeEditor({
         </div>
 
         {/* Sections */}
-         <div className="mb-6">
+         <div className="mb-6 flex-shrink-0">
            <div className="flex items-center justify-between mb-4">
              <h3 className="font-bold flex items-center gap-2 text-base" style={{ color: colors.primaryText }}>
                <Layers size={18} style={{ color: colors.badgePurpleText }} />
@@ -442,7 +450,7 @@ export default function ResumeEditor({
         </div>
         
          {/* Formatting */}
-         <div className="mb-6">
+         <div className="mb-6 flex-1 min-h-0 overflow-y-auto">
            <h3 className="font-bold flex items-center gap-2 text-base mb-4" style={{ color: colors.primaryText }}>
              <Palette size={18} style={{ color: colors.badgePurpleText }} />
             Formatting
@@ -484,7 +492,7 @@ export default function ResumeEditor({
             {/* Font Size */}
           <div className="mb-4">
             <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>FONT SIZE</h4>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 onClick={() => setFontSize('ats10pt')}
                 className="p-3 rounded-lg text-sm font-medium transition-all"
@@ -782,7 +790,7 @@ export default function ResumeEditor({
             {/* Bullet Style */}
           <div className="mb-4">
             <h4 className="font-semibold text-sm mb-2" style={{ color: colors.secondaryText }}>BULLET STYLE</h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 onClick={() => setBulletStyle('disc')}
                 className="p-3 rounded-lg text-sm font-medium transition-all"
@@ -948,25 +956,34 @@ export default function ResumeEditor({
                 Reset to Default
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
 
       {/* Main Resume Editing Area */}
       <div 
-        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 min-w-0"
+        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10"
         style={{ 
           height: '100%', 
           maxHeight: '100%',
+          width: '100%',
           background: colors.background,
+          flex: '1 1 0%',
+          minWidth: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          position: 'relative',
         }}
       >
         <div 
-          className="w-full rounded-2xl shadow-lg border p-2 sm:p-4 lg:p-6 xl:p-8 max-w-full transition-all"
+          className="w-full rounded-2xl shadow-lg border p-2 sm:p-4 lg:p-6 xl:p-8 transition-all box-border"
           style={{
             background: colors.cardBackground,
             border: `1px solid ${colors.border}`,
             boxShadow: `0 4px 6px ${colors.border}10`,
+            width: '100%',
+            maxWidth: '100%',
+            minHeight: '100%',
           }}
         >
           
@@ -1075,11 +1092,13 @@ export default function ResumeEditor({
               >
                 <span className="text-xs sm:text-sm font-medium break-words overflow-wrap-anywhere">Add Field</span>
               </button>
-        </div>
-      </div>
+            </div>
+          </div>
 
           {/* Render All Sections */}
+          <div className="w-full">
             {renderedSections}
+          </div>
           
         </div>
       </div>

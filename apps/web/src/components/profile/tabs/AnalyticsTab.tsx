@@ -30,9 +30,9 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
       </div>
       
       {/* Enhanced Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgeInfoBg,
             border: `1px solid ${colors.badgeInfoBorder}`,
@@ -40,20 +40,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgeInfoBg }}
             >
-              <Eye size={24} style={{ color: colors.primaryBlue }} />
+              <Eye size={20} className="sm:w-6 sm:h-6" style={{ color: colors.primaryBlue }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={(userData.profileViews || 0).toLocaleString()}
               >
                 {(userData.profileViews || 0).toLocaleString()}
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.primaryBlue }}
               >
                 +12% this month
@@ -61,7 +62,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Profile Views
@@ -69,7 +70,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         </div>
         
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgeSuccessBg,
             border: `1px solid ${colors.badgeSuccessBorder}`,
@@ -77,20 +78,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgeSuccessBg }}
             >
-              <FileText size={24} style={{ color: colors.successGreen }} />
+              <FileText size={20} className="sm:w-6 sm:h-6" style={{ color: colors.successGreen }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={(userData.applicationsSent || 0).toString()}
               >
                 {userData.applicationsSent || 0}
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.successGreen }}
               >
                 +3 this week
@@ -98,7 +100,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Applications Sent
@@ -106,7 +108,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         </div>
         
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgeWarningBg,
             border: `1px solid ${colors.badgeWarningBorder}`,
@@ -114,20 +116,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgeWarningBg }}
             >
-              <Calendar size={24} style={{ color: colors.badgeWarningText }} />
+              <Calendar size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgeWarningText }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={(userData.interviewsScheduled || 0).toString()}
               >
                 {userData.interviewsScheduled || 0}
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.badgeWarningText }}
               >
                 2 upcoming
@@ -135,7 +138,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Interviews
@@ -143,7 +146,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         </div>
         
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgePurpleBg,
             border: `1px solid ${colors.badgePurpleBorder}`,
@@ -151,20 +154,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgePurpleBg }}
             >
-              <TrendingUp size={24} style={{ color: colors.badgePurpleText }} />
+              <TrendingUp size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgePurpleText }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={`${userData.successRate || 0}%`}
               >
                 {userData.successRate || 0}%
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.badgePurpleText }}
               >
                 Above average
@@ -172,7 +176,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Success Rate
@@ -181,9 +185,9 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
       </div>
 
       {/* Additional Enhanced Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgeInfoBg,
             border: `1px solid ${colors.badgeInfoBorder}`,
@@ -191,20 +195,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgeInfoBg }}
             >
-              <CheckCircle size={24} style={{ color: colors.primaryBlue }} />
+              <CheckCircle size={20} className="sm:w-6 sm:h-6" style={{ color: colors.primaryBlue }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={`${userData.profileCompleteness || 0}%`}
               >
                 {userData.profileCompleteness || 0}%
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.primaryBlue }}
               >
                 Complete
@@ -212,7 +217,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Profile Completeness
@@ -220,7 +225,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         </div>
         
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgeSuccessBg,
             border: `1px solid ${colors.badgeSuccessBorder}`,
@@ -228,20 +233,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgeSuccessBg }}
             >
-              <TrendingUp size={24} style={{ color: colors.successGreen }} />
+              <TrendingUp size={20} className="sm:w-6 sm:h-6" style={{ color: colors.successGreen }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={`${userData.skillMatchRate || 0}%`}
               >
                 {userData.skillMatchRate || 0}%
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.successGreen }}
               >
                 Match Rate
@@ -249,7 +255,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Skills Match
@@ -257,7 +263,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         </div>
         
         <div 
-          className="p-6 rounded-2xl shadow-lg"
+          className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
             background: colors.badgeWarningBg,
             border: `1px solid ${colors.badgeWarningBorder}`,
@@ -265,20 +271,21 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         >
           <div className="flex items-center justify-between mb-4">
             <div 
-              className="p-3 rounded-xl"
+              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
               style={{ background: colors.badgeWarningBg }}
             >
-              <Calendar size={24} style={{ color: colors.badgeWarningText }} />
+              <Calendar size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgeWarningText }} />
             </div>
-            <div className="text-right">
+            <div className="text-right min-w-0 flex-1 ml-2">
               <p 
-                className="text-2xl font-bold"
+                className="text-xl sm:text-2xl font-bold truncate"
                 style={{ color: colors.primaryText }}
+                title={`${userData.avgResponseTime || 0}d`}
               >
                 {userData.avgResponseTime || 0}d
               </p>
               <p 
-                className="text-sm font-medium"
+                className="text-xs sm:text-sm font-medium truncate"
                 style={{ color: colors.badgeWarningText }}
               >
                 Avg Response
@@ -286,7 +293,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           <p 
-            className="text-sm font-semibold"
+            className="text-xs sm:text-sm font-semibold truncate"
             style={{ color: colors.secondaryText }}
           >
             Response Time
