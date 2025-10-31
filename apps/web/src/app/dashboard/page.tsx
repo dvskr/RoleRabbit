@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 // Critical components - load immediately
@@ -23,9 +23,7 @@ const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterG
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents/index'), { ssr: false });
-import { EyeOff, Sparkles, Plus, X, Cloud, Upload, Download, Briefcase, FolderOpen, Mail, FileText, Globe, LayoutTemplate, User as UserIcon, GraduationCap, MessageSquare, Home as HomeIcon, GripVertical, Eye, Trash2 } from 'lucide-react';
 import { 
-  CustomField, 
   ResumeData, 
   CustomSection, 
   SectionVisibility 
@@ -46,7 +44,6 @@ const ApplicationAnalytics = dynamic(() => import('../../components/ApplicationA
 
 // Modals are now loaded in DashboardModals component
 
-import { ResumeFile } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
 import ErrorBoundary from '../../components/ErrorBoundary';
 // Import dashboard constants
@@ -67,27 +64,7 @@ import {
   getDashboardTabIconColor,
   shouldHidePageHeader,
 } from './utils/dashboardHelpers';
-import {
-  loadCloudResumes,
-  saveResumeToCloud,
-  loadResumeFromCloud,
-  parseResumeFile,
-} from './utils/cloudStorageHelpers';
-import {
-  mapTabName,
-  duplicateData,
-  createCustomField,
-  generateDuplicateFileName,
-  findDuplicateResumes,
-  removeDuplicateResumes,
-} from './utils/dashboardHandlers';
-import {
-  removeDuplicateResumeEntries,
-  duplicateResumeState,
-} from './utils/resumeDataHelpers';
-import { getTemplateClasses } from './utils/templateClassesHelper';
 import { ResumePreview } from './components/ResumePreview';
-import { generateResumeHTML } from './utils/exportHtmlGenerator';
 import { CustomSectionEditor } from './components/CustomSectionEditor';
 import { DashboardModals } from './components/DashboardModals';
 // Import dashboard hooks
@@ -96,6 +73,9 @@ import { useDashboardTemplates } from './hooks/useDashboardTemplates';
 import { useDashboardCloudStorage } from './hooks/useDashboardCloudStorage';
 import { useDashboardAnalytics } from './hooks/useDashboardAnalytics';
 import { useDashboardTabChange } from './hooks/useDashboardTabChange';
+import { useDashboardHandlers } from './hooks/useDashboardHandlers';
+import { useDashboardExport } from './hooks/useDashboardExport';
+import { useDashboardCloudSave } from './hooks/useDashboardCloudSave';
 
 // Lazy load sections (only when Resume Editor is active) - use named exports from index
 const SummarySection = dynamic(() => import('../../components/sections').then(mod => ({ default: mod.SummarySection })), { ssr: false });
@@ -167,105 +147,6 @@ export default function DashboardPage() {
   // Tab change handler
   const { handleTabChange } = useDashboardTabChange(setActiveTab);
 
-  const handleConfirmSaveToCloud = (fileName: string, description: string, tags: string[]) => {
-    saveResumeToCloud(
-      resumeData,
-      customSections,
-      resumeFileName,
-      fontFamily,
-      fontSize,
-      lineSpacing,
-      sectionSpacing,
-      margins,
-      headingStyle,
-      bulletStyle,
-      fileName,
-      description,
-      tags
-    );
-    setShowSaveToCloudModal(false);
-  };
-
-  const handleLoadFromCloud = (file: ResumeFile) => {
-    const data = loadResumeFromCloud(file);
-    if (data) {
-      setResumeData(data.resumeData);
-      setCustomSections(data.customSections || []);
-      setResumeFileName(data.resumeFileName || file.name);
-      setFontFamily(data.fontFamily || 'Arial');
-      setFontSize(data.fontSize || '12pt');
-      setLineSpacing(data.lineSpacing || '1.5');
-      setSectionSpacing(data.sectionSpacing || 'normal');
-      setMargins(data.margins || 'medium');
-      setHeadingStyle(data.headingStyle || 'bold');
-      setBulletStyle(data.bulletStyle || 'disc');
-    }
-    setShowImportFromCloudModal(false);
-  };
-
-  const handleFileSelected = (file: File) => {
-    logger.debug('File selected:', file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const data = parseResumeFile(text);
-      if (data) {
-        setResumeData(data.resumeData);
-        setCustomSections(data.customSections || []);
-        setResumeFileName(data.resumeFileName || file.name);
-        setFontFamily(data.fontFamily || 'Arial');
-        setFontSize(data.fontSize || '12pt');
-        setLineSpacing(data.lineSpacing || '1.5');
-        setSectionSpacing(data.sectionSpacing || 'normal');
-        setMargins(data.margins || 'medium');
-        setHeadingStyle(data.headingStyle || 'bold');
-        setBulletStyle(data.bulletStyle || 'disc');
-      }
-    };
-    reader.readAsText(file);
-    setShowImportModal(false);
-  };
-
-  const handleDuplicateResume = () => {
-    logger.debug('Duplicating resume');
-    
-    const duplicated = duplicateResumeState(
-      resumeFileName,
-      resumeData,
-      customSections,
-      sectionOrder,
-      sectionVisibility
-    );
-    
-    // Update all states with duplicated data
-    setResumeFileName(duplicated.resumeFileName);
-    setResumeData(duplicated.resumeData);
-    setCustomSections(duplicated.customSections);
-    setSectionOrder(duplicated.sectionOrder);
-    setSectionVisibility(duplicated.sectionVisibility);
-    
-    // Reset history for the new resume
-    const newHistory = [duplicated.resumeData];
-    setHistory(newHistory);
-    setHistoryIndex(0);
-    
-    logger.debug('Resume duplicated successfully');
-  };
-
-  const handleRemoveDuplicates = () => {
-    logger.debug('Removing duplicates from resume');
-    
-    const { data, removedCount } = removeDuplicateResumeEntries(resumeData);
-    
-    if (removedCount > 0) {
-      setResumeData(data);
-      alert(`Removed ${removedCount} duplicate ${removedCount === 1 ? 'entry' : 'entries'}`);
-      logger.debug(`Removed ${removedCount} duplicates`);
-    } else {
-      alert('No duplicates found!');
-    }
-  };
-
   // Destructure hooks for easier access
   const {
     resumeFileName, setResumeFileName,
@@ -329,103 +210,136 @@ export default function DashboardPage() {
     }
   }, [resumeData]);
 
-  const toggleSection = (section: string) => {
-    resumeHelpers.toggleSection(section, sectionVisibility, setSectionVisibility);
-  };
-
-  const moveSection = (index: number, direction: 'up' | 'down') => {
-    resumeHelpers.moveSection(index, direction, sectionOrder, setSectionOrder);
-  };
-
-  const generateSmartFileName = () => {
-    return resumeHelpers.generateSmartFileName(resumeData);
-  };
-
-  const resetToDefault = () => {
-    const defaults = resumeHelpers.resetToDefault();
-    setFontFamily(defaults.fontFamily);
-    setFontSize(defaults.fontSize);
-    setLineSpacing(defaults.lineSpacing);
-    setSectionSpacing(defaults.sectionSpacing);
-    setMargins(defaults.margins);
-    setHeadingStyle(defaults.headingStyle);
-    setBulletStyle(defaults.bulletStyle);
-  };
-
-  const addCustomSection = () => {
-    resumeHelpers.addCustomSection(
-      newSectionName,
-      newSectionContent,
-      customSections,
-      setCustomSections,
+  // Dashboard handlers hook
+  const dashboardHandlers = useDashboardHandlers({
+    resumeData,
+    setResumeData,
+    sectionOrder,
       setSectionOrder,
+    sectionVisibility,
       setSectionVisibility,
+    customSections,
+    setCustomSections,
+    resumeFileName,
+    setResumeFileName,
+    history,
+    setHistory,
+    historyIndex,
+    setHistoryIndex,
+    fontFamily,
+    setFontFamily,
+    fontSize,
+    setFontSize,
+    lineSpacing,
+    setLineSpacing,
+    sectionSpacing,
+    setSectionSpacing,
+    margins,
+    setMargins,
+    headingStyle,
+    setHeadingStyle,
+    bulletStyle,
+    setBulletStyle,
+    newSectionName,
       setNewSectionName,
+    newSectionContent,
       setNewSectionContent,
-      setShowAddSectionModal
-    );
-  };
-
-  const deleteCustomSection = (id: string) => {
-    resumeHelpers.deleteCustomSection(id, customSections, setCustomSections, setSectionOrder, setSectionVisibility);
-  };
-
-  const updateCustomSection = (id: string, content: string) => {
-    resumeHelpers.updateCustomSection(id, content, customSections, setCustomSections);
-  };
-
-  const addCustomField = () => {
-    if (!newFieldName.trim()) return;
-    
-    const newField = createCustomField(newFieldName);
-    setCustomFields(prev => [...prev, newField]);
-    setNewFieldName('');
-    setNewFieldIcon('link');
-    setShowAddFieldModal(false);
-  };
-
-  const openAIGenerateModal = (section: string) => {
-    aiHelpers.openAIGenerateModal(section, setAiGenerateSection, setShowAIGenerateModal);
-  };
-
-  const hideSection = (section: string) => {
-    resumeHelpers.hideSection(section, sectionVisibility, setSectionVisibility);
-  };
-
-  const handleTemplateSelect = (template: string) => {
-    resumeHelpers.handleTemplateSelect(template);
-  };
-
-  const undo = () => {
-    resumeHelpers.undo(history, historyIndex, setHistoryIndex, setResumeData);
-  };
-
-  const redo = () => {
-    resumeHelpers.redo(history, historyIndex, setHistoryIndex, setResumeData);
-  };
-
-  const saveResume = () => {
-    resumeHelpers.saveResume();
-  };
-
-  const analyzeJobDescription = () => {
-    aiHelpers.analyzeJobDescription(
+    setShowAddSectionModal,
+    newFieldName,
+    setNewFieldName,
+    newFieldIcon,
+    setNewFieldIcon,
+    customFields,
+    setCustomFields,
+    setShowAddFieldModal,
+    aiGenerateSection,
+    setAiGenerateSection,
+    aiPrompt,
+    setAiPrompt,
+    writingTone,
+    setWritingTone,
+    contentLength,
+    setContentLength,
+    setShowAIGenerateModal,
       jobDescription,
       setIsAnalyzing,
       setMatchScore,
       setMatchedKeywords,
       setMissingKeywords,
-      setAiRecommendations
-    );
-  };
+    setAiRecommendations,
+    aiRecommendations,
+    aiConversation,
+    setAiConversation,
+  });
 
-  const applyAIRecommendations = () => {
-    aiHelpers.applyAIRecommendations(aiRecommendations, setAiRecommendations);
-  };
+  const {
+    toggleSection,
+    moveSection,
+    generateSmartFileName,
+    resetToDefault,
+    addCustomSection,
+    deleteCustomSection,
+    updateCustomSection,
+    addCustomField,
+    openAIGenerateModal,
+    hideSection,
+    analyzeJobDescription,
+    applyAIRecommendations,
+    sendAIMessage,
+    saveResume,
+    undo,
+    redo,
+  } = dashboardHandlers;
 
-  const sendAIMessage = () => {
-    aiHelpers.sendAIMessage(aiPrompt, setAiPrompt, aiConversation, setAiConversation);
-  };
+  // Dashboard export hook
+  const { handleFileSelected, handleExport } = useDashboardExport({
+    resumeFileName,
+    resumeData,
+    customSections,
+    sectionOrder,
+    sectionVisibility,
+    selectedTemplateId,
+    fontFamily,
+    fontSize,
+    lineSpacing,
+    setShowImportModal,
+    setResumeData,
+    setCustomSections,
+    setResumeFileName,
+    setFontFamily,
+    setFontSize,
+    setLineSpacing,
+    setSectionSpacing,
+    setMargins,
+    setHeadingStyle,
+    setBulletStyle,
+  });
+
+  // Dashboard cloud save hook
+  const { handleConfirmSaveToCloud, handleLoadFromCloud } = useDashboardCloudSave({
+    resumeData,
+    customSections,
+    resumeFileName,
+    fontFamily,
+    fontSize,
+    lineSpacing,
+    sectionSpacing,
+    margins,
+    headingStyle,
+    bulletStyle,
+    setResumeData,
+    setCustomSections,
+    setResumeFileName,
+    setFontFamily,
+    setFontSize,
+    setLineSpacing,
+    setSectionSpacing,
+    setMargins,
+    setHeadingStyle,
+    setBulletStyle,
+    setShowSaveToCloudModal,
+    setShowImportFromCloudModal,
+  });
 
   const renderSection = (section: string) => {
     if (!sectionVisibility[section]) return null;
@@ -994,85 +908,11 @@ export default function DashboardPage() {
         cloudResumes={cloudResumes}
         activeTab={activeTab}
         onTabChange={handleTabChange}
-        onExport={(format) => {
-          logger.debug('Export format:', format);
-          
-          // Generate HTML content using extracted utility
-          const htmlContent = generateResumeHTML({
-            resumeFileName,
-            resumeData,
-            customSections,
-            sectionOrder,
-            sectionVisibility,
-            selectedTemplateId: selectedTemplateId || DEFAULT_TEMPLATE_ID,
-            fontFamily,
-            fontSize,
-            lineSpacing,
-          });
-
-          // Handle different export formats
-          switch(format) {
-            case 'pdf':
-              // Generate PDF via print dialog
-              const newWindow = window.open('', '_blank');
-              if (newWindow) {
-                newWindow.document.write(htmlContent);
-                newWindow.document.close();
-                // Wait for content to load
-                setTimeout(() => {
-                  newWindow.print();
-                }, 250);
-              }
-              logger.debug('PDF export initiated');
-              break;
-
-            case 'word':
-              // Export as HTML (Word can open HTML files)
-              const blob = new Blob([htmlContent], { type: 'application/msword' });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `${resumeFileName || 'resume'}.doc`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              URL.revokeObjectURL(url);
-              logger.debug('Word export initiated');
-              break;
-
-            case 'print':
-              // Open print dialog
-              const printWindow = window.open('', '_blank');
-              if (printWindow) {
-                printWindow.document.write(htmlContent);
-                printWindow.document.close();
-                setTimeout(() => {
-                  printWindow.print();
-                }, 250);
-              }
-              logger.debug('Print initiated');
-              break;
-
-            default:
-              logger.debug('Unsupported format:', format);
-          }
-          
-          setShowExportModal(false);
-        }}
+        onExport={handleExport}
         onSaveToCloud={handleSaveToCloud}
         onImportFromCloud={handleImportFromCloud}
         onFileSelected={handleFileSelected}
-        onAddSection={() => resumeHelpers.addCustomSection(
-          newSectionName,
-          newSectionContent,
-          customSections,
-          setCustomSections,
-          setSectionOrder,
-          setSectionVisibility,
-          setNewSectionName,
-          setNewSectionContent,
-          setShowAddSectionModal
-        )}
+        onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}
         onNewResume={() => {

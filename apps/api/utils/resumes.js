@@ -1,11 +1,18 @@
 /**
- * Resumes API utilities
+ * Resumes API utilities - REFACTORED with Generic CRUD Service
  * Handles database operations for resume management
+ * 
+ * Uses CrudService base class to eliminate duplicate code
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const logger = require('./logger');
+const CrudService = require('./crudService');
+
+// Create resumes CRUD service instance
+const resumesService = new CrudService('resume', {
+  userIdField: 'userId',
+  orderBy: 'createdAt',
+  orderDirection: 'desc'
+});
 
 /**
  * Get all resumes for a user
@@ -13,20 +20,7 @@ const logger = require('./logger');
  * @returns {Promise<Array>} Array of resumes
  */
 async function getResumesByUserId(userId) {
-  try {
-    const resumes = await prisma.resume.findMany({
-      where: {
-        userId: userId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    return resumes;
-  } catch (error) {
-    logger.error('Error fetching resumes:', error);
-    throw error;
-  }
+  return resumesService.getAllByUserId(userId);
 }
 
 /**
@@ -35,17 +29,7 @@ async function getResumesByUserId(userId) {
  * @returns {Promise<Object>} Resume object
  */
 async function getResumeById(resumeId) {
-  try {
-    const resume = await prisma.resume.findUnique({
-      where: {
-        id: resumeId
-      }
-    });
-    return resume;
-  } catch (error) {
-    logger.error('Error fetching resume:', error);
-    throw error;
-  }
+  return resumesService.getById(resumeId);
 }
 
 /**
@@ -55,23 +39,17 @@ async function getResumeById(resumeId) {
  * @returns {Promise<Object>} Created resume
  */
 async function createResume(userId, resumeData) {
-  try {
-    const resume = await prisma.resume.create({
-      data: {
-        userId,
-        name: resumeData.name || 'Untitled Resume',
-        data: typeof resumeData.data === 'string' 
-          ? resumeData.data 
-          : JSON.stringify(resumeData.data || {}),
-        templateId: resumeData.templateId,
-        fileName: resumeData.fileName
-      }
-    });
-    return resume;
-  } catch (error) {
-    logger.error('Error creating resume:', error);
-    throw error;
-  }
+  return resumesService.create(userId, resumeData, (userId, data) => {
+    return {
+      userId,
+      name: data.name || 'Untitled Resume',
+      data: typeof data.data === 'string' 
+        ? data.data 
+        : JSON.stringify(data.data || {}),
+      templateId: data.templateId,
+      fileName: data.fileName
+    };
+  });
 }
 
 /**
@@ -81,49 +59,22 @@ async function createResume(userId, resumeData) {
  * @returns {Promise<Object>} Updated resume
  */
 async function updateResume(resumeId, updates) {
-  try {
-    // Filter out undefined fields and stringify data if it's an object
-    const cleanUpdates = {};
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        if (key === 'data' && typeof updates[key] === 'object') {
-          cleanUpdates[key] = JSON.stringify(updates[key]);
-        } else {
-          cleanUpdates[key] = updates[key];
-        }
-      }
-    });
-
-    const resume = await prisma.resume.update({
-      where: {
-        id: resumeId
-      },
-      data: cleanUpdates
-    });
-    return resume;
-  } catch (error) {
-    logger.error('Error updating resume:', error);
-    throw error;
-  }
+  return resumesService.update(resumeId, updates, (cleanUpdates) => {
+    // Stringify data if it's an object
+    if (cleanUpdates.data && typeof cleanUpdates.data === 'object') {
+      cleanUpdates.data = JSON.stringify(cleanUpdates.data);
+    }
+    return cleanUpdates;
+  });
 }
 
 /**
  * Delete a resume
  * @param {string} resumeId - Resume ID
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<void>}
  */
 async function deleteResume(resumeId) {
-  try {
-    await prisma.resume.delete({
-      where: {
-        id: resumeId
-      }
-    });
-    return true;
-  } catch (error) {
-    logger.error('Error deleting resume:', error);
-    throw error;
-  }
+  return resumesService.delete(resumeId);
 }
 
 module.exports = {

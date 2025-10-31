@@ -9,10 +9,11 @@ const logger = require('./logger');
  * Custom API Error class
  */
 class ApiError extends Error {
-  constructor(statusCode, message, isOperational = true) {
+  constructor(statusCode, message, isOperational = true, details = null) {
     super(message);
     this.statusCode = statusCode;
     this.isOperational = isOperational;
+    this.details = details;
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -29,8 +30,8 @@ function formatError(error) {
   return {
     success: false,
     error: message,
+    ...(error.details && { details: error.details }),
     ...(process.env.NODE_ENV === 'development' && {
-      details: error.message,
       stack: error.stack
     })
   };
