@@ -14,7 +14,10 @@ export function MetricCard({ metric, colors }: MetricCardProps) {
       className="group relative rounded-lg p-3 transition-all duration-200 hover:shadow-lg cursor-pointer"
       style={{
         background: colors.cardBackground,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         border: `1px solid ${colors.border}`,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = colors.borderFocused;

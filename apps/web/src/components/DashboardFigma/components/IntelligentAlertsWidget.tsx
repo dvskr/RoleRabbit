@@ -26,8 +26,12 @@ export function IntelligentAlertsWidget({ alerts, urgentCount }: IntelligentAler
       className="rounded-xl sm:rounded-2xl p-2 sm:p-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-red-500/10 flex flex-col overflow-visible"
       style={{
         background: widgetBackground,
-        backdropFilter: 'blur(10px)',
-        border: widgetBorder
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: widgetBorder,
+        boxShadow: isLightTheme 
+          ? '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)'
+          : '0 2px 8px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3)',
       }}
     >
       <div className="flex items-center justify-between mb-1.5">

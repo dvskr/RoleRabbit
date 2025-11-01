@@ -53,10 +53,16 @@ export default function DashboardFigma({
   // Calculate urgent alerts count
   const urgentAlertsCount = ALERTS.filter(a => a.priority === 'urgent').length;
 
+  const isDark = theme.mode === 'dark';
+
   return (
     <div 
-      className="min-h-screen w-full p-3 sm:p-4 md:p-6"
-      style={{ background: colors.background }}
+      className="min-h-screen transition-colors duration-300 w-full p-3 sm:p-4 md:p-6"
+      style={{
+        background: isDark 
+          ? 'transparent'  // Let body gradient show through in dark mode
+          : '#ffffff', // Pure white for light mode
+      }}
     >
       <div className="w-full max-w-full mx-auto space-y-3 sm:space-y-4 md:space-y-6">
         {/* Filter Tags */}

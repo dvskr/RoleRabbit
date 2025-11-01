@@ -26,8 +26,12 @@ export function ProgressMetricsWidget({ metrics }: ProgressMetricsWidgetProps) {
       className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-green-500/10"
       style={{
         background: widgetBackground,
-        backdropFilter: 'blur(10px)',
-        border: widgetBorder
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: widgetBorder,
+        boxShadow: isLightTheme 
+          ? '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)'
+          : '0 2px 8px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3)',
       }}
     >
       <h2 className="text-base font-semibold mb-3" style={{ color: headingColor }}>Progress</h2>

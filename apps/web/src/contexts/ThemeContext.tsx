@@ -116,16 +116,16 @@ const darkTheme: ThemeConfig = {
   },
 };
 
-// Light Theme
+// Light Theme (Pure White Design System)
 const lightTheme: ThemeConfig = {
   mode: 'light',
   colors: {
-    // Backgrounds
+    // Backgrounds - Pure White
     background: '#ffffff',
-    sidebarBackground: 'linear-gradient(180deg, rgba(249, 250, 251, 0.95) 0%, rgba(243, 244, 246, 0.95) 100%)',
-    headerBackground: 'rgba(255, 255, 255, 0.8)',
-    toolbarBackground: 'rgba(249, 250, 251, 0.8)',
-    cardBackground: '#f9fafb',
+    sidebarBackground: '#ffffff',
+    headerBackground: '#ffffff',
+    toolbarBackground: '#ffffff',
+    cardBackground: '#ffffff', // Pure white
     hoverBackground: 'rgba(0, 0, 0, 0.02)',
     hoverBackgroundStrong: 'rgba(0, 0, 0, 0.04)',
     inputBackground: 'rgba(0, 0, 0, 0.03)',
@@ -137,8 +137,8 @@ const lightTheme: ThemeConfig = {
     activeText: '#7c3aed',
     activeBlueText: '#2563eb',
     
-    // Border colors
-    border: 'rgba(107, 114, 128, 0.3)',
+    // Border colors - Very subtle for polished look
+    border: 'rgba(0, 0, 0, 0.08)', // Reduced opacity for softer edges
     borderFocused: 'rgba(107, 114, 128, 0.4)',
     
     // Accent colors

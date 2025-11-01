@@ -13,7 +13,10 @@ export function UpcomingEventsWidget({ colors }: UpcomingEventsWidgetProps) {
       className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-hidden"
       style={{
         background: colors.cardBackground,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         border: `1px solid ${colors.border}`,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)',
       }}
     >
       <div className="flex items-center justify-between mb-3">
