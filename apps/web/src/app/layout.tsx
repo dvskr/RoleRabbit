@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -35,15 +36,29 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = cookies();
+  const cookieTheme = cookieStore.get('themeMode')?.value;
+  const initialTheme = cookieTheme === 'light' || cookieTheme === 'dark' ? cookieTheme : 'dark';
+  const initialBodyBackground = initialTheme === 'light' ? '#ffffff' : '#0f172a';
+
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${inter.variable} ${initialTheme}`.trim()}
+      data-theme={initialTheme}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var theme = localStorage.getItem('themeMode');
+                  var match = document.cookie.match(/(?:^|;\\s*)themeMode=(light|dark)(?:;|$)/);
+                  var theme = match ? match[1] : null;
+                  if (!theme) {
+                    theme = localStorage.getItem('themeMode');
+                  }
                   if (!theme) {
                     var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
                     theme = prefersDark ? 'dark' : 'light';
@@ -53,11 +68,7 @@ export default function RootLayout({
                     document.documentElement.classList.add(theme);
                     document.documentElement.setAttribute('data-theme', theme);
                     // Set body background immediately to prevent flash
-                    if (theme === 'light') {
-                      document.body.style.backgroundColor = '#ffffff';
-                    } else {
-                      document.body.style.backgroundColor = '#0f172a';
-                    }
+                    document.body.style.backgroundColor = theme === 'light' ? '#ffffff' : '#0f172a';
                   }
                 } catch (e) {}
               })();
@@ -65,9 +76,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body style={{ margin: 0, padding: 0, backgroundColor: '#0f172a' }} suppressHydrationWarning>
+      <body
+        style={{ margin: 0, padding: 0, backgroundColor: initialBodyBackground }}
+        suppressHydrationWarning
+      >
         <GlobalErrorBoundary level="page">
-          <ThemeProvider>
+          <ThemeProvider initialThemeMode={initialTheme}>
             <AuthProvider>
               <ProfileProvider>
                 <div id="root">

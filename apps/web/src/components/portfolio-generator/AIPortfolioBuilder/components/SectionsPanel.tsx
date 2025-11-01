@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Plus } from 'lucide-react';
 import type { PortfolioSection, ThemeColors } from '../types/aiPortfolioBuilder';
@@ -29,12 +31,20 @@ export function SectionsPanel({
         </p>
         <button
           onClick={onAdd}
-          className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2"
+          className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
           style={{
-            background: `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`,
+            background: colors.badgeSuccessBg,
+            border: `1px solid ${colors.badgeSuccessBorder}`,
+            color: colors.badgeSuccessText,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.badgeSuccessBorder;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = colors.badgeSuccessBg;
           }}
         >
-          <Plus size={16} />
+          <Plus size={16} strokeWidth={2} style={{ color: colors.badgeSuccessText }} />
           Add Section
         </button>
       </div>

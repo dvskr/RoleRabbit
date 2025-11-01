@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Eye, Monitor, Tablet, Smartphone, ExternalLink } from 'lucide-react';
 import type { DeviceView, ThemeColors } from '../types/aiPortfolioBuilder';
@@ -10,7 +12,7 @@ interface PreviewPanelProps {
 
 export function PreviewPanel({ deviceView, onDeviceViewChange, colors }: PreviewPanelProps) {
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden" suppressHydrationWarning>
       {/* Preview Header */}
       <div 
         className="px-4 py-3 border-b flex items-center justify-between flex-shrink-0"
@@ -20,7 +22,7 @@ export function PreviewPanel({ deviceView, onDeviceViewChange, colors }: Preview
         }}
       >
         <div className="flex items-center gap-2">
-          <Eye size={18} style={{ color: colors.activeBlueText }} />
+          <Eye size={18} strokeWidth={2} style={{ color: colors.activeBlueText }} />
           <span 
             className="text-sm font-medium"
             style={{ color: colors.primaryText }}
@@ -35,19 +37,19 @@ export function PreviewPanel({ deviceView, onDeviceViewChange, colors }: Preview
               <button
                 key={device}
                 onClick={() => onDeviceViewChange(device)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                  deviceView === device ? 'text-white' : ''
-                }`}
+                className="px-3 py-1.5 rounded text-xs font-medium transition-all"
                 style={{
                   background: deviceView === device
-                    ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`
+                    ? colors.badgeInfoBg
                     : 'transparent',
-                  color: deviceView === device ? 'white' : colors.secondaryText,
+                  color: deviceView === device ? colors.badgeInfoText : colors.secondaryText,
+                  border: deviceView === device ? `1px solid ${colors.badgeInfoBorder}` : 'none',
                 }}
+                suppressHydrationWarning
               >
-                {device === 'desktop' && <Monitor size={14} />}
-                {device === 'tablet' && <Tablet size={14} />}
-                {device === 'mobile' && <Smartphone size={14} />}
+                {device === 'desktop' && <Monitor size={14} strokeWidth={2} style={{ color: deviceView === device ? colors.badgeInfoText : colors.secondaryText }} />}
+                {device === 'tablet' && <Tablet size={14} strokeWidth={2} style={{ color: deviceView === device ? colors.badgeInfoText : colors.secondaryText }} />}
+                {device === 'mobile' && <Smartphone size={14} strokeWidth={2} style={{ color: deviceView === device ? colors.badgeInfoText : colors.secondaryText }} />}
               </button>
             ))}
           </div>
@@ -68,7 +70,7 @@ export function PreviewPanel({ deviceView, onDeviceViewChange, colors }: Preview
               e.currentTarget.style.background = colors.inputBackground;
             }}
           >
-            <ExternalLink size={14} />
+            <ExternalLink size={14} strokeWidth={2} style={{ color: colors.primaryText }} />
             Open in New Tab
           </button>
         </div>
@@ -91,10 +93,12 @@ export function PreviewPanel({ deviceView, onDeviceViewChange, colors }: Preview
           <div 
             className="w-32 h-32 rounded-lg flex items-center justify-center mb-4"
             style={{
-              background: `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`,
+              background: colors.badgePurpleBg,
+              border: `1px solid ${colors.badgePurpleBorder}`,
             }}
+            suppressHydrationWarning
           >
-            <Eye size={48} className="text-white" />
+            <Eye size={48} strokeWidth={2} style={{ color: colors.badgePurpleText }} />
           </div>
           <p 
             className="text-lg font-medium mb-2"

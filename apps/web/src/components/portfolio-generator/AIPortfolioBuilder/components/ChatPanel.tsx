@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Send } from 'lucide-react';
 import type { Message, QuickActionType, ThemeColors } from '../types/aiPortfolioBuilder';
@@ -22,9 +24,9 @@ export function ChatPanel({
   colors
 }: ChatPanelProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" suppressHydrationWarning>
       {/* Chat Messages */}
-      <div className="space-y-4 max-h-[400px] overflow-y-auto">
+      <div className="space-y-4 max-h-[400px] overflow-y-auto" suppressHydrationWarning>
         {messages.map((message, index) => (
           <ChatMessage key={index} message={message} colors={colors} />
         ))}
@@ -77,12 +79,20 @@ export function ChatPanel({
             onClick={onSendMessage}
             className="p-2 rounded-lg transition-all"
             style={{
-              background: `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`,
+              background: colors.badgeInfoBg,
+              border: `1px solid ${colors.badgeInfoBorder}`,
+              color: colors.badgeInfoText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.badgeInfoBorder;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = colors.badgeInfoBg;
             }}
             title="Send message"
             aria-label="Send message"
           >
-            <Send size={18} className="text-white" />
+            <Send size={18} strokeWidth={2} style={{ color: colors.badgeInfoText }} />
           </button>
         </div>
       </div>

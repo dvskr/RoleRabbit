@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface LogoProps {
   className?: string;
@@ -14,6 +14,8 @@ interface LogoProps {
  * Features glassmorphism aesthetic with animated flames and twinkling stars
  */
 export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const isIconOnly = variant === 'icon';
   const isTextOnly = variant === 'text';
 
@@ -26,9 +28,9 @@ export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps)
   const scale = sizeNumber / viewBoxSize;
 
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
+    <div className={`inline-flex items-center gap-2 ${className}`} suppressHydrationWarning>
       {/* Logo Icon - Rocket */}
-      {!isTextOnly && (
+      {!isTextOnly && mounted && (
         <div className="relative cursor-pointer group">
           {/* Outer Glow Ring */}
           <div 

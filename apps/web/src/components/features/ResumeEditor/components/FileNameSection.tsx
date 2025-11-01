@@ -28,14 +28,15 @@ export default function FileNameSection({
           onClick={() => setResumeFileName(onGenerateSmartFileName())}
           className="p-1.5 rounded-lg transition-all"
           style={{
-            background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-            color: 'white',
+            background: colors.badgePurpleBg,
+            border: `1px solid ${colors.badgePurpleBorder}`,
+            color: colors.badgePurpleText,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = `0 4px 12px ${colors.primaryBlue}40`;
+            e.currentTarget.style.background = colors.badgePurpleBorder;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.background = colors.badgePurpleBg;
           }}
           title="Generate Smart Filename"
         >

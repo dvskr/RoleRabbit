@@ -182,23 +182,17 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+type ThemeProviderProps = {
+  children: ReactNode;
+  initialThemeMode?: 'light' | 'dark';
+};
+
+export function ThemeProvider({ children, initialThemeMode = 'dark' }: ThemeProviderProps) {
   // During SSR, always use dark theme to match server render
   // Client will sync after hydration
   const [isClient, setIsClient] = useState(false);
-  const [themeMode, setThemeModeState] = useState<'light' | 'dark'>(() => {
-    // On server, always return dark to match SSR
-    if (typeof window === 'undefined') return 'dark';
-    // On client, check DOM first (set by script), then localStorage
-    const htmlElement = document.documentElement;
-    if (htmlElement.classList.contains('light')) return 'light';
-    if (htmlElement.classList.contains('dark')) return 'dark';
-    const saved = localStorage.getItem('themeMode');
-    if (saved === 'light' || saved === 'dark') return saved;
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
-    return 'light';
-  });
-  const [theme, setTheme] = useState<ThemeConfig>(darkTheme); // Start with dark, will update on client
+  const [themeMode, setThemeModeState] = useState<'light' | 'dark'>(initialThemeMode);
+  const [theme, setTheme] = useState<ThemeConfig>(initialThemeMode === 'light' ? lightTheme : darkTheme);
 
   // Mark as client-side and sync theme after hydration
   useEffect(() => {
@@ -206,31 +200,31 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Re-read from DOM (set by blocking script) to sync React state
     const htmlElement = document.documentElement;
-    const domTheme = htmlElement.classList.contains('light') ? 'light' : 
-                    htmlElement.classList.contains('dark') ? 'dark' : null;
-    
-    if (domTheme && domTheme !== themeMode) {
-      setThemeModeState(domTheme);
-      setTheme(domTheme === 'dark' ? darkTheme : lightTheme);
-      return;
-    }
-    
-    // If no DOM class, sync with localStorage or system preference
-    if (!domTheme) {
-      const saved = localStorage.getItem('themeMode');
-      const finalTheme = saved === 'light' || saved === 'dark' 
-        ? saved 
-        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-      
-      if (finalTheme !== themeMode) {
-        setThemeModeState(finalTheme);
-        setTheme(finalTheme === 'dark' ? darkTheme : lightTheme);
-      } else {
-        // Even if themeMode matches, ensure theme object is correct
-        setTheme(themeMode === 'dark' ? darkTheme : lightTheme);
-      }
+    const domThemeAttr = htmlElement.getAttribute('data-theme');
+    const domThemeClass = htmlElement.classList.contains('light') ? 'light' :
+                         htmlElement.classList.contains('dark') ? 'dark' : null;
+
+    let finalTheme: 'light' | 'dark' = initialThemeMode;
+
+    if (domThemeAttr === 'light' || domThemeAttr === 'dark') {
+      finalTheme = domThemeAttr;
+    } else if (domThemeClass) {
+      finalTheme = domThemeClass;
     } else {
-      // Ensure theme object matches themeMode
+      const saved = localStorage.getItem('themeMode');
+      if (saved === 'light' || saved === 'dark') {
+        finalTheme = saved;
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        finalTheme = 'dark';
+      } else {
+        finalTheme = 'light';
+      }
+    }
+
+    if (finalTheme !== themeMode) {
+      setThemeModeState(finalTheme);
+      setTheme(finalTheme === 'dark' ? darkTheme : lightTheme);
+    } else {
       setTheme(themeMode === 'dark' ? darkTheme : lightTheme);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,6 +243,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Store in localStorage
     localStorage.setItem('themeMode', themeMode);
+
+    // Store in cookie for SSR hydration
+    document.cookie = `themeMode=${themeMode}; path=/; max-age=31536000; SameSite=Lax`;
   }, [themeMode, isClient]);
 
   // Listen for system theme changes (only on client)

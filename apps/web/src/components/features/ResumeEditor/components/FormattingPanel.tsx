@@ -102,10 +102,10 @@ export default function FormattingPanel({
               className="p-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 background: fontSize === option.value 
-                  ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                  ? colors.badgeInfoBg
                   : colors.inputBackground,
-                color: fontSize === option.value ? 'white' : colors.primaryText,
-                border: fontSize === option.value ? 'none' : `1px solid ${colors.border}`,
+                color: fontSize === option.value ? colors.badgeInfoText : colors.primaryText,
+                border: fontSize === option.value ? `1px solid ${colors.badgeInfoBorder}` : `1px solid ${colors.border}`,
               }}
               onMouseEnter={(e) => {
                 if (fontSize !== option.value) {
@@ -170,10 +170,10 @@ export default function FormattingPanel({
               className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 background: sectionSpacing === option.value 
-                  ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                  ? colors.badgeInfoBg
                   : colors.inputBackground,
-                color: sectionSpacing === option.value ? 'white' : colors.primaryText,
-                border: sectionSpacing === option.value ? 'none' : `1px solid ${colors.border}`,
+                color: sectionSpacing === option.value ? colors.badgeInfoText : colors.primaryText,
+                border: sectionSpacing === option.value ? `1px solid ${colors.badgeInfoBorder}` : `1px solid ${colors.border}`,
               }}
               onMouseEnter={(e) => {
                 if (sectionSpacing !== option.value) {
@@ -203,10 +203,10 @@ export default function FormattingPanel({
               className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 background: margins === option.value 
-                  ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                  ? colors.badgeInfoBg
                   : colors.inputBackground,
-                color: margins === option.value ? 'white' : colors.primaryText,
-                border: margins === option.value ? 'none' : `1px solid ${colors.border}`,
+                color: margins === option.value ? colors.badgeInfoText : colors.primaryText,
+                border: margins === option.value ? `1px solid ${colors.badgeInfoBorder}` : `1px solid ${colors.border}`,
               }}
               onMouseEnter={(e) => {
                 if (margins !== option.value) {
@@ -267,10 +267,10 @@ export default function FormattingPanel({
               className="p-3 rounded-lg text-sm font-medium transition-all"
               style={{
                 background: bulletStyle === option.value 
-                  ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`
+                  ? colors.badgePurpleBg
                   : colors.inputBackground,
-                color: bulletStyle === option.value ? 'white' : colors.primaryText,
-                border: bulletStyle === option.value ? 'none' : `1px solid ${colors.border}`,
+                color: bulletStyle === option.value ? colors.badgePurpleText : colors.primaryText,
+                border: bulletStyle === option.value ? `1px solid ${colors.badgePurpleBorder}` : `1px solid ${colors.border}`,
               }}
               onMouseEnter={(e) => {
                 if (bulletStyle !== option.value) {

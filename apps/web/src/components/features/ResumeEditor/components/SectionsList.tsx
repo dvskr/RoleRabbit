@@ -35,14 +35,15 @@ export default function SectionsList({
           onClick={onShowAddSectionModal}
           className="p-2 rounded-lg transition-all"
           style={{
-            background: `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.primaryBlue})`,
-            color: 'white',
+            background: colors.badgeSuccessBg,
+            border: `1px solid ${colors.badgeSuccessBorder}`,
+            color: colors.badgeSuccessText,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = `0 4px 12px ${colors.badgePurpleText}40`;
+            e.currentTarget.style.background = colors.badgeSuccessBorder;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.background = colors.badgeSuccessBg;
           }}
           title="Add Custom Section"
         >

@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import type { TabType, ThemeColors } from '../types/aiPortfolioBuilder';
 
@@ -20,14 +22,13 @@ export function Tabs({ activeTab, onTabChange, colors }: TabsProps) {
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-            activeTab === tab.id ? 'text-white' : ''
-          }`}
+          className="flex-1 px-4 py-3 text-sm font-medium transition-all"
           style={{
             background: activeTab === tab.id
-              ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`
+              ? colors.badgeInfoBg
               : 'transparent',
-            color: activeTab === tab.id ? 'white' : colors.secondaryText,
+            color: activeTab === tab.id ? colors.badgeInfoText : colors.secondaryText,
+            borderBottom: activeTab === tab.id ? `2px solid ${colors.badgeInfoBorder}` : 'none',
           }}
         >
           {tab.label}

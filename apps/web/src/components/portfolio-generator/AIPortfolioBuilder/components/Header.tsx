@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Zap } from 'lucide-react';
 import type { Step, ThemeColors } from '../types/aiPortfolioBuilder';
@@ -22,10 +24,11 @@ export function Header({ currentStep, onStepChange, colors }: HeaderProps) {
         <div 
           className="p-2 rounded-lg"
           style={{
-            background: `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`,
+            background: colors.badgePurpleBg,
+            border: `1px solid ${colors.badgePurpleBorder}`,
           }}
         >
-          <Zap size={20} className="text-white" />
+          <Zap size={20} strokeWidth={2} style={{ color: colors.badgePurpleText }} />
         </div>
         <div>
           <h1 

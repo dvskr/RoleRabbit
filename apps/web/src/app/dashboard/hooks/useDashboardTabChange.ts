@@ -17,7 +17,8 @@ export function useDashboardTabChange(
   setActiveTab: (tab: DashboardTab) => void
 ): UseDashboardTabChangeReturn {
   const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(mapTabName(tab));
+    const normalized = mapTabName(tab);
+    setActiveTab(normalized);
   }, [setActiveTab]);
 
   return {
