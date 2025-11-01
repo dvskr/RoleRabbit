@@ -1,9 +1,8 @@
 import { useCallback, useState } from 'react';
 import { AccessLog } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
-import { DEMO_ACCESS_LOGS } from '../constants/demoData';
 
-export const useAccessTracking = (initialLogs: AccessLog[] = DEMO_ACCESS_LOGS) => {
+export const useAccessTracking = (initialLogs: AccessLog[] = []) => {
   const [accessLogs] = useState<AccessLog[]>(initialLogs);
 
   const handleLogAccess = useCallback((fileId: string, action: 'view' | 'download' | 'share' | 'edit' | 'delete') => {

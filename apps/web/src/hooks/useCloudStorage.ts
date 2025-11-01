@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { FileType, SortBy, ViewMode, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
-import { DEMO_CREDENTIALS, DEMO_CREDENTIAL_REMINDERS, DEMO_CLOUD_INTEGRATIONS } from './useCloudStorage/constants/demoData';
 import { DEFAULT_STORAGE_USED, DEFAULT_STORAGE_LIMIT } from './useCloudStorage/constants/defaults';
 import { filterAndSortFiles } from './useCloudStorage/utils/fileFiltering';
 import { useFileOperations } from './useCloudStorage/hooks/useFileOperations';
@@ -51,8 +50,8 @@ export const useCloudStorage = () => {
   const { folders, selectedFolderId, setSelectedFolderId } = folderOps;
 
   // Credential management
-  const [credentials, setCredentials] = useState<CredentialInfo[]>(DEMO_CREDENTIALS);
-  const [credentialReminders, setCredentialReminders] = useState<CredentialReminder[]>(DEMO_CREDENTIAL_REMINDERS);
+  const [credentials, setCredentials] = useState<CredentialInfo[]>([]);
+  const [credentialReminders, setCredentialReminders] = useState<CredentialReminder[]>([]);
 
   // Load credentials from API on mount
   useEffect(() => {
@@ -65,6 +64,8 @@ export const useCloudStorage = () => {
         
         if (credentialsRes && credentialsRes.credentials) {
           setCredentials(credentialsRes.credentials);
+        } else {
+          setCredentials([]);
         }
         
         if (remindersRes && remindersRes.credentials) {
@@ -81,10 +82,13 @@ export const useCloudStorage = () => {
               : 'low' as 'high' | 'medium' | 'low'
           }));
           setCredentialReminders(reminders);
+        } else {
+          setCredentialReminders([]);
         }
       } catch (error) {
         logger.error('Failed to load credentials from API:', error);
-        // Keep demo data as fallback
+        setCredentials([]);
+        setCredentialReminders([]);
       }
     };
     loadCredentials();
@@ -94,7 +98,7 @@ export const useCloudStorage = () => {
   const accessTracking = useAccessTracking();
 
   // Cloud integrations
-  const [cloudIntegrations] = useState<CloudIntegration[]>(DEMO_CLOUD_INTEGRATIONS);
+  const [cloudIntegrations] = useState<CloudIntegration[]>([]);
 
   // Sharing operations
   const sharingOps = useSharingOperations(files, setFiles);
@@ -112,9 +116,10 @@ export const useCloudStorage = () => {
       filterType,
       sortBy,
       selectedFolderId,
+      showDeleted,
       quickFilters
     });
-  }, [files, searchTerm, filterType, sortBy, selectedFolderId, quickFilters]);
+  }, [files, searchTerm, filterType, sortBy, selectedFolderId, showDeleted, quickFilters]);
 
   const storageInfo: StorageInfo = useMemo(() => ({
     used: storageUsed,

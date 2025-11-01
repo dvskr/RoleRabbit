@@ -5,6 +5,7 @@ export interface FilterOptions {
   filterType: FileType;
   sortBy: SortBy;
   selectedFolderId: string | null;
+  showDeleted?: boolean;
   quickFilters?: {
     starred?: boolean;
     archived?: boolean;
@@ -21,12 +22,20 @@ export const filterAndSortFiles = (
   // Early return if no files
   if (files.length === 0) return [];
 
-  const { searchTerm, filterType, sortBy, selectedFolderId, quickFilters } = options;
+  const { searchTerm, filterType, sortBy, selectedFolderId, quickFilters, showDeleted } = options;
   const searchLower = searchTerm.toLowerCase();
   const hasSearch = searchLower.length > 0;
   
   // Filter files
   let filtered = files.filter(file => {
+    // Recycle bin filter - show only deleted files when showDeleted is true
+    if (showDeleted) {
+      if (!file.deletedAt) return false;
+    } else {
+      // Normal view - hide deleted files
+      if (file.deletedAt) return false;
+    }
+
     // Early exit conditions for performance
     const matchesFilter = filterType === 'all' || file.type === filterType;
     if (!matchesFilter) return false;
@@ -40,7 +49,7 @@ export const filterAndSortFiles = (
     if (quickFilters) {
       if (quickFilters.starred !== undefined && file.isStarred !== quickFilters.starred) return false;
       if (quickFilters.archived !== undefined && file.isArchived !== quickFilters.archived) return false;
-      if (quickFilters.shared !== undefined && file.sharedWith.length > 0 !== quickFilters.shared) return false;
+      if (quickFilters.shared !== undefined && (file.sharedWith?.length || 0) > 0 !== quickFilters.shared) return false;
       if (quickFilters.public !== undefined && file.isPublic !== quickFilters.public) return false;
       
       // Recent filter: files modified in last 7 days
@@ -73,10 +82,10 @@ export const filterAndSortFiles = (
         )) ||
         
         // Shared with search
-        file.sharedWith.some(share => 
+        (file.sharedWith && file.sharedWith.some(share => 
           share.userName.toLowerCase().includes(searchLower) ||
           share.userEmail.toLowerCase().includes(searchLower)
-        );
+        ));
       
       if (!matchesSearch) return false;
     }

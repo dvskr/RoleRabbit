@@ -320,7 +320,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           </div>
 
           {/* Current Shares */}
-          {file.sharedWith.length > 0 && (
+          {file.sharedWith && file.sharedWith.length > 0 && (
             <div>
               <label 
                 className="block text-sm font-medium mb-2"

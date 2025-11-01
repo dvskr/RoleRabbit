@@ -16,7 +16,7 @@ export const SharedUsers: React.FC<SharedUsersProps> = ({
   colors,
   maxVisible = 3,
 }) => {
-  if (sharedWith.length === 0) return null;
+  if (!sharedWith || sharedWith.length === 0) return null;
 
   return (
     <div className="mb-2">

@@ -3,7 +3,6 @@ import { ResumeFile } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 import { createDefaultFile } from '../utils/fileOperations';
-import { DEMO_FILES } from '../constants/demoData';
 
 export const useFileOperations = () => {
   const [files, setFiles] = useState<ResumeFile[]>([]);
@@ -16,11 +15,12 @@ export const useFileOperations = () => {
       const response = await apiService.getCloudFiles(undefined, includeDeleted);
       if (response && response.files) {
         setFiles(response.files as ResumeFile[]);
+      } else {
+        setFiles([]);
       }
     } catch (error) {
       logger.error('Failed to load files from API:', error);
-      // Fallback to demo data
-      setFiles(DEMO_FILES);
+      setFiles([]);
     } finally {
       setIsLoading(false);
     }
@@ -43,15 +43,23 @@ export const useFileOperations = () => {
 
   const handleDeleteFiles = useCallback(async () => {
     try {
-      // Delete from backend
+      // Delete from backend (soft delete)
       await Promise.all(selectedFiles.map(id => apiService.deleteCloudFile(id)));
-      // Update local state
-      setFiles(prev => prev.filter(file => !selectedFiles.includes(file.id)));
+      // Update local state - set deletedAt instead of removing
+      setFiles(prev => prev.map(file => 
+        selectedFiles.includes(file.id) 
+          ? { ...file, deletedAt: new Date().toISOString() } 
+          : file
+      ));
       setSelectedFiles([]);
     } catch (error) {
       logger.error('Failed to delete files:', error);
       // Fallback to local state update
-      setFiles(prev => prev.filter(file => !selectedFiles.includes(file.id)));
+      setFiles(prev => prev.map(file => 
+        selectedFiles.includes(file.id) 
+          ? { ...file, deletedAt: new Date().toISOString() } 
+          : file
+      ));
       setSelectedFiles([]);
     }
   }, [selectedFiles]);
@@ -166,31 +174,31 @@ export const useFileOperations = () => {
     }
   }, [files]);
 
-  // Single file delete handler
+  // Single file delete handler (soft delete - moves to recycle bin)
   const handleDeleteFile = useCallback(async (fileId: string) => {
     try {
       await apiService.deleteCloudFile(fileId);
-      setFiles(prev => prev.filter(file => file.id !== fileId));
+      // Update local state to set deletedAt
+      setFiles(prev => prev.map(file => 
+        file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
+      ));
     } catch (error) {
       logger.error('Failed to delete file:', error);
       // Fallback to local state update
-      setFiles(prev => prev.filter(file => file.id !== fileId));
+      setFiles(prev => prev.map(file => 
+        file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
+      ));
     }
   }, []);
 
   // Restore deleted file from recycle bin
   const handleRestoreFile = useCallback(async (fileId: string) => {
     try {
-      const response = await apiService.restoreCloudFile(fileId);
-      if (response && response.file) {
-        setFiles(prev => prev.map(file => 
-          file.id === fileId ? { ...file, deletedAt: undefined } : file
-        ));
-      } else {
-        setFiles(prev => prev.map(file => 
-          file.id === fileId ? { ...file, deletedAt: undefined } : file
-        ));
-      }
+      await apiService.restoreCloudFile(fileId);
+      // Update local state to remove deletedAt
+      setFiles(prev => prev.map(file => 
+        file.id === fileId ? { ...file, deletedAt: undefined } : file
+      ));
     } catch (error) {
       logger.error('Failed to restore file:', error);
       // Fallback to local state update

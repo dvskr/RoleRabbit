@@ -40,6 +40,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 45,
     isStarred: true,
     isArchived: false,
+    deletedAt: undefined,
     description: 'My latest software engineer resume with React and Node.js experience'
   },
   {
@@ -59,6 +60,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 23,
     isStarred: false,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Product management resume highlighting strategic thinking and team leadership'
   },
   {
@@ -78,6 +80,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 892,
     isStarred: true,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Clean and modern resume template for professionals'
   },
   {
@@ -96,6 +99,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 2,
     isStarred: false,
     isArchived: true,
+    deletedAt: undefined,
     description: 'Backup of all files from October 15th'
   },
   {
@@ -126,6 +130,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 18,
     isStarred: false,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Data science resume with ML and Python expertise'
   },
   {
@@ -144,6 +149,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 234,
     isStarred: true,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Creative resume template for tech positions'
   },
   {
@@ -162,6 +168,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 12,
     isStarred: false,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Customized cover letter for software engineer positions'
   },
   {
@@ -180,6 +187,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 32,
     isStarred: true,
     isArchived: false,
+    deletedAt: undefined,
     description: 'AWS Cloud Practitioner certification document',
     credentialInfo: {
       credentialType: 'certification',
@@ -208,6 +216,7 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 5,
     isStarred: false,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Official university transcript with degree confirmation'
   },
   {
@@ -226,7 +235,28 @@ export const DEMO_FILES: ResumeFile[] = [
     viewCount: 267,
     isStarred: true,
     isArchived: false,
+    deletedAt: undefined,
     description: 'Collection of web development projects and demos'
+  },
+  {
+    id: '11',
+    name: 'DevOps Engineer Resume',
+    type: 'resume',
+    size: '1.2 MB',
+    lastModified: '2024-10-10',
+    isPublic: false,
+    tags: ['devops', 'infrastructure'],
+    version: 1,
+    owner: 'john.doe@example.com',
+    folderId: undefined,
+    sharedWith: [],
+    comments: [],
+    downloadCount: 0,
+    viewCount: 5,
+    isStarred: false,
+    isArchived: false,
+    deletedAt: '2024-10-22T12:00:00Z',
+    description: 'DevOps engineer resume with infrastructure expertise'
   }
 ];
 

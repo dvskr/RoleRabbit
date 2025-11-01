@@ -2,14 +2,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { Folder, ResumeFile } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
 import { createDefaultFolder, updateFolderFileCounts } from '../utils/folderOperations';
-import { DEMO_FOLDERS } from '../constants/demoData';
 import apiService from '../../../services/apiService';
 
 export const useFolderOperations = (
   files: ResumeFile[],
   setFiles: React.Dispatch<React.SetStateAction<ResumeFile[]>>
 ) => {
-  const [folders, setFolders] = useState<Folder[]>(DEMO_FOLDERS);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   // Load folders from API on mount
@@ -19,10 +18,12 @@ export const useFolderOperations = (
         const response = await apiService.getFolders();
         if (response && response.folders) {
           setFolders(response.folders);
+        } else {
+          setFolders([]);
         }
       } catch (error) {
         logger.error('Failed to load folders from API:', error);
-        // Keep demo data as fallback
+        setFolders([]);
       }
     };
     loadFolders();

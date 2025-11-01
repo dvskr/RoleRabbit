@@ -8,6 +8,41 @@ const prisma = new PrismaClient();
 const logger = require('./logger');
 
 /**
+ * Transform Prisma file object to frontend-friendly format
+ * Maps database fields to frontend expected fields
+ */
+function transformFile(file) {
+  // Get owner email from user relation or fallback to userId
+  const owner = file.user?.email || file.userId || 'unknown@example.com';
+  
+  return {
+    ...file,
+    owner: owner, // Add owner field for frontend
+    sharedWith: file.shares || [],
+    comments: file.comments || [],
+    tags: file.tags ? (typeof file.tags === 'string' ? file.tags.split(',').map(t => t.trim()) : file.tags) : [],
+    size: typeof file.size === 'number' ? formatBytes(file.size) : file.size,
+    lastModified: file.updatedAt || file.createdAt,
+    version: file.version || 1,
+    downloadCount: file.downloadCount || 0,
+    viewCount: file.viewCount || 0,
+    isStarred: file.isStarred || false,
+    isArchived: file.isArchived || false
+  };
+}
+
+/**
+ * Format bytes to human-readable size
+ */
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
  * Get all cloud files for a user
  * @param {string} userId - User ID
  * @returns {Promise<Array>} Array of cloud files
@@ -39,7 +74,8 @@ async function getCloudFilesByUserId(userId, includeDeleted = false) {
         createdAt: 'desc'
       }
     });
-    return files;
+    // Transform for frontend compatibility
+    return files.map(transformFile);
   } catch (error) {
     logger.error('Error fetching cloud files:', error);
     throw error;
@@ -68,7 +104,7 @@ async function getCloudFileById(fileId) {
         }
       }
     });
-    return file;
+    return file ? transformFile(file) : null;
   } catch (error) {
     logger.error('Error fetching cloud file:', error);
     throw error;
@@ -111,7 +147,7 @@ async function createCloudFile(userId, fileData) {
         }
       }
     });
-    return file;
+    return transformFile(file);
   } catch (error) {
     logger.error('Error creating cloud file:', error);
     throw error;
@@ -154,7 +190,7 @@ async function updateCloudFile(fileId, updates) {
         }
       }
     });
-    return file;
+    return transformFile(file);
   } catch (error) {
     logger.error('Error updating cloud file:', error);
     throw error;
@@ -227,7 +263,7 @@ async function restoreCloudFile(fileId) {
         }
       }
     });
-    return file;
+    return transformFile(file);
   } catch (error) {
     logger.error('Error restoring cloud file:', error);
     throw error;
@@ -268,7 +304,8 @@ async function getCloudFilesByFolder(userId, folderId, includeDeleted = false) {
         createdAt: 'desc'
       }
     });
-    return files;
+    // Transform for frontend compatibility
+    return files.map(transformFile);
   } catch (error) {
     logger.error('Error fetching cloud files by folder:', error);
     throw error;
