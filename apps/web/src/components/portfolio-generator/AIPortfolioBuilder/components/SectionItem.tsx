@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { GripVertical, Eye, EyeOff, Settings, X } from 'lucide-react';
 import type { PortfolioSection, ThemeColors } from '../types/aiPortfolioBuilder';
@@ -16,9 +18,11 @@ export function SectionItem({ section, onToggleVisibility, onDelete, colors }: S
       style={{
         background: colors.inputBackground,
       }}
+      suppressHydrationWarning
     >
       <GripVertical 
-        size={16} 
+        size={16}
+        strokeWidth={2}
         style={{ 
           color: colors.tertiaryText,
           cursor: 'grab'
@@ -38,11 +42,12 @@ export function SectionItem({ section, onToggleVisibility, onDelete, colors }: S
             color: section.visible ? colors.activeBlueText : colors.tertiaryText,
           }}
           title={section.visible ? 'Hide section' : 'Show section'}
+          suppressHydrationWarning
         >
           {section.visible ? (
-            <Eye size={16} />
+            <Eye size={16} strokeWidth={2} style={{ color: section.visible ? colors.activeBlueText : colors.tertiaryText }} />
           ) : (
-            <EyeOff size={16} />
+            <EyeOff size={16} strokeWidth={2} style={{ color: colors.tertiaryText }} />
           )}
         </button>
         <button
@@ -52,7 +57,7 @@ export function SectionItem({ section, onToggleVisibility, onDelete, colors }: S
           }}
           title="Settings"
         >
-          <Settings size={16} />
+          <Settings size={16} strokeWidth={2} style={{ color: colors.tertiaryText }} />
         </button>
         {!section.required && (
           <button
@@ -63,7 +68,7 @@ export function SectionItem({ section, onToggleVisibility, onDelete, colors }: S
             }}
             title="Delete"
           >
-            <X size={16} />
+            <X size={16} strokeWidth={2} style={{ color: colors.errorRed }} />
           </button>
         )}
       </div>

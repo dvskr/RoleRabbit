@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 // Import types
@@ -18,8 +18,13 @@ import { SectionsPanel } from './AIPortfolioBuilder/components/SectionsPanel';
 import { PreviewPanel } from './AIPortfolioBuilder/components/PreviewPanel';
 
 export default function AIPortfolioBuilder({ onClose, profileData }: AIPortfolioBuilderProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
   const colors = theme.colors;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Use custom hook for all state management
   const {
@@ -46,8 +51,12 @@ export default function AIPortfolioBuilder({ onClose, profileData }: AIPortfolio
     addSection
   } = useAIPortfolioBuilder({ profileData });
 
+  if (!isMounted) {
+    return null;
+  }
+
   return (
-    <div className="h-full flex flex-col" style={{ background: colors.background }}>
+    <div className="h-full flex flex-col" suppressHydrationWarning style={{ background: colors.background }}>
       {/* Header with Progress Steps */}
       <Header
         currentStep={currentStep}
@@ -73,7 +82,7 @@ export default function AIPortfolioBuilder({ onClose, profileData }: AIPortfolio
           />
 
           {/* Tab Content */}
-          <div className="p-4">
+          <div className="p-4" suppressHydrationWarning>
             {activeTab === 'ai-chat' && (
               <ChatPanel
                 messages={messages}

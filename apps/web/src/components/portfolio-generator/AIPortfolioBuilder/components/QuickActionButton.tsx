@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Upload, User, Sparkles } from 'lucide-react';
 import type { QuickActionType, ThemeColors } from '../types/aiPortfolioBuilder';
@@ -33,7 +35,7 @@ export function QuickActionButton({ action, onClick, colors }: QuickActionButton
         e.currentTarget.style.background = colors.inputBackground;
       }}
     >
-      <Icon size={18} style={{ color: colors.activeBlueText }} />
+      <Icon size={18} strokeWidth={2} style={{ color: colors.activeBlueText }} />
       <span className="text-sm font-medium">{config.label}</span>
     </button>
   );

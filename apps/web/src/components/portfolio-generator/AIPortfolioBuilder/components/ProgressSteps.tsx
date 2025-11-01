@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import type { Step, StepConfig, ThemeColors } from '../types/aiPortfolioBuilder';
 import { STEPS } from '../constants/aiPortfolioBuilder';
@@ -21,18 +23,13 @@ export function ProgressSteps({ currentStep, onStepClick, colors }: ProgressStep
                 onStepClick(step.id);
               }
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              step.id === currentStep
-                ? 'text-white shadow-md'
-                : index < currentStepIndex
-                ? 'opacity-60'
-                : 'opacity-40'
-            }`}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
               background: step.id === currentStep
-                ? `linear-gradient(to right, ${colors.badgePurpleText}, ${colors.activeBlueText})`
+                ? colors.badgeInfoBg
                 : 'transparent',
-              color: step.id === currentStep ? 'white' : colors.secondaryText,
+              color: step.id === currentStep ? colors.badgeInfoText : index < currentStepIndex ? colors.secondaryText : colors.tertiaryText,
+              border: step.id === currentStep ? `1px solid ${colors.badgeInfoBorder}` : '1px solid transparent',
             }}
           >
             {step.label}
