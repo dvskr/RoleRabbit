@@ -8,10 +8,13 @@ export interface FileCardProps {
   file: ResumeFile;
   isSelected: boolean;
   viewMode: 'grid' | 'list' | 'compact';
+  showDeleted?: boolean;
   onSelect: (fileId: string) => void;
   onDownload: (file: ResumeFile, format?: 'pdf' | 'doc') => void;
   onShare: (file: ResumeFile) => void;
   onDelete: (fileId: string) => void;
+  onRestore?: (fileId: string) => void;
+  onPermanentlyDelete?: (fileId: string) => void;
   onTogglePublic: (fileId: string) => void;
   onEdit: (fileId: string) => void;
   onStar: (fileId: string) => void;

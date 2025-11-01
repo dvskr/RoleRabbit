@@ -6,6 +6,10 @@ Testing strategies and quality assurance for RoleReady.
 
 ---
 
+> **Feature-specific testing documentation**: See component folders (11+, 12+) in the docs root directory.
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests

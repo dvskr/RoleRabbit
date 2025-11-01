@@ -6,7 +6,11 @@ Technical reference and troubleshooting guides.
 
 ---
 
-## Troubleshooting
+> **Feature-specific reference documentation**: See component folders (11+, 12+) in the docs root directory.
+
+---
+
+## General Troubleshooting
 
 See: [Troubleshooting Guide](./troubleshooting.md)
 

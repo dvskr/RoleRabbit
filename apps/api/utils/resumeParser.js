@@ -62,7 +62,9 @@ async function parseWithAI(text) {
     "position": "Job title",
     "period": "Start - End dates",
     "location": "City, State",
-    "description": "Job description"
+    "description": "Job description",
+    "client": "Client name (if applicable for consulting/freelance work)",
+    "projectType": "Full-time | Part-time | Contract | Freelance | Consulting | Client Project"
   }],
   "skills": ["skill1", "skill2", "skill3"],
   "education": [{

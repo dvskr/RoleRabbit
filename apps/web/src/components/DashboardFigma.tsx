@@ -30,6 +30,7 @@ import { QuickActionsWidget } from './DashboardFigma/components/QuickActionsWidg
 import { TodosWidget } from './DashboardFigma/components/TodosWidget';
 import { IntelligentAlertsWidget } from './DashboardFigma/components/IntelligentAlertsWidget';
 import { ProgressMetricsWidget } from './DashboardFigma/components/ProgressMetricsWidget';
+import { ProfileAnalyticsWidget } from './DashboardFigma/components/ProfileAnalyticsWidget';
 
 export default function DashboardFigma({ 
   onNavigateToTab,
@@ -66,8 +67,11 @@ export default function DashboardFigma({
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
-          {/* Left Side - Premium Features + Activity Feed + Events */}
+          {/* Left Side - Profile Analytics + Premium Features + Activity Feed + Events */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3 sm:gap-4">
+            {/* Profile Analytics Widget */}
+            <ProfileAnalyticsWidget />
+
             {/* Premium Features Widget */}
             <PremiumFeaturesWidget colors={colors} />
 

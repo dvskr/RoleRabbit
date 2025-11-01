@@ -12,11 +12,28 @@ const logger = require('./logger');
  * @param {string} userId - User ID
  * @returns {Promise<Array>} Array of cloud files
  */
-async function getCloudFilesByUserId(userId) {
+async function getCloudFilesByUserId(userId, includeDeleted = false) {
   try {
+    const whereClause = {
+      userId: userId
+    };
+    
+    // Only show non-deleted files by default
+    if (!includeDeleted) {
+      whereClause.deletedAt = null;
+    }
+    
     const files = await prisma.cloudFile.findMany({
-      where: {
-        userId: userId
+      where: whereClause,
+      include: {
+        shares: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -39,6 +56,16 @@ async function getCloudFileById(fileId) {
     const file = await prisma.cloudFile.findUnique({
       where: {
         id: fileId
+      },
+      include: {
+        shares: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        }
       }
     });
     return file;
@@ -59,17 +86,29 @@ async function createCloudFile(userId, fileData) {
     const file = await prisma.cloudFile.create({
       data: {
         userId,
-        fileName: fileData.fileName || 'untitled',
+        name: fileData.name || fileData.fileName || 'untitled',
+        type: fileData.type || 'document',
         size: fileData.size || 0,
         contentType: fileData.contentType || 'application/octet-stream',
         data: typeof fileData.data === 'string' 
           ? fileData.data 
           : JSON.stringify(fileData.data || ''),
-        folder: fileData.folder,
+        folderId: fileData.folderId,
         tags: fileData.tags,
         description: fileData.description,
         isPublic: fileData.isPublic || false,
-        isStarred: fileData.isStarred || false
+        isStarred: fileData.isStarred || false,
+        isArchived: fileData.isArchived || false
+      },
+      include: {
+        shares: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        }
       }
     });
     return file;
@@ -103,7 +142,17 @@ async function updateCloudFile(fileId, updates) {
       where: {
         id: fileId
       },
-      data: cleanUpdates
+      data: cleanUpdates,
+      include: {
+        shares: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        }
+      }
     });
     return file;
   } catch (error) {
@@ -113,15 +162,18 @@ async function updateCloudFile(fileId, updates) {
 }
 
 /**
- * Delete a cloud file
+ * Soft delete a cloud file (moves to recycle bin)
  * @param {string} fileId - File ID
  * @returns {Promise<boolean>} Success status
  */
 async function deleteCloudFile(fileId) {
   try {
-    await prisma.cloudFile.delete({
+    await prisma.cloudFile.update({
       where: {
         id: fileId
+      },
+      data: {
+        deletedAt: new Date()
       }
     });
     return true;
@@ -132,17 +184,85 @@ async function deleteCloudFile(fileId) {
 }
 
 /**
+ * Permanently delete a cloud file
+ * @param {string} fileId - File ID
+ * @returns {Promise<boolean>} Success status
+ */
+async function permanentlyDeleteCloudFile(fileId) {
+  try {
+    await prisma.cloudFile.delete({
+      where: {
+        id: fileId
+      }
+    });
+    return true;
+  } catch (error) {
+    logger.error('Error permanently deleting cloud file:', error);
+    throw error;
+  }
+}
+
+/**
+ * Restore a deleted cloud file from recycle bin
+ * @param {string} fileId - File ID
+ * @returns {Promise<Object>} Restored cloud file
+ */
+async function restoreCloudFile(fileId) {
+  try {
+    const file = await prisma.cloudFile.update({
+      where: {
+        id: fileId
+      },
+      data: {
+        deletedAt: null
+      },
+      include: {
+        shares: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        }
+      }
+    });
+    return file;
+  } catch (error) {
+    logger.error('Error restoring cloud file:', error);
+    throw error;
+  }
+}
+
+/**
  * Get cloud files by folder
  * @param {string} userId - User ID
  * @param {string} folder - Folder name
  * @returns {Promise<Array>} Array of cloud files
  */
-async function getCloudFilesByFolder(userId, folder) {
+async function getCloudFilesByFolder(userId, folderId, includeDeleted = false) {
   try {
+    const whereClause = {
+      userId: userId,
+      folderId: folderId
+    };
+    
+    // Only show non-deleted files by default
+    if (!includeDeleted) {
+      whereClause.deletedAt = null;
+    }
+    
     const files = await prisma.cloudFile.findMany({
-      where: {
-        userId: userId,
-        folder: folder
+      where: whereClause,
+      include: {
+        shares: true,
+        folder: {
+          select: {
+            id: true,
+            name: true,
+            color: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -161,6 +281,8 @@ module.exports = {
   createCloudFile,
   updateCloudFile,
   deleteCloudFile,
+  permanentlyDeleteCloudFile,
+  restoreCloudFile,
   getCloudFilesByFolder
 };
 

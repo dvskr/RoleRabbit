@@ -1,5 +1,5 @@
 // Modal constants
-export const MODAL_BACKDROP_STYLE = 'rgba(0, 0, 0, 0.5)';
+export const MODAL_BACKDROP_STYLE = 'rgba(0, 0, 0, 0.85)';
 export const MODAL_MAX_WIDTH = 'max-w-md';
 
 // Download format options

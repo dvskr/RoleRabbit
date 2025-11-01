@@ -58,7 +58,7 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
   return (
     <div 
       className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto"
-      style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}
     >
       <div 
         className="rounded-lg p-4 w-full max-w-lg my-auto"

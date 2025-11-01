@@ -34,14 +34,33 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
-      style={{ background: MODAL_BACKDROP_STYLE }}
+      className="fixed inset-0 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+      style={{ 
+        background: 'rgba(0, 0, 0, 0.75)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div 
         className={`rounded-2xl p-6 w-full ${MODAL_MAX_WIDTH}`}
         style={{
           background: colors.cardBackground,
           border: `1px solid ${colors.border}`,
+          position: 'relative',
+          zIndex: 1,
+        }}
+        onClick={(e) => {
+          // Prevent clicks inside modal from closing it
+          e.stopPropagation();
         }}
       >
         <div className="flex items-center justify-between mb-6">

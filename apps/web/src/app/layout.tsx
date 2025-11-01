@@ -36,8 +36,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body style={{ margin: 0, padding: 0 }}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('themeMode');
+                  if (!theme) {
+                    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    theme = prefersDark ? 'dark' : 'light';
+                  }
+                  if (theme === 'light' || theme === 'dark') {
+                    document.documentElement.classList.remove('light', 'dark');
+                    document.documentElement.classList.add(theme);
+                    document.documentElement.setAttribute('data-theme', theme);
+                    // Set body background immediately to prevent flash
+                    if (theme === 'light') {
+                      document.body.style.backgroundColor = '#ffffff';
+                    } else {
+                      document.body.style.backgroundColor = '#0f172a';
+                    }
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#0f172a' }} suppressHydrationWarning>
         <GlobalErrorBoundary level="page">
           <ThemeProvider>
             <AuthProvider>

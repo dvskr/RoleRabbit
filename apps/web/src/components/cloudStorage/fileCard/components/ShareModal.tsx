@@ -43,43 +43,41 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   return (
     <div 
       className="fixed inset-0 flex items-center justify-center z-50 p-4"
-      style={{ background: MODAL_OVERLAY_STYLE }}
+      style={{ 
+        background: 'rgba(0, 0, 0, 0.75)', 
+        backdropFilter: 'blur(8px)'
+      }}
     >
       <div 
-        className="rounded-xl p-6 w-full max-w-md"
+        className="rounded-xl p-5 w-full max-w-sm shadow-2xl"
         style={{
           background: colors.cardBackground,
           border: `1px solid ${colors.border}`,
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)'
         }}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
             <div 
-              className="w-10 h-10 rounded-lg flex items-center justify-center"
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
                 background: colors.badgeSuccessBg,
               }}
             >
-              <Share2 size={20} style={{ color: colors.successGreen }} />
+              <Share2 size={16} style={{ color: colors.successGreen }} />
             </div>
             <div>
               <h2 
-                className="text-xl font-semibold"
+                className="text-lg font-semibold"
                 style={{ color: colors.primaryText }}
               >
                 {SHARE_MODAL.TITLE}
               </h2>
-              <p 
-                className="text-sm"
-                style={{ color: colors.secondaryText }}
-              >
-                {file.name}
-              </p>
             </div>
           </div>
               <button
                 onClick={() => fileSharing.setShowShareModal(false)}
-                className="p-2 transition-colors"
+                className="p-1 transition-colors rounded"
                 title="Close share modal"
                 style={{ color: colors.secondaryText }}
                 onMouseEnter={(e) => {
@@ -91,11 +89,20 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                   e.currentTarget.style.background = 'transparent';
                 }}
               >
-                <X size={24} />
+                <X size={18} />
               </button>
         </div>
+        
+        {/* File name shown separately */}
+        <p 
+          className="text-xs mb-4 truncate"
+          style={{ color: colors.secondaryText }}
+          title={file.name}
+        >
+          {file.name}
+        </p>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <label 
               className="block text-sm font-medium mb-2"

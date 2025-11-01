@@ -1,29 +1,60 @@
 import React from 'react';
-import type { Alert } from '../types/dashboardFigma';
+import type { Alert, ThemeColors } from '../types/dashboardFigma';
 
 interface AlertItemProps {
   alert: Alert;
+  colors: ThemeColors;
 }
 
-export function AlertItem({ alert }: AlertItemProps) {
+export function AlertItem({ alert, colors }: AlertItemProps) {
   const Icon = alert.icon;
+  const isUrgent = alert.priority === 'urgent';
+  
+  const iconBg = isUrgent 
+    ? colors.badgeErrorBg 
+    : colors.badgeWarningBg;
+  const iconColor = isUrgent 
+    ? colors.errorRed 
+    : colors.badgeWarningText;
 
   return (
-    <div className="flex items-start gap-1.5 p-1 rounded hover:bg-white/5 transition-colors">
-      <div className={`p-0.5 rounded-full flex-shrink-0 ${
-        alert.priority === 'urgent' ? 'bg-red-500/20' : 'bg-amber-500/20'
-      }`}>
+    <div 
+      className="flex items-start gap-1.5 p-1 rounded transition-colors"
+      style={{
+        background: 'transparent',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = colors.hoverBackground;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'transparent';
+      }}
+    >
+      <div 
+        className="p-0.5 rounded-full flex-shrink-0"
+        style={{
+          background: iconBg,
+        }}
+      >
         <Icon 
           size={12} 
-          className={`${
-            alert.priority === 'urgent' ? 'text-red-400' : 'text-amber-400'
-          }`} 
+          style={{ color: iconColor }}
         />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-white truncate">{alert.title}</p>
+        <p 
+          className="text-xs font-medium truncate"
+          style={{ color: colors.primaryText }}
+        >
+          {alert.title}
+        </p>
         <div className="flex items-center gap-1 mt-0.5">
-          <span className="text-xs text-slate-500">{alert.time}</span>
+          <span 
+            className="text-xs"
+            style={{ color: colors.tertiaryText }}
+          >
+            {alert.time}
+          </span>
         </div>
       </div>
     </div>

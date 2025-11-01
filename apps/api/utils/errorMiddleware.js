@@ -38,6 +38,26 @@ function errorHandler(handler) {
           method: request.method
         });
 
+        // Handle connection errors
+        if (error.code === 'P1001' || error.message?.includes('connection') || error.message?.includes('10054')) {
+          logger.warn('Database connection error detected, attempting reconnect...');
+          const { reconnectDB } = require('./db');
+          try {
+            await reconnectDB();
+            // Return 503 Service Unavailable - client can retry
+            return reply.status(503).send({
+              success: false,
+              error: 'Database connection temporarily unavailable. Please try again in a moment.'
+            });
+          } catch (reconnectError) {
+            logger.error('Reconnection failed:', reconnectError);
+            return reply.status(503).send({
+              success: false,
+              error: 'Database service unavailable. Please try again later.'
+            });
+          }
+        }
+
         // Common Prisma error codes
         const prismaErrorMap = {
           'P2002': { status: 409, message: 'Record already exists' },
@@ -52,6 +72,14 @@ function errorHandler(handler) {
             error: mappedError.message
           });
         }
+        
+        // For other Prisma errors, return 500
+        return reply.status(500).send({
+          success: false,
+          error: process.env.NODE_ENV === 'production' 
+            ? 'A database error occurred'
+            : error.message
+        });
       }
 
       // Handle validation errors

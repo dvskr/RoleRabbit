@@ -8,7 +8,7 @@ export const CREDENTIAL_TYPES: { value: CredentialType; label: string }[] = [
   { value: 'badge', label: 'Badge' },
 ];
 
-export const MODAL_OVERLAY_BACKGROUND = 'rgba(0, 0, 0, 0.5)';
+export const MODAL_OVERLAY_BACKGROUND = 'rgba(0, 0, 0, 0.85)';
 
 export const CREDENTIAL_HEADER = {
   title: 'Credential Management',

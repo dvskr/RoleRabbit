@@ -56,6 +56,7 @@ export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps)
               className="drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]"
               style={{ filter: 'brightness(1.3)' }}
               aria-label="RoleReady rocket logo"
+              suppressHydrationWarning
             >
               <defs>
                 {/* Rocket Body Gradient */}
@@ -181,8 +182,8 @@ export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps)
                 />
               </path>
 
-              {/* Twinkling Stars - Blue */}
-              <circle cx="8" cy="10" r="1" fill="#60a5fa">
+              {/* Twinkling Stars - Pink */}
+              <circle cx="8" cy="10" r="1" fill="#f8b4d9">
                 <animate
                   attributeName="opacity"
                   values="0.3;1;0.3"
@@ -192,7 +193,7 @@ export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps)
               </circle>
 
               {/* Twinkling Stars - Purple */}
-              <circle cx="40" cy="12" r="1" fill="#a855f7">
+              <circle cx="40" cy="12" r="1" fill="#c084fc">
                 <animate
                   attributeName="opacity"
                   values="0.5;1;0.5"
@@ -201,8 +202,8 @@ export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps)
                 />
               </circle>
 
-              {/* Twinkling Stars - Teal */}
-              <circle cx="38" cy="38" r="1" fill="#14b8a6">
+              {/* Twinkling Stars - Sparkling Pink */}
+              <circle cx="38" cy="38" r="1" fill="#ec4899">
                 <animate
                   attributeName="opacity"
                   values="0.4;1;0.4"
@@ -246,3 +247,4 @@ export function LogoIcon({ className = '', size = 32 }: Omit<LogoProps, 'variant
 export function LogoText({ className = '', size = 32 }: Omit<LogoProps, 'variant'>) {
   return <Logo className={className} size={size} variant="text" />;
 }
+

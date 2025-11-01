@@ -57,6 +57,13 @@ async function userRoutes(fastify, options) {
           projects: true,
           achievements: true,
           careerTimeline: true,
+          workExperiences: true,
+          volunteerExperiences: true,
+          recommendations: true,
+          publications: true,
+          patents: true,
+          organizations: true,
+          testScores: true,
           jobAlerts: true,
           emailNotifications: true,
           smsNotifications: true,
@@ -74,7 +81,7 @@ async function userRoutes(fastify, options) {
       
       // Parse JSON fields back to arrays/objects
       const parsedUser = { ...user };
-      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline'];
+      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
       jsonFields.forEach(field => {
         if (parsedUser[field]) {
           try {
@@ -118,7 +125,7 @@ async function userRoutes(fastify, options) {
       'linkedin', 'github', 'website',
       'skills', 'certifications', 'languages', 'education',
       'careerGoals', 'targetRoles', 'targetCompanies',
-      'socialLinks', 'projects', 'achievements', 'careerTimeline',
+      'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores',
       'jobAlerts', 'emailNotifications', 'smsNotifications',
       'privacyLevel', 'profileVisibility'
     ];
@@ -128,7 +135,7 @@ async function userRoutes(fastify, options) {
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
         // Handle JSON array fields - stringify arrays/objects
-        const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline'];
+        const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
         if (jsonFields.includes(field)) {
           if (Array.isArray(updates[field]) || typeof updates[field] === 'object') {
             updateData[field] = JSON.stringify(updates[field]);
@@ -194,6 +201,13 @@ async function userRoutes(fastify, options) {
           projects: true,
           achievements: true,
           careerTimeline: true,
+          workExperiences: true,
+          volunteerExperiences: true,
+          recommendations: true,
+          publications: true,
+          patents: true,
+          organizations: true,
+          testScores: true,
           jobAlerts: true,
           emailNotifications: true,
           smsNotifications: true,
@@ -206,7 +220,7 @@ async function userRoutes(fastify, options) {
 
       // Parse JSON fields back to arrays/objects
       const parsedUser = { ...updatedUser };
-      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline'];
+      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
       jsonFields.forEach(field => {
         if (parsedUser[field]) {
           try {

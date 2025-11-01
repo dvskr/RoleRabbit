@@ -10,77 +10,86 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  password      String?  // Optional for OAuth users
-  provider      String   @default("local") // local, google, github
-  providerId    String?  @unique
+  id             String  @id @default(cuid())
+  email          String  @unique
+  name           String
+  password       String? // Optional for OAuth users
+  provider       String  @default("local") // local, google, github
+  providerId     String? @unique
   profilePicture String?
-  
+
   // Extended Profile Fields
-  firstName     String?
-  lastName      String?
-  phone         String?
-  location      String?
-  bio           String?
-  currentRole   String?
-  currentCompany String?
-  experience    String?
-  industry      String?
-  jobLevel      String?
-  employmentType String?
-  availability  String?
+  firstName         String?
+  lastName          String?
+  phone             String?
+  location          String?
+  bio               String?
+  currentRole       String?
+  currentCompany    String?
+  experience        String?
+  industry          String?
+  jobLevel          String?
+  employmentType    String?
+  availability      String?
   salaryExpectation String?
-  workPreference String?
-  linkedin     String?
-  github        String?
-  website       String?
-  
+  workPreference    String?
+  linkedin          String?
+  github            String?
+  website           String?
+
   // JSON fields for complex data
-  skills        String?  // JSON array
-  certifications String? // JSON array
-  languages     String?  // JSON array
-  education     String?  // JSON array
-  careerGoals   String?  // JSON array
-  targetRoles   String?  // JSON array
-  targetCompanies String? // JSON array
-  socialLinks   String?  // JSON array
-  projects      String?  // JSON array
-  achievements  String?  // JSON array
-  careerTimeline String? // JSON array
-  
+  skills               String? // JSON array
+  certifications       String? // JSON array
+  languages            String? // JSON array
+  education            String? // JSON array
+  careerGoals          String? // JSON array
+  targetRoles          String? // JSON array
+  targetCompanies      String? // JSON array
+  socialLinks          String? // JSON array
+  projects             String? // JSON array
+  achievements         String? // JSON array
+  careerTimeline       String? // JSON array
+  workExperiences      String? // JSON array of work experience objects
+  volunteerExperiences String? // JSON array of volunteer experience objects
+  recommendations      String? // JSON array of recommendations/testimonials
+  publications         String? // JSON array of publications
+  patents              String? // JSON array of patents
+  organizations        String? // JSON array of organizations/associations
+  testScores           String? // JSON array of test scores
+
   // Preferences
-  jobAlerts     Boolean  @default(true)
+  jobAlerts          Boolean @default(true)
   emailNotifications Boolean @default(true)
-  smsNotifications Boolean @default(false)
-  privacyLevel  String?  @default("Professional")
-  profileVisibility String? @default("Public")
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  smsNotifications   Boolean @default(false)
+  privacyLevel       String? @default("Professional")
+  profileVisibility  String? @default("Public")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  resumes       Resume[]
-  jobs          Job[]
-  coverLetters  CoverLetter[]
-  emails        Email[]
-  portfolios    Portfolio[]
-  cloudFiles    CloudFile[]
-  analytics     Analytics[]
-  aiAgents      AIAgent[]
-  refreshTokens RefreshToken[]
-  sessions      Session[]
+  resumes             Resume[]
+  jobs                Job[]
+  coverLetters        CoverLetter[]
+  emails              Email[]
+  portfolios          Portfolio[]
+  cloudFiles          CloudFile[]
+  cloudFolders        CloudFolder[]
+  analytics           Analytics[]
+  aiAgents            AIAgent[]
+  refreshTokens       RefreshToken[]
+  sessions            Session[]
   passwordResetTokens PasswordResetToken[]
-  aiUsage       AIUsage[]
+  aiUsage             AIUsage[]
+  credentials         Credential[]
 
   // AI Usage tracking
-  totalAIUsage  Int @default(0)
-  aiUsageLimit  Int @default(100000) // 100K tokens per month
-  
+  totalAIUsage Int @default(0)
+  aiUsageLimit Int @default(100000) // 100K tokens per month
+
   // Two-Factor Authentication
-  twoFactorEnabled  Boolean @default(false)
-  twoFactorSecret   String?
+  twoFactorEnabled     Boolean @default(false)
+  twoFactorSecret      String?
   twoFactorBackupCodes String? // JSON array of backup codes
 
   @@map("users")
@@ -94,27 +103,27 @@ model RefreshToken {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("refresh_tokens")
   @@index([userId])
   @@index([token])
+  @@map("refresh_tokens")
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  device    String?  // Device info (desktop, mobile, tablet)
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  device       String? // Device info (desktop, mobile, tablet)
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
   lastActivity DateTime @default(now())
-  expiresAt DateTime
-  isActive  Boolean  @default(true)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("sessions")
   @@index([userId])
   @@index([isActive])
   @@index([expiresAt])
+  @@map("sessions")
 }
 
 model PasswordResetToken {
@@ -126,17 +135,17 @@ model PasswordResetToken {
   used      Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("password_reset_tokens")
   @@index([userId])
   @@index([token])
   @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model Resume {
   id          String   @id @default(cuid())
   userId      String
   name        String
-  data        String    // JSON string of resume data
+  data        String // JSON string of resume data
   templateId  String?
   fileName    String?
   isPublic    Boolean  @default(false)
@@ -144,7 +153,7 @@ model Resume {
   lastUpdated DateTime @default(now()) @updatedAt
   createdAt   DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("resumes")
 }
@@ -155,268 +164,337 @@ model Job {
   title       String
   company     String
   location    String?
-  status      String   // applied, screening, interview, offer, rejected
+  status      String // applied, screening, interview, offer, rejected
   salaryRange String?
-  notes       String?  
-  source      String?  // linkedin, indeed, etc.
+  notes       String?
+  source      String? // linkedin, indeed, etc.
   appliedDate DateTime @default(now())
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("jobs")
   @@index([userId])
   @@index([status])
+  @@map("jobs")
 }
 
 model CoverLetter {
-  id          String   @id @default(cuid())
-  userId      String
-  title       String
-  content     String   
-  jobId       String?  // Link to job application
-  templateId  String?
-  wordCount   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String
+  title      String
+  content    String
+  jobId      String? // Link to job application
+  templateId String?
+  wordCount  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("cover_letters")
 }
 
 model Email {
-  id          String   @id @default(cuid())
-  userId      String
-  to          String
-  subject     String
-  body        String   
-  type        String   // followup, thank_you, inquiry, etc.
-  status      String   // sent, draft, failed
-  sentDate    DateTime?
-  createdAt   DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  to        String
+  subject   String
+  body      String
+  type      String // followup, thank_you, inquiry, etc.
+  status    String // sent, draft, failed
+  sentDate  DateTime?
+  createdAt DateTime  @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("emails")
   @@index([userId])
+  @@map("emails")
 }
 
 model Portfolio {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  description String?  
-  data        String    // JSON string of portfolio data
-  templateId  String   @default("modern")
-  isPublished Boolean  @default(false)
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  description  String?
+  data         String // JSON string of portfolio data
+  templateId   String    @default("modern")
+  isPublished  Boolean   @default(false)
   customDomain String?
-  subdomain   String?
-  publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  subdomain    String?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("portfolios")
 }
 
 model CloudFile {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  type        String   // resume, cover_letter, document, portfolio
-  size        Int
-  contentType String
-  data        String    // Base64 or file path
-  folder      String?
-  tags        String?  // Comma-separated tags
-  description String?  
-  isPublic    Boolean  @default(false)
-  isStarred   Boolean  @default(false)
-  downloadCount Int    @default(0)
-  viewCount   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  userId        String
+  name          String
+  type          String // resume, cover_letter, document, portfolio
+  size          Int
+  contentType   String
+  data          String // Base64 or file path
+  folderId      String? // Reference to CloudFolder
+  tags          String? // Comma-separated tags
+  description   String?
+  isPublic      Boolean   @default(false)
+  isStarred     Boolean   @default(false)
+  isArchived    Boolean   @default(false)
+  deletedAt     DateTime? // Soft delete timestamp for recycle bin
+  downloadCount Int       @default(0)
+  viewCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder CloudFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  shares FileShare[]
 
-  @@map("cloud_files")
   @@index([userId])
   @@index([type])
+  @@index([folderId])
+  @@index([deletedAt])
+  @@map("cloud_files")
+}
+
+model CloudFolder {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  parentId  String? // For nested folders
+  deletedAt DateTime? // Soft delete timestamp for recycle bin
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files    CloudFile[]
+  parent   CloudFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children CloudFolder[] @relation("FolderHierarchy")
+
+  @@index([userId])
+  @@index([parentId])
+  @@index([deletedAt])
+  @@map("cloud_folders")
+}
+
+model FileShare {
+  id         String    @id @default(cuid())
+  fileId     String
+  userId     String // The user being shared with
+  userEmail  String
+  userName   String?
+  permission String // view, comment, edit, admin
+  grantedBy  String
+  grantedAt  DateTime  @default(now())
+  expiresAt  DateTime?
+
+  file CloudFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([userId])
+  @@map("file_shares")
+}
+
+model Credential {
+  id                 String    @id @default(cuid())
+  userId             String
+  credentialType     String // certification, license, visa, degree, badge
+  issuer             String
+  name               String
+  issuedDate         DateTime
+  expirationDate     DateTime?
+  credentialId       String?
+  verificationStatus String // pending, verified, expired, revoked
+  verificationUrl    String?
+  qrCode             String?
+  description        String?
+  isArchived         Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([credentialType])
+  @@index([verificationStatus])
+  @@map("credentials")
 }
 
 model Analytics {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String   // application_analytics, email_analytics, cover_letter_analytics
-  data        String    // JSON string of analytics data
-  date        DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // application_analytics, email_analytics, cover_letter_analytics
+  data      String // JSON string of analytics data
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("analytics")
   @@index([userId])
   @@index([type])
+  @@map("analytics")
 }
 
 model DiscussionPost {
-  id          String   @id @default(cuid())
-  title       String
-  content     String   
-  author      String?
-  community   String?
-  tags        String?  // Comma-separated tags
-  views       Int      @default(0)
-  upvotes     Int      @default(0)
-  downvotes   Int      @default(0)
-  isPinned    Boolean  @default(false)
-  isLocked    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  author    String?
+  community String?
+  tags      String? // Comma-separated tags
+  views     Int      @default(0)
+  upvotes   Int      @default(0)
+  downvotes Int      @default(0)
+  isPinned  Boolean  @default(false)
+  isLocked  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("discussion_posts")
   @@index([community])
   @@index([createdAt])
+  @@map("discussion_posts")
 }
 
 model DiscussionComment {
-  id          String   @id @default(cuid())
-  postId      String
-  content     String   
-  author      String?
-  parentId    String?  // For nested comments
-  upvotes     Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  postId    String
+  content   String
+  author    String?
+  parentId  String? // For nested comments
+  upvotes   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("discussion_comments")
   @@index([postId])
   @@index([parentId])
+  @@map("discussion_comments")
 }
 
 model AIAgent {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   name        String
   description String
-  type        String   // automatic, manual
-  status      String   // active, paused, stopped
-  config      String   // JSON config
-  enabled     Boolean  @default(true)
+  type        String // automatic, manual
+  status      String // active, paused, stopped
+  config      String // JSON config
+  enabled     Boolean   @default(true)
   lastRun     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  tasks       AIAgentTask[]
+  tasks AIAgentTask[]
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("ai_agents")
   @@index([userId])
   @@index([status])
+  @@map("ai_agents")
 }
 
 model AIAgentTask {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   agentId     String
   userId      String
-  taskType    String   // job_discovery, resume_optimization, interview_prep, etc.
-  status      String   // pending, in_progress, completed, failed
-  parameters  String?  // JSON parameters
+  taskType    String // job_discovery, resume_optimization, interview_prep, etc.
+  status      String // pending, in_progress, completed, failed
+  parameters  String? // JSON parameters
   description String?
-  result      String?  // JSON result
+  result      String? // JSON result
   error       String?
   startedAt   DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   completedAt DateTime?
 
-  agent       AIAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agent AIAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
-  @@map("ai_agent_tasks")
   @@index([agentId])
   @@index([userId])
   @@index([status])
+  @@map("ai_agent_tasks")
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?
-  action      String   // USER_LOGIN, RESUME_CREATE, etc.
-  resource    String?  // resume, job, email
-  resourceId  String?
-  details     String?  // JSON details
-  ip          String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String // USER_LOGIN, RESUME_CREATE, etc.
+  resource   String? // resume, job, email
+  resourceId String?
+  details    String? // JSON details
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
-  @@map("audit_logs")
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+  @@map("audit_logs")
 }
 
 model JobDescription {
-  id          String   @id @default(cuid())
-  userId      String
-  jobId       String
-  text        String
-  company     String?
-  position    String?
-  source      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  text      String
+  company   String?
+  position  String?
+  source    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("job_descriptions")
   @@index([userId])
   @@index([jobId])
+  @@map("job_descriptions")
 }
 
 model AnalyticsSnapshot {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String   // daily, weekly, monthly
-  period      String   // 2024-01-01
-  data        String   // JSON snapshot data
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // daily, weekly, monthly
+  period    String // 2024-01-01
+  data      String // JSON snapshot data
+  createdAt DateTime @default(now())
 
-  @@map("analytics_snapshots")
   @@index([userId])
   @@index([type])
   @@index([period])
+  @@map("analytics_snapshots")
 }
 
 model AIUsage {
-  id          String   @id @default(cuid())
-  userId      String
-  model       String   // gpt-4, gpt-4o-mini, etc.
-  tokensUsed  Int
-  cost        Float
-  endpoint    String?  // generate, analyze, ats-score
-  timestamp   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  model      String // gpt-4, gpt-4o-mini, etc.
+  tokensUsed Int
+  cost       Float
+  endpoint   String? // generate, analyze, ats-score
+  timestamp  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("ai_usage")
   @@index([userId])
   @@index([timestamp])
   @@index([model])
+  @@map("ai_usage")
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String
-  type        String   // info, success, warning, error
-  title       String
-  message     String
-  metadata    String?  // JSON metadata
-  read        Boolean  @default(false)
-  readAt      DateTime?
-  createdAt   DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // info, success, warning, error
+  title     String
+  message   String
+  metadata  String? // JSON metadata
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  @@map("notifications")
   @@index([userId])
   @@index([read])
+  @@map("notifications")
 }
-

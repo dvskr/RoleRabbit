@@ -3,6 +3,7 @@ export interface Folder {
   name: string;
   parentId?: string;
   color?: string;
+  deletedAt?: string; // Soft delete timestamp for recycle bin
   createdAt: string;
   updatedAt: string;
   fileCount?: number;
@@ -24,6 +25,7 @@ export interface ResumeFile {
   viewCount: number;
   isStarred: boolean;
   isArchived: boolean;
+  deletedAt?: string; // Soft delete timestamp for recycle bin
   folderId?: string;
   thumbnail?: string;
   description?: string;

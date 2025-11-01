@@ -37,7 +37,7 @@ export const RenameFolderModal: React.FC<RenameFolderModalProps> = ({
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: MODAL_BACKDROP_STYLE }}
+      style={{ background: MODAL_BACKDROP_STYLE, backdropFilter: 'blur(4px)' }}
     >
       <div 
         className={`rounded-2xl p-6 w-full ${MODAL_MAX_WIDTH} shadow-2xl`}

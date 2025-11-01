@@ -150,17 +150,16 @@ async function authRoutes(fastify, options) {
       } catch (authError) {
         // Log authentication error but don't expose details
         console.error('Authentication failed for email:', email);
-        reply.status(401).send({
+        return reply.status(401).send({
           success: false,
           error: authError.message || 'Invalid credentials'
         });
-        return;
       }
       
       // Check if user has 2FA enabled
       if (user.twoFactorEnabled) {
         // Return 2FA requirement instead of full login
-        return reply.send({
+        return reply.code(200).send({
           success: true,
           requires2FA: true,
           message: '2FA verification required',
@@ -183,7 +182,34 @@ async function authRoutes(fastify, options) {
       const userAgent = request.headers['user-agent'];
       const sessionId = await createSession(user.id, ipAddress, userAgent, 30);
       
-      // Set access token in httpOnly cookie
+      // Prepare user object first - ensure it's serializable
+      const safeUser = {
+        id: String(user.id),
+        email: String(user.email || ''),
+        name: user.name ? String(user.name) : null,
+        profilePicture: user.profilePicture ? String(user.profilePicture) : null,
+        firstName: user.firstName ? String(user.firstName) : null,
+        lastName: user.lastName ? String(user.lastName) : null,
+        createdAt: user.createdAt ? user.createdAt.toISOString() : null,
+        updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
+      };
+      
+      // Remove null/undefined values to prevent serialization issues
+      const cleanedUser = {};
+      Object.keys(safeUser).forEach(key => {
+        if (safeUser[key] !== undefined && safeUser[key] !== null) {
+          cleanedUser[key] = safeUser[key];
+        }
+      });
+      
+      // Prepare response object
+      const responseData = {
+        success: true,
+        user: cleanedUser,
+        token: String(accessToken)
+      };
+      
+      // Set cookies before sending response
       reply.setCookie('auth_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -192,7 +218,6 @@ async function authRoutes(fastify, options) {
         path: '/'
       });
       
-      // Set refresh token in httpOnly cookie
       reply.setCookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -201,7 +226,6 @@ async function authRoutes(fastify, options) {
         path: '/'
       });
       
-      // Set session ID in httpOnly cookie
       reply.setCookie('session_id', sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -210,41 +234,16 @@ async function authRoutes(fastify, options) {
         path: '/'
       });
       
-      // Prepare user object - ensure it's serializable (remove any undefined values)
-      const safeUser = {
-        id: user.id,
-        email: user.email,
-        name: user.name || null,
-        profilePicture: user.profilePicture || null,
-        firstName: user.firstName || null,
-        lastName: user.lastName || null,
-        createdAt: user.createdAt ? user.createdAt.toISOString() : null,
-        updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
-      };
-      
-      // Remove null/undefined values
-      Object.keys(safeUser).forEach(key => {
-        if (safeUser[key] === undefined) {
-          delete safeUser[key];
-        }
-      });
-      
-      const response = {
-        success: true,
-        user: safeUser,
-        token: accessToken
-        // Don't send refreshToken in response - it's in httpOnly cookie
-      };
-      
-      // Use code() and send() to ensure proper response handling
-      reply.code(200).send(response);
+      // Send response - ensure it's fully sent before handler completes
+      // Don't return anything - let Fastify handle the response naturally
+      reply.code(200).send(responseData);
     } catch (error) {
       console.error('Login endpoint error:', error);
       console.error('Error stack:', error.stack);
       
       // Ensure we always send a valid JSON response
       const statusCode = error.statusCode || 500;
-      reply.status(statusCode).send({
+      return reply.status(statusCode).send({
         success: false,
         error: error.message || 'An unexpected error occurred during login'
       });

@@ -88,7 +88,7 @@ export interface DashboardData {
 // Configuration for easy backend integration later
 export interface DashboardWidget {
   id: string;
-  type: 'activity' | 'todos' | 'metrics' | 'alerts' | 'actions' | 'premium';
+  type: 'activity' | 'todos' | 'metrics' | 'alerts' | 'actions' | 'premium' | 'analytics';
   title: string;
   description: string;
   isVisible: boolean;

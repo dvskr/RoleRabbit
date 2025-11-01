@@ -8,6 +8,7 @@ import { ProgressMetrics } from './ProgressMetrics';
 import { IntelligentAlerts } from './IntelligentAlerts';
 import { QuickActionsPanel } from './QuickActionsPanel';
 import { SponsoredAdPlaceholder } from './SponsoredAdPlaceholder';
+import { ProfileAnalytics } from './ProfileAnalytics';
 
 interface DashboardGridProps {
   dashboardData: DashboardData;
@@ -95,11 +96,11 @@ export function DashboardGrid({
             )}
           </div>
 
-          {/* Middle Row - Progress Metrics and Quick Actions */}
-          <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Middle Row - Progress Metrics, Profile Analytics, and Quick Actions */}
+          <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Progress Metrics */}
             {widgets.find(w => w.id === 'progress-metrics')?.isVisible !== false && (
-              <div>
+              <div className="lg:col-span-1">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 h-[350px] overflow-hidden">
                   <ProgressMetrics
                     metrics={dashboardData.metrics}
@@ -109,9 +110,16 @@ export function DashboardGrid({
               </div>
             )}
 
+            {/* Profile Analytics */}
+            <div className="lg:col-span-1" data-tour="profile-analytics">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 h-[350px] overflow-hidden">
+                <ProfileAnalytics isLoading={isLoading} />
+              </div>
+            </div>
+
             {/* Quick Actions Panel */}
             {widgets.find(w => w.id === 'quick-actions')?.isVisible !== false && (
-              <div data-tour="quick-actions">
+              <div className="lg:col-span-1" data-tour="quick-actions">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 h-[350px] overflow-hidden">
                   <QuickActionsPanel
                     actions={dashboardData.quickActions}

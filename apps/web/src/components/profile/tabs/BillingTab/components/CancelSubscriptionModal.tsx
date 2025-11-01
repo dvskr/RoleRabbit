@@ -20,14 +20,31 @@ export const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = (
 
   return (
     <div 
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
-      style={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      className="fixed inset-0 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+      style={{ 
+        background: 'rgba(0, 0, 0, 0.75)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
       <div 
         className="rounded-2xl p-6 w-full max-w-md"
         style={{
           background: colors.cardBackground,
           border: `1px solid ${colors.border}`,
+          position: 'relative',
+          zIndex: 1,
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
         }}
       >
         <div className="flex items-center justify-between mb-6">

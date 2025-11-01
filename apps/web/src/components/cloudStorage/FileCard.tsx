@@ -6,6 +6,7 @@ import {
   Download, 
   Share2, 
   Trash2, 
+  Trash,
   Eye, 
   EyeOff, 
   Edit, 
@@ -19,7 +20,8 @@ import {
   TrendingUp,
   UserPlus,
   X,
-  Users
+  Users,
+  RotateCcw
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
@@ -58,10 +60,13 @@ const FileCard = React.memo(function FileCard({
   file,
   isSelected,
   viewMode,
+  showDeleted,
   onSelect,
   onDownload,
   onShare,
   onDelete,
+  onRestore,
+  onPermanentlyDelete,
   onTogglePublic,
   onEdit,
   onStar,
@@ -872,22 +877,63 @@ const FileCard = React.memo(function FileCard({
         >
           <Archive size={16} />
         </button>
-        <button
-          onClick={() => onDelete(file.id)}
-          className="p-2 rounded-lg transition-colors flex-shrink-0"
-          style={{ color: colors.secondaryText }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = colors.errorRed;
-            e.currentTarget.style.background = colors.badgeErrorBg;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = colors.secondaryText;
-            e.currentTarget.style.background = 'transparent';
-          }}
-          title="Delete"
-        >
-          <Trash2 size={16} />
-        </button>
+        {showDeleted && file.deletedAt ? (
+          <>
+            {onRestore && (
+              <button
+                onClick={() => onRestore(file.id)}
+                className="p-2 rounded-lg transition-colors flex-shrink-0"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.successGreen;
+                  e.currentTarget.style.background = colors.badgeSuccessBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.secondaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }}
+                title="Restore"
+              >
+                <RotateCcw size={16} />
+              </button>
+            )}
+            {onPermanentlyDelete && (
+              <button
+                onClick={() => onPermanentlyDelete(file.id)}
+                className="p-2 rounded-lg transition-colors flex-shrink-0"
+                style={{ color: colors.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.errorRed;
+                  e.currentTarget.style.background = colors.badgeErrorBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.secondaryText;
+                  e.currentTarget.style.background = 'transparent';
+                }}
+                title="Permanently Delete"
+              >
+                <Trash size={16} />
+              </button>
+            )}
+          </>
+        ) : (
+          <button
+            onClick={() => onDelete(file.id)}
+            className="p-2 rounded-lg transition-colors flex-shrink-0"
+            style={{ color: colors.secondaryText }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = colors.errorRed;
+              e.currentTarget.style.background = colors.badgeErrorBg;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.background = 'transparent';
+            }}
+            title="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
         <div className="relative flex-shrink-0">
           <button 
             onClick={() => setShowMoreMenu(!showMoreMenu)}

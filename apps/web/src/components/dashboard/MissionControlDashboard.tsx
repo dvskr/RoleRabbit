@@ -73,8 +73,9 @@ export default function MissionControlDashboard({
     { id: 'smart-todos', type: 'todos', title: 'Smart To-Dos', description: 'AI-powered daily tasks', isVisible: true, order: 1, size: 'medium' },
     { id: 'intelligent-alerts', type: 'alerts', title: 'Intelligent Alerts', description: 'Proactive reminders', isVisible: true, order: 2, size: 'medium' },
     { id: 'progress-metrics', type: 'metrics', title: 'Progress Metrics', description: 'Track your progress', isVisible: true, order: 3, size: 'large' },
-    { id: 'quick-actions', type: 'actions', title: 'Quick Actions', description: 'One-click actions', isVisible: true, order: 4, size: 'medium' },
-    { id: 'premium-features', type: 'premium', title: 'Premium Features', description: 'RoleReady premium tools', isVisible: true, order: 5, size: 'large' }
+    { id: 'profile-analytics', type: 'analytics', title: 'Profile Analytics', description: 'Profile performance metrics', isVisible: true, order: 4, size: 'medium' },
+    { id: 'quick-actions', type: 'actions', title: 'Quick Actions', description: 'One-click actions', isVisible: true, order: 5, size: 'medium' },
+    { id: 'premium-features', type: 'premium', title: 'Premium Features', description: 'RoleReady premium tools', isVisible: true, order: 6, size: 'large' }
   ]);
 
   // Real-time notifications state

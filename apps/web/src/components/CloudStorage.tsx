@@ -39,11 +39,13 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     sortBy,
     viewMode,
     showUploadModal,
+    showDeleted,
     storageInfo,
     credentials,
     credentialReminders,
     folders,
     selectedFolderId,
+    quickFilters,
     
     // Computed
     filteredFiles,
@@ -54,12 +56,17 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     setSortBy,
     setViewMode,
     setShowUploadModal,
+    setShowDeleted,
     setSelectedFolderId,
+    setQuickFilters,
     
     // Actions
     handleFileSelect,
     handleSelectAll,
     handleDeleteFiles,
+    handleDeleteFile,
+    handleRestoreFile,
+    handlePermanentlyDeleteFile,
     handleTogglePublic,
     handleDownloadFile,
     handleShareFile,
@@ -114,10 +121,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     );
   }, [handleEditFile]);
 
-  const handleDeleteFile = useCallback((fileId: string) => {
-    logger.debug('Deleting file:', fileId);
-    handleDeleteFiles();
-  }, [handleDeleteFiles]);
+  // handleDeleteFile is now provided by useCloudStorage hook
 
   // Memoize folder selection handler
   const handleFolderSelect = useCallback((folderId: string | null) => {
@@ -186,6 +190,10 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               selectedFiles={selectedFiles}
               onSelectAll={handleSelectAll}
               onDeleteSelected={handleDeleteFiles}
+              quickFilters={quickFilters}
+              setQuickFilters={setQuickFilters}
+              showDeleted={showDeleted}
+              setShowDeleted={setShowDeleted}
             />
           </div>
 
@@ -215,10 +223,13 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                     file={file}
                     isSelected={selectedFiles.includes(file.id)}
                     viewMode={viewMode}
+                    showDeleted={showDeleted}
                     onSelect={handleFileSelect}
                     onDownload={handleDownloadFileWrapper}
                     onShare={handleShareFile}
                     onDelete={handleDeleteFile}
+                    onRestore={handleRestoreFile}
+                    onPermanentlyDelete={handlePermanentlyDeleteFile}
                     onTogglePublic={handleTogglePublic}
                     onEdit={handleEditFileWrapper}
                     onStar={handleStarFile}

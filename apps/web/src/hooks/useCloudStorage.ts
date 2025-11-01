@@ -11,17 +11,22 @@ import { useCredentialOperations } from './useCloudStorage/hooks/useCredentialOp
 import { useFolderOperations } from './useCloudStorage/hooks/useFolderOperations';
 import { useCloudIntegration } from './useCloudStorage/hooks/useCloudIntegration';
 import { useAccessTracking } from './useCloudStorage/hooks/useAccessTracking';
+import { logger } from '../utils/logger';
+import apiService from '../services/apiService';
 
 export const useCloudStorage = () => {
   // File operations hook
   const fileOps = useFileOperations();
   const { files, setFiles, isLoading, selectedFiles, setSelectedFiles } = fileOps;
 
+  // UI state
+  const [showDeleted, setShowDeleted] = useState(false); // Recycle bin toggle
+
   // Load files from API on mount
   useEffect(() => {
-    fileOps.loadFilesFromAPI();
+    fileOps.loadFilesFromAPI(showDeleted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [showDeleted]);
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +34,13 @@ export const useCloudStorage = () => {
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [quickFilters, setQuickFilters] = useState<{
+    starred?: boolean;
+    archived?: boolean;
+    shared?: boolean;
+    recent?: boolean;
+    public?: boolean;
+  }>({});
 
   // Storage info
   const [storageUsed, setStorageUsed] = useState(DEFAULT_STORAGE_USED);
@@ -39,8 +51,44 @@ export const useCloudStorage = () => {
   const { folders, selectedFolderId, setSelectedFolderId } = folderOps;
 
   // Credential management
-  const [credentials] = useState<CredentialInfo[]>(DEMO_CREDENTIALS);
-  const [credentialReminders] = useState<CredentialReminder[]>(DEMO_CREDENTIAL_REMINDERS);
+  const [credentials, setCredentials] = useState<CredentialInfo[]>(DEMO_CREDENTIALS);
+  const [credentialReminders, setCredentialReminders] = useState<CredentialReminder[]>(DEMO_CREDENTIAL_REMINDERS);
+
+  // Load credentials from API on mount
+  useEffect(() => {
+    const loadCredentials = async () => {
+      try {
+        const [credentialsRes, remindersRes] = await Promise.all([
+          apiService.getCredentials(),
+          apiService.getExpiringCredentials(90)
+        ]);
+        
+        if (credentialsRes && credentialsRes.credentials) {
+          setCredentials(credentialsRes.credentials);
+        }
+        
+        if (remindersRes && remindersRes.credentials) {
+          // Transform expiring credentials to reminders
+          const reminders: CredentialReminder[] = remindersRes.credentials.map((cred: any) => ({
+            id: cred.id,
+            credentialId: cred.id,
+            credentialName: cred.name,
+            expirationDate: cred.expirationDate,
+            reminderDate: new Date().toISOString(),
+            isSent: false,
+            priority: cred.expirationDate ? 
+              (new Date(cred.expirationDate).getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000 ? 'high' : 'medium') 
+              : 'low' as 'high' | 'medium' | 'low'
+          }));
+          setCredentialReminders(reminders);
+        }
+      } catch (error) {
+        logger.error('Failed to load credentials from API:', error);
+        // Keep demo data as fallback
+      }
+    };
+    loadCredentials();
+  }, []);
 
   // Access tracking
   const accessTracking = useAccessTracking();
@@ -63,9 +111,10 @@ export const useCloudStorage = () => {
       searchTerm,
       filterType,
       sortBy,
-      selectedFolderId
+      selectedFolderId,
+      quickFilters
     });
-  }, [files, searchTerm, filterType, sortBy, selectedFolderId]);
+  }, [files, searchTerm, filterType, sortBy, selectedFolderId, quickFilters]);
 
   const storageInfo: StorageInfo = useMemo(() => ({
     used: storageUsed,
@@ -95,6 +144,7 @@ export const useCloudStorage = () => {
     sortBy,
     viewMode,
     showUploadModal,
+    showDeleted,
     storageInfo,
     credentials,
     credentialReminders,
@@ -102,6 +152,7 @@ export const useCloudStorage = () => {
     selectedFolderId,
     accessLogs: accessTracking.accessLogs,
     cloudIntegrations,
+    quickFilters,
     
     // Computed
     filteredFiles,
@@ -114,14 +165,19 @@ export const useCloudStorage = () => {
     setSortBy,
     setViewMode,
     setShowUploadModal,
+    setShowDeleted,
     setStorageUsed,
     setStorageLimit,
     setSelectedFolderId,
+    setQuickFilters,
     
     // File Actions
     handleFileSelect: fileOps.handleFileSelect,
     handleSelectAll,
     handleDeleteFiles: fileOps.handleDeleteFiles,
+    handleDeleteFile: fileOps.handleDeleteFile,
+    handleRestoreFile: fileOps.handleRestoreFile,
+    handlePermanentlyDeleteFile: fileOps.handlePermanentlyDeleteFile,
     handleTogglePublic: fileOps.handleTogglePublic,
     handleDownloadFile: fileOps.handleDownloadFile,
     handleShareFile: fileOps.handleShareFile,
@@ -139,6 +195,7 @@ export const useCloudStorage = () => {
     handleAddComment: sharingOps.handleAddComment,
     
     // Credential Management
+    setCredentials,
     handleAddCredential: credentialOps.handleAddCredential,
     handleUpdateCredential: credentialOps.handleUpdateCredential,
     handleDeleteCredential: credentialOps.handleDeleteCredential,

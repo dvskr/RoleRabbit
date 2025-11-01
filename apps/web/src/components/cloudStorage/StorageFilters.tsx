@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter, Grid, List, Columns } from 'lucide-react';
+import { Search, Filter, Grid, List, Columns, Star, Archive, Share2, Clock, Globe, Trash2, RotateCcw } from 'lucide-react';
 import { FileType, SortBy, ViewMode } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -17,6 +17,22 @@ interface StorageFiltersProps {
   selectedFiles: string[];
   onSelectAll: () => void;
   onDeleteSelected: () => void;
+  quickFilters?: {
+    starred?: boolean;
+    archived?: boolean;
+    shared?: boolean;
+    recent?: boolean;
+    public?: boolean;
+  };
+  setQuickFilters?: (filters: {
+    starred?: boolean;
+    archived?: boolean;
+    shared?: boolean;
+    recent?: boolean;
+    public?: boolean;
+  }) => void;
+  showDeleted?: boolean;
+  setShowDeleted?: (show: boolean) => void;
 }
 
 export default function StorageFilters({
@@ -30,7 +46,11 @@ export default function StorageFilters({
   setViewMode,
   selectedFiles,
   onSelectAll,
-  onDeleteSelected
+  onDeleteSelected,
+  quickFilters = {},
+  setQuickFilters,
+  showDeleted = false,
+  setShowDeleted
 }: StorageFiltersProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -56,8 +76,25 @@ export default function StorageFilters({
     setLocalSearchTerm(e.target.value);
   }, []);
 
+  const toggleQuickFilter = useCallback((filterType: keyof typeof quickFilters) => {
+    if (!setQuickFilters) return;
+    
+    setQuickFilters({
+      ...quickFilters,
+      [filterType]: quickFilters[filterType] ? undefined : true
+    });
+  }, [quickFilters, setQuickFilters]);
+
+  // Clear all quick filters
+  const clearQuickFilters = useCallback(() => {
+    if (!setQuickFilters) return;
+    setQuickFilters({});
+  }, [setQuickFilters]);
+
+  const hasActiveQuickFilters = Object.values(quickFilters).some(v => v !== undefined);
+
   return (
-    <div className="flex items-center gap-3 mb-2">
+    <div className="flex flex-col gap-2 mb-2">
       {/* Unified compact search/filter bar */}
       <div className="flex items-center gap-2 flex-1">
         {/* Search */}
@@ -211,6 +248,179 @@ export default function StorageFilters({
           </button>
         </div>
       </div>
+
+      {/* Quick Filters */}
+      {setQuickFilters && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => toggleQuickFilter('starred')}
+            className={`px-2 py-1 rounded-lg transition-colors text-xs font-medium flex items-center gap-1`}
+            style={{
+              background: quickFilters.starred ? colors.badgeInfoBg : colors.inputBackground,
+              color: quickFilters.starred ? colors.primaryBlue : colors.secondaryText,
+              border: `1px solid ${colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              if (!quickFilters.starred) {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!quickFilters.starred) {
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+          >
+            <Star size={12} fill={quickFilters.starred ? colors.primaryBlue : 'none'} />
+            Starred
+          </button>
+
+          <button
+            onClick={() => toggleQuickFilter('recent')}
+            className={`px-2 py-1 rounded-lg transition-colors text-xs font-medium flex items-center gap-1`}
+            style={{
+              background: quickFilters.recent ? colors.badgeInfoBg : colors.inputBackground,
+              color: quickFilters.recent ? colors.primaryBlue : colors.secondaryText,
+              border: `1px solid ${colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              if (!quickFilters.recent) {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!quickFilters.recent) {
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+          >
+            <Clock size={12} />
+            Recent
+          </button>
+
+          <button
+            onClick={() => toggleQuickFilter('shared')}
+            className={`px-2 py-1 rounded-lg transition-colors text-xs font-medium flex items-center gap-1`}
+            style={{
+              background: quickFilters.shared ? colors.badgeInfoBg : colors.inputBackground,
+              color: quickFilters.shared ? colors.primaryBlue : colors.secondaryText,
+              border: `1px solid ${colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              if (!quickFilters.shared) {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!quickFilters.shared) {
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+          >
+            <Share2 size={12} />
+            Shared
+          </button>
+
+          <button
+            onClick={() => toggleQuickFilter('archived')}
+            className={`px-2 py-1 rounded-lg transition-colors text-xs font-medium flex items-center gap-1`}
+            style={{
+              background: quickFilters.archived ? colors.badgeInfoBg : colors.inputBackground,
+              color: quickFilters.archived ? colors.primaryBlue : colors.secondaryText,
+              border: `1px solid ${colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              if (!quickFilters.archived) {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!quickFilters.archived) {
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+          >
+            <Archive size={12} />
+            Archived
+          </button>
+
+          <button
+            onClick={() => toggleQuickFilter('public')}
+            className={`px-2 py-1 rounded-lg transition-colors text-xs font-medium flex items-center gap-1`}
+            style={{
+              background: quickFilters.public ? colors.badgeInfoBg : colors.inputBackground,
+              color: quickFilters.public ? colors.primaryBlue : colors.secondaryText,
+              border: `1px solid ${colors.border}`,
+            }}
+            onMouseEnter={(e) => {
+              if (!quickFilters.public) {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!quickFilters.public) {
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+          >
+            <Globe size={12} />
+            Public
+          </button>
+
+          {hasActiveQuickFilters && (
+            <button
+              onClick={clearQuickFilters}
+              className="px-2 py-1 rounded-lg transition-colors text-xs font-medium"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+                border: `1px solid ${colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+                e.currentTarget.style.color = colors.primaryText;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.color = colors.secondaryText;
+              }}
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Recycle Bin Toggle */}
+      {setShowDeleted && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowDeleted(!showDeleted)}
+            className="px-3 py-1.5 rounded-md text-sm transition-all flex items-center gap-1.5"
+            style={{
+              background: showDeleted ? colors.badgeErrorBg : colors.inputBackground,
+              border: `1px solid ${showDeleted ? colors.badgeErrorBorder : colors.border}`,
+              color: showDeleted ? colors.badgeErrorText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (!showDeleted) {
+                e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showDeleted) {
+                e.currentTarget.style.background = colors.inputBackground;
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+            title={showDeleted ? 'Hide Recycle Bin' : 'Show Recycle Bin'}
+          >
+            {showDeleted ? <RotateCcw size={14} /> : <Trash2 size={14} />}
+            <span>Recycle Bin</span>
+          </button>
+        </div>
+      )}
 
       {/* Bulk Actions - Inline */}
       {selectedFiles.length > 0 && (

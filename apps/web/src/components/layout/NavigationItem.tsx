@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface NavigationItemProps {
   id: string;
@@ -24,6 +25,39 @@ export default function NavigationItem({
   onClick,
   colors,
 }: NavigationItemProps) {
+  const { theme } = useTheme();
+  const isLightTheme = theme.mode === 'light';
+  
+  // Determine text color based on theme and active state
+  // In light theme, active items should use section color for better visibility
+  // In dark theme, active items can use white
+  const activeTextColor = isLightTheme 
+    ? (sectionColor || colors?.primaryText || '#111827') 
+    : '#ffffff';
+  
+  const inactiveTextColor = colors?.secondaryText || (isLightTheme ? '#4b5563' : '#9ca3af');
+  
+  // Background color for active state - use section color with low opacity in light theme
+  // This creates a subtle tint that works with the colored text
+  let activeBackground = 'rgba(255, 255, 255, 0.08)'; // Default for dark theme
+  
+  if (isLightTheme) {
+    // For light theme, use a subtle background based on section color
+    // Extract RGB from common section colors or use a neutral gray
+    if (sectionColor === '#a855f7') { // WORKSPACE - purple
+      activeBackground = 'rgba(168, 85, 247, 0.15)';
+    } else if (sectionColor === '#3b82f6') { // Blue (PREPARE)
+      activeBackground = 'rgba(59, 130, 246, 0.1)';
+    } else if (sectionColor === '#14b8a6') { // Teal (APPLY)
+      activeBackground = 'rgba(20, 184, 166, 0.1)';
+    } else if (sectionColor === '#8b5cf6') { // CONNECT - purple
+      activeBackground = 'rgba(139, 92, 246, 0.15)';
+    } else {
+      // Default to a subtle gray background
+      activeBackground = 'rgba(107, 114, 128, 0.08)';
+    }
+  }
+  
   return (
     <button
       onClick={onClick}
@@ -32,7 +66,7 @@ export default function NavigationItem({
       } ${isActive ? 'nav-item-active' : ''}`}
       data-section-color={sectionColor}
       style={{
-        background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+        background: isActive ? activeBackground : 'transparent',
       }}
       title={isCollapsed ? label : ''}
     >
@@ -64,7 +98,7 @@ export default function NavigationItem({
           <Icon 
             size={18} 
             style={{ 
-              color: isActive ? '#ffffff' : colors?.secondaryText || 'inherit',
+              color: isActive ? activeTextColor : inactiveTextColor,
             }} 
           />
         </div>
@@ -74,7 +108,7 @@ export default function NavigationItem({
           <span
             className="text-sm font-medium flex-1 text-left"
             style={{
-              color: isActive ? '#ffffff' : colors?.secondaryText || 'inherit',
+              color: isActive ? activeTextColor : inactiveTextColor,
             }}
           >
             {label}

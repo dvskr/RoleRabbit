@@ -72,7 +72,7 @@ export function AddCredentialModal({
   return (
     <div 
       className="fixed inset-0 flex items-center justify-center z-50 p-4"
-      style={{ background: MODAL_OVERLAY_BACKGROUND }}
+      style={{ background: MODAL_OVERLAY_BACKGROUND, backdropFilter: 'blur(4px)' }}
     >
       <div 
         className="rounded-lg shadow-xl max-w-md w-full p-6"

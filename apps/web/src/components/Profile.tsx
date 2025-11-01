@@ -29,7 +29,6 @@ import {
   SkillsTab,
   CareerTab,
   PortfolioTab,
-  AnalyticsTab,
   SecurityTab,
   BillingTab,
   PreferencesTab,
@@ -65,7 +64,6 @@ export default function Profile() {
     { id: 'career', label: 'Career Goals', icon: Target },
     { id: 'portfolio', label: 'Portfolio', icon: FileText },
     { id: 'preferences', label: 'Preferences', icon: Settings },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
@@ -104,8 +102,15 @@ export default function Profile() {
     socialLinks: [],
     projects: [],
     achievements: [],
-    careerTimeline: [],
-    jobAlerts: true,
+      careerTimeline: [],
+      workExperiences: [],
+      volunteerExperiences: [],
+      recommendations: [],
+      publications: [],
+      patents: [],
+      organizations: [],
+      testScores: [],
+      jobAlerts: true,
     emailNotifications: true,
     smsNotifications: false,
     privacyLevel: 'Professional',
@@ -318,12 +323,99 @@ export default function Profile() {
 
       // Map work experience to career timeline
       updates.careerTimeline = parsedData.experience.map((exp: any) => ({
+        id: `timeline-${Date.now()}-${Math.random()}`,
         title: exp.position || '',
-        company: exp.company || '',
-        period: exp.period || '',
-        location: exp.location || '',
-        description: exp.description || ''
+        date: exp.period || '',
+        description: `${exp.company || ''} - ${exp.description || ''}`,
+        type: 'Work'
       }));
+
+      // Map all work experiences to workExperiences array (including client work)
+      updates.workExperiences = parsedData.experience.map((exp: any, index: number) => {
+        // Parse period to extract dates
+        const period = exp.period || '';
+        const dateMatch = period.match(/(\d{1,2}[\/\-]\d{4}|\d{4})[\s\-–]+(\d{1,2}[\/\-]\d{4}|\d{4}|Present|Current)/i);
+        const singleYearMatch = period.match(/(\d{4})/);
+        
+        let startDate = '';
+        let endDate = '';
+        let isCurrent = false;
+        
+        if (dateMatch) {
+          startDate = dateMatch[1].replace(/\//g, '/');
+          const endStr = dateMatch[2];
+          if (endStr && (endStr.toLowerCase() === 'present' || endStr.toLowerCase() === 'current')) {
+            isCurrent = true;
+            endDate = '';
+          } else {
+            endDate = endStr.replace(/\//g, '/');
+          }
+        } else if (singleYearMatch) {
+          startDate = singleYearMatch[1];
+          // Assume current if it's the first experience entry
+          isCurrent = index === 0;
+        }
+        
+        // Try to detect if this is client work based on keywords in description or company
+        const description = exp.description || '';
+        const company = exp.company || '';
+        const clientKeywords = ['client', 'consulting', 'freelance', 'contract', 'project'];
+        const isClientWork = clientKeywords.some(keyword => 
+          description.toLowerCase().includes(keyword) || 
+          company.toLowerCase().includes(keyword)
+        );
+        
+        // Extract client name if mentioned (e.g., "Client: Company Name" or similar patterns)
+        let client = '';
+        const clientPatterns = [
+          /client[:\s]+([A-Z][A-Za-z\s&]+?)(?:\.|,|\n|$)/i,
+          /for\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|\n|$)/i,
+          /consulting\s+for\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|\n|$)/i
+        ];
+        for (const pattern of clientPatterns) {
+          const match = description.match(pattern);
+          if (match) {
+            client = match[1].trim();
+            break;
+          }
+        }
+        
+        // Determine project type based on keywords
+        let projectType: 'Client Project' | 'Full-time' | 'Part-time' | 'Contract' | 'Freelance' | 'Consulting' = 'Full-time';
+        if (description.toLowerCase().includes('consulting') || company.toLowerCase().includes('consulting')) {
+          projectType = 'Consulting';
+        } else if (description.toLowerCase().includes('freelance')) {
+          projectType = 'Freelance';
+        } else if (description.toLowerCase().includes('contract')) {
+          projectType = 'Contract';
+        } else if (description.toLowerCase().includes('part-time')) {
+          projectType = 'Part-time';
+        } else if (isClientWork || client) {
+          projectType = 'Client Project';
+        }
+        
+        // Extract technologies from description if mentioned
+        const techKeywords = ['react', 'node', 'javascript', 'python', 'java', 'angular', 'vue', 'aws', 'azure', 'docker', 'kubernetes'];
+        const technologies = techKeywords.filter(tech => 
+          description.toLowerCase().includes(tech) || 
+          company.toLowerCase().includes(tech)
+        );
+        
+        return {
+          id: `exp-${Date.now()}-${index}-${Math.random()}`,
+          company: company,
+          role: exp.position || exp.title || '',
+          client: client || undefined,
+          location: exp.location || '',
+          startDate: startDate,
+          endDate: endDate,
+          isCurrent: isCurrent,
+          description: description,
+          achievements: description ? [description] : [],
+          technologies: technologies.length > 0 ? technologies : undefined,
+          projectType: projectType
+        };
+      });
     }
 
     // Skills - handle both array of strings and array of objects
@@ -363,12 +455,14 @@ export default function Profile() {
 
     // Projects
     if (parsedData.projects && Array.isArray(parsedData.projects) && parsedData.projects.length > 0) {
-      updates.projects = parsedData.projects.map((project: any) => ({
-        name: project.name || '',
+      updates.projects = parsedData.projects.map((project: any, index: number) => ({
+        id: `proj-${Date.now()}-${index}-${Math.random()}`,
+        title: project.name || project.title || '',
         description: project.description || '',
-        technologies: project.technologies || [],
-        url: project.url || '',
-        period: project.period || ''
+        technologies: Array.isArray(project.technologies) ? project.technologies : [],
+        link: project.link || project.url || '',
+        github: project.github || '',
+        date: project.date || project.period || ''
       }));
     }
 
@@ -436,8 +530,6 @@ export default function Profile() {
         return <CareerTab {...commonProps} />;
       case 'portfolio':
         return <PortfolioTab {...commonProps} />;
-      case 'analytics':
-        return <AnalyticsTab userData={displayData} />;
       case 'security':
         return <SecurityTab />;
       case 'billing':

@@ -25,8 +25,20 @@ export default function AddLinkModal({
   if (!isOpen) return null;
 
   return (
-    <div className={styles.portfolioModalOverlay}>
-      <div className={styles.portfolioModal}>
+    <div 
+      className={styles.portfolioModalOverlay}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className={styles.portfolioModal}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
         <div className={styles.portfolioModalHeader}>
           <h3 className={styles.portfolioModalTitle}>
             Add Professional Link

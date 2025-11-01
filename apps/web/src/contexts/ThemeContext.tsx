@@ -102,7 +102,7 @@ const darkTheme: ThemeConfig = {
     badgeErrorBg: 'rgba(239, 68, 68, 0.15)',
     badgeErrorText: '#ef4444',
     badgeErrorBorder: 'rgba(239, 68, 68, 0.3)',
-    badgePurpleBg: 'rgba(168, 85, 247, 0.15)',
+    badgePurpleBg: 'rgba(168, 85, 247, 0.2)',
     badgePurpleText: '#a855f7',
     badgePurpleBorder: 'rgba(168, 85, 247, 0.3)',
     badgeNeutralBg: 'rgba(148, 163, 184, 0.15)',
@@ -125,7 +125,7 @@ const lightTheme: ThemeConfig = {
     sidebarBackground: 'linear-gradient(180deg, rgba(249, 250, 251, 0.95) 0%, rgba(243, 244, 246, 0.95) 100%)',
     headerBackground: 'rgba(255, 255, 255, 0.8)',
     toolbarBackground: 'rgba(249, 250, 251, 0.8)',
-    cardBackground: 'rgba(0, 0, 0, 0.02)',
+    cardBackground: '#f9fafb',
     hoverBackground: 'rgba(0, 0, 0, 0.02)',
     hoverBackgroundStrong: 'rgba(0, 0, 0, 0.04)',
     inputBackground: 'rgba(0, 0, 0, 0.03)',
@@ -138,7 +138,7 @@ const lightTheme: ThemeConfig = {
     activeBlueText: '#2563eb',
     
     // Border colors
-    border: 'rgba(107, 114, 128, 0.2)',
+    border: 'rgba(107, 114, 128, 0.3)',
     borderFocused: 'rgba(107, 114, 128, 0.4)',
     
     // Accent colors
@@ -183,29 +183,57 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  // Always start with dark theme to prevent hydration mismatch
-  const [themeMode, setThemeModeState] = useState<'light' | 'dark'>('dark');
+  // During SSR, always use dark theme to match server render
+  // Client will sync after hydration
   const [isClient, setIsClient] = useState(false);
+  const [themeMode, setThemeModeState] = useState<'light' | 'dark'>(() => {
+    // On server, always return dark to match SSR
+    if (typeof window === 'undefined') return 'dark';
+    // On client, check DOM first (set by script), then localStorage
+    const htmlElement = document.documentElement;
+    if (htmlElement.classList.contains('light')) return 'light';
+    if (htmlElement.classList.contains('dark')) return 'dark';
+    const saved = localStorage.getItem('themeMode');
+    if (saved === 'light' || saved === 'dark') return saved;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    return 'light';
+  });
+  const [theme, setTheme] = useState<ThemeConfig>(darkTheme); // Start with dark, will update on client
 
-  const [theme, setTheme] = useState<ThemeConfig>(darkTheme);
-
-  // Initialize client-side theme after hydration
+  // Mark as client-side and sync theme after hydration
   useEffect(() => {
     setIsClient(true);
     
-    // Check localStorage for saved preference
-    const saved = localStorage.getItem('themeMode');
-    if (saved === 'light' || saved === 'dark') {
-      setThemeModeState(saved);
+    // Re-read from DOM (set by blocking script) to sync React state
+    const htmlElement = document.documentElement;
+    const domTheme = htmlElement.classList.contains('light') ? 'light' : 
+                    htmlElement.classList.contains('dark') ? 'dark' : null;
+    
+    if (domTheme && domTheme !== themeMode) {
+      setThemeModeState(domTheme);
+      setTheme(domTheme === 'dark' ? darkTheme : lightTheme);
       return;
     }
     
-    // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setThemeModeState('dark');
+    // If no DOM class, sync with localStorage or system preference
+    if (!domTheme) {
+      const saved = localStorage.getItem('themeMode');
+      const finalTheme = saved === 'light' || saved === 'dark' 
+        ? saved 
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      
+      if (finalTheme !== themeMode) {
+        setThemeModeState(finalTheme);
+        setTheme(finalTheme === 'dark' ? darkTheme : lightTheme);
+      } else {
+        // Even if themeMode matches, ensure theme object is correct
+        setTheme(themeMode === 'dark' ? darkTheme : lightTheme);
+      }
     } else {
-      setThemeModeState('light');
+      // Ensure theme object matches themeMode
+      setTheme(themeMode === 'dark' ? darkTheme : lightTheme);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update theme when mode changes (only on client)

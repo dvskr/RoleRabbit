@@ -2,7 +2,7 @@
  * Constants for FileCard component
  */
 
-export const MODAL_OVERLAY_STYLE = 'rgba(0, 0, 0, 0.5)';
+export const MODAL_OVERLAY_STYLE = 'rgba(0, 0, 0, 0.85)';
 
 export const SHARE_MODAL = {
   TITLE: 'Share File',

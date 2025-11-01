@@ -416,12 +416,32 @@ export default function BillingTab() {
 
       {/* Payment Update Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+          style={{ 
+            background: 'rgba(0, 0, 0, 0.75)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowPaymentModal(false);
+            }
+          }}
+        >
           <div 
             className="rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
             style={{
               background: colors.cardBackground,
               border: `1px solid ${colors.border}`,
+              position: 'relative',
+              zIndex: 1,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
             }}
           >
             <div className="flex items-center justify-between mb-6">
@@ -675,12 +695,32 @@ export default function BillingTab() {
 
       {/* Cancel Subscription Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
+          style={{ 
+            background: 'rgba(0, 0, 0, 0.75)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCancelModal(false);
+            }
+          }}
+        >
           <div 
             className="rounded-2xl p-6 w-full max-w-md"
             style={{
               background: colors.cardBackground,
               border: `1px solid ${colors.border}`,
+              position: 'relative',
+              zIndex: 1,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
             }}
           >
             <div className="flex items-center justify-between mb-6">

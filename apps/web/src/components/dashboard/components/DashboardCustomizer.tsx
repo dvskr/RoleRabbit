@@ -41,12 +41,21 @@ export function DashboardCustomizer({ widgets, onWidgetsChange, onClose }: Dashb
       size: 'medium'
     },
     {
+      id: 'profile-analytics',
+      type: 'analytics',
+      title: 'Profile Analytics',
+      description: 'Profile performance metrics',
+      isVisible: true,
+      order: 4,
+      size: 'medium'
+    },
+    {
       id: 'intelligent-alerts',
       type: 'alerts',
       title: 'Intelligent Alerts',
       description: 'Proactive notifications',
       isVisible: true,
-      order: 4,
+      order: 5,
       size: 'medium'
     },
     {
@@ -55,7 +64,7 @@ export function DashboardCustomizer({ widgets, onWidgetsChange, onClose }: Dashb
       title: 'Quick Actions',
       description: 'One-click task access',
       isVisible: true,
-      order: 5,
+      order: 6,
       size: 'small'
     },
     {

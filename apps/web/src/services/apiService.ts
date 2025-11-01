@@ -323,6 +323,240 @@ class ApiService {
     });
   }
 
+  /**
+   * Get all cloud files
+   */
+  async getCloudFiles(folderId?: string, includeDeleted: boolean = false): Promise<any> {
+    const params = new URLSearchParams();
+    if (folderId) params.append('folderId', folderId);
+    if (includeDeleted) params.append('includeDeleted', 'true');
+    const url = `/api/cloud-files${params.toString() ? `?${params.toString()}` : ''}`;
+    return this.request(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get cloud file by ID
+   */
+  async getCloudFile(id: string): Promise<any> {
+    return this.request(`/api/cloud-files/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create cloud file
+   */
+  async createCloudFile(fileData: any): Promise<any> {
+    return this.request('/api/cloud-files', {
+      method: 'POST',
+      body: JSON.stringify(fileData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update cloud file
+   */
+  async updateCloudFile(id: string, updates: any): Promise<any> {
+    return this.request(`/api/cloud-files/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Soft delete cloud file (moves to recycle bin)
+   */
+  async deleteCloudFile(id: string): Promise<any> {
+    return this.request(`/api/cloud-files/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Restore deleted cloud file from recycle bin
+   */
+  async restoreCloudFile(id: string): Promise<any> {
+    return this.request(`/api/cloud-files/${id}/restore`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Permanently delete cloud file
+   */
+  async permanentlyDeleteCloudFile(id: string): Promise<any> {
+    return this.request(`/api/cloud-files/${id}/permanent`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get all folders
+   */
+  async getFolders(includeDeleted: boolean = false): Promise<any> {
+    const url = includeDeleted ? '/api/folders?includeDeleted=true' : '/api/folders';
+    return this.request(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create folder
+   */
+  async createFolder(folderData: any): Promise<any> {
+    return this.request('/api/folders', {
+      method: 'POST',
+      body: JSON.stringify(folderData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update folder
+   */
+  async updateFolder(id: string, updates: any): Promise<any> {
+    return this.request(`/api/folders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Soft delete folder (moves to recycle bin)
+   */
+  async deleteFolder(id: string): Promise<any> {
+    return this.request(`/api/folders/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Restore deleted folder from recycle bin
+   */
+  async restoreFolder(id: string): Promise<any> {
+    return this.request(`/api/folders/${id}/restore`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Permanently delete folder
+   */
+  async permanentlyDeleteFolder(id: string): Promise<any> {
+    return this.request(`/api/folders/${id}/permanent`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get all credentials
+   */
+  async getCredentials(): Promise<any> {
+    return this.request('/api/credentials', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get expiring credentials
+   */
+  async getExpiringCredentials(daysAhead?: number): Promise<any> {
+    const url = daysAhead ? `/api/credentials/expiring?daysAhead=${daysAhead}` : '/api/credentials/expiring';
+    return this.request(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create credential
+   */
+  async createCredential(credentialData: any): Promise<any> {
+    return this.request('/api/credentials', {
+      method: 'POST',
+      body: JSON.stringify(credentialData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update credential
+   */
+  async updateCredential(id: string, updates: any): Promise<any> {
+    return this.request(`/api/credentials/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete credential
+   */
+  async deleteCredential(id: string): Promise<any> {
+    return this.request(`/api/credentials/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Share file with user
+   */
+  async shareFile(fileId: string, shareData: any): Promise<any> {
+    return this.request(`/api/files/${fileId}/shares`, {
+      method: 'POST',
+      body: JSON.stringify(shareData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get file shares
+   */
+  async getFileShares(fileId: string): Promise<any> {
+    return this.request(`/api/files/${fileId}/shares`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update file share
+   */
+  async updateFileShare(shareId: string, updates: any): Promise<any> {
+    return this.request(`/api/shares/${shareId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete file share
+   */
+  async deleteFileShare(shareId: string): Promise<any> {
+    return this.request(`/api/shares/${shareId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
   // ===== AUTHENTICATION ENDPOINTS =====
 
   /**
