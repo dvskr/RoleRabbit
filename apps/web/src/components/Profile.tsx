@@ -48,10 +48,15 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Use profile data from context (loaded once at app startup)
   const userData = contextUserData;
   const isLoading = contextLoading;
+  
+  // Local state for editing - allows immediate updates while typing
+  const [localProfileData, setLocalProfileData] = useState<UserData | null>(null);
 
   const tabs: ProfileTabConfig[] = [
     { id: 'profile', label: 'Personal Information', icon: UserCircle },
@@ -115,33 +120,137 @@ export default function Profile() {
     avgResponseTime: 0,
   };
 
-  // Use userData if available, otherwise use default empty data
-  const displayData = userData || defaultUserData;
+  // Use local state if editing, otherwise use context data or defaults
+  // Initialize local state when userData loads or when entering edit mode
+  useEffect(() => {
+    // Don't update localProfileData during save operation to prevent flashing
+    if (isSaving || isSaved) {
+      return;
+    }
+    
+    if (userData && !localProfileData) {
+      setLocalProfileData(userData);
+    } else if (userData && !isEditing) {
+      // Sync local state with context when not editing
+      setLocalProfileData(userData);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userData, isEditing, isSaving, isSaved]);
+
+  // Use localProfileData if available during editing to prevent flashing
+  // Only fall back to userData if localProfileData is explicitly null (not just undefined)
+  const displayData = isEditing 
+    ? (localProfileData !== null ? (localProfileData || defaultUserData) : (userData || defaultUserData))
+    : (userData || defaultUserData);
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveMessage(null);
     try {
-      // Save user profile via API using displayData
-      await apiService.updateUserProfile(displayData);
-      logger.debug('Profile saved via API:', displayData);
-      // Refresh profile data from context after saving
-      await refreshProfile();
+      // Save user profile via API using displayData (which has latest local edits)
+      const dataToSave = localProfileData || displayData;
+      
+      // Clean up data before sending - remove null/undefined values and ensure arrays are arrays
+      // Also exclude large base64 profile pictures (those should be uploaded separately)
+      const cleanedData: Partial<UserData> = {};
+      Object.keys(dataToSave).forEach(key => {
+        const value = (dataToSave as any)[key];
+        // Skip profile picture if it's a large base64 string (upload separately)
+        if (key === 'profilePicture' && typeof value === 'string' && value.startsWith('data:') && value.length > 10000) {
+          // Profile picture will be uploaded separately, skip from general update
+          return;
+        }
+        if (value !== null && value !== undefined) {
+          // Ensure arrays are arrays, not null/undefined
+          if (Array.isArray(value)) {
+            cleanedData[key as keyof UserData] = value as any;
+          } else if (typeof value === 'object' && !Array.isArray(value)) {
+            // Handle objects
+            cleanedData[key as keyof UserData] = value as any;
+          } else {
+            cleanedData[key as keyof UserData] = value as any;
+          }
+        }
+      });
+      
+      logger.debug('Saving profile data:', cleanedData);
+      
+      await apiService.updateUserProfile(cleanedData);
+      logger.debug('Profile saved successfully via API');
+      
+      // Batch all state updates together to prevent flashing
+      // Update localProfileData with saved data immediately to keep UI stable
+      const updatedLocalData = localProfileData ? { ...localProfileData, ...cleanedData } : localProfileData;
+      
+      // Update all states in one batch using React's automatic batching
       setIsSaving(false);
-      setIsEditing(false);
-    } catch (error) {
+      setIsSaved(true);
+      if (updatedLocalData) {
+        setLocalProfileData(updatedLocalData);
+      }
+      
+      // Don't refresh profile - it causes flashing. Data is already updated locally.
+      // Profile will be refreshed when user manually exits edit mode or on next page load.
+      
+      // Reset saved status after 3 seconds but stay in edit mode to prevent flashing
+      // User can manually exit edit mode when ready
+      setTimeout(() => {
+        setIsSaved(false);
+      }, 3000);
+    } catch (error: any) {
       logger.error('Failed to save profile:', error);
       setIsSaving(false);
-      setIsEditing(false);
+      
+      // Provide more helpful error message
+      let errorMessage = 'Failed to save profile. Please try again.';
+      if (error.message) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = 'Cannot connect to server. Please ensure the API server is running on http://localhost:3001';
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          errorMessage = 'Session expired. Please log in again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setSaveMessage({ 
+        type: 'error', 
+        text: errorMessage
+      });
+      // Clear message after 5 seconds
+      setTimeout(() => setSaveMessage(null), 5000);
     }
   };
 
   const handleUserDataChange = (data: Partial<UserData>) => {
-    // Update profile data in context
+    // Update local state immediately for responsive typing
+    if (localProfileData) {
+      setLocalProfileData({ ...localProfileData, ...data });
+    } else {
+      // Initialize local state if it doesn't exist
+      const currentData = userData || defaultUserData;
+      setLocalProfileData({ ...currentData, ...data });
+    }
+    // Also update context for consistency
     updateProfileData(data);
   };
 
-  const handleChangePhoto = () => {
-    // Handle profile picture change
+  const handleChangePhoto = async (newPictureUrl: string) => {
+    try {
+      // Update the profile picture in local state
+      updateProfileData({ profilePicture: newPictureUrl });
+      // Refresh profile to get the latest data
+      await refreshProfile();
+      setSaveMessage({ type: 'success', text: 'Profile picture updated successfully!' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error: any) {
+      logger.error('Failed to update profile picture:', error);
+      setSaveMessage({ 
+        type: 'error', 
+        text: 'Failed to update profile picture. Please try again.' 
+      });
+      setTimeout(() => setSaveMessage(null), 5000);
+    }
   };
 
   // Show loading state only when actually loading
@@ -158,9 +267,10 @@ export default function Profile() {
 
 
   const handleResumeImport = (parsedData: any) => {
-    // Auto-fill profile data from resume
+    // Auto-fill profile data from resume with accurate mapping
     const updates: Partial<UserData> = {};
 
+    // Personal Information
     if (parsedData.personalInfo) {
       if (parsedData.personalInfo.firstName) updates.firstName = parsedData.personalInfo.firstName;
       if (parsedData.personalInfo.lastName) updates.lastName = parsedData.personalInfo.lastName;
@@ -169,25 +279,142 @@ export default function Profile() {
       if (parsedData.personalInfo.location) updates.location = parsedData.personalInfo.location;
     }
 
+    // Professional Summary / Bio
     if (parsedData.professionalSummary) {
+      updates.bio = parsedData.professionalSummary;
       updates.professionalSummary = parsedData.professionalSummary;
     }
 
-    if (parsedData.skills && parsedData.skills.length > 0) {
-      updates.skills = parsedData.skills;
+    // Current Role and Company
+    if (parsedData.currentRole) {
+      updates.currentRole = parsedData.currentRole;
+    }
+    if (parsedData.currentCompany) {
+      updates.currentCompany = parsedData.currentCompany;
     }
 
-    if (parsedData.education && parsedData.education.length > 0) {
-      updates.education = parsedData.education;
+    // Extract from experience if available and current role/company not set
+    if (parsedData.experience && Array.isArray(parsedData.experience) && parsedData.experience.length > 0) {
+      const mostRecent = parsedData.experience[0];
+      if (!updates.currentRole && mostRecent.position) {
+        updates.currentRole = mostRecent.position;
+      }
+      if (!updates.currentCompany && mostRecent.company) {
+        updates.currentCompany = mostRecent.company;
+      }
+
+      // Calculate experience duration if periods are available
+      if (mostRecent.period) {
+        const periodMatch = mostRecent.period.match(/(\d{4})/);
+        if (periodMatch) {
+          const startYear = parseInt(periodMatch[1]);
+          const currentYear = new Date().getFullYear();
+          const yearsOfExperience = currentYear - startYear;
+          if (yearsOfExperience > 0) {
+            updates.experience = `${yearsOfExperience}+ years`;
+          }
+        }
+      }
+
+      // Map work experience to career timeline
+      updates.careerTimeline = parsedData.experience.map((exp: any) => ({
+        title: exp.position || '',
+        company: exp.company || '',
+        period: exp.period || '',
+        location: exp.location || '',
+        description: exp.description || ''
+      }));
     }
 
-    if (parsedData.certifications && parsedData.certifications.length > 0) {
-      updates.certifications = parsedData.certifications;
+    // Skills - handle both array of strings and array of objects
+    if (parsedData.skills && Array.isArray(parsedData.skills)) {
+      if (parsedData.skills.length > 0) {
+        if (typeof parsedData.skills[0] === 'string') {
+          updates.skills = parsedData.skills;
+        } else if (typeof parsedData.skills[0] === 'object' && parsedData.skills[0].name) {
+          // Extract skill names from objects
+          updates.skills = parsedData.skills.map((skill: any) => skill.name || skill);
+        } else {
+          updates.skills = parsedData.skills;
+        }
+      }
     }
 
-    // Apply all updates to context
+    // Education
+    if (parsedData.education && Array.isArray(parsedData.education) && parsedData.education.length > 0) {
+      updates.education = parsedData.education.map((edu: any) => ({
+        school: edu.school || edu.institution || '',
+        degree: edu.degree || '',
+        field: edu.field || '',
+        period: edu.period || `${edu.startDate || ''} - ${edu.endDate || ''}`,
+        description: edu.description || ''
+      }));
+    }
+
+    // Certifications
+    if (parsedData.certifications && Array.isArray(parsedData.certifications) && parsedData.certifications.length > 0) {
+      updates.certifications = parsedData.certifications.map((cert: any) => ({
+        name: cert.name || '',
+        issuer: cert.issuer || '',
+        date: cert.date || '',
+        expiryDate: cert.expiryDate || null
+      }));
+    }
+
+    // Projects
+    if (parsedData.projects && Array.isArray(parsedData.projects) && parsedData.projects.length > 0) {
+      updates.projects = parsedData.projects.map((project: any) => ({
+        name: project.name || '',
+        description: project.description || '',
+        technologies: project.technologies || [],
+        url: project.url || '',
+        period: project.period || ''
+      }));
+    }
+
+    // Social Links
+    if (parsedData.links) {
+      if (parsedData.links.linkedin) {
+        updates.linkedin = parsedData.links.linkedin.startsWith('http') 
+          ? parsedData.links.linkedin 
+          : `https://${parsedData.links.linkedin}`;
+      }
+      if (parsedData.links.github) {
+        updates.github = parsedData.links.github.startsWith('http') 
+          ? parsedData.links.github 
+          : `https://${parsedData.links.github}`;
+      }
+      if (parsedData.links.website) {
+        updates.website = parsedData.links.website.startsWith('http') 
+          ? parsedData.links.website 
+          : `https://${parsedData.links.website}`;
+      }
+    }
+
+    // Apply all updates to local state and context
     if (Object.keys(updates).length > 0) {
+      // Update local state for immediate UI update
+      const currentData = localProfileData || userData || defaultUserData;
+      setLocalProfileData({ ...currentData, ...updates });
+      
+      // Update context
       updateProfileData(updates);
+      
+      // Enter edit mode automatically
+      setIsEditing(true);
+      
+      setSaveMessage({ 
+        type: 'success', 
+        text: `Successfully imported ${Object.keys(updates).length} fields from resume! Review and save your changes.` 
+      });
+      setTimeout(() => setSaveMessage(null), 5000);
+      logger.debug('Resume data imported:', updates);
+    } else {
+      setSaveMessage({ 
+        type: 'error', 
+        text: 'No data could be extracted from the resume. Please try a different file.' 
+      });
+      setTimeout(() => setSaveMessage(null), 5000);
     }
   };
 
@@ -236,12 +463,44 @@ export default function Profile() {
       className="w-full h-full flex flex-col overflow-hidden"
       style={{ background: colors.background }}
     >
+      {/* Error Message Only (Success shown in button) */}
+      {saveMessage && saveMessage.type === 'error' && (
+        <div 
+          className="mx-4 mt-4 p-4 rounded-xl shadow-lg flex items-center justify-between bg-red-50 border border-red-200"
+        >
+          <p className="text-sm font-medium text-red-800">
+            {saveMessage.text}
+          </p>
+          <button
+            onClick={() => setSaveMessage(null)}
+            className="ml-4 text-lg font-bold text-red-600 hover:text-red-800"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Enhanced Header */}
       <ProfileHeader
         isEditing={isEditing}
         isSaving={isSaving}
-        onEdit={() => setIsEditing(true)}
-        onCancel={() => setIsEditing(false)}
+        isSaved={isSaved}
+        onEdit={() => {
+          setIsEditing(true);
+          setIsSaved(false); // Reset saved state when entering edit mode
+          setIsSaving(false); // Reset saving state
+          // Initialize local state when entering edit mode
+          if (userData) {
+            setLocalProfileData(userData);
+          }
+        }}
+        onCancel={() => {
+          setIsEditing(false);
+          setIsSaved(false); // Reset saved state when canceling
+          setIsSaving(false); // Reset saving state
+          // Reset local state to match context when canceling (no refresh needed - just discard changes)
+          setLocalProfileData(null);
+        }}
         onSave={handleSave}
         resumeImportButton={<ResumeImport onResumeImport={handleResumeImport} />}
       />

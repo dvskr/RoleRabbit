@@ -81,10 +81,13 @@ export function useDashboardUI(): UseDashboardUIReturn {
         // Save to localStorage
         localStorage.setItem('dashboard_activeTab', activeTab);
         
-        // Update URL without page reload
+        // Only update URL if it's different from current
         const params = new URLSearchParams(window.location.search);
-        params.set('tab', activeTab);
-        router.push(`/dashboard?${params.toString()}`, { scroll: false });
+        const currentTab = params.get('tab');
+        if (currentTab !== activeTab) {
+          params.set('tab', activeTab);
+          router.push(`/dashboard?${params.toString()}`, { scroll: false });
+        }
       } catch (error) {
         console.error('Error saving tab state:', error);
       }

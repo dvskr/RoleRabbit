@@ -1,8 +1,8 @@
 import { DashboardConfig } from '../types/dashboard';
 
 export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
-  // Data source (easy to change later)
-  dataSource: 'mock',
+  // Data source - switch to 'api' for production
+  dataSource: 'api', // Changed to 'api' for production ready
   refreshInterval: 5, // minutes
   enableRealTimeUpdates: false,
   

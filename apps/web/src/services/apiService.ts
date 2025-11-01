@@ -64,12 +64,27 @@ class ApiService {
       }
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
+        // Try to get error details from response
+        let errorMessage = `API error: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+          if (errorData.details) {
+            errorMessage += ` - ${errorData.details}`;
+          }
+        } catch (e) {
+          // If response isn't JSON, use status text
+        }
+        throw new Error(errorMessage);
       }
 
       return await response.json();
-    } catch (error) {
+    } catch (error: any) {
       console.error('API request failed:', error);
+      // Provide more helpful error messages
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+        throw new Error('Failed to connect to server. Please check if the API server is running on http://localhost:3001');
+      }
       throw error;
     }
   }
@@ -109,6 +124,72 @@ class ApiService {
       body: JSON.stringify(data),
       credentials: 'include',
     });
+  }
+
+  /**
+   * Upload profile picture
+   */
+  async uploadProfilePicture(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${this.baseUrl}/api/users/profile/picture`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to upload profile picture');
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Parse resume file and extract profile information
+   */
+  async parseResume(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/api/users/profile/parse-resume`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to parse resume';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+          if (errorData.details && errorData.error !== errorData.details) {
+            errorMessage = `${errorData.error}: ${errorData.details}`;
+          }
+        } catch (parseError) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      
+      // Validate response structure
+      if (!data || !data.parsedData) {
+        throw new Error('Invalid response from server. No parsed data received.');
+      }
+
+      return data;
+    } catch (error: any) {
+      // Provide more helpful error messages
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+        throw new Error('Cannot connect to server. Please ensure the API server is running on http://localhost:3001');
+      }
+      throw error;
+    }
   }
 
   // ===== RESUME ENDPOINTS =====
@@ -561,6 +642,37 @@ class ApiService {
     return this.request(`/api/tasks/${taskId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
+    });
+  }
+
+  // Dashboard
+  async getDashboardActivities(limit?: number) {
+    const query = limit ? `?limit=${limit}` : '';
+    return this.request<{ activities: any[] }>(`/api/dashboard/activities${query}`);
+  }
+
+  async getDashboardTodos() {
+    return this.request<{ todos: any[] }>('/api/dashboard/todos');
+  }
+
+  async completeTodo(todoId: string, completed: boolean = true) {
+    return this.request<{ success: boolean }>(`/api/dashboard/todos/${todoId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ completed }),
+    });
+  }
+
+  async getDashboardMetrics() {
+    return this.request<{ metrics: any }>('/api/dashboard/metrics');
+  }
+
+  async getDashboardAlerts() {
+    return this.request<{ alerts: any[] }>('/api/dashboard/alerts');
+  }
+
+  async dismissAlert(alertId: string) {
+    return this.request<{ success: boolean }>(`/api/dashboard/alerts/${alertId}`, {
+      method: 'DELETE',
     });
   }
 }

@@ -1,4 +1,5 @@
 const fastify = require('fastify')({
+  bodyLimit: 10485760, // 10MB body limit for JSON requests
   logger: {
     level: 'info',
     serializers: {
@@ -237,18 +238,6 @@ fastify.register(require('@fastify/jwt'), {
   secret: process.env.JWT_SECRET || require('crypto').randomBytes(64).toString('hex')
 });
 
-// Configure JWT to read from both cookies and Authorization header
-fastify.addHook('preHandler', async (request, reply) => {
-  // If no auth_token cookie, try to read from Authorization header
-  if (!request.cookies.auth_token && request.headers.authorization) {
-    const [scheme, token] = request.headers.authorization.split(' ');
-    if (scheme === 'Bearer' && token) {
-      // Set the cookie so jwtVerify can read it
-      request.cookies.auth_token = token;
-    }
-  }
-});
-
 // Authentication middleware - import for use in routes
 const { authenticate } = require('./middleware/auth');
 
@@ -256,6 +245,26 @@ const { authenticate } = require('./middleware/auth');
 fastify.register(require('@fastify/multipart'), {
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Hook to make cookie token available for jwtVerify (runs after cookies are parsed)
+fastify.addHook('preHandler', async (request, reply) => {
+  // If we have a cookie token but no Authorization header, set it so jwtVerify can use it
+  const cookieToken = request.cookies?.auth_token;
+  const authHeader = request.headers.authorization;
+  
+  if (cookieToken && !authHeader) {
+    request.headers.authorization = `Bearer ${cookieToken}`;
+    // Debug log (remove in production)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
+    }
+  } else if (!cookieToken && !authHeader) {
+    // Debug log
+    if (process.env.NODE_ENV !== 'production' && !request.url.includes('/health') && !request.url.includes('/api/status')) {
+      console.log(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
+    }
   }
 });
 
@@ -318,6 +327,7 @@ fastify.register(require('./routes/analytics.routes'));
 fastify.register(require('./routes/discussions.routes'));
 fastify.register(require('./routes/agents.routes'));
 fastify.register(require('./routes/ai.routes'));
+fastify.register(require('./routes/dashboard.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {

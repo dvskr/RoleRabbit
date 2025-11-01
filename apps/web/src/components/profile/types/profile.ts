@@ -151,6 +151,7 @@ export interface ProfileTabConfig {
 export interface ProfileHeaderProps {
   isEditing: boolean;
   isSaving: boolean;
+  isSaved?: boolean;
   onEdit: () => void;
   onCancel: () => void;
   onSave: () => void;

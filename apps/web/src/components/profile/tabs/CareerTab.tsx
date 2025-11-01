@@ -18,24 +18,95 @@ export default function CareerTab({
 }: CareerTabProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Normalize array fields to always be arrays
+  const normalizeArray = (data: any): any[] => {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+      // Handle array of strings or objects
+      return data.map(item => typeof item === 'string' ? item : (item || ''));
+    }
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        return normalizeArray(parsed);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const normalizeCareerGoals = (goals: any): any[] => {
+    if (!goals) return [];
+    if (Array.isArray(goals)) {
+      return goals.map(goal => {
+        if (typeof goal === 'string') {
+          return { goal, deadline: '', description: '' };
+        }
+        return {
+          goal: goal.goal || '',
+          deadline: goal.deadline || '',
+          description: goal.description || ''
+        };
+      });
+    }
+    if (typeof goals === 'string') {
+      try {
+        const parsed = JSON.parse(goals);
+        return normalizeCareerGoals(parsed);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const normalizeCareerTimeline = (timeline: any): any[] => {
+    if (!timeline) return [];
+    if (Array.isArray(timeline)) {
+      return timeline.map(item => ({
+        title: item.title || '',
+        company: item.company || '',
+        period: item.period || '',
+        location: item.location || '',
+        description: item.description || ''
+      }));
+    }
+    if (typeof timeline === 'string') {
+      try {
+        const parsed = JSON.parse(timeline);
+        return normalizeCareerTimeline(parsed);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const targetRoles = normalizeArray(userData.targetRoles);
+  const targetCompanies = normalizeArray(userData.targetCompanies);
+  const careerGoals = normalizeCareerGoals(userData.careerGoals);
+  const careerTimeline = normalizeCareerTimeline(userData.careerTimeline);
+  
   const addTargetRole = (role: string) => {
-    if (role && !userData.targetRoles.includes(role)) {
-      onUserDataChange({ targetRoles: [...userData.targetRoles, role] });
+    if (role && !targetRoles.includes(role)) {
+      onUserDataChange({ targetRoles: [...targetRoles, role] });
     }
   };
 
   const removeTargetRole = (index: number) => {
-    onUserDataChange({ targetRoles: userData.targetRoles.filter((_, i) => i !== index) });
+    onUserDataChange({ targetRoles: targetRoles.filter((_, i) => i !== index) });
   };
 
   const addTargetCompany = (company: string) => {
-    if (company && !userData.targetCompanies.includes(company)) {
-      onUserDataChange({ targetCompanies: [...userData.targetCompanies, company] });
+    if (company && !targetCompanies.includes(company)) {
+      onUserDataChange({ targetCompanies: [...targetCompanies, company] });
     }
   };
 
   const removeTargetCompany = (index: number) => {
-    onUserDataChange({ targetCompanies: userData.targetCompanies.filter((_, i) => i !== index) });
+    onUserDataChange({ targetCompanies: targetCompanies.filter((_, i) => i !== index) });
   };
 
   return (
@@ -71,7 +142,7 @@ export default function CareerTab({
             Career Goals
           </h3>
           <div className="space-y-4">
-            {Array.isArray(userData.careerGoals) && userData.careerGoals.map((goal, index) => (
+            {careerGoals.map((goal, index) => (
               <div 
                 key={index} 
                 className="p-6 rounded-xl transition-all"
@@ -119,7 +190,7 @@ export default function CareerTab({
                   {isEditing && (
                     <button
                       onClick={() => {
-                        const updated = userData.careerGoals.filter((_, i) => i !== index);
+                        const updated = careerGoals.filter((_, i) => i !== index);
                         onUserDataChange({ careerGoals: updated });
                       }}
                       className="p-2 rounded-lg transition-colors"
@@ -167,7 +238,7 @@ export default function CareerTab({
                 </div>
               </div>
             ))}
-            {(!Array.isArray(userData.careerGoals) || userData.careerGoals.length === 0) && (
+            {careerGoals.length === 0 && (
               <div 
                 className="text-center py-8"
                 style={{ color: colors.tertiaryText }}
@@ -194,7 +265,7 @@ export default function CareerTab({
             Target Roles
           </h3>
           <div className="flex flex-wrap gap-3 mb-6">
-            {(userData.targetRoles || []).map((role, index) => (
+            {targetRoles.map((role, index) => (
               <span 
                 key={index} 
                 className="px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm"
@@ -285,7 +356,7 @@ export default function CareerTab({
             Target Companies
           </h3>
           <div className="flex flex-wrap gap-3 mb-6">
-            {(userData.targetCompanies || []).map((company, index) => (
+            {targetCompanies.map((company, index) => (
               <span 
                 key={index} 
                 className="px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm"

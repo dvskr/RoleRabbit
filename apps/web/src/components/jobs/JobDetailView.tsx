@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, FileText, DollarSign, Building2, UserPlus, ClipboardList, Bell } from 'lucide-react';
 import { logger } from '../../utils/logger';
 import { Job } from '../../types/job';
@@ -25,7 +25,45 @@ export default function JobDetailView({ job, onClose }: JobDetailViewProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   
-  const [activeTab, setActiveTab] = useState<TabType>('notes');
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    // Initialize from URL if available
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('detail');
+        if (tab && ['interview', 'salary', 'company', 'referral', 'notes', 'reminders'].includes(tab)) {
+          return tab as TabType;
+        }
+      } catch (error) {
+        // Ignore
+      }
+    }
+    return 'notes';
+  });
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize
+  useEffect(() => {
+    setIsInitialized(true);
+  }, []);
+
+  // Persist activeTab to URL (only after initialization)
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const currentTab = params.get('detail');
+        if (currentTab !== activeTab) {
+          params.set('detail', activeTab);
+          window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        }
+      } catch (error) {
+        // Ignore
+      }
+    }
+  }, [activeTab, isInitialized]);
 
   const tabs = [
     { id: 'notes' as TabType, label: 'Notes', icon: ClipboardList },

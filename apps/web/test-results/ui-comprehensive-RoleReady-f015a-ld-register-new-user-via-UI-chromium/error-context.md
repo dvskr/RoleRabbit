@@ -32,7 +32,7 @@
       - generic [ref=e51]:
         - textbox "Full name" [ref=e54]
         - generic [ref=e56]:
-          - textbox "Email" [ref=e57]: ui-test-1761962783525@test.com
+          - textbox "Email" [ref=e57]: ui-test-1761965741423@test.com
           - img [ref=e59]
         - generic [ref=e63]:
           - textbox "Password" [ref=e64]: TestPass123!

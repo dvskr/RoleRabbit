@@ -144,7 +144,18 @@ async function authRoutes(fastify, options) {
         });
       }
       
-      const user = await authenticateUser(email, password);
+      let user;
+      try {
+        user = await authenticateUser(email, password);
+      } catch (authError) {
+        // Log authentication error but don't expose details
+        console.error('Authentication failed for email:', email);
+        reply.status(401).send({
+          success: false,
+          error: authError.message || 'Invalid credentials'
+        });
+        return;
+      }
       
       // Check if user has 2FA enabled
       if (user.twoFactorEnabled) {
@@ -199,16 +210,43 @@ async function authRoutes(fastify, options) {
         path: '/'
       });
       
-      reply.send({
-        success: true,
-        user,
-        token: accessToken,
-        refreshToken
+      // Prepare user object - ensure it's serializable (remove any undefined values)
+      const safeUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name || null,
+        profilePicture: user.profilePicture || null,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        createdAt: user.createdAt ? user.createdAt.toISOString() : null,
+        updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
+      };
+      
+      // Remove null/undefined values
+      Object.keys(safeUser).forEach(key => {
+        if (safeUser[key] === undefined) {
+          delete safeUser[key];
+        }
       });
+      
+      const response = {
+        success: true,
+        user: safeUser,
+        token: accessToken
+        // Don't send refreshToken in response - it's in httpOnly cookie
+      };
+      
+      // Use code() and send() to ensure proper response handling
+      reply.code(200).send(response);
     } catch (error) {
-      reply.status(401).send({
+      console.error('Login endpoint error:', error);
+      console.error('Error stack:', error.stack);
+      
+      // Ensure we always send a valid JSON response
+      const statusCode = error.statusCode || 500;
+      reply.status(statusCode).send({
         success: false,
-        error: error.message
+        error: error.message || 'An unexpected error occurred during login'
       });
     }
   });
@@ -248,7 +286,8 @@ async function authRoutes(fastify, options) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 15 * 60 * 1000, // 15 minutes
-        path: '/'
+        path: '/',
+        // Don't set domain - let browser handle it (works for localhost)
       });
       
       reply.send({

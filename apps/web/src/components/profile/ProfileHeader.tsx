@@ -1,7 +1,7 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { Save, Edit, UserCircle } from 'lucide-react';
+import { Save, Edit, UserCircle, Check } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -12,6 +12,7 @@ interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
 export default function ProfileHeader({
   isEditing,
   isSaving,
+  isSaved = false,
   onEdit,
   onCancel,
   onSave,
@@ -83,23 +84,39 @@ export default function ProfileHeader({
               </button>
               <button
                 onClick={onSave}
-                disabled={isSaving}
-                className="px-5 py-2 rounded-lg disabled:opacity-50 transition-all duration-200 flex items-center gap-2 text-sm font-medium"
+                disabled={isSaving || isSaved}
+                className="px-5 py-2 rounded-lg transition-all duration-300 ease-in-out flex items-center gap-2 text-sm font-medium"
                 style={{
-                  background: colors.primaryBlue,
+                  background: isSaved ? '#10b981' : colors.primaryBlue,
                   color: 'white',
+                  opacity: 1,
+                  cursor: (isSaving || isSaved) ? 'not-allowed' : 'pointer',
+                  transition: 'background-color 0.3s ease-in-out, transform 0.2s ease-in-out',
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSaving) {
+                  if (!isSaving && !isSaved) {
                     e.currentTarget.style.background = colors.primaryBlueHover;
                   }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlue;
+                  if (isSaved) {
+                    e.currentTarget.style.background = '#10b981';
+                  } else {
+                    e.currentTarget.style.background = colors.primaryBlue;
+                  }
                 }}
               >
-                <Save size={16} />
-                {isSaving ? 'Saving...' : 'Save'}
+                {isSaved ? (
+                  <>
+                    <Check size={16} />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </>
+                )}
               </button>
             </>
           ) : (

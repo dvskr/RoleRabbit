@@ -100,17 +100,34 @@ function validateResumeData(data) {
  * Validate job application data
  */
 function validateJobApplication(data) {
-  if (!data || typeof data !== 'object') return false;
+  if (!data || typeof data !== 'object') {
+    return {
+      isValid: false,
+      errors: { message: 'Job data must be an object' }
+    };
+  }
   
   // Check required fields
   const requiredFields = ['title', 'company'];
+  const errors = {};
+  
   for (const field of requiredFields) {
     if (!data[field] || typeof data[field] !== 'string') {
-      return false;
+      errors[field] = `${field} is required and must be a string`;
     }
   }
   
-  return true;
+  if (Object.keys(errors).length > 0) {
+    return {
+      isValid: false,
+      errors: errors
+    };
+  }
+  
+  return {
+    isValid: true,
+    errors: {}
+  };
 }
 
 module.exports = {

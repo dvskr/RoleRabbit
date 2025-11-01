@@ -61,30 +61,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
       
+      // Read response text once (can only be read once)
+      const responseText = await response.text();
+      
       if (!response.ok) {
         let errorMessage = 'Login failed';
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
+          // Try to parse as JSON
+          if (responseText) {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } else {
+            errorMessage = `Server error: ${response.status} ${response.statusText || 'Unknown error'}`;
+          }
         } catch (parseError) {
-          // If response is not JSON, use status text
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          // If not JSON, use response text or status
+          errorMessage = responseText || `Server error: ${response.status} ${response.statusText || 'Unknown error'}`;
         }
         throw new Error(errorMessage);
       }
       
-      const data = await response.json();
+      // Parse successful response
+      let data;
+      try {
+        if (responseText) {
+          data = JSON.parse(responseText);
+        } else {
+          throw new Error('Empty response from server');
+        }
+      } catch (parseError: any) {
+        console.error('Failed to parse login response:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error('Invalid response from server. Please check if the API server is running.');
+      }
       
       // Token is now stored in httpOnly cookie (not in localStorage)
       // Only store user data in memory
       if (data.user) {
         setUser(data.user);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
       // Provide more helpful error message
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Cannot connect to server. Please ensure the backend is running.');
+        throw new Error('Cannot connect to server. Please ensure the API server is running on http://localhost:3001');
+      }
+      if (error.message.includes('Unexpected end of JSON')) {
+        throw new Error('Server returned invalid response. Please check if the API server is running.');
       }
       throw error; // Re-throw to let UI handle it
     } finally {

@@ -17,6 +17,46 @@ model User {
   provider      String   @default("local") // local, google, github
   providerId    String?  @unique
   profilePicture String?
+  
+  // Extended Profile Fields
+  firstName     String?
+  lastName      String?
+  phone         String?
+  location      String?
+  bio           String?
+  currentRole   String?
+  currentCompany String?
+  experience    String?
+  industry      String?
+  jobLevel      String?
+  employmentType String?
+  availability  String?
+  salaryExpectation String?
+  workPreference String?
+  linkedin     String?
+  github        String?
+  website       String?
+  
+  // JSON fields for complex data
+  skills        String?  // JSON array
+  certifications String? // JSON array
+  languages     String?  // JSON array
+  education     String?  // JSON array
+  careerGoals   String?  // JSON array
+  targetRoles   String?  // JSON array
+  targetCompanies String? // JSON array
+  socialLinks   String?  // JSON array
+  projects      String?  // JSON array
+  achievements  String?  // JSON array
+  careerTimeline String? // JSON array
+  
+  // Preferences
+  jobAlerts     Boolean  @default(true)
+  emailNotifications Boolean @default(true)
+  smsNotifications Boolean @default(false)
+  privacyLevel  String?  @default("Professional")
+  profileVisibility String? @default("Public")
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

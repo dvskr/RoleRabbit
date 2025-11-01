@@ -27,47 +27,58 @@ export default function FormField({
       </label>
       {type === 'textarea' ? (
         <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={value || ''}
+          onChange={(e) => {
+            if (!disabled) {
+              onChange(e.target.value);
+            }
+          }}
           disabled={disabled}
           rows={rows}
-          className="w-full px-4 py-3 rounded-xl transition-all duration-200 resize-none"
+          className={`w-full px-4 py-3 rounded-xl transition-all duration-200 resize-none ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text'}`}
           style={{
-            background: colors.inputBackground,
+            background: disabled ? colors.inputBackground : colors.inputBackground,
             border: `1px solid ${colors.border}`,
             color: colors.primaryText,
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = colors.borderFocused;
-            e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.badgeInfoBg}`;
+            if (!disabled) {
+              e.currentTarget.style.borderColor = colors.borderFocused;
+              e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.badgeInfoBg}`;
+            }
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = colors.border;
             e.currentTarget.style.boxShadow = 'none';
           }}
-          disabled={disabled}
           placeholder={placeholder}
         />
       ) : (
         <input
           type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl transition-all duration-200"
+          value={value || ''}
+          onChange={(e) => {
+            if (!disabled) {
+              onChange(e.target.value);
+            }
+          }}
+          disabled={disabled}
+          className={`w-full px-4 py-3 rounded-xl transition-all duration-200 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text'}`}
           style={{
             background: colors.inputBackground,
             border: `1px solid ${colors.border}`,
             color: colors.primaryText,
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = colors.borderFocused;
-            e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.badgeInfoBg}`;
+            if (!disabled) {
+              e.currentTarget.style.borderColor = colors.borderFocused;
+              e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.badgeInfoBg}`;
+            }
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = colors.border;
             e.currentTarget.style.boxShadow = 'none';
           }}
-          disabled={disabled}
           placeholder={placeholder}
         />
       )}

@@ -13,16 +13,50 @@ export function useJobsApi() {
     groupBy: 'status',
     showArchived: false
   });
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    // Initialize from URL if available
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get('view');
+        if (mode && ['list', 'grid', 'kanban', 'table'].includes(mode)) {
+          return mode as ViewMode;
+        }
+      } catch (error) {
+        // Ignore
+      }
+    }
+    return 'table';
+  });
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load jobs from API on mount
   useEffect(() => {
     loadJobs();
+    setIsInitialized(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist viewMode to URL (only after initialization)
+  useEffect(() => {
+    if (!isInitialized) return;
+    
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const currentView = params.get('view');
+        if (currentView !== viewMode) {
+          params.set('view', viewMode);
+          window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        }
+      } catch (error) {
+        // Ignore
+      }
+    }
+  }, [viewMode, isInitialized]);
 
   const loadJobs = useCallback(async () => {
     setIsLoading(true);

@@ -18,21 +18,77 @@ export default function SkillsTab({
 }: SkillsTabProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Normalize skills to always be an array
+  const normalizeSkills = (skills: any): Skill[] => {
+    if (!skills) return [];
+    if (Array.isArray(skills)) {
+      // Ensure each skill is an object with proper structure
+      return skills.map(skill => {
+        if (typeof skill === 'string') {
+          return { name: skill, proficiency: 'Beginner', verified: false };
+        }
+        return {
+          name: skill.name || '',
+          proficiency: skill.proficiency || 'Beginner',
+          verified: skill.verified || false
+        };
+      });
+    }
+    // If it's a JSON string, try to parse it
+    if (typeof skills === 'string') {
+      try {
+        const parsed = JSON.parse(skills);
+        return normalizeSkills(parsed);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const skills: Skill[] = normalizeSkills(userData.skills);
+  
   const addSkill = (skillName: string) => {
     const skill: Skill = {
       name: skillName,
       proficiency: 'Beginner',
       verified: false
     };
-    if (skillName && !userData.skills.some(s => s.name === skillName)) {
-      onUserDataChange({ skills: [...userData.skills, skill] });
+    if (skillName && !skills.some(s => s.name === skillName)) {
+      onUserDataChange({ skills: [...skills, skill] });
     }
   };
 
   const removeSkill = (index: number) => {
-    onUserDataChange({ skills: userData.skills.filter((_, i) => i !== index) });
+    onUserDataChange({ skills: skills.filter((_, i) => i !== index) });
   };
 
+  // Normalize certifications to always be an array
+  const normalizeCertifications = (certs: any): Certification[] => {
+    if (!certs) return [];
+    if (Array.isArray(certs)) {
+      return certs.map(cert => ({
+        name: cert.name || '',
+        issuer: cert.issuer || '',
+        date: cert.date || new Date().toISOString().split('T')[0],
+        expiryDate: cert.expiryDate || null,
+        verified: cert.verified || false
+      }));
+    }
+    if (typeof certs === 'string') {
+      try {
+        const parsed = JSON.parse(certs);
+        return normalizeCertifications(parsed);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const certifications: Certification[] = normalizeCertifications(userData.certifications);
+  
   const addCertification = (certName: string) => {
     const cert: Certification = {
       name: certName,
@@ -40,27 +96,49 @@ export default function SkillsTab({
       date: new Date().toISOString().split('T')[0],
       verified: false
     };
-    if (certName && !userData.certifications.some(c => c.name === certName)) {
-      onUserDataChange({ certifications: [...userData.certifications, cert] });
+    if (certName && !certifications.some(c => c.name === certName)) {
+      onUserDataChange({ certifications: [...certifications, cert] });
     }
   };
 
   const removeCertification = (index: number) => {
-    onUserDataChange({ certifications: userData.certifications.filter((_, i) => i !== index) });
+    onUserDataChange({ certifications: certifications.filter((_, i) => i !== index) });
   };
 
+  // Normalize languages to always be an array
+  const normalizeLanguages = (langs: any): any[] => {
+    if (!langs) return [];
+    if (Array.isArray(langs)) {
+      return langs.map(lang => ({
+        name: lang.name || '',
+        proficiency: lang.proficiency || 'Native'
+      }));
+    }
+    if (typeof langs === 'string') {
+      try {
+        const parsed = JSON.parse(langs);
+        return normalizeLanguages(parsed);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  
+  const languages = normalizeLanguages(userData.languages);
+  
   const addLanguage = (langName: string) => {
     const lang = {
       name: langName,
       proficiency: 'Native'
     };
-    if (langName && !userData.languages.some(l => l.name === langName)) {
-      onUserDataChange({ languages: [...userData.languages, lang] });
+    if (langName && !languages.some(l => l.name === langName)) {
+      onUserDataChange({ languages: [...languages, lang] });
     }
   };
 
   const removeLanguage = (index: number) => {
-    onUserDataChange({ languages: userData.languages.filter((_, i) => i !== index) });
+    onUserDataChange({ languages: languages.filter((_, i) => i !== index) });
   };
 
   const getProficiencyBadgeStyle = (proficiency: string) => {
@@ -124,7 +202,7 @@ export default function SkillsTab({
             Technical Skills
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            {(userData.skills || []).map((skill, index) => {
+            {skills.map((skill, index) => {
               const badgeStyle = getProficiencyBadgeStyle(skill.proficiency);
               return (
                 <div 
@@ -260,7 +338,7 @@ export default function SkillsTab({
             Certifications
           </h3>
           <div className="space-y-4">
-            {(userData.certifications || []).map((cert, index) => (
+            {certifications.map((cert, index) => (
               <div 
                 key={index} 
                 className="p-4 rounded-xl transition-all"
@@ -409,7 +487,7 @@ export default function SkillsTab({
             Languages
           </h3>
           <div className="space-y-4">
-            {(userData.languages || []).map((lang, index) => (
+            {languages.map((lang, index) => (
               <div 
                 key={index} 
                 className="flex items-center gap-4 p-4 rounded-xl transition-all"
