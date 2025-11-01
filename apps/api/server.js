@@ -1,5 +1,8 @@
 const fastify = require('fastify')({
   bodyLimit: 10485760, // 10MB body limit for JSON requests
+  requestTimeout: 30000, // 30 second request timeout
+  keepAliveTimeout: 65000, // 65 seconds for keep-alive  
+  connectionTimeout: 10000, // 10 second connection timeout
   logger: {
     level: 'info',
     serializers: {
@@ -397,8 +400,25 @@ fastify.setNotFoundHandler(async (request, reply) => {
 // Start server
 const start = async () => {
   try {
-    // Connect to database first
-    await connectDB();
+    // Connect to database first (with retry logic)
+    let dbConnected = false;
+    let retries = 0;
+    const maxRetries = 5;
+    
+    while (!dbConnected && retries < maxRetries) {
+      dbConnected = await connectDB();
+      if (!dbConnected) {
+        retries++;
+        if (retries < maxRetries) {
+          logger.warn(`Database connection failed, retrying... (${retries}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        }
+      }
+    }
+    
+    if (!dbConnected) {
+      logger.error('❌ Failed to connect to database after multiple attempts. Server will continue but database operations may fail.');
+    }
     
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || 'localhost';
@@ -408,25 +428,52 @@ const start = async () => {
     logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
     logger.info(`📊 Health check: http://${host}:${port}/health`);
     logger.info(`📋 API status: http://${host}:${port}/api/status`);
-    } catch (err) {
-    fastify.log.error(err);
+  } catch (err) {
+    logger.error('Failed to start server:', err);
+    console.error('Server startup error:', err);
+    // Don't exit immediately - try to log and recover
     process.exit(1);
   }
 };
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  logger.info('🛑 Shutting down server...');
-  await fastify.close();
-  await disconnectDB();
-  process.exit(0);
+// Handle unhandled promise rejections (prevent crashes)
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('Unhandled Rejection:', reason);
+  // Log but don't crash - allow server to continue running
+  // Only in development, we might want to see this more clearly
 });
 
-process.on('SIGTERM', async () => {
-  logger.info('🛑 Shutting down server...');
-  await fastify.close();
-  await disconnectDB();
-  process.exit(0);
+// Handle uncaught exceptions (prevent crashes)
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', error);
+  console.error('Uncaught Exception:', error);
+  // Graceful shutdown on uncaught exception
+  shutdown('uncaughtException');
+});
+
+// Graceful shutdown handler
+async function shutdown(signal) {
+  logger.info(`🛑 Shutting down server (${signal})...`);
+  try {
+    await fastify.close();
+    await disconnectDB();
+    logger.info('✅ Server shut down gracefully');
+    process.exit(0);
+  } catch (error) {
+    logger.error('❌ Error during shutdown:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown on signals
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+// Handle process warnings
+process.on('warning', (warning) => {
+  logger.warn('Process Warning:', warning);
 });
 
 start();

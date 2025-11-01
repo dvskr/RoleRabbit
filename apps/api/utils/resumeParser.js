@@ -96,7 +96,12 @@ ${text.substring(0, 4000)}`; // Limit to avoid token limits
   }
 
   try {
-    const response = await openai.chat.completions.create({
+    // Add timeout to OpenAI API call to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI API request timed out after 30 seconds')), 30000);
+    });
+    
+    const apiPromise = openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -110,8 +115,11 @@ ${text.substring(0, 4000)}`; // Limit to avoid token limits
       ],
       temperature: 0.3,
       max_tokens: 2000,
-      response_format: { type: 'json_object' }
+      response_format: { type: 'json_object' },
+      timeout: 30000 // 30 second timeout
     });
+    
+    const response = await Promise.race([apiPromise, timeoutPromise]);
 
     const content = response.choices[0].message.content;
     
