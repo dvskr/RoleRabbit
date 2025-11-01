@@ -46,9 +46,7 @@ async function resumeRoutes(fastify, options) {
     // Validate resume data
     const validation = validateResumeData(resumeData);
     if (!validation.isValid) {
-      throw new ApiError(400, 'Invalid resume data', true, {
-        details: validation.errors
-      });
+      throw new ApiError(400, 'Invalid resume data', true, validation.errors);
     }
     
     const resume = await createResume(userId, resumeData);

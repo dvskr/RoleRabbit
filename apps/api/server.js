@@ -205,7 +205,7 @@ fastify.register(require('@fastify/compress'), {
 
 // Register security headers (helmet)
 fastify.register(require('@fastify/helmet'), {
-  contentSecurityPolicy: false // Can be configured per app needs
+  contentSecurityPolicy: false
 });
 
 // Register CORS
@@ -229,9 +229,24 @@ fastify.register(require('@fastify/rate-limit'), {
   }
 });
 
+// Register cookie support for JWT tokens
+fastify.register(require('@fastify/cookie'));
+
 // Register JWT with secure secret
 fastify.register(require('@fastify/jwt'), {
   secret: process.env.JWT_SECRET || require('crypto').randomBytes(64).toString('hex')
+});
+
+// Configure JWT to read from both cookies and Authorization header
+fastify.addHook('preHandler', async (request, reply) => {
+  // If no auth_token cookie, try to read from Authorization header
+  if (!request.cookies.auth_token && request.headers.authorization) {
+    const [scheme, token] = request.headers.authorization.split(' ');
+    if (scheme === 'Bearer' && token) {
+      // Set the cookie so jwtVerify can read it
+      request.cookies.auth_token = token;
+    }
+  }
 });
 
 // Authentication middleware - import for use in routes
@@ -302,6 +317,7 @@ fastify.register(require('./routes/files.routes'));
 fastify.register(require('./routes/analytics.routes'));
 fastify.register(require('./routes/discussions.routes'));
 fastify.register(require('./routes/agents.routes'));
+fastify.register(require('./routes/ai.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {

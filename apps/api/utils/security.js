@@ -1,6 +1,5 @@
 // Security utilities for API
 const bcrypt = require('bcrypt');
-const DOMPurify = require('isomorphic-dompurify');
 
 /**
  * Hash a password using bcrypt
@@ -22,7 +21,13 @@ async function verifyPassword(password, hash) {
  */
 function sanitizeInput(input) {
   if (typeof input === 'string') {
-    return DOMPurify.sanitize(input);
+    // Remove script tags, iframes, and event handlers
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '')
+      .trim();
   }
   if (typeof input === 'object' && input !== null) {
     const sanitized = {};

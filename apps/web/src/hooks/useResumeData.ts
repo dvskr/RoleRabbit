@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ResumeData, CustomSection, SectionVisibility } from '../types/resume';
+import apiService from '../services/apiService';
+import { logger } from '../utils/logger';
 
 // Resume data state hook
 export const useResumeData = () => {
   const [resumeFileName, setResumeFileName] = useState('My_Resume');
+  const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasChanges, setHasChanges] = useState(false);
   
   // Formatting state
   const [fontFamily, setFontFamily] = useState('arial');
@@ -84,9 +89,63 @@ export const useResumeData = () => {
   const [history, setHistory] = useState<ResumeData[]>([resumeData]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
+  // Load resume from API on mount
+  useEffect(() => {
+    const loadResume = async () => {
+      setIsLoading(true);
+      try {
+        const response = await apiService.getResumes();
+        if (response && response.resumes && response.resumes.length > 0) {
+          const resume = response.resumes[0];
+          try {
+            const parsedData = typeof resume.data === 'string' 
+              ? JSON.parse(resume.data) 
+              : resume.data;
+            setResumeData(parsedData);
+            setCurrentResumeId(resume.id);
+            setResumeFileName(resume.name);
+          } catch (parseError) {
+            logger.error('Failed to parse resume data:', parseError);
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to load resume:', error);
+        // Keep default data if load fails
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadResume();
+  }, []);
+
+  // Auto-save every 30 seconds when there are changes
+  useEffect(() => {
+    if (!currentResumeId || !hasChanges) return;
+    
+    const autoSaveTimer = setTimeout(async () => {
+      try {
+        await apiService.updateResume(currentResumeId, {
+          data: JSON.stringify(resumeData),
+          lastUpdated: new Date().toISOString(),
+        });
+        setHasChanges(false);
+      } catch (error) {
+        logger.error('Auto-save failed:', error);
+      }
+    }, 30000);
+    
+    return () => clearTimeout(autoSaveTimer);
+  }, [resumeData, currentResumeId, hasChanges]);
+
   return {
     resumeFileName,
     setResumeFileName,
+    currentResumeId,
+    setCurrentResumeId,
+    isLoading,
+    hasChanges,
+    setHasChanges,
     fontFamily,
     setFontFamily,
     fontSize,

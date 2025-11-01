@@ -1,0 +1,552 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "RoleReady rocket logo" [ref=e16]
+        - generic [ref=e29]:
+          - generic [ref=e30]: RoleReady
+          - generic [ref=e31]: Your Career Hub
+      - navigation [ref=e32]:
+        - generic [ref=e33]:
+          - heading "WORKSPACE" [level=3] [ref=e34]
+          - generic [ref=e35]:
+            - button "Dashboard" [ref=e36] [cursor=pointer]:
+              - generic [ref=e37]:
+                - img [ref=e39]
+                - generic [ref=e42]: Dashboard
+            - button "Profile" [ref=e43] [cursor=pointer]:
+              - generic [ref=e44]:
+                - img [ref=e46]
+                - generic [ref=e49]: Profile
+            - button "My Files" [ref=e50] [cursor=pointer]:
+              - generic [ref=e51]:
+                - img [ref=e53]
+                - generic [ref=e55]: My Files
+        - generic [ref=e56]:
+          - heading "PREPARE" [level=3] [ref=e57]
+          - generic [ref=e58]:
+            - button "Resume Builder" [active] [ref=e59] [cursor=pointer]:
+              - generic [ref=e61]:
+                - img [ref=e63]
+                - generic [ref=e66]: Resume Builder
+            - button "Cover Letter" [ref=e67] [cursor=pointer]:
+              - generic [ref=e68]:
+                - img [ref=e70]
+                - generic [ref=e73]: Cover Letter
+            - button "Portfolio Builder" [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]:
+                - img [ref=e77]
+                - generic [ref=e80]: Portfolio Builder
+            - button "Templates" [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]:
+                - img [ref=e84]
+                - generic [ref=e86]: Templates
+        - generic [ref=e87]:
+          - heading "APPLY" [level=3] [ref=e88]
+          - generic [ref=e89]:
+            - button "AI Auto-Apply" [ref=e90] [cursor=pointer]:
+              - generic [ref=e91]:
+                - img [ref=e93]
+                - generic [ref=e96]: AI Auto-Apply
+            - button "Job Tracker" [ref=e97] [cursor=pointer]:
+              - generic [ref=e98]:
+                - img [ref=e100]
+                - generic [ref=e103]: Job Tracker
+        - generic [ref=e104]:
+          - heading "CONNECT" [level=3] [ref=e105]
+          - generic [ref=e106]:
+            - button "Email Hub" [ref=e107] [cursor=pointer]:
+              - generic [ref=e108]:
+                - img [ref=e110]
+                - generic [ref=e113]: Email Hub
+            - button "Community" [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]:
+                - img [ref=e117]
+                - generic [ref=e119]: Community
+            - button "Learning Hub" [ref=e120] [cursor=pointer]:
+              - generic [ref=e121]:
+                - img [ref=e123]
+                - generic [ref=e126]: Learning Hub
+      - button "Collapse" [ref=e128] [cursor=pointer]:
+        - img [ref=e129]
+        - generic [ref=e131]: Collapse
+    - generic [ref=e132]:
+      - banner [ref=e133]:
+        - button "Collapse" [ref=e135] [cursor=pointer]:
+          - img [ref=e136]
+          - generic [ref=e139]: Collapse
+        - generic [ref=e140]:
+          - button "Undo" [ref=e141] [cursor=pointer]:
+            - img [ref=e142]
+            - generic [ref=e145]: Undo
+          - button "Redo" [disabled] [ref=e146]:
+            - img [ref=e147]
+            - generic [ref=e150]: Redo
+          - button "Import" [ref=e151] [cursor=pointer]:
+            - img [ref=e152]
+            - generic [ref=e155]: Import
+          - button "Export" [ref=e156] [cursor=pointer]:
+            - img [ref=e157]
+            - generic [ref=e160]: Export
+          - button "Share" [ref=e161] [cursor=pointer]:
+            - img [ref=e162]
+            - generic [ref=e168]: Share
+          - button "Preview" [ref=e169] [cursor=pointer]:
+            - img [ref=e170]
+            - generic [ref=e173]: Preview
+          - button "AI Assistant" [ref=e174] [cursor=pointer]:
+            - img [ref=e175]
+            - text: AI Assistant
+          - button "Save" [ref=e177] [cursor=pointer]:
+            - img [ref=e178]
+            - generic [ref=e182]: Save
+      - generic [ref=e186]:
+        - generic [ref=e188]:
+          - generic [ref=e189]:
+            - generic [ref=e190]:
+              - heading "File Name" [level=3] [ref=e191]:
+                - img [ref=e192]
+                - text: File Name
+              - button "Generate Smart Filename" [ref=e195] [cursor=pointer]:
+                - img [ref=e196]
+            - textbox "Enter filename..." [ref=e198]: My_Resume
+            - paragraph [ref=e199]: "💡 AI generates: Name_Title_YYYY-MM format"
+          - generic [ref=e201]:
+            - heading "Templates (2/10)" [level=3] [ref=e203]:
+              - img [ref=e204]
+              - text: Templates (2/10)
+            - generic [ref=e206]:
+              - button "Active ATS Classic ★ 4.8" [ref=e208] [cursor=pointer]:
+                - button "Remove from editor" [ref=e209]:
+                  - img [ref=e210]
+                - generic [ref=e213]:
+                  - generic [ref=e235]:
+                    - img [ref=e236]
+                    - text: Active
+                  - generic [ref=e239]:
+                    - paragraph [ref=e240]: ATS Classic
+                    - generic [ref=e241]:
+                      - generic [ref=e242]: ★
+                      - generic [ref=e243]: "4.8"
+              - button "ATS Modern ★ 4.7" [ref=e245] [cursor=pointer]:
+                - button "Remove from editor" [ref=e246]:
+                  - img [ref=e247]
+                - generic [ref=e272]:
+                  - paragraph [ref=e273]: ATS Modern
+                  - generic [ref=e274]:
+                    - generic [ref=e275]: ★
+                    - generic [ref=e276]: "4.7"
+              - button "Add Templates (8 slots left)" [ref=e277] [cursor=pointer]:
+                - img [ref=e279]
+                - paragraph [ref=e280]:
+                  - text: Add Templates
+                  - generic [ref=e281]: (8 slots left)
+          - generic [ref=e282]:
+            - generic [ref=e283]:
+              - heading "Sections" [level=3] [ref=e284]:
+                - img [ref=e285]
+                - text: Sections
+              - button "Add Custom Section" [ref=e289] [cursor=pointer]:
+                - img [ref=e290]
+            - generic [ref=e291]:
+              - generic [ref=e292]:
+                - generic [ref=e293]:
+                  - button [ref=e294] [cursor=pointer]:
+                    - img [ref=e295]
+                  - generic [ref=e298]: Summary
+                - button "Move Down" [ref=e300] [cursor=pointer]:
+                  - img [ref=e301]
+              - generic [ref=e303]:
+                - generic [ref=e304]:
+                  - button [ref=e305] [cursor=pointer]:
+                    - img [ref=e306]
+                  - generic [ref=e309]: Skills
+                - generic [ref=e310]:
+                  - button "Move Up" [ref=e311] [cursor=pointer]:
+                    - img [ref=e312]
+                  - button "Move Down" [ref=e314] [cursor=pointer]:
+                    - img [ref=e315]
+              - generic [ref=e317]:
+                - generic [ref=e318]:
+                  - button [ref=e319] [cursor=pointer]:
+                    - img [ref=e320]
+                  - generic [ref=e323]: Experience
+                - generic [ref=e324]:
+                  - button "Move Up" [ref=e325] [cursor=pointer]:
+                    - img [ref=e326]
+                  - button "Move Down" [ref=e328] [cursor=pointer]:
+                    - img [ref=e329]
+              - generic [ref=e331]:
+                - generic [ref=e332]:
+                  - button [ref=e333] [cursor=pointer]:
+                    - img [ref=e334]
+                  - generic [ref=e337]: Education
+                - generic [ref=e338]:
+                  - button "Move Up" [ref=e339] [cursor=pointer]:
+                    - img [ref=e340]
+                  - button "Move Down" [ref=e342] [cursor=pointer]:
+                    - img [ref=e343]
+              - generic [ref=e345]:
+                - generic [ref=e346]:
+                  - button [ref=e347] [cursor=pointer]:
+                    - img [ref=e348]
+                  - generic [ref=e351]: Projects
+                - generic [ref=e352]:
+                  - button "Move Up" [ref=e353] [cursor=pointer]:
+                    - img [ref=e354]
+                  - button "Move Down" [ref=e356] [cursor=pointer]:
+                    - img [ref=e357]
+              - generic [ref=e359]:
+                - generic [ref=e360]:
+                  - button [ref=e361] [cursor=pointer]:
+                    - img [ref=e362]
+                  - generic [ref=e365]: Certifications
+                - button "Move Up" [ref=e367] [cursor=pointer]:
+                  - img [ref=e368]
+          - generic [ref=e370]:
+            - heading "Formatting" [level=3] [ref=e371]:
+              - img [ref=e372]
+              - text: Formatting
+            - generic [ref=e378]:
+              - heading "FONT FAMILY" [level=4] [ref=e379]:
+                - img [ref=e380]
+                - text: FONT FAMILY
+              - combobox "Font family" [ref=e382]:
+                - option "Arial (ATS Recommended)" [selected]
+                - option "Calibri"
+                - option "Times New Roman"
+                - option "Helvetica"
+            - generic [ref=e383]:
+              - heading "FONT SIZE" [level=4] [ref=e384]
+              - generic [ref=e385]:
+                - button "10pt ATS" [ref=e386] [cursor=pointer]:
+                  - generic [ref=e388]: 10pt
+                  - generic [ref=e390]: ATS
+                - button "11pt ATS" [ref=e391] [cursor=pointer]:
+                  - generic [ref=e393]: 11pt
+                  - generic [ref=e395]: ATS
+                - button "12pt ATS" [ref=e396] [cursor=pointer]:
+                  - generic [ref=e398]: 12pt
+                  - generic [ref=e400]: ATS
+            - generic [ref=e401]:
+              - heading "LINE SPACING" [level=4] [ref=e402]
+              - combobox "Line spacing" [ref=e403]:
+                - option "Tight"
+                - option "Normal" [selected]
+                - option "Loose"
+            - generic [ref=e404]:
+              - heading "SECTION SPACING" [level=4] [ref=e405]
+              - generic [ref=e406]:
+                - button "Tight" [ref=e407] [cursor=pointer]
+                - button "Medium" [ref=e408] [cursor=pointer]
+                - button "Loose" [ref=e409] [cursor=pointer]
+            - generic [ref=e410]:
+              - heading "PAGE MARGINS" [level=4] [ref=e411]
+              - generic [ref=e412]:
+                - button "Narrow" [ref=e413] [cursor=pointer]
+                - button "Normal" [ref=e414] [cursor=pointer]
+                - button "Wide" [ref=e415] [cursor=pointer]
+            - generic [ref=e416]:
+              - heading "HEADING WEIGHT" [level=4] [ref=e417]
+              - combobox "Heading weight" [ref=e418]:
+                - option "Bold" [selected]
+                - option "Semi Bold"
+                - option "Extra Bold"
+            - generic [ref=e419]:
+              - heading "BULLET STYLE" [level=4] [ref=e420]
+              - generic [ref=e421]:
+                - button "•" [ref=e422] [cursor=pointer]:
+                  - generic [ref=e423]: •
+                - button "◦" [ref=e424] [cursor=pointer]:
+                  - generic [ref=e425]: ◦
+                - button "▪" [ref=e426] [cursor=pointer]:
+                  - generic [ref=e427]: ▪
+                - button "→" [ref=e428] [cursor=pointer]:
+                  - generic [ref=e429]: →
+                - button "✓" [ref=e430] [cursor=pointer]:
+                  - generic [ref=e431]: ✓
+                - button "–" [ref=e432] [cursor=pointer]:
+                  - generic [ref=e433]: –
+            - button "Reset to Default" [ref=e434] [cursor=pointer]: Reset to Default
+        - generic [ref=e438]:
+          - textbox "Your Name" [ref=e439]: John Doe
+          - generic [ref=e440]:
+            - generic [ref=e441]:
+              - img [ref=e442]
+              - textbox "Email" [ref=e445]: john.doe@example.com
+            - generic [ref=e446]:
+              - img [ref=e447]
+              - textbox "Phone" [ref=e449]: (555) 123-4567
+            - generic [ref=e450]:
+              - img [ref=e451]
+              - textbox "Location" [ref=e454]: San Francisco, CA
+            - generic [ref=e455]:
+              - img [ref=e456]
+              - textbox "Linkedin" [ref=e460]
+            - generic [ref=e461]:
+              - img [ref=e462]
+              - textbox "Github" [ref=e465]
+            - generic [ref=e466]:
+              - img [ref=e467]
+              - textbox "Website" [ref=e470]
+            - generic [ref=e471]:
+              - img [ref=e472]
+              - button "Add Field" [ref=e473] [cursor=pointer]
+          - generic [ref=e474]:
+            - generic [ref=e477]:
+              - generic [ref=e478]:
+                - generic [ref=e479]:
+                  - img [ref=e480]
+                  - heading "SUMMARY" [level=3] [ref=e487]
+                - button "Hide summary section" [ref=e489] [cursor=pointer]:
+                  - img [ref=e490]
+              - generic [ref=e493]:
+                - textbox "Write a compelling professional summary..." [ref=e494]: Experienced software engineer with 5+ years of experience...
+                - button "AI Generate" [ref=e496] [cursor=pointer]:
+                  - img [ref=e497]
+                  - text: AI Generate
+            - generic [ref=e501]:
+              - generic [ref=e502]:
+                - generic [ref=e503]:
+                  - img [ref=e504]
+                  - heading "SKILLS" [level=3] [ref=e511]
+                - button "Hide skills section" [ref=e512] [cursor=pointer]:
+                  - img [ref=e513]
+              - generic [ref=e516]:
+                - heading "Skills" [level=4] [ref=e518]
+                - generic [ref=e519]:
+                  - generic [ref=e520]:
+                    - generic [ref=e521]: Python
+                    - button [ref=e522] [cursor=pointer]:
+                      - img [ref=e523]
+                  - generic [ref=e526]:
+                    - generic [ref=e527]: PySpark
+                    - button [ref=e528] [cursor=pointer]:
+                      - img [ref=e529]
+                  - generic [ref=e532]:
+                    - generic [ref=e533]: SQL
+                    - button [ref=e534] [cursor=pointer]:
+                      - img [ref=e535]
+                  - generic [ref=e538]:
+                    - generic [ref=e539]: Kafka
+                    - button [ref=e540] [cursor=pointer]:
+                      - img [ref=e541]
+                  - generic [ref=e544]:
+                    - generic [ref=e545]: Schema Registry
+                    - button [ref=e546] [cursor=pointer]:
+                      - img [ref=e547]
+                  - generic [ref=e550]:
+                    - generic [ref=e551]: Airflow
+                    - button [ref=e552] [cursor=pointer]:
+                      - img [ref=e553]
+                  - generic [ref=e556]:
+                    - textbox "Enter skill..." [ref=e557]
+                    - button [ref=e558] [cursor=pointer]:
+                      - img [ref=e559]
+              - button "AI Generate" [ref=e561] [cursor=pointer]:
+                - img [ref=e562]
+                - text: AI Generate
+            - generic [ref=e566]:
+              - generic [ref=e567]:
+                - generic [ref=e568]:
+                  - img [ref=e569]
+                  - heading "EXPERIENCE" [level=3] [ref=e576]
+                - generic [ref=e577]:
+                  - button "Add" [ref=e578] [cursor=pointer]:
+                    - img [ref=e579]
+                    - text: Add
+                  - button "Hide experience section" [ref=e580] [cursor=pointer]:
+                    - img [ref=e581]
+              - generic [ref=e584]:
+                - generic [ref=e585]:
+                  - img [ref=e586]
+                  - generic [ref=e593]:
+                    - textbox "Company Name" [ref=e594]: Tech Corp
+                    - generic [ref=e595]:
+                      - textbox "Start Date" [ref=e596]: "2020"
+                      - generic [ref=e597]: →
+                      - textbox "End Date" [ref=e598]: Present
+                    - textbox "Location" [ref=e599]: San Francisco, CA
+                    - textbox "Job Title" [ref=e600]: Senior Software Engineer
+                    - button "Add Field" [ref=e602] [cursor=pointer]:
+                      - img [ref=e603]
+                      - text: Add Field
+                  - button "Delete experience" [ref=e604] [cursor=pointer]:
+                    - img [ref=e605]
+                - generic [ref=e608]:
+                  - generic [ref=e609]:
+                    - heading "Responsibilities" [level=4] [ref=e610]
+                    - button "Add Responsibility" [ref=e611] [cursor=pointer]:
+                      - img [ref=e612]
+                      - text: Add Responsibility
+                  - generic [ref=e613]:
+                    - generic [ref=e614]: •
+                    - textbox "Describe your responsibility..." [ref=e615]: Led development of microservices architecture
+                    - button "Delete bullet" [ref=e616] [cursor=pointer]:
+                      - img [ref=e617]
+                  - generic [ref=e620]:
+                    - generic [ref=e621]: •
+                    - textbox "Describe your responsibility..." [ref=e622]: Improved system performance by 40%
+                    - button "Delete bullet" [ref=e623] [cursor=pointer]:
+                      - img [ref=e624]
+                  - generic [ref=e627]:
+                    - generic [ref=e628]: •
+                    - textbox "Describe your responsibility..." [ref=e629]: Mentored junior developers
+                    - button "Delete bullet" [ref=e630] [cursor=pointer]:
+                      - img [ref=e631]
+                - generic [ref=e634]:
+                  - generic [ref=e635]:
+                    - heading "Technologies" [level=4] [ref=e636]
+                    - button "Add Tech" [ref=e637] [cursor=pointer]:
+                      - img [ref=e638]
+                      - text: Add Tech
+                  - generic [ref=e639]:
+                    - generic [ref=e640]:
+                      - textbox "Technology" [ref=e641]: Python
+                      - button [ref=e642] [cursor=pointer]:
+                        - img [ref=e643]
+                    - generic [ref=e646]:
+                      - textbox "Technology" [ref=e647]: Docker
+                      - button [ref=e648] [cursor=pointer]:
+                        - img [ref=e649]
+                    - generic [ref=e652]:
+                      - textbox "Technology" [ref=e653]: Kubernetes
+                      - button [ref=e654] [cursor=pointer]:
+                        - img [ref=e655]
+              - button "AI Generate" [ref=e659] [cursor=pointer]:
+                - img [ref=e660]
+                - text: AI Generate
+            - generic [ref=e664]:
+              - generic [ref=e665]:
+                - generic [ref=e666]:
+                  - img [ref=e667]
+                  - heading "EDUCATION" [level=3] [ref=e674]
+                - generic [ref=e675]:
+                  - button "Add" [ref=e676] [cursor=pointer]:
+                    - img [ref=e677]
+                    - text: Add
+                  - button "Hide education section" [ref=e678] [cursor=pointer]:
+                    - img [ref=e679]
+              - generic [ref=e683]:
+                - img [ref=e684]
+                - generic [ref=e691]:
+                  - textbox "School/University Name" [ref=e692]: University of California
+                  - textbox "Degree/Program" [ref=e693]: Bachelor of Science in Computer Science
+                  - generic [ref=e694]:
+                    - textbox "Start Date" [ref=e695]: "2016"
+                    - generic [ref=e696]: →
+                    - textbox "End Date" [ref=e697]: "2020"
+                  - button "Add Field" [ref=e699] [cursor=pointer]:
+                    - img [ref=e700]
+                    - text: Add Field
+                - button "Delete education" [ref=e701] [cursor=pointer]:
+                  - img [ref=e702]
+            - generic [ref=e707]:
+              - generic [ref=e708]:
+                - generic [ref=e709]:
+                  - img [ref=e710]
+                  - heading "PROJECTS" [level=3] [ref=e717]
+                - generic [ref=e718]:
+                  - button "Add" [ref=e719] [cursor=pointer]:
+                    - img [ref=e720]
+                    - text: Add
+                  - button "Hide projects section" [ref=e721] [cursor=pointer]:
+                    - img [ref=e722]
+              - generic [ref=e725]:
+                - generic [ref=e726]:
+                  - img [ref=e727]
+                  - generic [ref=e734]:
+                    - textbox "Project Name" [ref=e735]: E-commerce Platform
+                    - textbox "Project Description" [ref=e736]: Full-stack e-commerce solution
+                    - textbox "Project Link/URL" [ref=e737]: https://github.com/johndoe/ecommerce
+                    - button "Add Field" [ref=e739] [cursor=pointer]:
+                      - img [ref=e740]
+                      - text: Add Field
+                  - button "Delete project" [ref=e741] [cursor=pointer]:
+                    - img [ref=e742]
+                - generic [ref=e745]:
+                  - generic [ref=e746]:
+                    - heading "Key Features" [level=4] [ref=e747]
+                    - button "Add Feature" [ref=e748] [cursor=pointer]:
+                      - img [ref=e749]
+                      - text: Add Feature
+                  - generic [ref=e750]:
+                    - generic [ref=e751]: •
+                    - textbox "Describe a key feature..." [ref=e752]: Built with React and Node.js
+                    - button "Delete bullet" [ref=e753] [cursor=pointer]:
+                      - img [ref=e754]
+                  - generic [ref=e757]:
+                    - generic [ref=e758]: •
+                    - textbox "Describe a key feature..." [ref=e759]: Integrated payment processing
+                    - button "Delete bullet" [ref=e760] [cursor=pointer]:
+                      - img [ref=e761]
+                  - generic [ref=e764]:
+                    - generic [ref=e765]: •
+                    - textbox "Describe a key feature..." [ref=e766]: Implemented real-time notifications
+                    - button "Delete bullet" [ref=e767] [cursor=pointer]:
+                      - img [ref=e768]
+                - generic [ref=e771]:
+                  - generic [ref=e772]:
+                    - heading "Technologies Used" [level=4] [ref=e773]
+                    - button "Add Tech" [ref=e774] [cursor=pointer]:
+                      - img [ref=e775]
+                      - text: Add Tech
+                  - generic [ref=e776]:
+                    - generic [ref=e777]:
+                      - textbox "Technology" [ref=e778]: React
+                      - button [ref=e779] [cursor=pointer]:
+                        - img [ref=e780]
+                    - generic [ref=e783]:
+                      - textbox "Technology" [ref=e784]: Node.js
+                      - button [ref=e785] [cursor=pointer]:
+                        - img [ref=e786]
+                    - generic [ref=e789]:
+                      - textbox "Technology" [ref=e790]: MongoDB
+                      - button [ref=e791] [cursor=pointer]:
+                        - img [ref=e792]
+              - button "AI Generate" [ref=e796] [cursor=pointer]:
+                - img [ref=e797]
+                - text: AI Generate
+            - generic [ref=e801]:
+              - generic [ref=e802]:
+                - generic [ref=e803]:
+                  - img [ref=e804]
+                  - heading "CERTIFICATIONS" [level=3] [ref=e811]
+                - generic [ref=e812]:
+                  - button "Add" [ref=e813] [cursor=pointer]:
+                    - img [ref=e814]
+                    - text: Add
+                  - button "Hide certifications section" [ref=e815] [cursor=pointer]:
+                    - img [ref=e816]
+              - generic [ref=e819]:
+                - generic [ref=e820]:
+                  - img [ref=e821]
+                  - generic [ref=e828]:
+                    - textbox "Certification Name" [ref=e829]: AWS Certified Solutions Architect
+                    - textbox "Issuing Organization" [ref=e830]: Amazon Web Services
+                    - textbox "Certification Link/URL" [ref=e831]: https://aws.amazon.com/certification/
+                    - button "Add Field" [ref=e833] [cursor=pointer]:
+                      - img [ref=e834]
+                      - text: Add Field
+                  - button "Delete certification" [ref=e835] [cursor=pointer]:
+                    - img [ref=e836]
+                - generic [ref=e839]:
+                  - generic [ref=e840]:
+                    - heading "Skills Covered" [level=4] [ref=e841]
+                    - button "Add Skill" [ref=e842] [cursor=pointer]:
+                      - img [ref=e843]
+                      - text: Add Skill
+                  - generic [ref=e844]:
+                    - generic [ref=e845]:
+                      - textbox "Skill" [ref=e846]: AWS
+                      - button [ref=e847] [cursor=pointer]:
+                        - img [ref=e848]
+                    - generic [ref=e851]:
+                      - textbox "Skill" [ref=e852]: Cloud Architecture
+                      - button [ref=e853] [cursor=pointer]:
+                        - img [ref=e854]
+  - alert [ref=e857]
+```

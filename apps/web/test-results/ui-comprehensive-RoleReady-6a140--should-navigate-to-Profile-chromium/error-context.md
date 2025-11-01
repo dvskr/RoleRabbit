@@ -1,0 +1,188 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - generic [ref=e6] [cursor=pointer]:
+        - img "RoleReady rocket logo" [ref=e16]
+        - generic [ref=e29]:
+          - generic [ref=e30]: RoleReady
+          - generic [ref=e31]: Your Career Hub
+      - navigation [ref=e32]:
+        - generic [ref=e33]:
+          - heading "WORKSPACE" [level=3] [ref=e34]
+          - generic [ref=e35]:
+            - button "Dashboard" [ref=e36] [cursor=pointer]:
+              - generic [ref=e37]:
+                - img [ref=e39]
+                - generic [ref=e42]: Dashboard
+            - button "Profile" [active] [ref=e43] [cursor=pointer]:
+              - generic [ref=e45]:
+                - img [ref=e47]
+                - generic [ref=e50]: Profile
+            - button "My Files" [ref=e51] [cursor=pointer]:
+              - generic [ref=e52]:
+                - img [ref=e54]
+                - generic [ref=e56]: My Files
+        - generic [ref=e57]:
+          - heading "PREPARE" [level=3] [ref=e58]
+          - generic [ref=e59]:
+            - button "Resume Builder" [ref=e60] [cursor=pointer]:
+              - generic [ref=e61]:
+                - img [ref=e63]
+                - generic [ref=e66]: Resume Builder
+            - button "Cover Letter" [ref=e67] [cursor=pointer]:
+              - generic [ref=e68]:
+                - img [ref=e70]
+                - generic [ref=e73]: Cover Letter
+            - button "Portfolio Builder" [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]:
+                - img [ref=e77]
+                - generic [ref=e80]: Portfolio Builder
+            - button "Templates" [ref=e81] [cursor=pointer]:
+              - generic [ref=e82]:
+                - img [ref=e84]
+                - generic [ref=e86]: Templates
+        - generic [ref=e87]:
+          - heading "APPLY" [level=3] [ref=e88]
+          - generic [ref=e89]:
+            - button "AI Auto-Apply" [ref=e90] [cursor=pointer]:
+              - generic [ref=e91]:
+                - img [ref=e93]
+                - generic [ref=e96]: AI Auto-Apply
+            - button "Job Tracker" [ref=e97] [cursor=pointer]:
+              - generic [ref=e98]:
+                - img [ref=e100]
+                - generic [ref=e103]: Job Tracker
+        - generic [ref=e104]:
+          - heading "CONNECT" [level=3] [ref=e105]
+          - generic [ref=e106]:
+            - button "Email Hub" [ref=e107] [cursor=pointer]:
+              - generic [ref=e108]:
+                - img [ref=e110]
+                - generic [ref=e113]: Email Hub
+            - button "Community" [ref=e114] [cursor=pointer]:
+              - generic [ref=e115]:
+                - img [ref=e117]
+                - generic [ref=e119]: Community
+            - button "Learning Hub" [ref=e120] [cursor=pointer]:
+              - generic [ref=e121]:
+                - img [ref=e123]
+                - generic [ref=e126]: Learning Hub
+      - button "Collapse" [ref=e128] [cursor=pointer]:
+        - img [ref=e129]
+        - generic [ref=e131]: Collapse
+    - generic [ref=e136]:
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - img [ref=e141]
+          - generic [ref=e145]:
+            - heading "Personal Information" [level=1] [ref=e146]
+            - paragraph [ref=e147]: Update your personal details and profile information
+        - generic [ref=e148]:
+          - button "Import Resume" [ref=e149] [cursor=pointer]:
+            - img [ref=e150]
+            - generic [ref=e153]: Import Resume
+          - button "Edit Profile" [ref=e154] [cursor=pointer]:
+            - img [ref=e155]
+            - text: Edit Profile
+      - generic [ref=e158]:
+        - navigation [ref=e160]:
+          - list [ref=e161]:
+            - listitem [ref=e162]:
+              - button "Personal Information" [ref=e163] [cursor=pointer]:
+                - generic [ref=e165]:
+                  - img [ref=e167]
+                  - generic [ref=e171]: Personal Information
+            - listitem [ref=e172]:
+              - button "Professional" [ref=e173] [cursor=pointer]:
+                - generic [ref=e174]:
+                  - img [ref=e176]
+                  - generic [ref=e179]: Professional
+            - listitem [ref=e180]:
+              - button "Skills & Expertise" [ref=e181] [cursor=pointer]:
+                - generic [ref=e182]:
+                  - img [ref=e184]
+                  - generic [ref=e187]: Skills & Expertise
+            - listitem [ref=e188]:
+              - button "Career Goals" [ref=e189] [cursor=pointer]:
+                - generic [ref=e190]:
+                  - img [ref=e192]
+                  - generic [ref=e196]: Career Goals
+            - listitem [ref=e197]:
+              - button "Portfolio" [ref=e198] [cursor=pointer]:
+                - generic [ref=e199]:
+                  - img [ref=e201]
+                  - generic [ref=e204]: Portfolio
+            - listitem [ref=e205]:
+              - button "Preferences" [ref=e206] [cursor=pointer]:
+                - generic [ref=e207]:
+                  - img [ref=e209]
+                  - generic [ref=e212]: Preferences
+            - listitem [ref=e213]:
+              - button "Analytics" [ref=e214] [cursor=pointer]:
+                - generic [ref=e215]:
+                  - img [ref=e217]
+                  - generic [ref=e219]: Analytics
+            - listitem [ref=e220]:
+              - button "Security" [ref=e221] [cursor=pointer]:
+                - generic [ref=e222]:
+                  - img [ref=e224]
+                  - generic [ref=e226]: Security
+            - listitem [ref=e227]:
+              - button "Billing" [ref=e228] [cursor=pointer]:
+                - generic [ref=e229]:
+                  - img [ref=e231]
+                  - generic [ref=e233]: Billing
+            - listitem [ref=e234]:
+              - button "Help & Support" [ref=e235] [cursor=pointer]:
+                - generic [ref=e236]:
+                  - img [ref=e238]
+                  - generic [ref=e241]: Help & Support
+        - generic [ref=e245]:
+          - generic [ref=e246]:
+            - heading "Personal Information" [level=2] [ref=e247]
+            - paragraph [ref=e248]: Update your personal details and profile information
+          - generic [ref=e249]:
+            - generic [ref=e251]:
+              - generic [ref=e252]:
+                - generic [ref=e253]: US
+                - img [ref=e255]
+              - generic [ref=e258]:
+                - heading "Profile Picture" [level=3] [ref=e259]
+                - paragraph [ref=e260]: Upload a professional photo to make your profile stand out
+                - button "Change Photo" [ref=e261] [cursor=pointer]:
+                  - img [ref=e262]
+                  - text: Change Photo
+                - paragraph [ref=e265]: "JPG, PNG up to 5MB • Recommended: 400x400px"
+            - generic [ref=e266]:
+              - heading "Basic Information" [level=3] [ref=e267]
+              - generic [ref=e268]:
+                - generic [ref=e269]:
+                  - generic [ref=e270]: First Name
+                  - textbox "Enter your first name" [disabled] [ref=e271]
+                - generic [ref=e272]:
+                  - generic [ref=e273]: Last Name
+                  - textbox "Enter your last name" [disabled] [ref=e274]
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - generic [ref=e277]: Email Address
+                  - textbox "Enter your email address" [disabled] [ref=e278]
+                - generic [ref=e279]:
+                  - generic [ref=e280]: Phone Number
+                  - textbox "Enter your phone number" [disabled] [ref=e281]
+              - generic [ref=e283]:
+                - generic [ref=e284]: Location
+                - textbox "Enter your location" [disabled] [ref=e285]
+            - generic [ref=e286]:
+              - heading "Professional Bio" [level=3] [ref=e287]
+              - generic [ref=e288]:
+                - generic [ref=e289]:
+                  - generic [ref=e290]: Tell us about yourself
+                  - textbox "Write a compelling bio that highlights your experience, skills, and career goals..." [disabled] [ref=e291]
+                - generic [ref=e292]:
+                  - generic [ref=e293]: This will be visible to recruiters and potential employers
+                  - generic [ref=e294]: 0/500 characters
+  - alert [ref=e295]
+```

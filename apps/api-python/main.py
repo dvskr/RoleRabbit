@@ -10,6 +10,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict, Any
 import jwt
 import os
+import json
 from datetime import datetime, timedelta
 import uvicorn
 import logging
@@ -232,40 +233,147 @@ async def get_current_user(current_user_email: str = Depends(verify_token)):
 @app.post("/api/ai/generate", response_model=AIResponse)
 async def generate_ai_content(request: AIRequest, current_user_email: str = Depends(verify_token)):
   """Generate AI content for resumes using OpenAI"""
-  try:
-    if not openai_client:
-      raise Exception("OpenAI client not initialized")
-    
-    response = openai_client.chat.completions.create(
-      model=request.model or "gpt-4o-mini",
-      messages=[
-        {"role": "system", "content": "You are a professional resume writer and career coach."},
-        {"role": "user", "content": request.prompt}
-      ],
-      max_tokens=1000,
-      temperature=0.7
+  if not openai_client:
+    raise HTTPException(
+      status_code=503,
+      detail="OpenAI client not configured. Please set OPENAI_API_KEY environment variable."
     )
-    
-    content = response.choices[0].message.content
-    
-    return AIResponse(
-      content=content,
-      tokens_used=response.usage.total_tokens if response.usage else 150,
-      model=response.model
+  
+  response = openai_client.chat.completions.create(
+    model=request.model or "gpt-4o-mini",
+    messages=[
+      {"role": "system", "content": "You are a professional resume writer and career coach."},
+      {"role": "user", "content": request.prompt}
+    ],
+    max_tokens=1000,
+    temperature=0.7
+  )
+  
+  content = response.choices[0].message.content
+  
+  return AIResponse(
+    content=content,
+    tokens_used=response.usage.total_tokens if response.usage else 150,
+    model=response.model
+  )
+
+@app.post("/api/ai/ats-score", response_model=ATSScoreResponse)
+async def calculate_ats_score(request: ATSScoreRequest, current_user_email: str = Depends(verify_token)):
+  """Calculate ATS compatibility score between resume and job description"""
+  if not openai_client:
+    raise HTTPException(
+      status_code=503,
+      detail="OpenAI client not configured. Please set OPENAI_API_KEY environment variable."
     )
-  except Exception as e:
-    logger.error(f"OpenAI API error: {e}")
-    prompt_lower = request.prompt.lower()
-    if "summary" in prompt_lower or "objective" in prompt_lower:
-      content = "Experienced professional with a proven track record of delivering results in fast-paced environments."
-    else:
-      content = "Generated professional content based on your input."
-    
-    return AIResponse(
-      content=content,
-      tokens_used=150,
-      model="mock-model"
+  
+  prompt = f"""
+  Calculate ATS compatibility score between resume and job description.
+  Return a JSON object with: overall_score (0-100), category_scores (dict with keys: skills, experience, keywords, education),
+  matched_keywords (list), missing_keywords (list), suggestions (list of improvement suggestions).
+  
+  Resume: {request.resume_text}
+  Job Description: {request.job_description}
+  """
+  
+  response = openai_client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+      {"role": "system", "content": "You are an ATS expert. Return only valid JSON with no markdown formatting."},
+      {"role": "user", "content": prompt}
+    ],
+    temperature=0.2,
+    max_tokens=1500,
+    response_format={"type": "json_object"}
+  )
+  
+  score_data = json.loads(response.choices[0].message.content)
+  
+  return ATSScoreResponse(
+    overall_score=score_data.get("overall_score", 75),
+    category_scores=score_data.get("category_scores", {}),
+    matched_keywords=score_data.get("matched_keywords", []),
+    missing_keywords=score_data.get("missing_keywords", []),
+    suggestions=score_data.get("suggestions", [])
+  )
+
+@app.post("/api/ai/analyze-job", response_model=dict)
+async def analyze_job(request: ResumeAnalysisRequest, current_user_email: str = Depends(verify_token)):
+  """Analyze job description and provide insights"""
+  if not openai_client:
+    raise HTTPException(
+      status_code=503,
+      detail="OpenAI client not configured. Please set OPENAI_API_KEY environment variable."
     )
+  
+  job_desc = request.job_description or ""
+  prompt = f"""
+  Analyze this job description and provide:
+  1. Key skills and technologies required
+  2. Experience level needed
+  3. Important keywords
+  4. Potential salary range
+  5. Company culture indicators
+  
+  Job Description:
+  {job_desc}
+  
+  Return JSON format with keys: skills (list), experience_level (string), keywords (list), salary_range (dict with min/max), culture_indicators (list).
+  """
+  
+  response = openai_client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+      {"role": "system", "content": "You are a job market expert. Return only valid JSON with no markdown formatting."},
+      {"role": "user", "content": prompt}
+    ],
+    temperature=0.3,
+    max_tokens=1000,
+    response_format={"type": "json_object"}
+  )
+  
+  analysis = json.loads(response.choices[0].message.content)
+  return analysis
+
+@app.post("/api/ai/analyze-resume", response_model=ResumeAnalysisResponse)
+async def analyze_resume(request: ResumeAnalysisRequest, current_user_email: str = Depends(verify_token)):
+  """Analyze resume and provide improvement suggestions"""
+  if not openai_client:
+    raise HTTPException(
+      status_code=503,
+      detail="OpenAI client not configured. Please set OPENAI_API_KEY environment variable."
+    )
+  
+  resume_json = json.dumps(request.resume_data) if isinstance(request.resume_data, dict) else str(request.resume_data)
+  job_desc = request.job_description or "General job application"
+  
+  prompt = f"""
+  Analyze this resume and provide improvement suggestions.
+  Return a JSON object with: score (0-100), suggestions (list), missing_keywords (list), strengths (list), ai_analysis (string).
+  
+  Resume: {resume_json}
+  Job Description: {job_desc}
+  """
+  
+  response = openai_client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[
+      {"role": "system", "content": "You are a professional resume writer. Return only valid JSON with no markdown formatting."},
+      {"role": "user", "content": prompt}
+    ],
+    temperature=0.3,
+    max_tokens=1500,
+    response_format={"type": "json_object"}
+  )
+  
+  analysis = json.loads(response.choices[0].message.content)
+  
+  return ResumeAnalysisResponse(
+    score=analysis.get("score", 75),
+    suggestions=analysis.get("suggestions", []),
+    missing_keywords=analysis.get("missing_keywords", []),
+    strengths=analysis.get("strengths", []),
+    ai_analysis=analysis.get("ai_analysis", "Resume looks good overall")
+  )
 
 # Health check
 @app.get("/health")

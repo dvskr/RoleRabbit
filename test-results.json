@@ -1,0 +1,537 @@
+{
+  "config": {
+    "configFile": "C:\\RoleReady-FullStack\\apps\\web\\playwright.config.ts",
+    "rootDir": "C:/RoleReady-FullStack/apps/web/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 9
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "C:/RoleReady-FullStack/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 9
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/RoleReady-FullStack/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/RoleReady-FullStack/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 9
+        },
+        "id": "firefox",
+        "name": "firefox",
+        "testDir": "C:/RoleReady-FullStack/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/RoleReady-FullStack/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 9
+        },
+        "id": "webkit",
+        "name": "webkit",
+        "testDir": "C:/RoleReady-FullStack/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/RoleReady-FullStack/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 9
+        },
+        "id": "Mobile Chrome",
+        "name": "Mobile Chrome",
+        "testDir": "C:/RoleReady-FullStack/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/RoleReady-FullStack/apps/web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 9
+        },
+        "id": "Mobile Safari",
+        "name": "Mobile Safari",
+        "testDir": "C:/RoleReady-FullStack/apps/web/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 11,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://localhost:3000",
+      "reuseExistingServer": true
+    }
+  },
+  "suites": [
+    {
+      "title": "ui-comprehensive.spec.ts",
+      "file": "ui-comprehensive.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "RoleReady - Complete UI Testing",
+          "file": "ui-comprehensive.spec.ts",
+          "line": 8,
+          "column": 6,
+          "specs": [],
+          "suites": [
+            {
+              "title": "1. Authentication Flow",
+              "file": "ui-comprehensive.spec.ts",
+              "line": 20,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should navigate to home page",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-37170585a7b8dd4628a4",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 21,
+                  "column": 9
+                },
+                {
+                  "title": "should show signup page",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-743d72f2bfe8a5f5d81d",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 30,
+                  "column": 9
+                },
+                {
+                  "title": "should register new user via UI",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-359802e9c7bd894a1b47",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 45,
+                  "column": 9
+                },
+                {
+                  "title": "should login via UI",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-50433d0aaa15e1e812dd",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 89,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "2. Dashboard Navigation",
+              "file": "ui-comprehensive.spec.ts",
+              "line": 120,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should load dashboard",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-ed276d2360ef25850cde",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 145,
+                  "column": 9
+                },
+                {
+                  "title": "should have sidebar navigation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-8050c353ca7b32de4905",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 149,
+                  "column": 9
+                },
+                {
+                  "title": "should navigate to Profile",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-674b493c5e2d392d97c5",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 161,
+                  "column": 9
+                },
+                {
+                  "title": "should navigate to Resume Builder",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-c25ee531cb11469eac7e",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 175,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "3. Resume Builder UI",
+              "file": "ui-comprehensive.spec.ts",
+              "line": 188,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should show resume editor",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-9b9cb3d363d8594acc3c",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 201,
+                  "column": 9
+                },
+                {
+                  "title": "should have input fields",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-9ac1225ab746707b3de3",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 206,
+                  "column": 9
+                },
+                {
+                  "title": "should have save button",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-37d32abd09195b81ed10",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 212,
+                  "column": 9
+                },
+                {
+                  "title": "should allow editing resume data",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-286765b4d24192840312",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 220,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "4. Job Tracker UI",
+              "file": "ui-comprehensive.spec.ts",
+              "line": 232,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should show job tracker",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-bd3bd1614003d3100516",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 245,
+                  "column": 9
+                },
+                {
+                  "title": "should have add job button",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-84f64f41de40d05b287d",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 250,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "5. Button Functionality",
+              "file": "ui-comprehensive.spec.ts",
+              "line": 257,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should click all visible buttons without errors",
+                  "ok": false,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "unexpected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-f1e844a3e35fab6b3ff5",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 258,
+                  "column": 9
+                },
+                {
+                  "title": "should handle form submissions",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-216a506012e771f8807d",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 293,
+                  "column": 9
+                }
+              ]
+            },
+            {
+              "title": "6. Error Handling",
+              "file": "ui-comprehensive.spec.ts",
+              "line": 328,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "should show error for invalid login",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 30000,
+                      "annotations": "",
+                      "expectedStatus": "passed",
+                      "projectId": "chromium",
+                      "projectName": "chromium",
+                      "results": "",
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "4d60751c6f6867131b01-baa3433874e2a1b65a1e",
+                  "file": "ui-comprehensive.spec.ts",
+                  "line": 329,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2025-11-01T02:01:04.602Z",
+    "duration": 28844.150999999998,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 5,
+    "flaky": 0
+  }
+}

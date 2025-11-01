@@ -16,7 +16,7 @@ function initializeOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
   
   if (!apiKey) {
-    logger.warn('OpenAI API key not configured. Mock responses will be used.');
+    logger.warn('OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.');
     return null;
   }
   
@@ -39,42 +39,34 @@ async function generateText(prompt, options = {}) {
   }
   
   if (!openaiClient) {
-    return { 
-      text: 'Mock response: OpenAI not configured',
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-    };
+    throw new Error('OpenAI not configured. Please set OPENAI_API_KEY environment variable.');
   }
   
-  try {
-    const response = await openaiClient.chat.completions.create({
+  const response = await openaiClient.chat.completions.create({
+    model: options.model || 'gpt-4o-mini',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: options.temperature || 0.7,
+    max_tokens: options.max_tokens || 1000,
+    ...options
+  });
+  
+  const usage = response.usage;
+  
+  // Track usage if userId provided
+  if (options.userId) {
+    await trackUsage(options.userId, {
+      endpoint: 'chat/completions',
       model: options.model || 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: options.temperature || 0.7,
-      max_tokens: options.max_tokens || 1000,
-      ...options
+      tokens: usage.total_tokens,
+      cost: calculateCost(usage.total_tokens, options.model || 'gpt-4o-mini')
     });
-    
-    const usage = response.usage;
-    
-    // Track usage if userId provided
-    if (options.userId) {
-      await trackUsage(options.userId, {
-        endpoint: 'chat/completions',
-        model: options.model || 'gpt-4o-mini',
-        tokens: usage.total_tokens,
-        cost: calculateCost(usage.total_tokens, options.model || 'gpt-4o-mini')
-      });
-    }
-    
-    return {
-      text: response.choices[0].message.content,
-      usage,
-      model: response.model
-    };
-  } catch (error) {
-    logger.error('OpenAI API error', error);
-    throw error;
   }
+  
+  return {
+    text: response.choices[0].message.content,
+    usage,
+    model: response.model
+  };
 }
 
 /**

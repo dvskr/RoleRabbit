@@ -1,10 +1,8 @@
 'use client';
 
 import React, { ReactNode } from 'react';
-import { Save, Edit, LogOut, UserCircle } from 'lucide-react';
+import { Save, Edit, UserCircle } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
-import { useAuth } from '../../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
@@ -19,15 +17,8 @@ export default function ProfileHeader({
   onSave,
   resumeImportButton
 }: ExtendedProfileHeaderProps) {
-  const { logout } = useAuth();
-  const router = useRouter();
   const { theme } = useTheme();
   const colors = theme.colors;
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-  };
 
   return (
     <div 
@@ -136,28 +127,6 @@ export default function ProfileHeader({
               >
                 <Edit size={16} />
                 Edit Profile
-              </button>
-              
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium"
-                style={{
-                  background: colors.inputBackground,
-                  color: colors.errorRed,
-                  border: `1px solid ${colors.border}`,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.badgeErrorBg;
-                  e.currentTarget.style.borderColor = colors.badgeErrorBorder;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.inputBackground;
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-              >
-                <LogOut size={16} />
-                Logout
               </button>
             </>
           )}

@@ -17,6 +17,9 @@ An all-in-one platform for job seekers with AI-powered resume building, job trac
 # Install dependencies
 npm run install:all
 
+# Set up API keys (REQUIRED for AI features)
+# See docs/02-setup/setup-api-keys.md for detailed instructions
+
 # Start all services
 npm run dev:all
 
@@ -25,6 +28,24 @@ npm run dev:all
 # Node.js API: http://localhost:3001
 # Python API: http://localhost:8000
 ```
+
+**📝 Important:** AI features require an OpenAI API key. See [Setup API Keys](./docs/02-setup/setup-api-keys.md) for configuration.
+
+---
+
+## 📚 **Documentation**
+
+Complete documentation is available in the `docs/` directory:
+
+- **[Getting Started](./docs/01-getting-started/README.md)** - Quick start guide
+- **[Setup & Configuration](./docs/02-setup/)** - API keys, database, Docker
+- **[API Reference](./docs/03-api/api-reference.md)** - Complete API documentation
+- **[Implementation Plan](./docs/04-implementation/)** - 12-week roadmap
+- **[Architecture](./docs/05-architecture/)** - System design
+- **[Deployment](./docs/06-deployment/)** - Production deployment
+- **[Contributing](./docs/CONTRIBUTING.md)** - How to contribute
+
+**See [Complete Documentation Index](./docs/README.md) for full navigation.**
 
 ---
 

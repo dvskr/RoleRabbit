@@ -24,32 +24,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // IMMEDIATELY set loading to false to prevent blocking
-    setIsLoading(false);
-    
-    // Check for existing session on mount - completely non-blocking
-    // Use requestIdleCallback for lowest priority, fallback to setTimeout
-    const scheduleAuthCheck = () => {
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-          checkAuth();
-        }, { timeout: 3000 });
-      } else {
-        // Fallback - delay even more
-        setTimeout(checkAuth, 2000);
-      }
-    };
-    
+    // Check for existing session on mount
     const checkAuth = async () => {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1000); // Very short timeout
-        
         const response = await fetch('http://localhost:3001/api/auth/verify', {
           credentials: 'include',
-          signal: controller.signal,
         });
-        clearTimeout(timeoutId);
         
         if (response.ok) {
           const data = await response.json();
@@ -58,11 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        // Completely silent - don't log, don't block
+        // Silent fail - user likely not logged in
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    scheduleAuthCheck();
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -80,8 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, use status text
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
@@ -93,10 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Login error:', error);
+      // Provide more helpful error message
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to server. Please ensure the backend is running.');
+      }
       throw error; // Re-throw to let UI handle it
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const signup = async (name: string, email: string, password: string) => {
@@ -114,8 +107,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
+        let errorMessage = 'Registration failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, use status text
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
       
       const data = await response.json();
@@ -127,10 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Signup error:', error);
+      // Provide more helpful error message
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Cannot connect to server. Please ensure the backend is running.');
+      }
       throw error; // Re-throw to let UI handle it
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const logout = async () => {

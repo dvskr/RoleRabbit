@@ -55,32 +55,37 @@ class AIService {
   }
 
   /**
-   * Generate content using AI
+   * Generate content using AI via backend API
    */
   async generateContent(request: AIRequest): Promise<AIResponse> {
-    if (!this.isServiceConfigured()) {
-      console.warn('AI not configured, using fallback mock response');
-      return this.generateMockResponse(request);
+    // Call backend API which proxies to Python AI service
+    const response = await fetch('/api/ai/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        prompt: request.prompt,
+        context: request.context,
+        model: this.provider?.model || 'gpt-4o-mini'
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'AI generation failed' }));
+      throw new Error(error.detail || error.error || 'AI generation failed');
     }
-
-    try {
-      // Try OpenAI first
-      if (process.env.NEXT_PUBLIC_OPENAI_API_KEY || localStorage.getItem('aiProvider') === 'openai') {
-        return await this.callOpenAI(request);
-      }
-
-      // Try Anthropic
-      if (process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || localStorage.getItem('aiProvider') === 'anthropic') {
-        return await this.callAnthropic(request);
-      }
-
-      // Fallback to mock
-      return this.generateMockResponse(request);
-    } catch (error) {
-      console.error('AI API Error:', error);
-      console.warn('Falling back to mock response');
-      return this.generateMockResponse(request);
-    }
+    
+    const data = await response.json();
+    
+    return {
+      content: data.content,
+      model: data.model,
+      usage: data.tokens_used ? {
+        promptTokens: Math.floor(data.tokens_used * 0.5),
+        completionTokens: Math.floor(data.tokens_used * 0.5),
+        totalTokens: data.tokens_used
+      } : undefined
+    };
   }
 
   /**
@@ -167,60 +172,6 @@ class AIService {
         totalTokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0)
       }
     };
-  }
-
-  /**
-   * Generate mock response when API is not configured
-   */
-  private generateMockResponse(request: AIRequest): AIResponse {
-    console.log('Using mock AI response');
-    
-    // Simulate API delay
-    const mockDelay = () => new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Return a more realistic mock response based on the prompt
-    const mockContent = this.generateRealisticMockResponse(request.prompt);
-
-    return {
-      content: mockContent,
-      model: 'mock-model',
-      usage: {
-        promptTokens: request.prompt.length / 4,
-        completionTokens: mockContent.length / 4,
-        totalTokens: (request.prompt.length + mockContent.length) / 4
-      }
-    };
-  }
-
-  /**
-   * Generate realistic mock response based on prompt
-   */
-  private generateRealisticMockResponse(prompt: string): string {
-    const lowerPrompt = prompt.toLowerCase();
-    
-    // Resume-related prompts
-    if (lowerPrompt.includes('summary') || lowerPrompt.includes('professional summary')) {
-      return 'Experienced and results-driven professional with a proven track record of success. Skilled in multiple domains with a focus on delivering exceptional results and driving organizational growth through strategic initiatives.';
-    }
-    
-    if (lowerPrompt.includes('skill')) {
-      return 'Technical Skills: JavaScript, TypeScript, React, Node.js, Python, AWS, Docker, Kubernetes, Git\n\nSoft Skills: Leadership, Communication, Problem-solving, Team collaboration, Agile methodology';
-    }
-    
-    if (lowerPrompt.includes('experience') || lowerPrompt.includes('worked')) {
-      return '• Led cross-functional teams to deliver high-impact projects on time and within budget\n• Implemented best practices that improved operational efficiency by 35%\n• Collaborated with stakeholders to define requirements and deliver scalable solutions\n• Mentored junior team members and established development processes';
-    }
-    
-    if (lowerPrompt.includes('project')) {
-      return 'Built a scalable web application using React and Node.js, serving 10,000+ users daily. Integrated third-party APIs, implemented responsive design, and deployed on AWS with CI/CD pipeline. Reduced page load time by 40% through optimization techniques.';
-    }
-    
-    if (lowerPrompt.includes('cover letter') || lowerPrompt.includes('application')) {
-      return 'I am excited to apply for this position. With my extensive experience and proven track record, I am confident I can contribute effectively to your team and help achieve your organizational goals.';
-    }
-    
-    // Generic response
-    return `Based on your request about "${prompt}", here are some recommendations:\n\n1. Focus on quantifiable achievements and metrics\n2. Use action verbs and strong language\n3. Tailor content to the specific opportunity\n4. Highlight relevant technical and soft skills\n5. Ensure content is clear, concise, and impactful`;
   }
 
   /**

@@ -4,7 +4,8 @@
 
 import { useState } from 'react';
 import { ResumeFile } from '../../../types/cloudStorage';
-import { loadCloudResumes } from '../utils/cloudStorageHelpers';
+import apiService from '../../../services/apiService';
+import { logger } from '../../../utils/logger';
 
 export interface UseDashboardCloudStorageReturn {
   showSaveToCloudModal: boolean;
@@ -29,10 +30,19 @@ export function useDashboardCloudStorage(): UseDashboardCloudStorageReturn {
     setShowSaveToCloudModal(true);
   };
 
-  const handleImportFromCloud = () => {
-    const resumes = loadCloudResumes();
-    setCloudResumes(resumes);
-    setShowImportFromCloudModal(true);
+  const handleImportFromCloud = async () => {
+    try {
+      // Load from API
+      const response = await apiService.listCloudResumes();
+      if (response && response.savedResumes) {
+        setCloudResumes(response.savedResumes);
+      }
+      setShowImportFromCloudModal(true);
+    } catch (error) {
+      logger.error('Failed to load cloud resumes:', error);
+      setCloudResumes([]);
+      setShowImportFromCloudModal(true);
+    }
   };
 
   return {

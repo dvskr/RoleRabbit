@@ -10,7 +10,7 @@ const logger = require('./logger');
 /**
  * Create a new session for user
  */
-async function createSession(userId, ipAddress, userAgent) {
+async function createSession(userId, ipAddress, userAgent, daysToExpire = 7) {
   try {
     const sessionId = crypto.randomBytes(32).toString('hex');
     
@@ -20,13 +20,13 @@ async function createSession(userId, ipAddress, userAgent) {
         userId,
         ipAddress,
         userAgent,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        expiresAt: new Date(Date.now() + daysToExpire * 24 * 60 * 60 * 1000)
       }
     });
     
     logger.info(`Session created for user ${userId}`);
     
-    return session;
+    return sessionId; // Return sessionId, not the full session object
   } catch (error) {
     logger.error('Failed to create session', error);
     throw error;

@@ -119,7 +119,9 @@ async function authRoutes(fastify, options) {
       
       reply.send({
         success: true,
-        user
+        user,
+        token: accessToken,
+        refreshToken
       });
     } catch (error) {
       reply.status(400).send({
@@ -199,7 +201,9 @@ async function authRoutes(fastify, options) {
       
       reply.send({
         success: true,
-        user
+        user,
+        token: accessToken,
+        refreshToken
       });
     } catch (error) {
       reply.status(401).send({

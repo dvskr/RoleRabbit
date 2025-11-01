@@ -36,6 +36,7 @@ import { resumeHelpers } from '../../utils/resumeHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
+import apiService from '../../services/apiService';
 // Lazy load heavy analytics and modal components
 const ResumeSharing = dynamic(() => import('../../components/features/ResumeSharing'), { ssr: false });
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
@@ -150,6 +151,9 @@ export default function DashboardPage() {
   // Destructure hooks for easier access
   const {
     resumeFileName, setResumeFileName,
+    currentResumeId, setCurrentResumeId,
+    isLoading: resumeLoading,
+    hasChanges, setHasChanges,
     fontFamily, setFontFamily,
     fontSize, setFontSize,
     lineSpacing, setLineSpacing,
@@ -915,21 +919,40 @@ export default function DashboardPage() {
         onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}
-        onNewResume={() => {
-          setResumeData({
-            name: '',
-            title: '',
-            email: '',
-            phone: '',
-            location: '',
-            summary: '',
-            skills: [],
-            experience: [],
-            education: [],
-            projects: [],
-            certifications: []
-          });
-          setShowNewResumeModal(false);
+        onNewResume={async () => {
+          try {
+            // Clear local state first
+            const emptyResume = {
+              name: '',
+              title: '',
+              email: '',
+              phone: '',
+              location: '',
+              summary: '',
+              skills: [],
+              experience: [],
+              education: [],
+              projects: [],
+              certifications: []
+            };
+            setResumeData(emptyResume);
+            
+            // Create new resume via API
+            const response = await apiService.saveResume({
+              name: `New Resume ${new Date().toLocaleDateString()}`,
+              data: JSON.stringify(emptyResume),
+              templateId: selectedTemplateId,
+            });
+            
+            if (response && response.resume) {
+              setCurrentResumeId(response.resume.id);
+              setResumeFileName(response.resume.name);
+            }
+            
+            setShowNewResumeModal(false);
+          } catch (error) {
+            logger.error('Failed to create new resume:', error);
+          }
         }}
         onGenerateAIContent={() => aiHelpers.generateAIContent(
           aiGenerateSection,

@@ -17,6 +17,7 @@ import {
 import apiService from '@/services/apiService';
 import { logger } from '@/utils/logger';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -41,177 +42,16 @@ import {
 export default function Profile() {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const { userData: contextUserData, isLoading: contextLoading, refreshProfile, updateProfileData } = useProfile();
+  const { isAuthenticated } = useAuth();
   
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Comprehensive user data for career platform
-  const [userData, setUserData] = useState<UserData | null>(null);
-
-  // Load user profile from API on mount
-  useEffect(() => {
-    loadUserProfile();
-  }, []);
-
-  const loadUserProfile = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.getUserProfile();
-      if (response && response.user) {
-        // Map API response to UserData format and ensure analytics properties exist
-        const userProfile = response.user as UserData;
-        
-        // Ensure analytics properties have default values if missing
-        const userDataWithDefaults: UserData = {
-          ...userProfile,
-          profileViews: userProfile.profileViews || 0,
-          applicationsSent: userProfile.applicationsSent || 0,
-          interviewsScheduled: userProfile.interviewsScheduled || 0,
-          offersReceived: userProfile.offersReceived || 0,
-          successRate: userProfile.successRate || 0,
-          profileCompleteness: userProfile.profileCompleteness || 0,
-          skillMatchRate: userProfile.skillMatchRate || 0,
-          avgResponseTime: userProfile.avgResponseTime || 0,
-        };
-        
-        setUserData(userDataWithDefaults);
-      }
-    } catch (error) {
-      logger.error('Failed to load user profile:', error);
-      // Fallback to default demo data
-      setUserData({
-        // Basic Info
-        firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    location: 'San Francisco, CA',
-    bio: 'Experienced software engineer with 5+ years of experience in full-stack development.',
-    profilePicture: null,
-    
-    // Professional Info
-    currentRole: 'Senior Software Engineer',
-    currentCompany: 'Tech Corp',
-    experience: '5+ years',
-    industry: 'Technology',
-    jobLevel: 'Senior',
-    employmentType: 'Full-time',
-    availability: 'Open to opportunities',
-    salaryExpectation: '$120,000 - $150,000',
-    workPreference: 'Hybrid',
-    professionalSummary: {
-      overview: 'Seasoned full-stack engineer with expertise in modern web technologies, cloud infrastructure, and scalable system design.',
-      keyStrengths: ['Full-stack development', 'System architecture', 'Cloud infrastructure', 'Team leadership'],
-      currentFocus: 'Leading migration to microservices architecture and optimizing application performance',
-      achievements: ['Reduced app load time by 60%', 'Led team of 5 engineers', 'Deployed 100+ production releases'],
-      lookingFor: 'Tech lead role in a innovative product company'
-    },
-    
-    // Skills & Expertise (Enhanced with Proficiency)
-    skills: [
-      { name: 'JavaScript', proficiency: 'Expert', yearsOfExperience: 5, verified: true },
-      { name: 'React', proficiency: 'Advanced', yearsOfExperience: 4, verified: true },
-      { name: 'Node.js', proficiency: 'Advanced', yearsOfExperience: 4, verified: true },
-      { name: 'Python', proficiency: 'Intermediate', yearsOfExperience: 3, verified: true },
-      { name: 'AWS', proficiency: 'Advanced', yearsOfExperience: 3, verified: true },
-      { name: 'Docker', proficiency: 'Advanced', yearsOfExperience: 3, verified: true }
-    ],
-    certifications: [
-      { name: 'AWS Certified Developer', issuer: 'Amazon Web Services', date: '2023-01-15', credentialUrl: 'https://aws.amazon.com/verification', verified: true },
-      { name: 'Google Cloud Professional', issuer: 'Google Cloud', date: '2022-08-20', verified: true }
-    ],
-    languages: [
-      { name: 'English', proficiency: 'Native' },
-      { name: 'Spanish', proficiency: 'Fluent' },
-      { name: 'French', proficiency: 'Conversational' }
-    ],
-    
-    // Education History
-    education: [
-      {
-        institution: 'Stanford University',
-        degree: 'Bachelor of Science',
-        field: 'Computer Science',
-        startDate: '2015-09',
-        endDate: '2019-06',
-        gpa: '3.8',
-        honors: 'Dean\'s List, Cum Laude',
-        description: 'Focused on software engineering and distributed systems'
-      }
-    ],
-    
-    // Career Goals (Enhanced)
-    careerGoals: [
-      { title: 'Become a Tech Lead', description: 'Lead engineering teams and drive technical strategy', targetDate: '2025-12', progress: 60, category: 'Role' },
-      { title: 'Join Google', description: 'Secure a senior role at Google', targetDate: '2025-06', progress: 30, category: 'Company' }
-    ],
-    targetRoles: ['Tech Lead', 'Senior Developer', 'Architect'],
-    targetCompanies: ['Google', 'Microsoft', 'Apple'],
-    relocationWillingness: 'Open to relocation',
-    
-    // Portfolio & Links (Enhanced)
-    portfolio: 'https://johndoe.dev',
-    linkedin: 'https://linkedin.com/in/johndoe',
-    github: 'https://github.com/johndoe',
-    website: 'https://johndoe.com',
-    socialLinks: [
-      { platform: 'LinkedIn', url: 'https://linkedin.com/in/johndoe' },
-      { platform: 'GitHub', url: 'https://github.com/johndoe' },
-      { platform: 'Twitter', url: 'https://twitter.com/johndoe' },
-      { platform: 'Medium', url: 'https://medium.com/@johndoe' }
-    ],
-    projects: [
-      {
-        title: 'E-Commerce Platform',
-        description: 'Built a scalable e-commerce platform handling 10K+ daily transactions',
-        technologies: ['React', 'Node.js', 'MongoDB', 'Stripe'],
-        link: 'https://example.com/ecommerce',
-        github: 'https://github.com/johndoe/ecommerce',
-        date: '2023-01'
-      },
-      {
-        title: 'Real-time Collaboration Tool',
-        description: 'Developed a real-time document collaboration tool with WebSocket',
-        technologies: ['React', 'Socket.io', 'PostgreSQL', 'AWS'],
-        github: 'https://github.com/johndoe/collab-tool',
-        date: '2022-08'
-      }
-    ],
-    achievements: [
-      { title: 'Employee of the Year', description: 'Recognized for outstanding contributions', date: '2023-12', type: 'Award', link: '#' },
-      { title: 'Tech Conference Speaker', description: 'Spoke at React Summit 2023', date: '2023-06', type: 'Speaking', link: 'https://reactsummit.com' }
-    ],
-    
-    // Career Timeline
-    careerTimeline: [
-      { id: '1', title: 'Joined Tech Corp', description: 'Started as Senior Software Engineer', date: '2023-01', type: 'Work', icon: 'briefcase', color: 'blue' },
-      { id: '2', title: 'AWS Certification', description: 'Earned AWS Certified Developer credential', date: '2023-01', type: 'Certification', icon: 'certificate', color: 'green' },
-      { id: '3', title: 'Graduated Stanford', description: 'BS in Computer Science', date: '2019-06', type: 'Education', icon: 'graduation', color: 'purple' }
-    ],
-    
-    // Preferences
-    jobAlerts: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    privacyLevel: 'Professional',
-    profileVisibility: 'Public',
-    
-    // Analytics & Insights (Enhanced)
-    profileViews: 1247,
-    applicationsSent: 23,
-    interviewsScheduled: 8,
-    offersReceived: 2,
-    successRate: 8.7,
-    profileCompleteness: 85,
-    skillMatchRate: 92,
-    avgResponseTime: 2.5
-      } as UserData);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Use profile data from context (loaded once at app startup)
+  const userData = contextUserData;
+  const isLoading = contextLoading;
 
   const tabs: ProfileTabConfig[] = [
     { id: 'profile', label: 'Personal Information', icon: UserCircle },
@@ -226,32 +66,86 @@ export default function Profile() {
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
   ];
 
+  // Create default empty data for first-time users
+  const defaultUserData: UserData = {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    location: '',
+    bio: '',
+    profilePicture: null,
+    currentRole: '',
+    currentCompany: '',
+    experience: '',
+    industry: '',
+    jobLevel: '',
+    employmentType: '',
+    availability: '',
+    salaryExpectation: '',
+    workPreference: '',
+    skills: [],
+    certifications: [],
+    languages: [],
+    education: [],
+    careerGoals: [],
+    targetRoles: [],
+    targetCompanies: [],
+    relocationWillingness: '',
+    portfolio: '',
+    linkedin: '',
+    github: '',
+    website: '',
+    socialLinks: [],
+    projects: [],
+    achievements: [],
+    careerTimeline: [],
+    jobAlerts: true,
+    emailNotifications: true,
+    smsNotifications: false,
+    privacyLevel: 'Professional',
+    profileVisibility: 'Public',
+    profileViews: 0,
+    applicationsSent: 0,
+    interviewsScheduled: 0,
+    offersReceived: 0,
+    successRate: 0,
+    profileCompleteness: 0,
+    skillMatchRate: 0,
+    avgResponseTime: 0,
+  };
+
+  // Use userData if available, otherwise use default empty data
+  const displayData = userData || defaultUserData;
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Save user profile via API
-      await apiService.updateUserProfile(userData);
-      logger.debug('Profile saved via API:', userData);
+      // Save user profile via API using displayData
+      await apiService.updateUserProfile(displayData);
+      logger.debug('Profile saved via API:', displayData);
+      // Refresh profile data from context after saving
+      await refreshProfile();
       setIsSaving(false);
       setIsEditing(false);
     } catch (error) {
       logger.error('Failed to save profile:', error);
       setIsSaving(false);
-      // Still exit edit mode on error
       setIsEditing(false);
     }
   };
 
   const handleUserDataChange = (data: Partial<UserData>) => {
-    setUserData((prev: UserData | null) => prev ? ({ ...prev, ...data }) : null);
+    // Update profile data in context
+    updateProfileData(data);
   };
 
   const handleChangePhoto = () => {
     // Handle profile picture change
   };
 
-  // Show loading state while fetching
-  if (isLoading || !userData) {
+  // Show loading state only when actually loading
+  if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
         <div className="text-center">
@@ -261,6 +155,7 @@ export default function Profile() {
       </div>
     );
   }
+
 
   const handleResumeImport = (parsedData: any) => {
     // Auto-fill profile data from resume
@@ -290,15 +185,15 @@ export default function Profile() {
       updates.certifications = parsedData.certifications;
     }
 
-    // Apply all updates
+    // Apply all updates to context
     if (Object.keys(updates).length > 0) {
-      handleUserDataChange(updates);
+      updateProfileData(updates);
     }
   };
 
   const renderTabContent = () => {
     const commonProps = {
-      userData: userData!, // Safe because we check for null above
+      userData: displayData,
       isEditing,
       onUserDataChange: handleUserDataChange
     };
@@ -315,7 +210,7 @@ export default function Profile() {
       case 'portfolio':
         return <PortfolioTab {...commonProps} />;
       case 'analytics':
-        return <AnalyticsTab userData={userData!} />;
+        return <AnalyticsTab userData={displayData} />;
       case 'security':
         return <SecurityTab />;
       case 'billing':

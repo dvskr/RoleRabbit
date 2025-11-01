@@ -5,6 +5,7 @@ import { Sparkles, Bot } from 'lucide-react';
 import EmailComposer from '../components/EmailComposer';
 import AIGenerator from '../components/AIGenerator';
 import { EmailDraft, AIContext } from '../types/email';
+import { logger } from '../../../utils/logger';
 
 export default function ComposeTab() {
   const [showAIGenerator, setShowAIGenerator] = useState(false);
@@ -32,9 +33,33 @@ export default function ComposeTab() {
     setDraft((prev: EmailDraft) => ({ ...prev, ...changes }));
   };
 
-  const handleSend = () => {
-    console.log('Sending email:', draft);
-    // In real app, this would send the email
+  const handleSend = async (emailData: any) => {
+    try {
+      const response = await fetch('http://localhost:3001/api/emails/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          to: emailData.to,
+          subject: emailData.subject,
+          body: emailData.body,
+          html: emailData.body
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send email');
+      }
+
+      const data = await response.json();
+      logger.info('Email sent:', data);
+      
+      // Reset form
+      handleCancel();
+    } catch (error) {
+      logger.error('Failed to send email:', error);
+    }
   };
 
   const handleSave = () => {

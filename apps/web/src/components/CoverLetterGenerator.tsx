@@ -17,6 +17,7 @@ import ExportModal from './coverletter/ExportModal';
 import ImportModal from './coverletter/ImportModal';
 import CoverLetterAnalytics from './CoverLetterAnalytics';
 import { useTheme } from '../contexts/ThemeContext';
+import apiService from '../services/apiService';
 
 export default function CoverLetterGenerator() {
   const { theme } = useTheme();
@@ -32,57 +33,70 @@ export default function CoverLetterGenerator() {
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [cloudFiles, setCloudFiles] = useState<ResumeFile[]>([]);
 
-  // Load draft from localStorage on mount
+  // Load recent cover letter from API on mount
   useEffect(() => {
-    const saved = localStorage.getItem('coverLetterDraft');
-    if (saved) {
+    const loadRecentDraft = async () => {
       try {
-        const draft = JSON.parse(saved);
-        setContent(draft.content || '');
-        setTitle(draft.title || '');
-        setDraftId(draft.id || null);
-        logger.debug('Loaded draft from localStorage');
-      } catch (e) {
-        logger.debug('Error loading draft:', e);
+        const response = await apiService.getCoverLetters();
+        if (response && response.coverLetters && response.coverLetters.length > 0) {
+          const latest = response.coverLetters[0]; // Most recent
+          setContent(latest.content || '');
+          setTitle(latest.title || '');
+          setDraftId(latest.id);
+          logger.debug('Loaded recent cover letter from API');
+        }
+      } catch (error) {
+        logger.error('Failed to load cover letter:', error);
       }
-    }
+    };
+    loadRecentDraft();
   }, []);
 
-  // Auto-save to localStorage
+  // Auto-save to API every 30 seconds
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (content) {
-        const draft = {
-          id: draftId || `draft-${Date.now()}`,
+    if (!draftId || !content) return;
+    
+    const autoSaveTimer = setTimeout(async () => {
+      try {
+        await apiService.updateCoverLetter(draftId, {
           content,
           title,
-          timestamp: Date.now()
-        };
-        localStorage.setItem('coverLetterDraft', JSON.stringify(draft));
-        if (!draftId) setDraftId(draft.id);
+          wordCount,
+        });
+        logger.debug('Auto-saved cover letter to API');
+      } catch (error) {
+        logger.error('Auto-save failed:', error);
       }
-    }, 2000);
+    }, 30000);
 
-    return () => clearTimeout(timer);
-  }, [content, title, draftId]);
+    return () => clearTimeout(autoSaveTimer);
+  }, [content, title, wordCount, draftId]);
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const draft = {
-        id: draftId || `draft-${Date.now()}`,
-        content,
-        title,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('coverLetterDraft', JSON.stringify(draft));
-      if (!draftId) setDraftId(draft.id);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      logger.debug('Cover letter saved:', draft);
+      if (draftId) {
+        // Update existing
+        await apiService.updateCoverLetter(draftId, {
+          content,
+          title,
+          wordCount,
+        });
+        logger.debug('Cover letter updated via API');
+      } else {
+        // Create new
+        const response = await apiService.saveCoverLetter({
+          content,
+          title,
+          wordCount,
+        });
+        if (response && response.coverLetter) {
+          setDraftId(response.coverLetter.id);
+          logger.debug('Cover letter created via API');
+        }
+      }
     } catch (error) {
-      logger.debug('Error saving cover letter:', error);
+      logger.error('Error saving cover letter:', error);
     } finally {
       setIsSaving(false);
     }

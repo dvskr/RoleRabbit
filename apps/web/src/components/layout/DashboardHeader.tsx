@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Settings, Search, User, LogOut, LogIn, ChevronDown, Home } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -19,6 +19,8 @@ export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
   const colors = theme.colors;
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     await logout();
@@ -32,6 +34,16 @@ export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
       onSearch(query);
     }
   };
+
+  // Position dropdown menu when it opens
+  useEffect(() => {
+    if (showUserMenu && userMenuRef.current && menuDropdownRef.current) {
+      const rect = userMenuRef.current.getBoundingClientRect();
+      const menu = menuDropdownRef.current;
+      menu.style.top = `${rect.bottom + 8}px`;
+      menu.style.right = `${window.innerWidth - rect.right}px`;
+    }
+  }, [showUserMenu]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +186,7 @@ export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
         </button>
 
         {/* User Menu */}
-        <div className="relative">
+        <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-1.5 px-2 py-1 rounded transition-all"
@@ -206,14 +218,24 @@ export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
           {showUserMenu && (
             <>
               <div 
-                className="fixed inset-0 z-40"
+                className="fixed inset-0 z-[9998]"
                 onClick={() => setShowUserMenu(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                }}
               />
               <div 
-                className="absolute right-0 mt-2 w-56 rounded-lg shadow-xl py-1 z-50"
+                ref={menuDropdownRef}
+                className="fixed w-56 rounded-lg shadow-2xl py-1 z-[9999]"
                 style={{
-                  background: colors.cardBackground,
+                  backgroundColor: colors.cardBackground || colors.background || '#1a1a1a',
+                  backgroundImage: 'none',
                   border: `1px solid ${colors.border}`,
+                  opacity: 1,
+                  backdropFilter: 'none',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+                  isolation: 'isolate',
+                  willChange: 'transform',
                 }}
               >
                 {isAuthenticated ? (

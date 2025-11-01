@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../contexts/AuthContext';
+import { ProfileProvider } from '../contexts/ProfileContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import GlobalErrorBoundary from '../components/GlobalErrorBoundary';
 
@@ -40,11 +41,13 @@ export default function RootLayout({
         <GlobalErrorBoundary level="page">
           <ThemeProvider>
             <AuthProvider>
-              <div id="root">
-                {children}
-              </div>
-              <div id="modal-root" />
-              <div id="toast-root" />
+              <ProfileProvider>
+                <div id="root">
+                  {children}
+                </div>
+                <div id="modal-root" />
+                <div id="toast-root" />
+              </ProfileProvider>
             </AuthProvider>
           </ThemeProvider>
         </GlobalErrorBoundary>

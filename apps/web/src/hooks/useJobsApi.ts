@@ -18,152 +18,28 @@ export function useJobsApi() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Initialize sample jobs - moved outside to avoid dependency issues
-  const initializeSampleJobs = useCallback(() => {
-    try {
-      const sampleJobs: Job[] = [
-        {
-          id: '1',
-          title: 'Senior Frontend Developer',
-          company: 'TechCorp Inc.',
-          location: 'San Francisco, CA',
-          status: 'applied',
-          appliedDate: new Date().toISOString().split('T')[0],
-          salary: '$120,000 - $150,000',
-          description: 'Looking for an experienced frontend developer to join our team.',
-          url: 'https://techcorp.com/jobs',
-          priority: 'high',
-          remote: true,
-        },
-        {
-          id: '2',
-          title: 'Full Stack Engineer',
-          company: 'StartupXYZ',
-          location: 'New York, NY',
-          status: 'interview',
-          appliedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          salary: '$100,000 - $130,000',
-          description: 'Join our growing team of engineers building the future.',
-          url: 'https://startupxyz.com/careers',
-          priority: 'medium',
-          remote: false,
-        },
-        {
-          id: '3',
-          title: 'React Developer',
-          company: 'WebDev Agency',
-          location: 'Austin, TX',
-          status: 'offer',
-          appliedDate: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          salary: '$90,000 - $110,000',
-          description: 'Work on exciting client projects using modern React.',
-          url: 'https://webdev.com/jobs',
-          priority: 'high',
-          remote: true,
-        },
-      ];
-      setJobs(sampleJobs);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('jobs', JSON.stringify(sampleJobs));
-      }
-    } catch (error) {
-      logger.error('Failed to initialize sample jobs:', error);
-    }
-  }, []);
-
-  // Load jobs from API on mount - only once
+  // Load jobs from API on mount
   useEffect(() => {
-    // Check localStorage first for cached data
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('jobs');
-      if (cached) {
-        try {
-          const parsedJobs = JSON.parse(cached);
-          if (Array.isArray(parsedJobs) && parsedJobs.length > 0) {
-            // Use cached data immediately
-            setJobs(parsedJobs);
-            setIsLoading(false);
-            // Still try to fetch fresh data in background
-            loadJobs();
-            return;
-          }
-        } catch (e) {
-          // Cache invalid, proceed with normal load
-        }
-      }
-    }
-    
-    // Only load if jobs array is empty (first load)
-    if (jobs.length === 0) {
-      loadJobs();
-    }
+    loadJobs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadJobs = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Check if we're in browser
-      if (typeof window === 'undefined') {
-        initializeSampleJobs();
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await apiService.getJobs();
-        if (response && response.jobs && Array.isArray(response.jobs) && response.jobs.length > 0) {
-          setJobs(response.jobs);
-          // Save to localStorage as backup
-          localStorage.setItem('jobs', JSON.stringify(response.jobs));
-        } else {
-          // Try loading from localStorage
-          const stored = localStorage.getItem('jobs');
-          if (stored) {
-            try {
-              const parsedJobs = JSON.parse(stored);
-              if (Array.isArray(parsedJobs) && parsedJobs.length > 0) {
-                setJobs(parsedJobs);
-              } else {
-                // Initialize with sample data if completely empty
-                initializeSampleJobs();
-              }
-            } catch (e) {
-              logger.error('Failed to parse stored jobs:', e);
-              initializeSampleJobs();
-            }
-          } else {
-            // Initialize with sample data
-            initializeSampleJobs();
-          }
-        }
-      } catch (error) {
-        logger.error('Failed to load jobs from API:', error);
-        // Try localStorage as fallback
-        try {
-          const stored = localStorage.getItem('jobs');
-          if (stored) {
-            const parsedJobs = JSON.parse(stored);
-            if (Array.isArray(parsedJobs) && parsedJobs.length > 0) {
-              setJobs(parsedJobs);
-            } else {
-              initializeSampleJobs();
-            }
-          } else {
-            initializeSampleJobs();
-          }
-        } catch (e) {
-          logger.error('Failed to load from localStorage:', e);
-          initializeSampleJobs();
-        }
+      const response = await apiService.getJobs();
+      if (response && response.jobs && Array.isArray(response.jobs)) {
+        setJobs(response.jobs);
+      } else {
+        setJobs([]); // Empty if no jobs
       }
     } catch (error) {
-      logger.error('Critical error loading jobs:', error);
-      initializeSampleJobs();
+      logger.error('Failed to load jobs from API:', error);
+      setJobs([]); // Empty on error
     } finally {
       setIsLoading(false);
     }
-  }, [initializeSampleJobs]);
+  }, []);
 
   // Filter and sort jobs - Comprehensive filtering matching table view
   const filteredJobs = useMemo(() => {
@@ -310,13 +186,7 @@ export function useJobsApi() {
       }
     } catch (error) {
       logger.error('Failed to save job via API:', error);
-      // Fallback to local state
-      const newJob: Job = {
-        ...job,
-        id: Date.now().toString()
-      };
-      setJobs(prev => [...prev, newJob]);
-      return newJob;
+      throw error; // Re-throw to let UI handle it
     }
   };
 
@@ -329,10 +199,7 @@ export function useJobsApi() {
       logger.debug('Job updated via API:', id);
     } catch (error) {
       logger.error('Failed to update job via API:', error);
-      // Fallback to local update
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { ...job, ...updates } : job
-      ));
+      throw error; // Re-throw to let UI handle it
     }
   };
 
@@ -355,17 +222,7 @@ export function useJobsApi() {
       logger.debug('Job deleted via API:', id, permanent ? 'permanently' : 'to recycle bin');
     } catch (error) {
       logger.error('Failed to delete job via API:', error);
-      // Fallback to local soft delete
-      if (permanent) {
-        setJobs(prev => prev.filter(job => job.id !== id));
-      } else {
-        const deletedAt = new Date().toISOString();
-        setJobs(prev => prev.map(job => 
-          job.id === id ? { ...job, deletedAt } : job
-        ));
-      }
-      setSelectedJobs(prev => prev.filter(jobId => jobId !== id));
-      setFavorites(prev => prev.filter(jobId => jobId !== id));
+      throw error; // Re-throw to let UI handle it
     }
   };
 
@@ -378,10 +235,7 @@ export function useJobsApi() {
       logger.debug('Job restored via API:', id);
     } catch (error) {
       logger.error('Failed to restore job via API:', error);
-      // Fallback to local restore
-      setJobs(prev => prev.map(job => 
-        job.id === id ? { ...job, deletedAt: undefined } : job
-      ));
+      throw error; // Re-throw to let UI handle it
     }
   };
 
@@ -405,16 +259,7 @@ export function useJobsApi() {
       logger.debug('Bulk delete completed via API:', permanent ? 'permanently' : 'to recycle bin');
     } catch (error) {
       logger.error('Failed to bulk delete via API:', error);
-      // Fallback to local delete
-      if (permanent) {
-        setJobs(prev => prev.filter(job => !selectedJobs.includes(job.id)));
-      } else {
-        const deletedAt = new Date().toISOString();
-        setJobs(prev => prev.map(job => 
-          selectedJobs.includes(job.id) ? { ...job, deletedAt } : job
-        ));
-      }
-      setSelectedJobs([]);
+      throw error; // Re-throw to let UI handle it
     }
   };
 
@@ -430,11 +275,7 @@ export function useJobsApi() {
       logger.debug('Bulk restore completed via API');
     } catch (error) {
       logger.error('Failed to bulk restore via API:', error);
-      // Fallback to local restore
-      setJobs(prev => prev.map(job => 
-        selectedJobs.includes(job.id) ? { ...job, deletedAt: undefined } : job
-      ));
-      setSelectedJobs([]);
+      throw error; // Re-throw to let UI handle it
     }
   };
 
@@ -451,11 +292,7 @@ export function useJobsApi() {
       logger.debug('Bulk update completed via API');
     } catch (error) {
       logger.error('Failed to bulk update via API:', error);
-      // Fallback to local update
-      setJobs(prev => prev.map(job => 
-        selectedJobs.includes(job.id) ? { ...job, status } : job
-      ));
-      setSelectedJobs([]);
+      throw error; // Re-throw to let UI handle it
     }
   };
 

@@ -1,0 +1,439 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - img "RoleReady rocket logo" [ref=e13] [cursor=pointer]
+      - navigation [ref=e26]:
+        - generic [ref=e28]:
+          - button "Dashboard" [ref=e29] [cursor=pointer]:
+            - img [ref=e32]
+          - button "Profile" [ref=e35] [cursor=pointer]:
+            - img [ref=e38]
+          - button "My Files" [ref=e41] [cursor=pointer]:
+            - img [ref=e44]
+        - generic [ref=e47]:
+          - button "Resume Builder" [ref=e48] [cursor=pointer]:
+            - img [ref=e51]
+          - button "Cover Letter" [ref=e54] [cursor=pointer]:
+            - img [ref=e57]
+          - button "Portfolio Builder" [ref=e60] [cursor=pointer]:
+            - img [ref=e63]
+          - button "Templates" [ref=e66] [cursor=pointer]:
+            - img [ref=e69]
+        - generic [ref=e72]:
+          - button "AI Auto-Apply" [ref=e73] [cursor=pointer]:
+            - img [ref=e76]
+          - button "Job Tracker" [ref=e79] [cursor=pointer]:
+            - img [ref=e82]
+        - generic [ref=e86]:
+          - button "Email Hub" [ref=e87] [cursor=pointer]:
+            - img [ref=e90]
+          - button "Community" [ref=e93] [cursor=pointer]:
+            - img [ref=e96]
+          - button "Learning Hub" [ref=e98] [cursor=pointer]:
+            - img [ref=e102]
+      - button "Expand sidebar" [ref=e106] [cursor=pointer]:
+        - img [ref=e107]
+    - generic [ref=e109]:
+      - generic [ref=e110]:
+        - img [ref=e112]
+        - generic [ref=e115]:
+          - heading "Learning Hub" [level=1] [ref=e116]
+          - paragraph [ref=e117]: Learn new skills
+      - generic [ref=e122]:
+        - generic [ref=e124]:
+          - img [ref=e125]
+          - textbox "Search courses, videos, articles..." [ref=e128]
+        - generic [ref=e129]:
+          - generic [ref=e130]:
+            - generic [ref=e131]: Category
+            - combobox "Category filter" [ref=e132]:
+              - option "All" [selected]
+              - option "Resume Writing"
+              - option "Interview Prep"
+              - option "Career Development"
+              - option "Technical Skills"
+              - option "Communication"
+              - option "Salary Negotiation"
+          - generic [ref=e133]:
+            - generic [ref=e134]: Difficulty
+            - combobox "Difficulty filter" [ref=e135]:
+              - option "All" [selected]
+              - option "Beginner"
+              - option "Intermediate"
+              - option "Advanced"
+          - generic [ref=e136]:
+            - generic [ref=e137]: Type
+            - combobox "Type filter" [ref=e138]:
+              - option "All" [selected]
+              - option "Course"
+              - option "Video"
+              - option "Article"
+              - option "Tutorial"
+        - paragraph [ref=e140]: Showing 12 resources
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - generic [ref=e145]:
+                - img [ref=e146]
+                - generic [ref=e149]: course
+              - generic [ref=e150]: FREE
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - heading "Mastering the Modern Resume" [level=3] [ref=e153]
+                - generic [ref=e154]:
+                  - img [ref=e155]
+                  - generic [ref=e157]: "4.8"
+              - paragraph [ref=e158]: Learn to create ATS-friendly resumes that get you noticed. Includes templates, examples, and best practices.
+              - generic [ref=e159]:
+                - generic [ref=e160]:
+                  - img [ref=e161]
+                  - generic [ref=e164]: 2h 30m
+                - generic [ref=e165]:
+                  - img [ref=e166]
+                  - generic [ref=e169]: 15,420 views
+              - generic [ref=e170]:
+                - generic [ref=e171]: resume
+                - generic [ref=e172]: ATS
+              - generic [ref=e173]:
+                - generic [ref=e174]: Intermediate
+                - generic [ref=e175]: Resume Writing
+              - generic [ref=e177]:
+                - generic [ref=e178]: Progress
+                - generic [ref=e179]: 65%
+              - generic [ref=e183]: "Instructor: Sarah Chen"
+              - button "Start Learning" [ref=e184] [cursor=pointer]:
+                - img [ref=e185]
+                - text: Start Learning
+          - generic [ref=e189]:
+            - generic [ref=e191]:
+              - img [ref=e192]
+              - generic [ref=e195]: video
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - heading "Ace Your Technical Interview" [level=3] [ref=e198]
+                - generic [ref=e199]:
+                  - img [ref=e200]
+                  - generic [ref=e202]: "4.9"
+              - paragraph [ref=e203]: Comprehensive guide to technical interviews with coding challenges, system design, and behavioral questions.
+              - generic [ref=e204]:
+                - generic [ref=e205]:
+                  - img [ref=e206]
+                  - generic [ref=e209]: 3h 15m
+                - generic [ref=e210]:
+                  - img [ref=e211]
+                  - generic [ref=e214]: 28,450 views
+              - generic [ref=e215]:
+                - generic [ref=e216]: interview
+                - generic [ref=e217]: technical
+              - generic [ref=e218]:
+                - generic [ref=e219]: Advanced
+                - generic [ref=e220]: Interview Prep
+              - generic [ref=e222]: "Provider: Tech Interview Mastery"
+              - button "Watch Now" [ref=e223] [cursor=pointer]:
+                - img [ref=e224]
+                - text: Watch Now
+          - generic [ref=e227]:
+            - generic [ref=e228]:
+              - generic [ref=e229]:
+                - img [ref=e230]
+                - generic [ref=e233]: article
+              - generic [ref=e234]: FREE
+            - generic [ref=e235]:
+              - generic [ref=e236]:
+                - heading "Salary Negotiation Masterclass" [level=3] [ref=e237]
+                - generic [ref=e238]:
+                  - img [ref=e239]
+                  - generic [ref=e241]: "4.7"
+              - paragraph [ref=e242]: Learn the art of negotiating salary and benefits. Real scenarios, scripts, and proven strategies.
+              - generic [ref=e243]:
+                - generic [ref=e244]:
+                  - img [ref=e245]
+                  - generic [ref=e248]: 45m
+                - generic [ref=e249]:
+                  - img [ref=e250]
+                  - generic [ref=e253]: 12,340 views
+              - generic [ref=e254]:
+                - generic [ref=e255]: salary
+                - generic [ref=e256]: negotiation
+              - generic [ref=e257]:
+                - generic [ref=e258]: Intermediate
+                - generic [ref=e259]: Career Development
+              - generic [ref=e261]: "Provider: Harvard Business Review"
+              - button "Start Learning" [ref=e262] [cursor=pointer]:
+                - img [ref=e263]
+                - text: Start Learning
+          - generic [ref=e267]:
+            - generic [ref=e268]:
+              - generic [ref=e269]:
+                - img [ref=e270]
+                - generic [ref=e273]: tutorial
+              - generic [ref=e274]: FREE
+            - generic [ref=e275]:
+              - generic [ref=e276]:
+                - heading "LinkedIn Optimization Guide" [level=3] [ref=e277]
+                - generic [ref=e278]:
+                  - img [ref=e279]
+                  - generic [ref=e281]: "4.6"
+              - paragraph [ref=e282]: Transform your LinkedIn profile into a job magnet. Boost visibility and get recruiter attention.
+              - generic [ref=e283]:
+                - generic [ref=e284]:
+                  - img [ref=e285]
+                  - generic [ref=e288]: 1h 20m
+                - generic [ref=e289]:
+                  - img [ref=e290]
+                  - generic [ref=e293]: 18,900 views
+              - generic [ref=e294]:
+                - generic [ref=e295]: linkedin
+                - generic [ref=e296]: networking
+              - generic [ref=e297]:
+                - generic [ref=e298]: Beginner
+                - generic [ref=e299]: Career Development
+              - generic [ref=e301]: "Instructor: LinkedIn Learning Team"
+              - button "Start Learning" [ref=e302] [cursor=pointer]:
+                - img [ref=e303]
+                - text: Start Learning
+          - generic [ref=e307]:
+            - generic [ref=e308]:
+              - generic [ref=e309]:
+                - img [ref=e310]
+                - generic [ref=e313]: course
+              - generic [ref=e314]: FREE
+            - generic [ref=e315]:
+              - generic [ref=e316]:
+                - heading "Behavioral Interview Success" [level=3] [ref=e317]
+                - generic [ref=e318]:
+                  - img [ref=e319]
+                  - generic [ref=e321]: "4.8"
+              - paragraph [ref=e322]: Master the STAR method and answer behavioral questions like a pro with structured responses.
+              - generic [ref=e323]:
+                - generic [ref=e324]:
+                  - img [ref=e325]
+                  - generic [ref=e328]: 2h
+                - generic [ref=e329]:
+                  - img [ref=e330]
+                  - generic [ref=e333]: 16,780 views
+              - generic [ref=e334]:
+                - generic [ref=e335]: interview
+                - generic [ref=e336]: behavioral
+              - generic [ref=e337]:
+                - generic [ref=e338]: Beginner
+                - generic [ref=e339]: Interview Prep
+              - generic [ref=e340]:
+                - img [ref=e341]
+                - generic [ref=e344]: Completed
+              - generic [ref=e346]: "Instructor: Dr. Emily Thompson"
+              - button "Review" [ref=e347] [cursor=pointer]:
+                - img [ref=e348]
+                - text: Review
+          - generic [ref=e352]:
+            - generic [ref=e354]:
+              - img [ref=e355]
+              - generic [ref=e358]: video
+            - generic [ref=e359]:
+              - generic [ref=e360]:
+                - 'heading "Tech Stack Deep Dive: React & Next.js" [level=3] [ref=e361]'
+                - generic [ref=e362]:
+                  - img [ref=e363]
+                  - generic [ref=e365]: "4.9"
+              - paragraph [ref=e366]: Build modern web applications with React and Next.js. Hands-on projects and portfolio pieces.
+              - generic [ref=e367]:
+                - generic [ref=e368]:
+                  - img [ref=e369]
+                  - generic [ref=e372]: 8h
+                - generic [ref=e373]:
+                  - img [ref=e374]
+                  - generic [ref=e377]: 34,500 views
+              - generic [ref=e378]:
+                - generic [ref=e379]: react
+                - generic [ref=e380]: nextjs
+              - generic [ref=e381]:
+                - generic [ref=e382]: Intermediate
+                - generic [ref=e383]: Technical Skills
+              - generic [ref=e385]: "Provider: Udemy"
+              - button "Watch Now" [active] [ref=e386] [cursor=pointer]:
+                - img [ref=e387]
+                - text: Watch Now
+          - generic [ref=e390]:
+            - generic [ref=e391]:
+              - generic [ref=e392]:
+                - img [ref=e393]
+                - generic [ref=e396]: article
+              - generic [ref=e397]: FREE
+            - generic [ref=e398]:
+              - generic [ref=e399]:
+                - heading "How to Write Compelling Cover Letters" [level=3] [ref=e400]
+                - generic [ref=e401]:
+                  - img [ref=e402]
+                  - generic [ref=e404]: "4.7"
+              - paragraph [ref=e405]: Create cover letters that stand out. Templates, examples, and tips for different industries.
+              - generic [ref=e406]:
+                - generic [ref=e407]:
+                  - img [ref=e408]
+                  - generic [ref=e411]: 30m
+                - generic [ref=e412]:
+                  - img [ref=e413]
+                  - generic [ref=e416]: 11,560 views
+              - generic [ref=e417]:
+                - generic [ref=e418]: cover letter
+                - generic [ref=e419]: applications
+              - generic [ref=e420]:
+                - generic [ref=e421]: Beginner
+                - generic [ref=e422]: Resume Writing
+              - button "Start Learning" [ref=e423] [cursor=pointer]:
+                - img [ref=e424]
+                - text: Start Learning
+          - generic [ref=e428]:
+            - generic [ref=e429]:
+              - generic [ref=e430]:
+                - img [ref=e431]
+                - generic [ref=e434]: course
+              - generic [ref=e435]: FREE
+            - generic [ref=e436]:
+              - generic [ref=e437]:
+                - heading "Networking That Works" [level=3] [ref=e438]
+                - generic [ref=e439]:
+                  - img [ref=e440]
+                  - generic [ref=e442]: "4.5"
+              - paragraph [ref=e443]: Learn authentic networking strategies. Build meaningful connections that advance your career.
+              - generic [ref=e444]:
+                - generic [ref=e445]:
+                  - img [ref=e446]
+                  - generic [ref=e449]: 1h 45m
+                - generic [ref=e450]:
+                  - img [ref=e451]
+                  - generic [ref=e454]: 9,800 views
+              - generic [ref=e455]:
+                - generic [ref=e456]: networking
+                - generic [ref=e457]: professional
+              - generic [ref=e458]:
+                - generic [ref=e459]: Intermediate
+                - generic [ref=e460]: Career Development
+              - generic [ref=e462]: "Instructor: Michael Rodriguez"
+              - button "Start Learning" [ref=e463] [cursor=pointer]:
+                - img [ref=e464]
+                - text: Start Learning
+          - generic [ref=e468]:
+            - generic [ref=e469]:
+              - generic [ref=e470]:
+                - img [ref=e471]
+                - generic [ref=e474]: tutorial
+              - generic [ref=e475]: FREE
+            - generic [ref=e476]:
+              - generic [ref=e477]:
+                - heading "Mock Interview Practice" [level=3] [ref=e478]
+                - generic [ref=e479]:
+                  - img [ref=e480]
+                  - generic [ref=e482]: "4.9"
+              - paragraph [ref=e483]: Practice interviews with AI-powered feedback on your responses, body language, and communication skills.
+              - generic [ref=e484]:
+                - generic [ref=e485]:
+                  - img [ref=e486]
+                  - generic [ref=e489]: 1h
+                - generic [ref=e490]:
+                  - img [ref=e491]
+                  - generic [ref=e494]: 22,000 views
+              - generic [ref=e495]:
+                - generic [ref=e496]: mock interview
+                - generic [ref=e497]: practice
+              - generic [ref=e498]:
+                - generic [ref=e499]: Beginner
+                - generic [ref=e500]: Interview Prep
+              - generic [ref=e502]:
+                - generic [ref=e503]: Progress
+                - generic [ref=e504]: 40%
+              - generic [ref=e508]: "Provider: RoleReady AI"
+              - button "Start Learning" [ref=e509] [cursor=pointer]:
+                - img [ref=e510]
+                - text: Start Learning
+          - generic [ref=e514]:
+            - generic [ref=e515]:
+              - generic [ref=e516]:
+                - img [ref=e517]
+                - generic [ref=e520]: article
+              - generic [ref=e521]: FREE
+            - generic [ref=e522]:
+              - generic [ref=e523]:
+                - heading "Career Pivot Success Stories" [level=3] [ref=e524]
+                - generic [ref=e525]:
+                  - img [ref=e526]
+                  - generic [ref=e528]: "4.6"
+              - paragraph [ref=e529]: Real stories from professionals who successfully changed careers. Learn their strategies and lessons.
+              - generic [ref=e530]:
+                - generic [ref=e531]:
+                  - img [ref=e532]
+                  - generic [ref=e535]: 1h 15m
+                - generic [ref=e536]:
+                  - img [ref=e537]
+                  - generic [ref=e540]: 15,600 views
+              - generic [ref=e541]:
+                - generic [ref=e542]: career change
+                - generic [ref=e543]: pivot
+              - generic [ref=e544]:
+                - generic [ref=e545]: Beginner
+                - generic [ref=e546]: Career Development
+              - button "Start Learning" [ref=e547] [cursor=pointer]:
+                - img [ref=e548]
+                - text: Start Learning
+          - generic [ref=e552]:
+            - generic [ref=e554]:
+              - img [ref=e555]
+              - generic [ref=e558]: course
+            - generic [ref=e559]:
+              - generic [ref=e560]:
+                - heading "ATS Optimization Fundamentals" [level=3] [ref=e561]
+                - generic [ref=e562]:
+                  - img [ref=e563]
+                  - generic [ref=e565]: "4.9"
+              - paragraph [ref=e566]: Deep dive into ATS (Applicant Tracking System) optimization. Keywords, formatting, and best practices.
+              - generic [ref=e567]:
+                - generic [ref=e568]:
+                  - img [ref=e569]
+                  - generic [ref=e572]: 3h
+                - generic [ref=e573]:
+                  - img [ref=e574]
+                  - generic [ref=e577]: 18,900 views
+              - generic [ref=e578]:
+                - generic [ref=e579]: ATS
+                - generic [ref=e580]: resume
+              - generic [ref=e581]:
+                - generic [ref=e582]: Advanced
+                - generic [ref=e583]: Resume Writing
+              - generic [ref=e585]: "Instructor: Lisa Johnson"
+              - button "Start Learning" [ref=e586] [cursor=pointer]:
+                - img [ref=e587]
+                - text: Start Learning
+          - generic [ref=e591]:
+            - generic [ref=e592]:
+              - generic [ref=e593]:
+                - img [ref=e594]
+                - generic [ref=e597]: course
+              - generic [ref=e598]: FREE
+            - generic [ref=e599]:
+              - generic [ref=e600]:
+                - heading "Building Your Personal Brand" [level=3] [ref=e601]
+                - generic [ref=e602]:
+                  - img [ref=e603]
+                  - generic [ref=e605]: "4.7"
+              - paragraph [ref=e606]: Create a consistent personal brand across LinkedIn, portfolio, and resume. Stand out in your industry.
+              - generic [ref=e607]:
+                - generic [ref=e608]:
+                  - img [ref=e609]
+                  - generic [ref=e612]: 2h 30m
+                - generic [ref=e613]:
+                  - img [ref=e614]
+                  - generic [ref=e617]: 12,400 views
+              - generic [ref=e618]:
+                - generic [ref=e619]: personal brand
+                - generic [ref=e620]: branding
+              - generic [ref=e621]:
+                - generic [ref=e622]: Intermediate
+                - generic [ref=e623]: Career Development
+              - generic [ref=e625]: "Instructor: Alex Martinez"
+              - button "Start Learning" [ref=e626] [cursor=pointer]:
+                - img [ref=e627]
+                - text: Start Learning
+  - alert [ref=e631]
+```

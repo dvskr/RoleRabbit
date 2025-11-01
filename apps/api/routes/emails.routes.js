@@ -12,6 +12,7 @@ const {
   deleteEmail,
   getEmailsByJobId
 } = require('../utils/emails');
+const { sendEmail } = require('../utils/emailService');
 const { authenticate } = require('../middleware/auth');
 const { errorHandler, requireOwnership } = require('../utils/errorMiddleware');
 const CrudService = require('../utils/crudService');
@@ -95,6 +96,43 @@ async function emailRoutes(fastify, options) {
 
     await deleteEmail(id);
     return { success: true };
+  }));
+
+  // Send email
+  fastify.post('/api/emails/send', {
+    preHandler: authenticate
+  }, errorHandler(async (request, reply) => {
+    const { to, subject, body, html, from } = request.body;
+    
+    // Validate required fields
+    if (!to || !subject || !body) {
+      return reply.status(400).send({ error: 'Missing required fields: to, subject, body' });
+    }
+
+    // Send email using email service
+    const result = await sendEmail({
+      to,
+      subject,
+      html: html || body,
+      text: body,
+      from: from || process.env.EMAIL_FROM || 'noreply@roleready.com'
+    });
+
+    // Save email record to database
+    const email = await createEmail(request.user.userId, {
+      to,
+      subject,
+      body,
+      status: 'sent',
+      type: 'outgoing'
+    });
+
+    return {
+      success: true,
+      email,
+      provider: result.provider,
+      messageId: result.id || result.messageId
+    };
   }));
 }
 

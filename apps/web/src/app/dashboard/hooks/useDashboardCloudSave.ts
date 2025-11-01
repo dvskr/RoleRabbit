@@ -8,10 +8,8 @@ import type {
   CustomSection,
   ResumeFile,
 } from '../../../types/resume';
-import {
-  saveResumeToCloud,
-  loadResumeFromCloud,
-} from '../utils/cloudStorageHelpers';
+import apiService from '../../../services/apiService';
+import { logger } from '../../../utils/logger';
 
 export interface UseDashboardCloudSaveParams {
   resumeData: ResumeData;
@@ -72,52 +70,59 @@ export function useDashboardCloudSave(params: UseDashboardCloudSaveParams): UseD
     setShowImportFromCloudModal,
   } = params;
 
-  const handleConfirmSaveToCloud = useCallback((fileName: string, description: string, tags: string[]) => {
-    saveResumeToCloud(
-      resumeData,
-      customSections,
-      resumeFileName,
-      fontFamily,
-      fontSize,
-      lineSpacing,
-      sectionSpacing,
-      margins,
-      headingStyle,
-      bulletStyle,
-      fileName,
-      description,
-      tags
-    );
-    setShowSaveToCloudModal(false);
+  const handleConfirmSaveToCloud = useCallback(async (fileName: string, description: string, tags: string[]) => {
+    try {
+      // Save via API
+      const response = await apiService.saveToCloud(resumeData, fileName);
+      if (response && response.savedResume) {
+        logger.debug('Saved resume to cloud:', response.savedResume);
+      }
+      setShowSaveToCloudModal(false);
+    } catch (error) {
+      logger.error('Failed to save resume to cloud:', error);
+      // Still close modal even on error
+      setShowSaveToCloudModal(false);
+    }
   }, [
     resumeData,
-    customSections,
-    resumeFileName,
-    fontFamily,
-    fontSize,
-    lineSpacing,
-    sectionSpacing,
-    margins,
-    headingStyle,
-    bulletStyle,
     setShowSaveToCloudModal,
   ]);
 
-  const handleLoadFromCloud = useCallback((file: ResumeFile) => {
-    const data = loadResumeFromCloud(file);
-    if (data) {
-      setResumeData(data.resumeData);
-      setCustomSections(data.customSections || []);
-      setResumeFileName(data.resumeFileName || file.name);
-      setFontFamily(data.fontFamily || 'Arial');
-      setFontSize(data.fontSize || '12pt');
-      setLineSpacing(data.lineSpacing || '1.5');
-      setSectionSpacing(data.sectionSpacing || 'normal');
-      setMargins(data.margins || 'medium');
-      setHeadingStyle(data.headingStyle || 'bold');
-      setBulletStyle(data.bulletStyle || 'disc');
+  const handleLoadFromCloud = useCallback(async (file: ResumeFile) => {
+    try {
+      // Load from API
+      const response = await apiService.listCloudResumes();
+      if (response && response.savedResumes) {
+        const cloudFile = response.savedResumes.find((f: ResumeFile) => f.id === file.id);
+        if (cloudFile && cloudFile.data) {
+          // Cloud storage data is stored as JSON string
+          try {
+            const parsedData = typeof cloudFile.data === 'string' 
+              ? JSON.parse(cloudFile.data) 
+              : cloudFile.data;
+            
+            if (parsedData.resumeData) {
+              setResumeData(parsedData.resumeData);
+              if (parsedData.customSections) setCustomSections(parsedData.customSections);
+              if (parsedData.resumeFileName) setResumeFileName(parsedData.resumeFileName);
+              if (parsedData.fontFamily) setFontFamily(parsedData.fontFamily);
+              if (parsedData.fontSize) setFontSize(parsedData.fontSize);
+              if (parsedData.lineSpacing) setLineSpacing(parsedData.lineSpacing);
+              if (parsedData.sectionSpacing) setSectionSpacing(parsedData.sectionSpacing);
+              if (parsedData.margins) setMargins(parsedData.margins);
+              if (parsedData.headingStyle) setHeadingStyle(parsedData.headingStyle);
+              if (parsedData.bulletStyle) setBulletStyle(parsedData.bulletStyle);
+            }
+          } catch (parseError) {
+            logger.error('Failed to parse cloud file data:', parseError);
+          }
+        }
+      }
+      setShowImportFromCloudModal(false);
+    } catch (error) {
+      logger.error('Failed to load resume from cloud:', error);
+      setShowImportFromCloudModal(false);
     }
-    setShowImportFromCloudModal(false);
   }, [
     setResumeData,
     setCustomSections,
