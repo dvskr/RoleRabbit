@@ -410,7 +410,7 @@ export default function CoverLetterGenerator() {
   return (
     <div className="w-full h-full flex flex-col overflow-hidden" style={{ background: theme.colors.background }}>
       {/* Header with Title and Subtitle */}
-      <div className="flex-shrink-0 px-6 pt-6 pb-3" style={{ background: theme.colors.headerBackground }}>
+      <div className="flex-shrink-0 px-6 pt-4 pb-3" style={{ background: theme.colors.headerBackground }}>
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={24} style={{ color: theme.colors.primaryBlue }} />
