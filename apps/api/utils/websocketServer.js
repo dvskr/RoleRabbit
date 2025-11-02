@@ -10,7 +10,6 @@ class WebSocketServer {
   constructor(server) {
     this.server = server;
     this.clients = new Map(); // userId -> Set of connections
-    this.resumeRooms = new Map(); // resumeId -> Set of connections
   }
 
   /**
@@ -40,18 +39,6 @@ class WebSocketServer {
       switch (data.type) {
         case 'auth':
           this.handleAuth(connection, data);
-          break;
-        case 'join_resume':
-          this.handleJoinResume(connection, data);
-          break;
-        case 'leave_resume':
-          this.handleLeaveResume(connection, data);
-          break;
-        case 'resume_update':
-          this.handleResumeUpdate(connection, data);
-          break;
-        case 'get_presence':
-          this.handleGetPresence(connection, data);
           break;
         default:
           this.sendError(connection, 'Unknown message type');
@@ -85,102 +72,6 @@ class WebSocketServer {
     });
   }
 
-  /**
-   * Handle joining resume room
-   */
-  handleJoinResume(connection, data) {
-    if (!connection.userId) {
-      this.sendError(connection, 'Authentication required');
-      return;
-    }
-
-    const resumeId = data.resumeId;
-    if (!resumeId) {
-      this.sendError(connection, 'Resume ID required');
-      return;
-    }
-
-    // Add to resume room
-    if (!this.resumeRooms.has(resumeId)) {
-      this.resumeRooms.set(resumeId, new Set());
-    }
-    this.resumeRooms.get(resumeId).add(connection);
-
-    // Broadcast to others in the room
-    this.broadcastToRoom(resumeId, connection, {
-      type: 'user_joined',
-      userId: connection.userId,
-      resumeId
-    });
-  }
-
-  /**
-   * Handle leaving resume room
-   */
-  handleLeaveResume(connection, data) {
-    const resumeId = data.resumeId;
-    if (!resumeId || !this.resumeRooms.has(resumeId)) {
-      return;
-    }
-
-    this.resumeRooms.get(resumeId).delete(connection);
-
-    this.broadcastToRoom(resumeId, connection, {
-      type: 'user_left',
-      userId: connection.userId,
-      resumeId
-    });
-  }
-
-  /**
-   * Handle resume updates
-   */
-  handleResumeUpdate(connection, data) {
-    if (!connection.userId) {
-      this.sendError(connection, 'Authentication required');
-      return;
-    }
-
-    const resumeId = data.resumeId;
-    if (!resumeId || !this.resumeRooms.has(resumeId)) {
-      this.sendError(connection, 'Not in resume room');
-      return;
-    }
-
-    // Broadcast update to all others in the room
-    this.broadcastToRoom(resumeId, connection, {
-      type: 'resume_updated',
-      resumeId,
-      changes: data.changes,
-      userId: connection.userId,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Handle getting presence information
-   */
-  handleGetPresence(connection, data) {
-    const resumeId = data.resumeId;
-    if (!resumeId || !this.resumeRooms.has(resumeId)) {
-      this.send(connection, {
-        type: 'presence',
-        resumeId,
-        users: []
-      });
-      return;
-    }
-
-    const users = Array.from(this.resumeRooms.get(resumeId))
-      .map(client => client.userId)
-      .filter(id => id && id !== connection.userId);
-
-    this.send(connection, {
-      type: 'presence',
-      resumeId,
-      users
-    });
-  }
 
   /**
    * Handle disconnect
@@ -196,35 +87,9 @@ class WebSocketServer {
         }
       }
 
-      // Remove from all resume rooms
-      for (const [resumeId, connections] of this.resumeRooms.entries()) {
-        if (connections.has(connection)) {
-          connections.delete(connection);
-          
-          // Broadcast user left
-          this.broadcastToRoom(resumeId, connection, {
-            type: 'user_left',
-            userId: connection.userId,
-            resumeId
-          });
-        }
-      }
     }
   }
 
-  /**
-   * Broadcast to all connections in a room except sender
-   */
-  broadcastToRoom(resumeId, sender, message) {
-    const room = this.resumeRooms.get(resumeId);
-    if (!room) return;
-
-    room.forEach(connection => {
-      if (connection !== sender && connection.socket.readyState === 1) {
-        this.send(connection, message);
-      }
-    });
-  }
 
   /**
    * Send message to a specific connection
@@ -268,8 +133,7 @@ class WebSocketServer {
   getStats() {
     return {
       totalConnections: Array.from(this.clients.values()).reduce((sum, set) => sum + set.size, 0),
-      uniqueUsers: this.clients.size,
-      activeRooms: this.resumeRooms.size
+      uniqueUsers: this.clients.size
     };
   }
 }

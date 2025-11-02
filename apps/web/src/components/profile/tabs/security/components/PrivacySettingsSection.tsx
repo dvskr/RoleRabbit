@@ -84,6 +84,8 @@ export const PrivacySettingsSection: React.FC<PrivacySettingsSectionProps> = ({
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input 
+              id="show-contact-info-toggle"
+              name="showContactInfo"
               type="checkbox" 
               className="sr-only peer" 
               checked={showContactInfo}

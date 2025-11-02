@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import type { SetStateAction } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -22,7 +22,6 @@ const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: f
 const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
-const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents/index'), { ssr: false });
 import {
   ResumeData,
@@ -135,24 +134,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   const { theme } = useTheme();
   const colors = theme.colors;
   const initializingCustomFieldsRef = useRef(false);
-  const [resumes, setResumes] = useState<any[]>([]);
-  const [resumesLoading, setResumesLoading] = useState(false);
-  const MAX_RESUMES = 10;
-
-  const fetchResumes = useCallback(async () => {
-    setResumesLoading(true);
-    try {
-      const response = await apiService.getResumes();
-      const list = response?.resumes || [];
-      setResumes(list);
-      return list;
-    } catch (error) {
-      logger.error('Failed to fetch resumes:', error);
-      return [];
-    } finally {
-      setResumesLoading(false);
-    }
-  }, []);
   
   // Dashboard-specific state hooks
   const dashboardUI = useDashboardUI(initialTab);
@@ -181,10 +162,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setAddedTemplates,
   } = dashboardTemplates;
 
-  useEffect(() => {
-    fetchResumes();
-  }, [fetchResumes]);
-
   const handleResumeLoaded = useCallback(({ resume, snapshot }: { resume: any; snapshot: { customFields?: CustomField[] } }) => {
     initializingCustomFieldsRef.current = true;
     try {
@@ -192,22 +169,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     } finally {
       initializingCustomFieldsRef.current = false;
     }
-    if (resume) {
-      setSelectedTemplateId(resume.templateId ?? null);
-      setResumes((prev) => {
-        if (!prev || !Array.isArray(prev)) {
-          return resume ? [resume] : [];
-        }
-        const index = prev.findIndex((item) => item.id === resume.id);
-        if (index === -1) {
-          return [...prev, resume];
-        }
-        const updated = [...prev];
-        updated[index] = { ...updated[index], ...resume };
-        return updated;
-      });
-    }
-  }, [setCustomFieldsBase, setSelectedTemplateId, setResumes]);
+    setSelectedTemplateId(resume?.templateId ?? null);
+  }, [setCustomFieldsBase, setSelectedTemplateId]);
 
   const resumeDataHook = useResumeData({ onResumeLoaded: handleResumeLoaded });
 
@@ -261,9 +224,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     sectionVisibility, setSectionVisibility,
     customSections, setCustomSections,
     history, setHistory,
-    historyIndex, setHistoryIndex,
-    loadResumeById,
-    applyResumeRecord
+    historyIndex, setHistoryIndex
   } = resumeDataHook;
 
   const setCustomFieldsTracked = useCallback((value: SetStateAction<CustomField[]>) => {
@@ -276,115 +237,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       return next;
     });
   }, [setCustomFieldsBase, setHasChanges, setSaveError]);
-
-  const handleSwitchResume = useCallback(async (resumeId: string) => {
-    if (!resumeId || resumeId === currentResumeId || isSaving) {
-      return;
-    }
-
-    try {
-      const result = await loadResumeById(resumeId);
-      if (result?.snapshot) {
-        initializingCustomFieldsRef.current = true;
-        try {
-          setCustomFieldsBase(result.snapshot.customFields ?? []);
-        } finally {
-          initializingCustomFieldsRef.current = false;
-        }
-      }
-      if (result?.resume) {
-        setSelectedTemplateId(result.resume.templateId ?? null);
-      }
-    } catch (error) {
-      logger.error('Failed to switch resume:', error);
-    }
-  }, [currentResumeId, isSaving, loadResumeById, setCustomFieldsBase, setSelectedTemplateId]);
-
-  const handleRequestNewResume = useCallback(() => {
-    if (resumes.length >= MAX_RESUMES) {
-      alert(`You can only create up to ${MAX_RESUMES} resumes.`);
-      return;
-    }
-    setShowNewResumeModal(true);
-  }, [resumes.length, setShowNewResumeModal]);
-
-  const handleConfirmNewResume = useCallback(async () => {
-    if (resumes.length >= MAX_RESUMES) {
-      alert(`You can only create up to ${MAX_RESUMES} resumes.`);
-      setShowNewResumeModal(false);
-      return;
-    }
-
-    let createdSuccessfully = false;
-    try {
-      setIsSaving(true);
-      setSaveError(null);
-      const response = await apiService.saveResume({ name: 'Untitled Resume', data: {} });
-      const created = response?.resume;
-      if (created) {
-        const applied = applyResumeRecord(created);
-        if (applied?.snapshot) {
-          initializingCustomFieldsRef.current = true;
-          try {
-            setCustomFieldsBase(applied.snapshot.customFields ?? []);
-          } finally {
-            initializingCustomFieldsRef.current = false;
-          }
-        }
-        setSelectedTemplateId(created.templateId ?? null);
-        createdSuccessfully = true;
-      }
-      await fetchResumes();
-    } catch (error: any) {
-      logger.error('Failed to create resume:', error);
-      setSaveError(error instanceof Error ? error.message : 'Failed to create resume');
-    } finally {
-      setIsSaving(false);
-      if (createdSuccessfully) {
-        setShowNewResumeModal(false);
-      }
-    }
-  }, [resumes.length, MAX_RESUMES, setIsSaving, setSaveError, applyResumeRecord, fetchResumes, setCustomFieldsBase, setSelectedTemplateId, setShowNewResumeModal]);
-
-  const handleDeleteResume = useCallback(async (resumeId: string) => {
-    if (!resumeId) {
-      return;
-    }
-    if (resumes.length <= 1) {
-      alert('You must keep at least one resume.');
-      return;
-    }
-    if (!window.confirm('Are you sure you want to delete this resume? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await apiService.deleteResume(resumeId);
-      const updated = await fetchResumes();
-      if (resumeId === currentResumeId) {
-        const fallback = updated.find((item: any) => item.id !== resumeId);
-        if (fallback) {
-          const result = await loadResumeById(fallback.id);
-          if (result?.snapshot) {
-            initializingCustomFieldsRef.current = true;
-            try {
-              setCustomFieldsBase(result.snapshot.customFields ?? []);
-            } finally {
-              initializingCustomFieldsRef.current = false;
-            }
-          }
-          if (result?.resume) {
-            setSelectedTemplateId(result.resume.templateId ?? null);
-          }
-        } else {
-          setCurrentResumeId(null);
-        }
-      }
-    } catch (error: any) {
-      logger.error('Failed to delete resume:', error);
-      setSaveError(error instanceof Error ? error.message : 'Failed to delete resume');
-    }
-  }, [resumes.length, fetchResumes, currentResumeId, loadResumeById, setCustomFieldsBase, setSelectedTemplateId, setCurrentResumeId, setSaveError]);
 
   const {
     aiMode, setAiMode,
@@ -743,13 +595,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             }}
             isSidebarCollapsed={resumePanelCollapsed}
             onToggleSidebar={() => setResumePanelCollapsed(!resumePanelCollapsed)}
-            resumes={resumes}
-            activeResumeId={currentResumeId}
-            onResumeSwitch={handleSwitchResume}
-            onResumeCreate={handleRequestNewResume}
-            onResumeDelete={handleDeleteResume}
-            isResumeListLoading={resumesLoading}
-            maxResumes={MAX_RESUMES}
           />
         );
       case 'templates':
@@ -789,8 +634,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         return <CoverLetterGenerator />;
       case 'portfolio':
         return <PortfolioGenerator />;
-      case 'learning':
-        return <LearningHub />;
       case 'agents':
       case 'ai-agents':
         return (
@@ -832,8 +675,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             <Header
               isMobile={false}
               isSaving={isSaving}
-              lastSavedAt={lastSavedAt ?? undefined}
-              saveError={saveError ?? undefined}
               canUndo={historyIndex > 0}
               canRedo={historyIndex < history.length - 1}
               onExport={() => setShowExportModal(true)}
@@ -970,14 +811,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'email') ? 'block' : 'none' }}
               >
-                  <Email />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'learning') ? 'block' : 'none' }}
-              >
-                  <LearningHub />
-                </div>
+                <Email />
+              </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'agents' || activeTab === 'ai-agents') ? 'block' : 'none' }}
@@ -1136,7 +971,22 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}
-        onNewResume={() => handleConfirmNewResume()}
+        onNewResume={() => {
+          setResumeData({
+            name: '',
+            title: '',
+            email: '',
+            phone: '',
+            location: '',
+            summary: '',
+            skills: [],
+            experience: [],
+            education: [],
+            projects: [],
+            certifications: [],
+          });
+          setShowNewResumeModal(false);
+        }}
         onGenerateAIContent={() => aiHelpers.generateAIContent(
           aiGenerateSection,
           aiPrompt,

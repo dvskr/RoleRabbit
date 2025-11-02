@@ -274,6 +274,49 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     const resumeData = data.resumeData && typeof data.resumeData === 'object'
       ? cloneResumeData(data.resumeData)
       : cloneResumeData(createDefaultResumeData());
+    
+    // Normalize all array fields to always be arrays
+    if (!Array.isArray(resumeData.skills)) {
+      resumeData.skills = [];
+    }
+    if (!Array.isArray(resumeData.experience)) {
+      resumeData.experience = [];
+    }
+    if (!Array.isArray(resumeData.education)) {
+      resumeData.education = [];
+    }
+    if (!Array.isArray(resumeData.projects)) {
+      resumeData.projects = [];
+    }
+    if (!Array.isArray(resumeData.certifications)) {
+      resumeData.certifications = [];
+    }
+    
+    // Normalize nested arrays in experience items
+    resumeData.experience.forEach((exp: any) => {
+      if (exp && typeof exp === 'object') {
+        if (!Array.isArray(exp.bullets)) exp.bullets = [];
+        if (!Array.isArray(exp.environment)) exp.environment = [];
+        if (!Array.isArray(exp.customFields)) exp.customFields = [];
+      }
+    });
+    
+    // Normalize nested arrays in project items
+    resumeData.projects.forEach((proj: any) => {
+      if (proj && typeof proj === 'object') {
+        if (!Array.isArray(proj.bullets)) proj.bullets = [];
+        if (!Array.isArray(proj.skills)) proj.skills = [];
+        if (!Array.isArray(proj.customFields)) proj.customFields = [];
+      }
+    });
+    
+    // Normalize nested arrays in certification items
+    resumeData.certifications.forEach((cert: any) => {
+      if (cert && typeof cert === 'object') {
+        if (!Array.isArray(cert.skills)) cert.skills = [];
+        if (!Array.isArray(cert.customFields)) cert.customFields = [];
+      }
+    });
     const sectionOrder = Array.isArray(data.sectionOrder) && data.sectionOrder.length > 0
       ? [...data.sectionOrder]
       : [...DEFAULT_SECTION_ORDER];

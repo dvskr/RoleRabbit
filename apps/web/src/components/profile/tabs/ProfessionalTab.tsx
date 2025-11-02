@@ -740,6 +740,8 @@ export default function ProfessionalTab({
                 Experience Level
               </label>
               <select
+                id="experience-select"
+                name="experience"
                 value={userData.experience}
                 onChange={(e) => onUserDataChange({ experience: e.target.value })}
                 disabled={!isEditing}
@@ -773,6 +775,8 @@ export default function ProfessionalTab({
                 Industry
               </label>
               <select
+                id="industry-select"
+                name="industry"
                 value={userData.industry}
                 onChange={(e) => onUserDataChange({ industry: e.target.value })}
                 disabled={!isEditing}
@@ -809,6 +813,8 @@ export default function ProfessionalTab({
                 Job Level
               </label>
               <select
+                id="job-level-select"
+                name="jobLevel"
                 value={userData.jobLevel}
                 onChange={(e) => onUserDataChange({ jobLevel: e.target.value })}
                 disabled={!isEditing}
@@ -867,6 +873,8 @@ export default function ProfessionalTab({
                 Work Preference
               </label>
               <select
+                id="work-preference-select"
+                name="workPreference"
                 value={userData.workPreference}
                 onChange={(e) => onUserDataChange({ workPreference: e.target.value })}
                 disabled={!isEditing}
@@ -1063,6 +1071,8 @@ export default function ProfessionalTab({
                           Project Type
                         </label>
                         <select
+                          id={`project-type-${exp.id}`}
+                          name={`project-type-${exp.id}`}
                           value={exp.projectType}
                           onChange={(e) => updateWorkExperience(exp.id || '', { projectType: e.target.value as any })}
                           className="w-full px-4 py-3 rounded-xl"
@@ -1084,6 +1094,7 @@ export default function ProfessionalTab({
                         <input
                           type="checkbox"
                           id={`current-${exp.id}`}
+                          name={`current-${exp.id}`}
                           checked={exp.isCurrent}
                           onChange={(e) => updateWorkExperience(exp.id || '', { isCurrent: e.target.checked, endDate: e.target.checked ? '' : exp.endDate })}
                           className="w-4 h-4"
@@ -1404,6 +1415,8 @@ export default function ProfessionalTab({
                       )}
                       <div className="flex gap-2">
                         <input
+                          id={`project-tech-${proj.id}`}
+                          name={`project-tech-${proj.id}`}
                           type="text"
                           value={newProjTech[proj.id || ''] || ''}
                           onChange={(e) => setNewProjTech({ ...newProjTech, [proj.id || '']: e.target.value })}
@@ -1606,11 +1619,13 @@ export default function ProfessionalTab({
                       <div className="flex items-center gap-2 pt-8">
                         <input
                           type="checkbox"
+                          id={`vol-current-${vol.id}`}
+                          name={`vol-current-${vol.id}`}
                           checked={vol.isCurrent}
                           onChange={(e) => updateVolunteerExperience(vol.id || '', { isCurrent: e.target.checked })}
                           className="w-4 h-4"
                         />
-                        <label className="text-sm" style={{ color: colors.primaryText }}>Current</label>
+                        <label htmlFor={`vol-current-${vol.id}`} className="text-sm" style={{ color: colors.primaryText }}>Current</label>
                       </div>
                       {!vol.isCurrent && (
                         <FormField
@@ -2041,6 +2056,8 @@ export default function ProfessionalTab({
                           Type
                         </label>
                         <select
+                          id={`publication-type-${pub.id}`}
+                          name={`publication-type-${pub.id}`}
                           value={pub.type}
                           onChange={(e) => updatePublication(pub.id || '', { type: e.target.value as any })}
                           className="w-full px-4 py-3 rounded-xl"
@@ -2269,6 +2286,8 @@ export default function ProfessionalTab({
                           Status
                         </label>
                         <select
+                          id={`patent-status-${pat.id}`}
+                          name={`patent-status-${pat.id}`}
                           value={pat.status}
                           onChange={(e) => updatePatent(pat.id || '', { status: e.target.value as any })}
                           className="w-full px-4 py-3 rounded-xl"
@@ -2464,6 +2483,8 @@ export default function ProfessionalTab({
                           Type
                         </label>
                         <select
+                          id={`org-type-${org.id}`}
+                          name={`org-type-${org.id}`}
                           value={org.type}
                           onChange={(e) => updateOrganization(org.id || '', { type: e.target.value as any })}
                           className="w-full px-4 py-3 rounded-xl"
@@ -2496,12 +2517,14 @@ export default function ProfessionalTab({
                       <div className="flex items-center gap-2 pt-8">
                         <input
                           type="checkbox"
+                          id={`org-current-${org.id}`}
+                          name={`org-current-${org.id}`}
                           checked={org.isCurrent}
                           onChange={(e) => updateOrganization(org.id || '', { isCurrent: e.target.checked })}
                           className="w-4 h-4"
                         />
-                        <label className="text-sm" style={{ color: colors.primaryText }}>Current</label>
-                      </div>
+                        <label htmlFor={`org-current-${org.id}`} className="text-sm" style={{ color: colors.primaryText }}>Current</label>
+                        </div>
                       {!org.isCurrent && (
                         <FormField
                           label="End Date"

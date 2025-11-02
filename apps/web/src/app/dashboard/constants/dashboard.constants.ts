@@ -18,7 +18,6 @@ export type DashboardTab =
   | 'discussion'
   | 'cover-letter'
   | 'portfolio'
-  | 'learning'
   | 'ai-agents'
   | 'agents';  // Alias for ai-agents (legacy support)
 
@@ -33,7 +32,6 @@ export const DASHBOARD_TABS: DashboardTab[] = [
   'discussion',
   'cover-letter',
   'portfolio',
-  'learning',
   'ai-agents',
 ];
 

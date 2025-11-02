@@ -1,13 +1,10 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { Save, Edit, UserCircle, Check } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
 import { useTheme } from '../../contexts/ThemeContext';
 
-interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
-  resumeImportButton?: ReactNode;
-}
 
 export default function ProfileHeader({
   isEditing,
@@ -15,9 +12,8 @@ export default function ProfileHeader({
   isSaved = false,
   onEdit,
   onCancel,
-  onSave,
-  resumeImportButton
-}: ExtendedProfileHeaderProps) {
+  onSave
+}: ProfileHeaderProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
 
@@ -121,9 +117,6 @@ export default function ProfileHeader({
             </>
           ) : (
             <>
-              {/* Resume Import Button */}
-              {resumeImportButton}
-              
               {/* Edit Profile Button */}
               <button
                 onClick={onEdit}

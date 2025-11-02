@@ -11,7 +11,12 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:a11y": "jest --config jest.a11y.config.js",
+    "test:visual": "playwright test --grep visual",
+    "test:cross-browser": "playwright test --grep cross-browser",
+    "test:e2e": "playwright test",
     "test:lighthouse": "lhci autorun",
+    "check-bundle-size": "node scripts/check-bundle-size.js",
     "clean": "rm -rf .next dist"
   },
   "dependencies": {

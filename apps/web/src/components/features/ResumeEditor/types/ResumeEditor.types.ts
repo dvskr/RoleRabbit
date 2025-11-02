@@ -47,12 +47,5 @@ export interface ResumeEditorProps {
   onNavigateToTemplates?: () => void;
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
-  resumes?: Array<{ id: string; name: string; fileName?: string; templateId?: string | null }>;
-  activeResumeId?: string | null;
-  onResumeSwitch?: (resumeId: string) => void | Promise<void>;
-  onResumeCreate?: () => void | Promise<void>;
-  onResumeDelete?: (resumeId: string) => void | Promise<void>;
-  isResumeListLoading?: boolean;
-  maxResumes?: number;
 }
 

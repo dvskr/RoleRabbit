@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, BookOpen, Bot } from 'lucide-react';
+import { Sparkles, Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -109,14 +109,6 @@ export default function Sidebar({
         >
           <Globe size={20} />
           {!sidebarCollapsed && <span className="font-semibold">Portfolio</span>}
-        </button>
-        <button 
-          onClick={() => onTabChange('learning')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'learning' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
-          title={sidebarCollapsed ? 'Learning Hub' : ''}
-        >
-          <BookOpen size={20} />
-          {!sidebarCollapsed && <span className="font-semibold">Learning Hub</span>}
         </button>
         <button 
           onClick={() => onTabChange('agents')} 

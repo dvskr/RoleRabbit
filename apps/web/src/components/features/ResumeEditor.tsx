@@ -60,14 +60,7 @@ export default function ResumeEditor({
   onAddTemplates,
   onNavigateToTemplates,
   isSidebarCollapsed = false,
-  onToggleSidebar,
-  resumes,
-  activeResumeId,
-  onResumeSwitch,
-  onResumeCreate,
-  onResumeDelete,
-  isResumeListLoading,
-  maxResumes
+  onToggleSidebar
 }: ResumeEditorProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -118,19 +111,6 @@ export default function ResumeEditor({
           <CollapsedSidebar colors={colors} onToggleSidebar={onToggleSidebar} />
         ) : (
           <div className="flex flex-col w-full">
-            {onResumeSwitch && (
-              <div className="-mx-4 -mt-2 mb-4">
-                <MultiResumeManager
-                  resumes={resumes}
-                  activeResumeId={activeResumeId}
-                  onSwitchResume={onResumeSwitch}
-                  onCreateResume={onResumeCreate}
-                  onDeleteResume={onResumeDelete}
-                  isLoadingResumes={isResumeListLoading}
-                  maxResumes={maxResumes}
-                />
-              </div>
-            )}
             {/* File Name Configuration */}
             <FileNameSection
               resumeFileName={resumeFileName}

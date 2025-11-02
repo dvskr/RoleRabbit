@@ -22,6 +22,10 @@ export default function ExperienceSection({
 }: ExperienceSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+
+  // Ensure experience is always an array
+  const experience = Array.isArray(resumeData.experience) ? resumeData.experience : [];
+
   const addExperience = () => {
     const newExperience: ExperienceItem = {
       id: Date.now(),
@@ -34,72 +38,84 @@ export default function ExperienceSection({
       environment: [],
       customFields: []
     };
-    setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
+    setResumeData(prev => ({ ...prev, experience: [...(Array.isArray(prev.experience) ? prev.experience : []), newExperience] }));
   };
 
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
-    const updatedExperience = resumeData.experience.map((item) => 
+    const updatedExperience = experience.map((item) => 
       item.id === id ? { ...item, ...updates } : item
     );
     setResumeData({...resumeData, experience: updatedExperience});
   };
 
   const deleteExperience = (id: number) => {
-    const updatedExperience = resumeData.experience.filter(item => item.id !== id);
+    const updatedExperience = experience.filter(item => item.id !== id);
     setResumeData({...resumeData, experience: updatedExperience});
   };
 
   const addBullet = (expId: number) => {
-    updateExperience(expId, { bullets: [...resumeData.experience.find(e => e.id === expId)!.bullets, ''] });
+    const exp = experience.find(e => e.id === expId);
+    if (exp) {
+      updateExperience(expId, { bullets: [...(Array.isArray(exp.bullets) ? exp.bullets : []), ''] });
+    }
   };
 
   const updateBullet = (expId: number, bulletIndex: number, value: string) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const updatedBullets = [...exp.bullets];
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const updatedBullets = [...(Array.isArray(exp.bullets) ? exp.bullets : [])];
     updatedBullets[bulletIndex] = value;
     updateExperience(expId, { bullets: updatedBullets });
   };
 
   const deleteBullet = (expId: number, bulletIndex: number) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const updatedBullets = exp.bullets.filter((_, index) => index !== bulletIndex);
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const updatedBullets = (Array.isArray(exp.bullets) ? exp.bullets : []).filter((_, index) => index !== bulletIndex);
     updateExperience(expId, { bullets: updatedBullets });
   };
 
   const addEnvironment = (expId: number) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    updateExperience(expId, { environment: [...exp.environment, ''] });
+    const exp = experience.find(e => e.id === expId);
+    if (exp) {
+      updateExperience(expId, { environment: [...(Array.isArray(exp.environment) ? exp.environment : []), ''] });
+    }
   };
 
   const updateEnvironment = (expId: number, envIndex: number, value: string) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const updatedEnvironment = [...exp.environment];
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const updatedEnvironment = [...(Array.isArray(exp.environment) ? exp.environment : [])];
     updatedEnvironment[envIndex] = value;
     updateExperience(expId, { environment: updatedEnvironment });
   };
 
   const deleteEnvironment = (expId: number, envIndex: number) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const updatedEnvironment = exp.environment.filter((_, index) => index !== envIndex);
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const updatedEnvironment = (Array.isArray(exp.environment) ? exp.environment : []).filter((_, index) => index !== envIndex);
     updateExperience(expId, { environment: updatedEnvironment });
   };
 
   const addCustomFieldToExperience = (expId: number, field: CustomField) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const currentFields = exp.customFields || [];
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const currentFields = Array.isArray(exp.customFields) ? exp.customFields : [];
     updateExperience(expId, { customFields: [...currentFields, field] });
   };
 
   const updateCustomFieldInExperience = (expId: number, fieldId: string, value: string) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const currentFields = exp.customFields || [];
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const currentFields = Array.isArray(exp.customFields) ? exp.customFields : [];
     const updatedFields = currentFields.map(f => f.id === fieldId ? { ...f, value } : f);
     updateExperience(expId, { customFields: updatedFields });
   };
 
   const deleteCustomFieldFromExperience = (expId: number, fieldId: string) => {
-    const exp = resumeData.experience.find(e => e.id === expId)!;
-    const currentFields = exp.customFields || [];
+    const exp = experience.find(e => e.id === expId);
+    if (!exp) return;
+    const currentFields = Array.isArray(exp.customFields) ? exp.customFields : [];
     const updatedFields = currentFields.filter(f => f.id !== fieldId);
     updateExperience(expId, { customFields: updatedFields });
   };
@@ -160,7 +176,7 @@ export default function ExperienceSection({
         </div>
       </div>
 
-      {resumeData.experience.length === 0 && (
+      {experience.length === 0 && (
         <div 
           className="text-center py-12 border-2 border-dashed rounded-2xl transition-all"
           style={{
@@ -205,7 +221,7 @@ export default function ExperienceSection({
         </div>
       )}
 
-      {resumeData.experience.map((exp) => (
+      {experience.map((exp) => (
         <div 
           key={exp.id} 
           className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"

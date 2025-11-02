@@ -329,6 +329,8 @@ export default function CareerTab({
                             Progress (%)
                           </label>
                           <input
+                            id={`goal-progress-${index}`}
+                            name={`goal-progress-${index}`}
                             type="number"
                             min="0"
                             max="100"
@@ -610,6 +612,8 @@ export default function CareerTab({
           {isEditing && (
             <div className="flex gap-3">
               <input
+                id="add-target-role-input"
+                name="add-target-role-input"
                 type="text"
                 placeholder="Add target role (e.g., Senior Software Engineer, Product Manager)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
@@ -745,6 +749,8 @@ export default function CareerTab({
           {isEditing && (
             <div className="flex gap-3">
               <input
+                id="add-target-company-input"
+                name="add-target-company-input"
                 type="text"
                 placeholder="Add target company (e.g., Google, Microsoft, Amazon)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"

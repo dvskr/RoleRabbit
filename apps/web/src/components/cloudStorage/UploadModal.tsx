@@ -60,7 +60,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
       .split(',')
       .map(tag => tag.trim())
       .filter(Boolean);
-
+    
     const payload: UploadModalPayload = {
       file: selectedFile,
       displayName: trimmedName,
@@ -77,7 +77,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
       logger.error('Failed to upload file:', error);
       setErrorMessage(error instanceof Error ? error.message : 'Failed to upload file');
     } finally {
-      setIsUploading(false);
+    setIsUploading(false);
     }
   };
 
@@ -113,7 +113,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
       style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}
       data-testid="storage-upload-modal"
     >
-      <div
+      <div 
         className="rounded-lg p-4 w-full max-w-lg my-auto"
         style={{
           background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
@@ -125,20 +125,20 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <div
+            <div 
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: colors.badgeInfoBg }}
             >
               <Upload size={16} style={{ color: colors.primaryBlue }} />
             </div>
             <div>
-              <h2
+              <h2 
                 className="text-lg font-semibold"
                 style={{ color: colors.primaryText }}
               >
                 Upload File
               </h2>
-              <p
+              <p 
                 className="text-xs"
                 style={{ color: colors.secondaryText }}
               >
@@ -169,7 +169,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
         </div>
 
         <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
-          <div
+          <div 
             className="border-2 border-dashed rounded-lg p-4 text-center transition-colors"
             style={{ borderColor: colors.border }}
             onMouseEnter={(e) => {
@@ -180,7 +180,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             }}
           >
             <Upload size={24} style={{ color: colors.tertiaryText }} className="mx-auto mb-1.5" />
-            <p
+            <p 
               className="text-xs mb-1.5"
               style={{ color: colors.secondaryText }}
             >
@@ -207,7 +207,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             >
               Choose File
             </label>
-            <p
+            <p 
               className="text-[10px] mt-1.5"
               style={{ color: colors.tertiaryText }}
             >
@@ -225,7 +225,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
 
           <div className="space-y-2">
             <div>
-              <label
+              <label 
                 className="block text-xs font-medium mb-1"
                 style={{ color: colors.primaryText }}
               >
@@ -255,7 +255,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             </div>
 
             <div>
-              <label
+              <label 
                 className="block text-xs font-medium mb-1"
                 style={{ color: colors.primaryText }}
               >
@@ -287,7 +287,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             </div>
 
             <div>
-              <label
+              <label 
                 className="block text-xs font-medium mb-1"
                 style={{ color: colors.primaryText }}
               >
@@ -314,7 +314,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
                   }}
                 />
               </div>
-              <p
+              <p 
                 className="text-[10px] mt-0.5"
                 style={{ color: colors.tertiaryText }}
               >
@@ -331,8 +331,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
                 className="w-3.5 h-3.5 rounded focus:ring-2 transition-all"
                 style={{ accentColor: colors.primaryBlue, borderColor: colors.border }}
               />
-              <label
-                htmlFor="isPublic"
+              <label 
+                htmlFor="isPublic" 
                 className="text-xs"
                 style={{ color: colors.primaryText }}
               >
@@ -342,7 +342,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
           </div>
         </div>
 
-        <div
+        <div 
           className="flex justify-end space-x-2 mt-4 pt-4"
           style={{ borderTop: `1px solid ${colors.border}` }}
         >
@@ -393,7 +393,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
           >
             {isUploading ? (
               <>
-                <div
+                <div 
                   className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
                   style={{ borderColor: 'white' }}
                 />

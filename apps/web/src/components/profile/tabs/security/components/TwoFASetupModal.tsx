@@ -162,6 +162,7 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
 
           <div>
             <label 
+              htmlFor="twofa-code-input"
               className="block text-sm font-medium mb-2"
               style={{ color: colors.primaryText }}
             >
@@ -169,6 +170,8 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
             </label>
             <div className="relative">
               <input
+                id="twofa-code-input"
+                name="twofa-code"
                 type="text"
                 value={code}
                 onChange={handleCodeChange}

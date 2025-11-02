@@ -276,4 +276,6 @@ export interface FormFieldProps {
   placeholder?: string;
   rows?: number;
   className?: string;
+  id?: string;
+  name?: string;
 }

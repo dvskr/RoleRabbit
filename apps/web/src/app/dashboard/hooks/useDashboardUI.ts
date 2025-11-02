@@ -43,7 +43,6 @@ const VALID_TABS: DashboardTab[] = [
   'discussion',
   'cover-letter',
   'portfolio',
-  'learning',
   'ai-agents',
 ];
 

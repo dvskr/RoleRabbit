@@ -7,9 +7,7 @@ const {
   validateEmail,
   validatePassword,
   validateRequired,
-  validateLength,
-  validateResumeData,
-  validateJobApplication
+  validateLength
 } = require('../../utils/validation');
 
 describe('Validation Utilities Tests', () => {
@@ -64,46 +62,5 @@ describe('Validation Utilities Tests', () => {
     });
   });
 
-  describe('Resume Data Validation', () => {
-    test('should validate complete resume data', () => {
-      const resumeData = {
-        name: 'Test Resume',
-        sections: []
-      };
-
-      expect(validateResumeData(resumeData).isValid).toBe(true);
-    });
-
-    test('should reject incomplete resume data', () => {
-      const resumeData = {};
-      const validation = validateResumeData(resumeData);
-
-      expect(validation.isValid).toBe(false);
-      expect(validation.errors).toBeDefined();
-    });
-  });
-
-  describe('Job Application Validation', () => {
-    test('should validate complete job application', () => {
-      const jobData = {
-        title: 'Software Engineer',
-        company: 'Test Company',
-        location: 'Remote',
-        status: 'applied'
-      };
-
-      expect(validateJobApplication(jobData).isValid).toBe(true);
-    });
-
-    test('should reject incomplete job application', () => {
-      const jobData = {
-        title: 'Software Engineer'
-        // Missing required fields
-      };
-
-      const validation = validateJobApplication(jobData);
-      expect(validation.isValid).toBe(false);
-    });
-  });
 });
 

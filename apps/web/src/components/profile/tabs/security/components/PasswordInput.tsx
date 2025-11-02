@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { PasswordInputProps } from '../types';
 
@@ -12,10 +12,17 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   onToggleShowPassword,
   placeholder,
   colors,
+  id,
+  name
 }) => {
+  const reactId = useId();
+  const fieldId = id || `password-${reactId.replace(/:/g, '-')}`;
+  const fieldName = name || fieldId;
+
   return (
     <div>
       <label 
+        htmlFor={fieldId}
         className="block text-sm font-medium mb-2"
         style={{ color: colors.primaryText }}
       >
@@ -23,6 +30,8 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       </label>
       <div className="relative">
         <input
+          id={fieldId}
+          name={fieldName}
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}

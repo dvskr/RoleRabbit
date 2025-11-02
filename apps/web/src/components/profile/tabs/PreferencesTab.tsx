@@ -130,6 +130,7 @@ export default function PreferencesTab({
                 </div>
                 <div>
                   <p 
+                    id="job-alerts-heading"
                     className="font-semibold flex items-center gap-2"
                     style={{ color: colors.primaryText }}
                   >
@@ -148,11 +149,14 @@ export default function PreferencesTab({
               </div>
               <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                 <input 
+                  id="job-alerts-toggle"
+                  name="jobAlerts"
                   type="checkbox" 
                   className="sr-only peer" 
                   checked={userData.jobAlerts || false}
                   onChange={(e) => onUserDataChange({ jobAlerts: e.target.checked })}
                   disabled={!isEditing}
+                  aria-labelledby="job-alerts-heading"
                 />
                 <div 
                   className="w-11 h-6 rounded-full relative transition-all duration-200"
@@ -197,6 +201,7 @@ export default function PreferencesTab({
                 </div>
                 <div>
                   <p 
+                    id="email-notifications-heading"
                     className="font-semibold flex items-center gap-2"
                     style={{ color: colors.primaryText }}
                   >
@@ -215,11 +220,14 @@ export default function PreferencesTab({
               </div>
               <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                 <input 
+                  id="email-notifications-toggle"
+                  name="emailNotifications"
                   type="checkbox" 
                   className="sr-only peer" 
                   checked={userData.emailNotifications || false}
                   onChange={(e) => onUserDataChange({ emailNotifications: e.target.checked })}
                   disabled={!isEditing}
+                  aria-labelledby="email-notifications-heading"
                 />
                 <div 
                   className="w-11 h-6 rounded-full relative transition-all duration-200"
@@ -264,6 +272,7 @@ export default function PreferencesTab({
                 </div>
                 <div>
                   <p 
+                    id="sms-notifications-heading"
                     className="font-semibold flex items-center gap-2"
                     style={{ color: colors.primaryText }}
                   >
@@ -282,11 +291,14 @@ export default function PreferencesTab({
               </div>
               <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                 <input 
+                  id="sms-notifications-toggle"
+                  name="smsNotifications"
                   type="checkbox" 
                   className="sr-only peer" 
                   checked={userData.smsNotifications || false}
                   onChange={(e) => onUserDataChange({ smsNotifications: e.target.checked })}
                   disabled={!isEditing}
+                  aria-labelledby="sms-notifications-heading"
                 />
                 <div 
                   className="w-11 h-6 rounded-full relative transition-all duration-200"

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -12,8 +13,6 @@ interface HeaderProps {
   previousSidebarState: boolean;
   sidebarCollapsed: boolean;
   isPreviewMode?: boolean;
-  lastSavedAt?: Date | null;
-  saveError?: string | null;
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -42,8 +41,6 @@ export default function HeaderNew({
   previousSidebarState,
   sidebarCollapsed,
   isPreviewMode,
-  lastSavedAt,
-  saveError,
   onExport,
   onUndo,
   onRedo,
@@ -62,14 +59,10 @@ export default function HeaderNew({
   previousMainSidebarState,
   setPreviousMainSidebarState
 }: HeaderProps) {
-  const formatSavedTime = (date: Date) => {
-    try {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    } catch {
-      return date.toISOString();
-    }
-  };
-
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const isLightMode = theme.mode === 'light';
+  
   const handleToggleAIPanel = () => {
     if (!showRightPanel) {
       if (setPreviousMainSidebarState && mainSidebarCollapsed !== undefined) {
@@ -105,41 +98,62 @@ export default function HeaderNew({
   }
 
   return (
-    <header className="h-16 bg-[#0D1117] border-b border-[#27272A] flex items-center justify-between px-6 relative z-50">
+    <header 
+      className="h-16 flex items-center justify-between px-6 relative z-50 border-b"
+      style={{
+        background: isLightMode ? '#ffffff' : '#0D1117',
+        borderBottom: `1px solid ${colors.border}`,
+      }}
+    >
       {/* Left Section */}
       <div className="flex items-center gap-3">
         {isMobile && (
           <button 
             onClick={onShowMobileMenu}
-            className="p-2 hover:bg-[#1A1F26] rounded-lg transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{
+              color: colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
             aria-label="Toggle mobile menu"
             title="Toggle mobile menu"
           >
-            <Menu size={20} className="text-[#A0A0A0]" />
+            <Menu size={20} />
           </button>
         )}
         
         {isSaving && (
-          <div className="flex items-center gap-2 text-sm text-[#34B27B]">
-            <div className="w-3 h-3 border-2 border-[#34B27B] border-t-transparent rounded-full animate-spin"></div>
+          <div className="flex items-center gap-2 text-sm" style={{ color: colors.successGreen }}>
+            <div 
+              className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: colors.successGreen }}
+            ></div>
             Saving...
-          </div>
-        )}
-        {!isSaving && saveError && (
-          <div className="text-sm text-red-400 max-w-xs truncate" title={saveError}>
-            {saveError}
-          </div>
-        )}
-        {!isSaving && !saveError && lastSavedAt && (
-          <div className="text-xs text-[#6E7681]">
-            Saved at {formatSavedTime(lastSavedAt)}
           </div>
         )}
         
         {onToggleSidebar && (
           <button 
             onClick={onToggleSidebar}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#1A1F26] border border-[#27272A] rounded-lg text-sm text-[#A0A0A0] hover:text-white hover:border-[#34B27B] transition-all"
+            className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
+            style={{
+              background: isLightMode ? '#ffffff' : colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
+              e.currentTarget.style.borderColor = colors.successGreen;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = colors.secondaryText;
+              e.currentTarget.style.borderColor = colors.border;
+            }}
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
@@ -155,11 +169,26 @@ export default function HeaderNew({
             key={index}
             onClick={btn.onClick}
             disabled={btn.disabled}
-            className={`flex items-center gap-2 px-3 py-1.5 bg-[#1A1F26] border border-[#27272A] rounded-lg text-sm text-[#A0A0A0] transition-all ${
-              btn.disabled 
-                ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:text-white hover:border-[#34B27B]'
-            }`}
+            className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
+            style={{
+              background: isLightMode ? '#ffffff' : colors.inputBackground,
+              border: `1px solid ${colors.border}`,
+              color: btn.disabled ? colors.tertiaryText : colors.secondaryText,
+              opacity: btn.disabled ? 0.5 : 1,
+              cursor: btn.disabled ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              if (!btn.disabled) {
+                e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
+                e.currentTarget.style.borderColor = colors.successGreen;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!btn.disabled) {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
             title={btn.title}
           >
             <btn.icon size={16} />
@@ -180,7 +209,20 @@ export default function HeaderNew({
         {/* Save */}
         <button 
           onClick={onSave}
-          className="flex items-center gap-2 px-3 py-1.5 bg-[#1A1F26] border border-[#27272A] rounded-lg text-sm text-[#A0A0A0] hover:text-white hover:border-[#34B27B] transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
+          style={{
+            background: isLightMode ? '#ffffff' : colors.inputBackground,
+            border: `1px solid ${colors.border}`,
+            color: colors.secondaryText,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
+            e.currentTarget.style.borderColor = colors.successGreen;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = colors.secondaryText;
+            e.currentTarget.style.borderColor = colors.border;
+          }}
           title="Save Resume"
         >
           <Save size={16} />

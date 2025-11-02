@@ -10,6 +10,16 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+  expect: {
+    // Configure screenshot comparison thresholds
+    toHaveScreenshot: {
+      maxDiffPixels: 100, // Maximum number of pixels that can differ
+      threshold: 0.2, // Color difference threshold (0-1)
+      animations: 'disabled', // Disable animations for consistent screenshots
+    },
   },
 
   projects: [

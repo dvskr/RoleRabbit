@@ -94,6 +94,8 @@ export interface PasswordInputProps {
   onToggleShowPassword: () => void;
   placeholder?: string;
   colors: ThemeColors;
+  id?: string;
+  name?: string;
 }
 
 // Security card props (wrapper)

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId, useMemo } from 'react';
 import { FormFieldProps } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 
@@ -12,14 +12,38 @@ export default function FormField({
   disabled = false,
   placeholder,
   rows = 1,
-  className = ''
+  className = '',
+  id,
+  name
 }: FormFieldProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const reactId = useId(); // React 18+ hook for unique IDs
+
+  const { fieldId, fieldName } = useMemo(() => {
+    if (id) {
+      return {
+        fieldId: id,
+        fieldName: name || id
+      };
+    }
+
+    const normalizedLabel = typeof label === 'string' && label.trim().length > 0
+      ? label.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+      : 'field';
+
+    const generatedId = `field-${normalizedLabel}-${reactId.replace(/[:]/g, '-')}`;
+
+    return {
+      fieldId: generatedId,
+      fieldName: name || generatedId
+    };
+  }, [id, name, label, reactId]);
 
   return (
     <div className={`space-y-2 ${className}`}>
       <label 
+        htmlFor={fieldId}
         className="block text-sm font-semibold"
         style={{ color: colors.primaryText }}
       >
@@ -27,6 +51,8 @@ export default function FormField({
       </label>
       {type === 'textarea' ? (
         <textarea
+          id={fieldId}
+          name={fieldName}
           value={value || ''}
           onChange={(e) => {
             if (!disabled) {
@@ -55,6 +81,8 @@ export default function FormField({
         />
       ) : (
         <input
+          id={fieldId}
+          name={fieldName}
           type={type}
           value={value || ''}
           onChange={(e) => {

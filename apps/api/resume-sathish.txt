@@ -1,0 +1,195 @@
+Sathish Kumar
+Sr. Full stack .NET Developer|+1 3149243827|dvskr.9182@gmail.com
+www.linkedin.com/in/sathish1729
+
+PROFESSIONAL SUMMARY:
+• Over 11 years of experience as a Senior Full Stack .NET Developer, specializing in C#, ASP.NET Core (including .NET 8 and .NET Framework 4.8), and Angular (up to version 19), with strong expertise in SQL Server, RESTful APIs, and web services.
+• Proficient in modern C# (12.0), with advanced skills in multithreading, collections, and other .NET features for high-performance application development.
+• Front-end development expertise with frameworks and libraries like Angular 19, React, Blazor, Vue.js, Knockout.js, jQuery, and modern web technologies (HTML5, CSS3, Bootstrap, TypeScript, JavaScript).
+• Extensive experience in SDLC methodologies such as Agile, ensuring effective project management, continuous delivery, and adaptability.
+• Expertise in architectural patterns like Onion architecture, N-Tier architecture, MVC, and Microservices for building scalable, modular, and maintainable applications.
+• Skilled in developing and consuming RESTful APIs, SOAP APIs, and Web Services using ASP.NET Core Web API, ASP.NET MVC, and WCF.
+• Proficient in cloud technologies, including Azure (App Services, Functions, Service Bus, Logic Apps) and AWS (S3, EC2, Lambda, RDS), ensuring robust and scalable cloud solutions.
+• Strong experience in database management, including SQL Server, PostgreSQL, Oracle, MySQL, and NoSQL solutions like MongoDB
+• Proficient in writing complex SQL queries, stored procedures, functions, and triggers for high-performance data management.
+• Extensive experience with Entity Framework Core, Dapper, ADO.NET for efficient data access and database operations.
+• Expertise in using messaging systems like RabbitMQ, MSMQ, and Apache Kafka for building event-driven, scalable applications.
+• Hands-on experience with DevOps tools such as Azure DevOps, Jenkins, AWS ECS, and Docker for automating CI/CD pipelines and containerization.
+• Skilled in unit testing with xUnit, NUnit, MSTest, and front-end testing with Karma, Jasmine, Mocha, ensuring high-quality and reliable code.
+• Knowledge of security protocols like OAuth2, JWT, SSL/TLS, and integration with authentication/authorization systems to safeguard applications.
+• Expertise in performance tuning, caching mechanisms, and asynchronous programming to optimize application efficiency and responsiveness.
+• Experience in using Microsoft IIS, Nginx, Apache Tomcat for web application hosting and management.
+
+TECHNICAL SKILLS:
+Programming Languages C#, VB.NET, Python, T-SQL
+Web Frameworks ASP.NET MVC, .NET Core, ASP.NET Core, Razor Pages
+Front-End Technologies Angular 18, React, Blazor, Vue.js, Knockout.js, jQuery, HTML5, CSS3, Bootstrap, JavaScript, TypeScript, AJAX
+Database Management SQL Server, PostgreSQL, Oracle, MySQL, Amazon RDS, Azure SQL Database
+Cloud Platforms Azure, AWS, Azure App Services, Azure Functions, Azure Service Bus, Azure logic apps, AWS (S3, EC2, Lambda, IAM, API Gateway, RDS, Code Pipeline)
+DevOps Tools Azure DevOps, AWS ECS, Jenkins, CI/CD Pipelines, Docker, Kubernetes
+Testing Tools xUnit, NUnit, MSTest, Karma, Jasmine, Mocha, Selenium, Postman, SOAP UI, Swagger UI
+Source Control Git, TFS, SVN
+Messaging/Queuing MSMQ, RabbitMQ, Apache Kafka
+ORM/Data Access Entity Framework Core, Dapper, ADO.NET
+Application Servers Microsoft IIS, Nginx, Apache Tomcat
+Other Technologies WCF, SignalR, OAuth2, JWT, SSL/TLS, SSRS, SSIS, Unity, Autofac
+
+PROFESSIONALEXPERIENCE:
+Client: Propper International, Saint Louis, MO. Mar 2024 to till date
+Role: Sr. Full Stack .NET Developer
+
+• Collaborated in a Scrum-based Agile environment, actively participating in Sprint Planning, Standups, Backlog Grooming, Reviews, and Retrospectives to deliver high-quality Azure-hosted .NET applications.
+• Architected and developed scalable, cloud-native applications using .NET 8, C# 12, and ASP.NET Core MVC/Web API, leveraging microservices, event-driven patterns, and hexagonal architecture deployed on Azure Kubernetes Service (AKS) and App Services.
+• Built robust backend services using Entity Framework Core 8, LINQ, and Azure SQL Database, with secure authentication via JWT, OAuth2, and Azure AD B2C.
+• Designed RESTful APIs and GraphQL (HotChocolate) endpoints for modern client applications, deployed behind Azure API Management.
+• Implemented background services using IHostedService and scheduled jobs via Azure Functions, Logic Apps, and Event Grid.
+• Built responsive frontends using React 18 and Angular 19, integrated with ASP.NET Core APIs hosted on Azure, and optimized UI components using NgRx, React Context, and lazy loading.
+• Modernized legacy systems built on .NET Framework 4.8 and migrated to .NET 8 to enhance scalability and maintainability.
+• Developed real-time features using SignalR with WebSocket support via Azure Web PubSub, enabling live dashboards and notifications.
+• Integrated with third-party APIs and internal systems using custom .NET middleware, implementing global exception handling, retry policies with Polly, and secure key management via Azure Key Vault and App Configuration.
+• Built and deployed containerized .NET applications using Docker, orchestrated with AKS, leveraging Bicep/ARM templates, and implementing blue/green deployments with Azure DevOps Release Pipelines.
+• Created CI/CD pipelines with Azure DevOps, integrating xUnit, static code analysis via SonarQube, and multi-environment deployments.
+• Monitored application performance using Azure Monitor, Application Insights, Serilog, and OpenTelemetry, enabling observability, logging, and proactive incident response.
+• Applied SOLID, DRY, and KISS principles with design patterns (Factory, Strategy, Mediator) across services for clean, testable, maintainable .NET code.
+• Ensured accessibility by implementing WCAG 2.2 standards across .NET, React, and SharePoint components, delivering inclusive user experiences.
+• Led code reviews, mentored developers, and worked cross-functionally with QA, UX, product, and cloud engineers to ship robust .NET apps on Azure.
+• Performed full-stack integration testing using xUnit, Moq, FluentAssertions, Postman, JMeter, and Playwright, ensuring completeness, performance, and usability.
+
+Environment:.NET 8, ASP.NET Core, C# 12, Azure Kubernetes Service (AKS), Azure App Services, Docker, Azure SQL Database, Azure Cosmos DB, API Management, Azure Functions, Logic Apps, Azure Event Grid, Azure Key Vault, Azure AD B2C, GraphQL (HotChocolate), SignalR, Azure Monitor, Application Insights, Serilog, xUnit, Moq, Playwright, Git, Azure DevOps, ARM/Bicep, WCAG 2.2, Agile (Scrum)
+
+Client: QBE, New York, NY Jul 2023 to Feb 2024
+Role: Sr. Full Stack .NET Developer
+
+• Implemented Agile methodologies, participating in Scrum meetings, Sprint Planning, Daily Standups, and Retrospectives to ensure smooth development cycles and efficient teamwork.
+• Designed, developed, and maintained ASP.NET Core Web API microservices using C#, ensuring high scalability, performance, and security in a cloud-native environment.
+• Developed and exposed RESTful APIs, implementing best practices for request validation, error handling, and response optimization while ensuring secure authentication using OAuth2 and JWT.
+• Implemented various C# design patterns to enhance code maintainability, reusability, and scalability in microservices architecture.
+• Architected and implemented a microservices-based system, leveraging Azure API Gateway for efficient API management, traffic routing, and centralized security enforcement.
+• Utilized XML for data serialization and communication between microservices, ensuring efficient data exchange and compatibility across different platforms and applications.
+• Designed and implemented Entity Framework Core for seamless database interactions, optimizing SQL Server queries and stored procedures to improve system performance.
+• Developed dynamic and responsive web applications using Angular, implementing state management with NgRx to manage application state efficiently across multiple components and ensure a scalable, maintainable codebase.
+• Utilized Angular Material to design and implement a consistent, user-friendly UI with reusable components, ensuring a modern, responsive, and accessible design across web applications while adhering to best practices in user experience.
+• Developed responsive, dynamic, and user-friendly web applications by leveraging HTML5, CSS3, JavaScript, and TypeScript, implementing AJAX for asynchronous data loading, utilizing jQuery for DOM manipulation, and enhancing UI with Bootstrap for fast, mobile-first design.
+• Designed and implemented solutions using Azure SQL Database, optimizing database performance with advanced indexing, partitioning, and automated backups to ensure scalability, availability, and security in a cloud-native architecture.
+• Integrated Azure Cosmos DB for globally distributed, low-latency, and high-throughput NoSQL database solutions, enabling efficient data storage and retrieval for applications with diverse data models and massive scale.
+• Implemented ETL processes using SSIS to integrate and transform data from multiple sources, ensuring efficient data flow and integration with SQL Server databases.
+• Designed and developed interactive reports and dashboards using SSRS, providing business intelligence insights and supporting decision-making with accurate and timely data.
+• Implemented CQRS (Command Query Responsibility Segregation) and Event-Driven Architecture using Apache Kafka, ensuring efficient event processing and real-time data synchronization across microservices.
+• Created and maintained unit tests using XUnit, achieving high test coverage and ensuring robust, bug-free code through continuous test-driven development (TDD).
+• Developed and executed UI unit tests for Angular applications using Karma and Jasmine, ensuring front-end functionality met business and user expectations.
+• Automated and executed end-to-end UI testing using Protractor, validating user interactions, navigation flows, and application behavior across different browsers.
+• Utilized API testing tools such as Postman, Swagger UI, and SOAP UI to validate request-response cycles, API contracts, and overall service functionality.
+• Built and deployed cloud-native applications leveraging Azure Functions, Azure Storage, and Azure Service Bus, ensuring high availability and fault tolerance.
+• Designed and deployed Dockerized microservices for better containerized application management and leveraged Kubernetes for dynamic orchestration in cloud environments.
+• Implemented Azure DevOps CI/CD pipelines, automating build, test, and deployment processes, ensuring faster delivery and seamless integration of new features.
+• Integrated Application Insights for real-time application monitoring, logging, and performance tracking to proactively identify issues before they impact end users.
+• Implemented Azure Infrastructure as Code (IaC) using Terraform and Azure Resource Manager (ARM) templates to automate infrastructure provisioning and ensure consistent, repeatable deployments across environments.
+• Designed and managed role-based access control (RBAC) using Azure AD B2C, securing application access and ensuring proper authorization mechanisms were in place.
+• Worked with JIRA for project management, effectively tracking issues, managing sprints, and ensuring proper documentation and resolution of development tasks.
+• Managed source control and versioning using Git, maintaining proper branching strategies and conducting thorough pull request reviews to uphold code quality.
+• Provided mentorship and technical guidance to junior developers, conducting code reviews, knowledge-sharing sessions, and implementing best practices to enhance team productivity.
+
+Environment: ASP.NET Core, C#, RESTful APIs, OAuth2, JWT, Angular, Azure API Gateway, Entity Framework Core, Apache Kafka, Azure SQL Database, Azure Cosmos DB, Azure Functions, Docker, Kubernetes, SSIS, SonarQube, Agile, Azure AD B2C, Git
+PNC Bank, Pittsburgh, PA Oct 2021 to Jun 2023
+Role: Sr .NET Developer
+
+• Took part in Agile practices like daily standups, sprint planning, and reviews to deliver updates on time and adapt to changes.
+• Built fast and stable web apps using C# and .NET 6.0, focusing on async programming and multithreading to boost speed and performance.
+• Used .NET 6 features like minimal APIs and improved logging to develop financial applications that were easier to maintain and faster to run.
+• Secured APIs using OAuth2 and JWT, following best practices to keep user data safe and meet security standards.
+• Managed user authentication and single sign-on using AWS Cognito, making login secure and easy for users.
+• Passed data between front-end and back-end with JSON in REST APIs, making communication smooth and reliable.
+• Upgraded older apps by rebuilding them with MVC architecture, which made the code cleaner and easier to manage.
+• Built APIs using ASP.NET Core Web API that could handle a large number of users and requests without slowing down.
+• Connected with outside services like banks and payment gateways through RESTful APIs, adding more features to the apps.
+• Worked with Entity Framework Core 6.0 for database access, which made reading and writing data simpler and faster.
+• Added fraud checks and account verification by connecting Plaid to the system, helping users trust the app.
+• Used SignalR to add real-time updates so users could see live data and get notifications instantly.
+• Created front-end apps with Angular, using reusable components and reactive forms to make the UI fast and smooth.
+• Built responsive layouts using HTML5, CSS3, Bootstrap, JavaScript, and TypeScript so the app looked good on all devices.
+• Used Angular CLI to quickly build, test, and release the front-end across different environments.
+• Designed and managed SQL Server databases using stored procedures, triggers, and indexing for fast and secure data access.
+• Improved slow database queries by fine-tuning them and fixing indexing problems to speed up data operations.
+• Used MongoDB with sharding and replication to manage large amounts of data across multiple servers.
+• Created data pipelines with AWS Glue to move, clean, and prepare financial data from different sources.
+• Built dashboards using Amazon QuickSight to turn complex financial data into easy-to-read reports for business teams.
+• Used Apache Kafka to move data between services in real-time without losing messages.
+• Tested the front-end with Karma and Jasmine to make sure everything worked well before deployment.
+• Wrote unit and integration tests with xUnit, Postman, and Swagger UI to catch bugs early and keep the code reliable.
+• Set up full microservice testing using Cucumber and Citrus to confirm that services could talk to each other properly.
+• Deployed apps in containers using Amazon EKS, which helped with auto-scaling and easy management.
+• Created background tasks using AWS Lambda, so jobs like alerts or event handling ran automatically without needing a server.
+• Hosted web apps on AWS Elastic Beanstalk and EC2, making sure the apps were always running smoothly.
+• Set up automated build and deployment using AWS CodePipeline, CodeBuild, and CodeDeploy to push changes faster.
+• Used AWS S3, Glue, and Athena to process large data files and run reports quickly.
+• Used Git every day to manage code, track changes, and work with teammates smoothly.
+
+Environment: C#, .NET 6.0, ASP.NET Core, AWS Cognito (SSO/Auth), Entity Framework Core, SignalR, Angular, SQL Server, MongoDB, AWS Glue, Amazon QuickSight, Apache Kafka, AWS CodePipeline, Git, Amazon EKS (Kubernetes), AWS Lambda, OAuth2, JWT, RESTful APIs.
+
+Client: Thermo Fisher Scientific, Waltham, MA. Aug 2018 to Sep 2021
+Role: .NET Developer
+
+• Implemented Agile methodologies for iterative development and project management, ensuring timely delivery and adaptability to change.
+• Developed high-performance APIs using .NET Core and optimized database interactions, reducing query execution time.
+• Implemented MVC architecture to structure applications effectively, promoting scalability and maintainability.
+• Developed robust web solutions using C# and ASP.NET MVC, enhancing internal operations and increasing workflow efficiency.
+• Designed and developed RESTful APIs for seamless communication between the front-end and back-end services, ensuring scalability, flexibility, and ease of integration.
+• Developed and implemented Razor Pages in ASP.NET Core to create dynamic, server-side rendered web pages, enhancing user interactivity and simplifying page routing and data handling in web applications.
+• Configured and managed APIs using Azure Functions, enhancing system integration and data flow.
+• Configured and managed Windows Server and IIS for deploying and hosting .NET applications, ensuring performance and security.
+• Developed interactive, component-based web applications using React.js, improving code reusability and maintainability.
+• Implemented state management using Redux, optimizing application performance and streamlining data flow across components.
+• Enhanced UI performance by leveraging React Hooks and React Context API, reducing unnecessary re-renders and improving user experience.
+• Integrated React with .NET Core APIs, ensuring seamless communication between frontend and backend services.
+• Implemented UI components using HTML5, CSS3, JavaScript, AJAX, jQuery and Bootstrap, creating responsive, visually appealing web pages with structured layouts.
+• Coded and maintained applications managing HIPAA-protected health information (PHI), rigorously adhering to security standards and ensuring data privacy.
+• Created the Data Access Layer (DAL) and Data Access Objects (DAO) with ADO.NET, Entity Framework, and LINQ to minimize impedance mismatches and streamline database interactions.
+• Designed and maintained Oracle database schemas, developed stored procedures, triggers, and functions in PL/SQL, ensuring data integrity and automating business processes.
+• Improved database performance by optimizing complex Oracle PL/SQL queries and implementing efficient indexing strategies to reduce query execution time, enhancing overall system responsiveness.
+• Implemented unit and component testing for React applications using Jest and React Testing Library, ensuring reliability and reducing potential defects before deployment.
+• Employed XUnit.net for rigorous application testing to ensure all features met high-quality standards, including unit tests to identify bugs early in the development process.
+• Integrated Azure Service Bus for reliable message queuing and inter-service communication, enhancing application responsiveness and supporting complex workflows.
+• Configured and maintained Jenkins pipelines for automated build, test, and deployment processes, ensuring efficient continuous integration and continuous delivery (CI/CD) workflows.
+• Developed and maintained application documentation and system updates using Visual Studio Code’s integrated Git support and TFS for version control.
+
+Environment: .NET Core, C#, ASP.NET MVC, React.js, Azure Functions, Entity Framework Core, RESTful APIs, Azure Service Bus, SQL Server, Oracle PL/SQL, CI/CD pipelines, Redux, xUnit.net, ADO.NET, LINQ, Jenkins, Jest, Git, TFS.
+
+Client: American Airlines, Fort Worth, TX May 2016 to Jul 2018
+Role: .NET Full Stack Developer
+
+• Proficient in Agile methodologies, facilitating iterative development, effective sprint planning, and continuous improvement through regular feedback loops.
+• Developed high-performance web solutions using C# and .NET Core, focusing on multithreading and asynchronous programming for scalable enterprise applications.
+• Implemented MVC architecture to structure applications effectively, promoting modularity and maintainability while supporting scalability.
+• Developed robust web solutions using VB.NET and ASP.NET MVC, enhancing internal operations and increasing workflow efficiency.
+• Utilized Entity Framework (6.0) for streamlined database interactions, optimizing data access and management through ORM.
+• Leveraged AWS S3 for scalable and secure storage solutions, optimizing data retrieval and reducing infrastructure costs for application assets.
+• Utilized XML for data interchange between applications, ensuring compatibility and ease of integration with various systems.
+• Developed dynamic and responsive user interfaces using Angular (2/4/5), HTML, CSS, JavaScript, Bootstrap, jQuery, AJAX, and TypeScript, enhancing user engagement and experience.
+• Integrated SQL Server for efficient data storage and management, ensuring high availability and performance for applications.
+• Implemented AWS RDS for database management, enhancing performance, scalability, and reliability of relational data storage.
+• Conducted comprehensive testing using xUnit for unit tests, ensuring code quality and reliability throughout the development lifecycle.
+• Used RabbitMQ for efficient message queuing and real-time communication between microservices, enhancing system responsiveness.
+• Deployed and managed microservices using AWS Lambda, enabling event-driven architectures and reducing server maintenance overhead.
+• Configured and optimized AWS EC2 instances for hosting .NET Core applications, ensuring high availability and cost-efficiency.
+• Implemented AWS CodePipeline for CI/CD automation, streamlining application deployment and minimizing manual intervention in release cycles.
+• Utilized Visual Studio for development and debugging, enhancing productivity through its IDE features.
+• Integrated Bitbucket for version control and collaborative code management, ensuring efficient team workflows, seamless branch management, and streamlined code review processes.
+
+Environment: Agile, Angular (2/4/5), TypeScript, HTML, CSS, Bootstrap, C#, .NET Core 2.0, Entity Framework (6.0), ORM, SQL Server, MySQL, RESTful APIs, RabbitMQ, JWT, SSL/TLS, SSRS, SSIS, NUnit, Selenium, Postman, Docker, Kubernetes, AWS (S3, EC2, Lambda, IAM, API Gateway, RDS, CodePipeline), Git.
+
+Client: Helios & Matheson, Chennai, India Jun 2014 to Apr 2016
+Role: Software Developer
+
+• Participated in Agile development processes to enhance project agility and responsiveness to change, adapting to rapidly changing technology environments to meet business needs and continuously updating skills and knowledge.
+• Developed web applications using VB.NET and ASP.NET, delivering high-performance solutions tailored to client needs.
+• Implemented NTier architecture, promoting separation of concerns, enhancing maintainability, and improving scalability by dividing the application into logical layers.
+• Utilized ADO.NET for advanced database management and complex queries, enhancing data handling capabilities and performance.
+• Developed dynamic and responsive web applications using Angular, HTML, CSS, JavaScript, Bootstrap, jQuery and AJAX enhancing user experience with modern design patterns and integrating state management for efficient handling of application data.
+• Integrated PostgreSQL as a SQL database for efficient data storage and management, optimizing data retrieval and performance.
+• Implemented unit testing with xUnit.net, enhancing code reliability and reducing post-deployment issues.
+• Developed and maintained applications using the .NET Framework, leveraging its robust libraries and tools to create scalable and maintainable enterprise-level solutions.
+
+Environment: VB.NET, ASP.NET, N-Tier, .NET Framework, Oracle, Microsoft IIS, xUnit.net, Unity, jQuery, Microsoft Visual Studio (2015), Agile methodologies, Docker, Kubernetes, RESTful APIs, RabbitMQ, JWT, SSL/TLS, NUnit, Selenium, Postman.
+
+Education:
+Bachelor of Technology in Computer science from Karunya Institute of Technology and Sciences, Coimbatore, Tamil Nadu, India – 2014.

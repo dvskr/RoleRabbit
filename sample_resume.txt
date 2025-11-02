@@ -1,0 +1,1 @@
+John Doe\nEmail: john@example.com\nPhone: 555-1234\nLocation: New York, NY\n\nSUMMARY\nExperienced engineer...\n\nEXPERIENCE\nAcme Corp | Senior Developer | Jan 2020 - Present\n- Built things\n\nEDUCATION\nState University | B.S. Computer Science | 2010 - 2014\n\nSKILLS\nJavaScript, React, Node.js\n

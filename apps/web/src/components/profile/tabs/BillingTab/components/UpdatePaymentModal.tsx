@@ -99,13 +99,16 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
         <div className="space-y-4">
           {/* Card Number */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: colors.primaryText }}
-            >
-              Card Number
-            </label>
+              <label 
+                htmlFor="modal-card-number"
+                className="block text-sm font-medium mb-2"
+                style={{ color: colors.primaryText }}
+              >
+                Card Number
+              </label>
             <input
+              id="modal-card-number"
+              name="modal-card-number"
               type="text"
               value={paymentData.cardNumber}
               onChange={(e) => {
@@ -130,13 +133,16 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
 
           {/* Card Holder */}
           <div>
-            <label 
-              className="block text-sm font-medium mb-2"
-              style={{ color: colors.primaryText }}
-            >
-              Card Holder Name
-            </label>
+              <label 
+                htmlFor="modal-card-holder"
+                className="block text-sm font-medium mb-2"
+                style={{ color: colors.primaryText }}
+              >
+                Card Holder Name
+              </label>
             <input
+              id="modal-card-holder"
+              name="modal-card-holder"
               type="text"
               value={paymentData.cardHolder}
               onChange={(e) => onUpdatePaymentData('cardHolder', e.target.value)}
@@ -160,14 +166,15 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label 
-                htmlFor="expiry-month"
+                htmlFor="modal-expiry-month"
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.primaryText }}
               >
                 Month
               </label>
               <select
-                id="expiry-month"
+                id="modal-expiry-month"
+                name="modal-expiry-month"
                 value={paymentData.expiryMonth}
                 onChange={(e) => onUpdatePaymentData('expiryMonth', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg transition-all"
@@ -194,14 +201,15 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
             </div>
             <div>
               <label 
-                htmlFor="expiry-year"
+                htmlFor="modal-expiry-year"
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.primaryText }}
               >
                 Year
               </label>
               <select
-                id="expiry-year"
+                id="modal-expiry-year"
+                name="modal-expiry-year"
                 value={paymentData.expiryYear}
                 onChange={(e) => onUpdatePaymentData('expiryYear', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg transition-all"
@@ -228,12 +236,15 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
             </div>
             <div>
               <label 
+                htmlFor="modal-cvv"
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.primaryText }}
               >
                 CVV
               </label>
               <input
+                id="modal-cvv"
+                name="modal-cvv"
                 type="text"
                 value={paymentData.cvv}
                 onChange={(e) => {

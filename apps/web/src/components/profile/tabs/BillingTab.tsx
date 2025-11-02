@@ -472,13 +472,16 @@ export default function BillingTab() {
             <div className="space-y-4">
               {/* Card Number */}
               <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
-                  Card Number
-                </label>
+                  <label 
+                    htmlFor="card-number"
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
+                    Card Number
+                  </label>
                 <input
+                  id="card-number"
+                  name="cardNumber"
                   type="text"
                   value={paymentData.cardNumber}
                   onChange={(e) => {
@@ -503,13 +506,16 @@ export default function BillingTab() {
 
               {/* Card Holder */}
               <div>
-                <label 
-                  className="block text-sm font-medium mb-2"
-                  style={{ color: colors.primaryText }}
-                >
-                  Card Holder Name
-                </label>
+                  <label 
+                    htmlFor="card-holder"
+                    className="block text-sm font-medium mb-2"
+                    style={{ color: colors.primaryText }}
+                  >
+                    Card Holder Name
+                  </label>
                 <input
+                  id="card-holder"
+                  name="cardHolder"
                   type="text"
                   value={paymentData.cardHolder}
                   onChange={(e) => setPaymentData(prev => ({ ...prev, cardHolder: e.target.value }))}
@@ -533,12 +539,15 @@ export default function BillingTab() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label 
+                    htmlFor="expiry-month"
                     className="block text-sm font-medium mb-2"
                     style={{ color: colors.primaryText }}
                   >
                     Month
                   </label>
                   <select
+                    id="expiry-month"
+                    name="expiryMonth"
                     value={paymentData.expiryMonth}
                     onChange={(e) => setPaymentData(prev => ({ ...prev, expiryMonth: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg"
@@ -565,12 +574,15 @@ export default function BillingTab() {
                 </div>
                 <div>
                   <label 
+                    htmlFor="expiry-year"
                     className="block text-sm font-medium mb-2"
                     style={{ color: colors.primaryText }}
                   >
                     Year
                   </label>
                   <select
+                    id="expiry-year"
+                    name="expiryYear"
                     value={paymentData.expiryYear}
                     onChange={(e) => setPaymentData(prev => ({ ...prev, expiryYear: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg"
@@ -600,12 +612,15 @@ export default function BillingTab() {
                 </div>
                 <div>
                   <label 
+                    htmlFor="cvv"
                     className="block text-sm font-medium mb-2"
                     style={{ color: colors.primaryText }}
                   >
                     CVV
                   </label>
                   <input
+                    id="cvv"
+                    name="cvv"
                     type="text"
                     value={paymentData.cvv}
                     onChange={(e) => {

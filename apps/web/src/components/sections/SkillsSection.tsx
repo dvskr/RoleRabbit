@@ -23,6 +23,9 @@ export default function SkillsSection({
   const { theme } = useTheme();
   const colors = theme.colors;
 
+  // Ensure skills is always an array
+  const skills = Array.isArray(resumeData.skills) ? resumeData.skills : [];
+
   return (
     <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
       <div 
@@ -74,7 +77,7 @@ export default function SkillsSection({
           </div>
           
           <div className="flex flex-wrap gap-2 min-w-0 w-full">
-            {resumeData.skills.map((skill, idx) => (
+            {skills.map((skill, idx) => (
               <div 
                 key={idx} 
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg border group min-w-0 max-w-full flex-shrink-0 transition-all"
@@ -92,7 +95,7 @@ export default function SkillsSection({
                 <span className="text-xs font-medium break-words overflow-wrap-anywhere min-w-0" style={{ color: colors.primaryText }}>{skill}</span>
                 <button
                   onClick={() => {
-                    const updatedSkills = resumeData.skills.filter((_, index) => index !== idx);
+                    const updatedSkills = skills.filter((_, index) => index !== idx);
                     setResumeData(prev => ({ ...prev, skills: updatedSkills }));
                   }}
                   className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity"
@@ -125,14 +128,14 @@ export default function SkillsSection({
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
                     if ((e.target as HTMLInputElement).value.trim()) {
-                      setResumeData(prev => ({ ...prev, skills: [...prev.skills, (e.target as HTMLInputElement).value.trim()] }));
+                      setResumeData(prev => ({ ...prev, skills: [...(Array.isArray(prev.skills) ? prev.skills : []), (e.target as HTMLInputElement).value.trim()] }));
                       (e.target as HTMLInputElement).value = '';
                     }
                   }
                 }}
                 onBlur={(e) => {
                   if ((e.target as HTMLInputElement).value.trim()) {
-                    setResumeData(prev => ({ ...prev, skills: [...prev.skills, (e.target as HTMLInputElement).value.trim()] }));
+                    setResumeData(prev => ({ ...prev, skills: [...(Array.isArray(prev.skills) ? prev.skills : []), (e.target as HTMLInputElement).value.trim()] }));
                     (e.target as HTMLInputElement).value = '';
                   }
                 }}
@@ -141,7 +144,7 @@ export default function SkillsSection({
                 onClick={(e) => {
                   const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
                   if (input && input.value.trim()) {
-                    setResumeData(prev => ({ ...prev, skills: [...prev.skills, input.value.trim()] }));
+                    setResumeData(prev => ({ ...prev, skills: [...(Array.isArray(prev.skills) ? prev.skills : []), input.value.trim()] }));
                     input.value = '';
                   }
                 }}
@@ -158,7 +161,7 @@ export default function SkillsSection({
               </button>
             </div>
             
-            {resumeData.skills.length === 0 && (
+            {skills.length === 0 && (
               <span className="text-xs italic" style={{ color: colors.tertiaryText }}>No skills added yet</span>
             )}
           </div>

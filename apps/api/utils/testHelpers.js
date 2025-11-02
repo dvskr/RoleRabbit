@@ -31,51 +31,12 @@ async function deleteTestUser(prisma, userId) {
 }
 
 /**
- * Create test resume
- */
-async function createTestResume(prisma, userId, resumeData = {}) {
-  return await prisma.resume.create({
-    data: {
-      userId,
-      name: resumeData.name || 'Test Resume',
-      data: resumeData.data || JSON.stringify({ sections: [] }),
-      templateId: resumeData.templateId || 'modern',
-      ...resumeData
-    }
-  });
-}
-
-/**
- * Create test job
- */
-async function createTestJob(prisma, userId, jobData = {}) {
-  return await prisma.job.create({
-    data: {
-      userId,
-      title: jobData.title || 'Software Engineer',
-      company: jobData.company || 'Test Company',
-      location: jobData.location || 'Remote',
-      status: jobData.status || 'applied',
-      ...jobData
-    }
-  });
-}
-
-/**
  * Clean up test data
  */
 async function cleanupTestData(prisma) {
   try {
     await prisma.$transaction([
-      prisma.auditLog.deleteMany({ where: {} }),
-      prisma.aiAgentTask.deleteMany({ where: {} }),
-      prisma.aiAgent.deleteMany({ where: {} }),
-      prisma.cloudFile.deleteMany({ where: {} }),
-      prisma.portfolio.deleteMany({ where: {} }),
-      prisma.email.deleteMany({ where: {} }),
-      prisma.coverLetter.deleteMany({ where: {} }),
-      prisma.job.deleteMany({ where: {} }),
-      prisma.resume.deleteMany({ where: {} })
+      prisma.auditLog.deleteMany({ where: {} })
     ]);
     logger.info('✅ Test data cleaned up');
   } catch (error) {
@@ -183,17 +144,6 @@ function generateTestData(type, count = 1) {
       email: `test${Date.now()}@example.com`,
       name: 'Test User',
       password: 'TestPassword123!'
-    }),
-    resume: () => ({
-      name: 'Test Resume',
-      data: JSON.stringify({ sections: [] }),
-      templateId: 'modern'
-    }),
-    job: () => ({
-      title: 'Software Engineer',
-      company: 'Test Company',
-      location: 'Remote',
-      status: 'applied'
     })
   };
 
@@ -207,8 +157,6 @@ function generateTestData(type, count = 1) {
 module.exports = {
   createTestUser,
   deleteTestUser,
-  createTestResume,
-  createTestJob,
   cleanupTestData,
   createTestToken,
   createAuthenticatedRequest,

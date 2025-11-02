@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, BookOpen, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LogoIcon, Logo } from '../common/Logo';
 import { useTheme } from '../../contexts/ThemeContext';
 import NavigationItem from './NavigationItem';
@@ -72,7 +72,6 @@ export default function SidebarNew({
       items: [
         { id: 'email', icon: Mail, label: 'Email Hub' },
         { id: 'discussion', icon: MessageSquare, label: 'Community' },
-        { id: 'learning', icon: BookOpen, label: 'Learning Hub' },
       ],
     },
   ];

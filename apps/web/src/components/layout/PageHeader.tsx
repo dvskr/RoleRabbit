@@ -12,7 +12,6 @@ import {
   LayoutTemplate,
   User,
   Sparkles,
-  GraduationCap,
   MessageSquare
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -45,7 +44,6 @@ export const PageHeaderIcons = {
   Templates: LayoutTemplate,
   Profile: User,
   Agents: Sparkles,
-  Learning: GraduationCap,
 };
 
 export default function PageHeader({

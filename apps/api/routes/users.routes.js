@@ -8,6 +8,7 @@ const { getUserById } = require('../auth');
 const { authenticate } = require('../middleware/auth');
 const { validateEmail } = require('../utils/validation');
 const { errorHandler } = require('../utils/errorMiddleware');
+const logger = require('../utils/logger');
 
 /**
  * Register all user routes with Fastify instance
@@ -312,85 +313,6 @@ async function userRoutes(fastify, options) {
     }
   });
 
-  // Parse resume and extract profile information
-  fastify.post('/api/users/profile/parse-resume', {
-    preHandler: authenticate
-  }, async (request, reply) => {
-    try {
-      const data = await request.file();
-      
-      if (!data) {
-        return reply.status(400).send({ error: 'No file uploaded' });
-      }
-
-      // Validate file type
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain'
-      ];
-      
-      if (!allowedTypes.includes(data.mimetype)) {
-        return reply.status(400).send({ error: 'Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.' });
-      }
-
-      // Extract text from file
-      const { extractTextFromFile } = require('../utils/documentExtractor');
-      const buffer = await data.toBuffer();
-      
-      let resumeText;
-      try {
-        resumeText = await extractTextFromFile(buffer, data.mimetype);
-      } catch (extractError) {
-        console.error('Error extracting text from file:', extractError);
-        return reply.status(400).send({ 
-          error: 'Failed to extract text from file',
-          details: extractError.message || 'File may be corrupted or unsupported format'
-        });
-      }
-
-      if (!resumeText || resumeText.trim().length === 0) {
-        return reply.status(400).send({ 
-          error: 'Could not extract text from file',
-          details: 'The file may be corrupted, empty, image-based (scanned), or encrypted. Please try a text-based PDF/DOCX file.'
-        });
-      }
-
-      // Parse resume text
-      let parsedData;
-      try {
-        const { parseResumeText } = require('../utils/resumeParser');
-        parsedData = await parseResumeText(resumeText);
-      } catch (parseError) {
-        console.error('Error parsing resume text:', parseError);
-        return reply.status(500).send({ 
-          error: 'Failed to parse resume content',
-          details: parseError.message || 'Unable to extract information from resume'
-        });
-      }
-
-      if (!parsedData || Object.keys(parsedData).length === 0) {
-        return reply.status(400).send({ 
-          error: 'No data could be extracted from resume',
-          details: 'The resume format may not be supported or the file may be corrupted'
-        });
-      }
-
-      return {
-        success: true,
-        parsedData
-      };
-    } catch (error) {
-      console.error('Error parsing resume:', error);
-      console.error('Error stack:', error.stack);
-      reply.status(500).send({ 
-        error: 'Failed to parse resume', 
-        details: error.message || 'An unexpected error occurred while parsing the resume'
-      });
-      return;
-    }
-  });
 
   // Get profile completeness score
   fastify.get('/api/users/profile/completeness', {
@@ -590,26 +512,13 @@ async function userRoutes(fastify, options) {
         return reply.status(404).send({ error: 'User not found' });
       }
       
-      // Get job statistics
-      const jobs = await prisma.job.findMany({
-        where: { userId },
-        select: { status: true, appliedDate: true }
-      });
-      
-      // Calculate metrics
-      const applicationsSent = jobs.length;
-      const interviewsScheduled = jobs.filter(j => ['interview', 'screening'].includes(j.status)).length;
-      const offersReceived = jobs.filter(j => j.status === 'offer').length;
-      const successRate = interviewsScheduled > 0 
-        ? Math.round((offersReceived / interviewsScheduled) * 100) 
-        : 0;
-      
+      // Return user metrics
       return {
         profileViews: user.profileViews || 0,
-        applicationsSent: user.applicationsSent || applicationsSent,
-        interviewsScheduled: user.interviewsScheduled || interviewsScheduled,
-        offersReceived: user.offersReceived || offersReceived,
-        successRate: user.successRate || successRate,
+        applicationsSent: user.applicationsSent || 0,
+        interviewsScheduled: user.interviewsScheduled || 0,
+        offersReceived: user.offersReceived || 0,
+        successRate: user.successRate || 0,
         profileCompleteness: user.profileCompleteness || 0,
         skillMatchRate: user.skillMatchRate || 0,
         avgResponseTime: user.avgResponseTime || 0

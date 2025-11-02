@@ -38,29 +38,5 @@ describe('API Server', () => {
       expect(true).toBe(true);
     });
   });
-
-  describe('Jobs API', () => {
-    it('should get all jobs', async () => {
-      // Test GET /api/jobs
-      expect(true).toBe(true);
-    });
-
-    it('should create a job', async () => {
-      // Test POST /api/jobs
-      expect(true).toBe(true);
-    });
-  });
-
-  describe('Resumes API', () => {
-    it('should get all resumes', async () => {
-      // Test GET /api/resumes
-      expect(true).toBe(true);
-    });
-
-    it('should create a resume', async () => {
-      // Test POST /api/resumes
-      expect(true).toBe(true);
-    });
-  });
 });
 
