@@ -30,7 +30,6 @@ import {
   CareerTab,
   PortfolioTab,
   SecurityTab,
-  BillingTab,
   PreferencesTab,
   SupportTab,
   UserData,
@@ -64,7 +63,6 @@ export default function Profile() {
     { id: 'portfolio', label: 'Portfolio', icon: FileText },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'security', label: 'Security', icon: Shield },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
   ];
 
@@ -109,15 +107,11 @@ export default function Profile() {
       patents: [],
       organizations: [],
       testScores: [],
-      jobAlerts: true,
     emailNotifications: true,
     smsNotifications: false,
     privacyLevel: 'Professional',
     profileVisibility: 'Public',
     profileViews: 0,
-    applicationsSent: 0,
-    interviewsScheduled: 0,
-    offersReceived: 0,
     successRate: 0,
     profileCompleteness: 0,
     skillMatchRate: 0,
@@ -289,8 +283,6 @@ export default function Profile() {
         return <PortfolioTab {...commonProps} />;
       case 'security':
         return <SecurityTab />;
-      case 'billing':
-        return <BillingTab />;
       case 'preferences':
         return <PreferencesTab {...commonProps} />;
       case 'support':

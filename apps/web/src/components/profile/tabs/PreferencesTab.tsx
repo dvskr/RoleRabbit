@@ -21,7 +21,6 @@ export default function PreferencesTab({
 
   // Calculate notification preferences summary
   const enabledNotifications = [
-    userData.jobAlerts && 'Job Alerts',
     userData.emailNotifications && 'Email',
     userData.smsNotifications && 'SMS'
   ].filter(Boolean).length;
@@ -63,7 +62,7 @@ export default function PreferencesTab({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-xl font-bold mb-1" style={{ color: enabledNotifications > 0 ? colors.successGreen : colors.tertiaryText }}>
-                {enabledNotifications}/3
+                {enabledNotifications}/2
               </div>
               <div className="text-xs" style={{ color: colors.secondaryText }}>Notifications</div>
             </div>
@@ -78,12 +77,6 @@ export default function PreferencesTab({
                 {userData.privacyLevel || 'Professional'}
               </div>
               <div className="text-xs" style={{ color: colors.secondaryText }}>Privacy Level</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold mb-1" style={{ color: userData.jobAlerts ? colors.successGreen : colors.tertiaryText }}>
-                {userData.jobAlerts ? '✓' : '—'}
-              </div>
-              <div className="text-xs" style={{ color: colors.secondaryText }}>Job Alerts</div>
             </div>
           </div>
         </div>
@@ -104,77 +97,6 @@ export default function PreferencesTab({
             </h3>
           </div>
           <div className="space-y-4">
-            <div 
-              className="flex items-center justify-between p-5 rounded-xl transition-all"
-              style={{
-                background: colors.inputBackground,
-                border: `1px solid ${userData.jobAlerts ? colors.borderFocused : colors.border}`,
-              }}
-              onMouseEnter={(e) => {
-                if (isEditing) {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = userData.jobAlerts ? colors.borderFocused : colors.border;
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div 
-                  className="p-2 rounded-lg"
-                  style={{
-                    background: userData.jobAlerts ? colors.badgeSuccessBg : colors.inputBackground,
-                  }}
-                >
-                  <Bell size={18} style={{ color: userData.jobAlerts ? colors.successGreen : colors.secondaryText }} />
-                </div>
-                <div>
-                  <p 
-                    id="job-alerts-heading"
-                    className="font-semibold flex items-center gap-2"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Job Alerts
-                    {userData.jobAlerts && (
-                      <CheckCircle size={14} style={{ color: colors.successGreen }} />
-                    )}
-                  </p>
-                  <p 
-                    className="text-sm mt-1"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    Receive notifications about new job opportunities matching your profile
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                <input 
-                  id="job-alerts-toggle"
-                  name="jobAlerts"
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={userData.jobAlerts || false}
-                  onChange={(e) => onUserDataChange({ jobAlerts: e.target.checked })}
-                  disabled={!isEditing}
-                  aria-labelledby="job-alerts-heading"
-                />
-                <div 
-                  className="w-11 h-6 rounded-full relative transition-all duration-200"
-                  style={{
-                    background: userData.jobAlerts ? colors.successGreen : colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                >
-                  <div
-                    className="absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-all duration-200 bg-white shadow-sm"
-                    style={{
-                      transform: userData.jobAlerts ? 'translateX(20px)' : 'translateX(0)',
-                    }}
-                  />
-                </div>
-              </label>
-            </div>
-            
             <div 
               className="flex items-center justify-between p-5 rounded-xl transition-all"
               style={{

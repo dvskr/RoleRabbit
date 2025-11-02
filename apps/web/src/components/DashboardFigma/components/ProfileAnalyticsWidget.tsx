@@ -20,8 +20,6 @@ export function ProfileAnalyticsWidget() {
   
   // Use default values if userData is not loaded yet
   const profileViews = userData?.profileViews || 0;
-  const applicationsSent = userData?.applicationsSent || 0;
-  const interviewsScheduled = userData?.interviewsScheduled || 0;
   const successRate = userData?.successRate || 0;
   const profileCompleteness = userData?.profileCompleteness || 0;
   const skillMatchRate = userData?.skillMatchRate || 0;
@@ -42,7 +40,7 @@ export function ProfileAnalyticsWidget() {
     >
       <h2 className="text-base font-semibold mb-3" style={{ color: headingColor }}>Profile Analytics</h2>
       
-      {/* Primary Stats - All 4 cards */}
+      {/* Primary Stats */}
       <div className="grid grid-cols-2 gap-2 mb-3">
         <div 
           className="p-2 rounded-lg"
@@ -65,54 +63,6 @@ export function ProfileAnalyticsWidget() {
             style={{ color: colors.secondaryText }}
           >
             Views
-          </p>
-        </div>
-        
-        <div 
-          className="p-2 rounded-lg"
-          style={{
-            background: colors.badgeSuccessBg,
-            border: `1px solid ${colors.badgeSuccessBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <FileText size={14} style={{ color: colors.successGreen }} />
-            <span 
-              className="text-sm font-bold"
-              style={{ color: colors.primaryText }}
-            >
-              {applicationsSent}
-            </span>
-          </div>
-          <p 
-            className="text-[10px] font-medium truncate"
-            style={{ color: colors.secondaryText }}
-          >
-            Applications
-          </p>
-        </div>
-        
-        <div 
-          className="p-2 rounded-lg"
-          style={{
-            background: colors.badgeWarningBg,
-            border: `1px solid ${colors.badgeWarningBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <Calendar size={14} style={{ color: colors.badgeWarningText }} />
-            <span 
-              className="text-sm font-bold"
-              style={{ color: colors.primaryText }}
-            >
-              {interviewsScheduled}
-            </span>
-          </div>
-          <p 
-            className="text-[10px] font-medium truncate"
-            style={{ color: colors.secondaryText }}
-          >
-            Interviews
           </p>
         </div>
         
@@ -328,53 +278,6 @@ export function ProfileAnalyticsWidget() {
             </div>
           </div>
           
-          <div 
-            className="flex items-center gap-2 p-2 rounded-lg"
-            style={{
-              background: colors.badgeSuccessBg,
-              border: `1px solid ${colors.badgeSuccessBorder}`,
-            }}
-          >
-            <FileText size={12} style={{ color: colors.successGreen }} />
-            <div className="flex-1 min-w-0">
-              <p 
-                className="text-[10px] font-medium truncate"
-                style={{ color: colors.primaryText }}
-              >
-                Application sent
-              </p>
-              <p 
-                className="text-[9px] truncate"
-                style={{ color: colors.tertiaryText }}
-              >
-                1d ago
-              </p>
-            </div>
-          </div>
-          
-          <div 
-            className="flex items-center gap-2 p-2 rounded-lg"
-            style={{
-              background: colors.badgeWarningBg,
-              border: `1px solid ${colors.badgeWarningBorder}`,
-            }}
-          >
-            <Calendar size={12} style={{ color: colors.badgeWarningText }} />
-            <div className="flex-1 min-w-0">
-              <p 
-                className="text-[10px] font-medium truncate"
-                style={{ color: colors.primaryText }}
-              >
-                Interview scheduled
-              </p>
-              <p 
-                className="text-[9px] truncate"
-                style={{ color: colors.tertiaryText }}
-              >
-                3d ago
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

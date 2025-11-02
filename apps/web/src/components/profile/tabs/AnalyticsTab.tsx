@@ -25,12 +25,12 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
         <p 
           style={{ color: colors.secondaryText }}
         >
-          Track your profile performance and job search metrics
+          Track your profile performance and visibility metrics
         </p>
       </div>
       
       {/* Enhanced Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">
         <div 
           className="p-4 sm:p-6 rounded-2xl shadow-lg"
           style={{
@@ -66,82 +66,6 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             style={{ color: colors.secondaryText }}
           >
             Profile Views
-          </p>
-        </div>
-        
-        <div 
-          className="p-4 sm:p-6 rounded-2xl shadow-lg"
-          style={{
-            background: colors.badgeSuccessBg,
-            border: `1px solid ${colors.badgeSuccessBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div 
-              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
-              style={{ background: colors.badgeSuccessBg }}
-            >
-              <FileText size={20} className="sm:w-6 sm:h-6" style={{ color: colors.successGreen }} />
-            </div>
-            <div className="text-right min-w-0 flex-1 ml-2">
-              <p 
-                className="text-xl sm:text-2xl font-bold truncate"
-                style={{ color: colors.primaryText }}
-                title={(userData.applicationsSent || 0).toString()}
-              >
-                {userData.applicationsSent || 0}
-              </p>
-              <p 
-                className="text-xs sm:text-sm font-medium truncate"
-                style={{ color: colors.successGreen }}
-              >
-                +3 this week
-              </p>
-            </div>
-          </div>
-          <p 
-            className="text-xs sm:text-sm font-semibold truncate"
-            style={{ color: colors.secondaryText }}
-          >
-            Applications Sent
-          </p>
-        </div>
-        
-        <div 
-          className="p-4 sm:p-6 rounded-2xl shadow-lg"
-          style={{
-            background: colors.badgeWarningBg,
-            border: `1px solid ${colors.badgeWarningBorder}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div 
-              className="p-2 sm:p-3 rounded-xl flex-shrink-0"
-              style={{ background: colors.badgeWarningBg }}
-            >
-              <Calendar size={20} className="sm:w-6 sm:h-6" style={{ color: colors.badgeWarningText }} />
-            </div>
-            <div className="text-right min-w-0 flex-1 ml-2">
-              <p 
-                className="text-xl sm:text-2xl font-bold truncate"
-                style={{ color: colors.primaryText }}
-                title={(userData.interviewsScheduled || 0).toString()}
-              >
-                {userData.interviewsScheduled || 0}
-              </p>
-              <p 
-                className="text-xs sm:text-sm font-medium truncate"
-                style={{ color: colors.badgeWarningText }}
-              >
-                2 upcoming
-              </p>
-            </div>
-          </div>
-          <p 
-            className="text-xs sm:text-sm font-semibold truncate"
-            style={{ color: colors.secondaryText }}
-          >
-            Interviews
           </p>
         </div>
         
@@ -473,63 +397,6 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
             </div>
           </div>
           
-          <div 
-            className="flex items-center gap-4 p-4 rounded-xl"
-            style={{
-              background: colors.badgeSuccessBg,
-              border: `1px solid ${colors.badgeSuccessBorder}`,
-            }}
-          >
-            <div 
-              className="p-2 rounded-lg"
-              style={{ background: colors.badgeSuccessBg }}
-            >
-              <FileText size={16} style={{ color: colors.successGreen }} />
-            </div>
-            <div className="flex-1">
-              <p 
-                className="text-sm font-medium"
-                style={{ color: colors.primaryText }}
-              >
-                Application sent to Google
-              </p>
-              <p 
-                className="text-xs"
-                style={{ color: colors.tertiaryText }}
-              >
-                1 day ago
-              </p>
-            </div>
-          </div>
-          
-          <div 
-            className="flex items-center gap-4 p-4 rounded-xl"
-            style={{
-              background: colors.badgeWarningBg,
-              border: `1px solid ${colors.badgeWarningBorder}`,
-            }}
-          >
-            <div 
-              className="p-2 rounded-lg"
-              style={{ background: colors.badgeWarningBg }}
-            >
-              <Calendar size={16} style={{ color: colors.badgeWarningText }} />
-            </div>
-            <div className="flex-1">
-              <p 
-                className="text-sm font-medium"
-                style={{ color: colors.primaryText }}
-              >
-                Interview scheduled with Microsoft
-              </p>
-              <p 
-                className="text-xs"
-                style={{ color: colors.tertiaryText }}
-              >
-                3 days ago
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

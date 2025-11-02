@@ -92,7 +92,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             careerTimeline: userProfile.careerTimeline || [],
             
             // Preferences
-            jobAlerts: userProfile.jobAlerts ?? true,
             emailNotifications: userProfile.emailNotifications ?? true,
             smsNotifications: userProfile.smsNotifications ?? false,
             privacyLevel: userProfile.privacyLevel || 'Professional',
@@ -100,9 +99,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             
             // Analytics
             profileViews: userProfile.profileViews || 0,
-            applicationsSent: userProfile.applicationsSent || 0,
-            interviewsScheduled: userProfile.interviewsScheduled || 0,
-            offersReceived: userProfile.offersReceived || 0,
             successRate: userProfile.successRate || 0,
             profileCompleteness: userProfile.profileCompleteness || 0,
             skillMatchRate: userProfile.skillMatchRate || 0,
@@ -179,15 +175,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           projects: userProfile.projects || [],
           achievements: userProfile.achievements || [],
           careerTimeline: userProfile.careerTimeline || [],
-          jobAlerts: userProfile.jobAlerts ?? true,
           emailNotifications: userProfile.emailNotifications ?? true,
           smsNotifications: userProfile.smsNotifications ?? false,
           privacyLevel: userProfile.privacyLevel || 'Professional',
           profileVisibility: userProfile.profileVisibility || 'Public',
           profileViews: userProfile.profileViews || 0,
-          applicationsSent: userProfile.applicationsSent || 0,
-          interviewsScheduled: userProfile.interviewsScheduled || 0,
-          offersReceived: userProfile.offersReceived || 0,
           successRate: userProfile.successRate || 0,
           profileCompleteness: userProfile.profileCompleteness || 0,
           skillMatchRate: userProfile.skillMatchRate || 0,

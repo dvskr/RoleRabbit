@@ -227,7 +227,6 @@ export interface UserData {
   testScores: TestScore[];
   
   // Preferences
-  jobAlerts: boolean;
   emailNotifications: boolean;
   smsNotifications: boolean;
   privacyLevel: string;
@@ -235,9 +234,6 @@ export interface UserData {
   
   // Analytics & Insights (Enhanced)
   profileViews: number;
-  applicationsSent: number;
-  interviewsScheduled: number;
-  offersReceived: number;
   successRate: number;
   profileCompleteness: number;
   skillMatchRate: number;

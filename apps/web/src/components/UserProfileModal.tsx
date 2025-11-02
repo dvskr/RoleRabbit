@@ -14,14 +14,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
-import { UserProfileModalProps, BillingInfo } from '../types/userProfile';
+import { UserProfileModalProps } from '../types/userProfile';
 import {
   ProfileTab,
   SecurityTab,
   PreferencesTab,
-  BillingTab,
   SupportTab,
-  JobTrackerTab
 } from './userProfile';
 
 export default function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
@@ -38,13 +36,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     profileForm,
     securityForm,
     preferences,
-    billingInfo,
     supportTickets,
     feedbackForm,
-    jobs,
-    newJob,
-    showAddJob,
-    jobFilter,
     
     // Setters
     setActiveTab,
@@ -56,13 +49,8 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     setProfileForm,
     setSecurityForm,
     setPreferences,
-    setBillingInfo,
     setSupportTickets,
     setFeedbackForm,
-    setJobs,
-    setNewJob,
-    setShowAddJob,
-    setJobFilter,
     
     // Actions
     handleLogin,
@@ -71,24 +59,16 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
     handleSaveProfile,
     handleUpdateSecurity,
     handleUpdatePreferences,
-    handleSubmitFeedback,
-    handleAddJob,
-    handleUpdateJob,
-    handleDeleteJob
+    handleSubmitFeedback
   } = useUserProfile();
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'preferences', label: 'Preferences', icon: Settings },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'support', label: 'Support', icon: HelpCircle },
   ];
 
-  const handleUpdateBilling = async (billing: BillingInfo) => {
-    console.log('Updating billing info:', billing);
-    // TODO: Implement actual billing update logic
-  };
 
   const handleLoginSubmit = async () => {
     setLoginForm({ email: '', password: '' });
@@ -309,14 +289,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
             onUpdate={handleUpdatePreferences}
           />
         );
-      case 'billing':
-        return (
-          <BillingTab
-            billingInfo={billingInfo}
-            setBillingInfo={setBillingInfo}
-            onUpdate={handleUpdateBilling}
-          />
-        );
       case 'support':
         return (
           <SupportTab
@@ -325,22 +297,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
             feedbackForm={feedbackForm}
             setFeedbackForm={setFeedbackForm}
             onSubmitFeedback={handleSubmitFeedback}
-          />
-        );
-      case 'jobs':
-        return (
-          <JobTrackerTab
-            jobs={jobs}
-            setJobs={setJobs}
-            newJob={newJob}
-            setNewJob={setNewJob}
-            showAddJob={showAddJob}
-            setShowAddJob={setShowAddJob}
-            jobFilter={jobFilter}
-            setJobFilter={setJobFilter}
-            onAddJob={handleAddJob}
-            onUpdateJob={handleUpdateJob}
-            onDeleteJob={handleDeleteJob}
           />
         );
       default:
@@ -407,19 +363,6 @@ export default function UserProfileModal({ isOpen, onClose }: UserProfileModalPr
                       </button>
                     );
                   })}
-                  
-              {/* Job Tracker Tab */}
-                    <button
-                onClick={() => setActiveTab('jobs')}
-                className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === 'jobs'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                <Settings size={18} />
-                <span>Job Tracker</span>
-                  </button>
             </nav>
           </div>
 
