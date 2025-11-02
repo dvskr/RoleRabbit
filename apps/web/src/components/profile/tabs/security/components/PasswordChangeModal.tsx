@@ -11,6 +11,9 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
   onClose,
   onConfirm,
   colors,
+  isSubmitting = false,
+  errorMessage,
+  successMessage,
 }) => {
   const [passwordData, setPasswordData] = React.useState({
     currentPassword: '',
@@ -80,7 +83,19 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
           e.stopPropagation();
         }}
       >
-        <div className="flex items-center justify-between mb-6">
+        {(errorMessage || successMessage) && (
+          <div
+            className={`mb-4 p-3 rounded-lg text-sm font-medium ${
+              errorMessage
+                ? 'bg-red-100 text-red-700 border border-red-200'
+                : 'bg-green-100 text-green-700 border border-green-200'
+            }`}
+          >
+            {errorMessage || successMessage}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-4">
           <h3 
             className="text-xl font-semibold"
             style={{ color: colors.primaryText }}
@@ -176,26 +191,26 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!isFormValid}
+            disabled={!isFormValid || isSubmitting}
             className="flex-1 px-4 py-2 rounded-lg transition-colors"
             style={{
-              background: !isFormValid ? colors.inputBackground : colors.successGreen,
-              color: !isFormValid ? colors.tertiaryText : 'white',
-              opacity: !isFormValid ? 0.5 : 1,
-              cursor: !isFormValid ? 'not-allowed' : 'pointer',
+              background: !isFormValid || isSubmitting ? colors.inputBackground : colors.successGreen,
+              color: !isFormValid || isSubmitting ? colors.tertiaryText : 'white',
+              opacity: !isFormValid || isSubmitting ? 0.5 : 1,
+              cursor: !isFormValid || isSubmitting ? 'not-allowed' : 'pointer',
             }}
             onMouseEnter={(e) => {
-              if (isFormValid) {
+              if (isFormValid && !isSubmitting) {
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
             onMouseLeave={(e) => {
-              if (isFormValid) {
+              if (isFormValid && !isSubmitting) {
                 e.currentTarget.style.opacity = '1';
               }
             }}
           >
-            Change Password
+            {isSubmitting ? 'Updating…' : 'Change Password'}
           </button>
         </div>
       </div>

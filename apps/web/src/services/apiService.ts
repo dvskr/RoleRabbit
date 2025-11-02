@@ -66,16 +66,26 @@ class ApiService {
       if (!response.ok) {
         // Try to get error details from response
         let errorMessage = `API error: ${response.statusText}`;
+        let errorDetails: any = undefined;
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorData.message || errorMessage;
           if (errorData.details) {
-            errorMessage += ` - ${errorData.details}`;
+            errorDetails = errorData.details;
+            if (typeof errorData.details === 'string' && !errorMessage.includes(errorData.details)) {
+              errorMessage += ` - ${errorData.details}`;
+            }
           }
         } catch (e) {
           // If response isn't JSON, use status text
         }
-        throw new Error(errorMessage);
+
+        const error: any = new Error(errorMessage);
+        error.statusCode = response.status;
+        if (errorDetails !== undefined) {
+          error.details = errorDetails;
+        }
+        throw error;
       }
 
       return await response.json();
@@ -145,6 +155,49 @@ class ApiService {
     }
 
     return await response.json();
+  }
+
+  /**
+   * Upload a file to cloud storage (binary upload)
+   */
+  async uploadStorageFile(formData: FormData): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/files/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to upload file';
+        let errorCode: string | undefined;
+        let storage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          errorCode = errorData.code;
+          storage = errorData.storage;
+        } catch (parseError) {
+          // Ignore parse errors, fall back to default message
+        }
+
+        const error: any = new Error(errorMessage);
+        if (errorCode) {
+          error.code = errorCode;
+        }
+        if (storage) {
+          error.storage = storage;
+        }
+        throw error;
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+        throw new Error('Failed to upload file. Please ensure the API server is reachable.');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -231,6 +284,17 @@ class ApiService {
   async updateResume(id: string, resumeData: any): Promise<any> {
     return this.request(`/api/resumes/${id}`, {
       method: 'PUT',
+      body: JSON.stringify(resumeData),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Auto-save a resume
+   */
+  async autoSaveResume(id: string, resumeData: any): Promise<any> {
+    return this.request(`/api/resumes/${id}/autosave`, {
+      method: 'POST',
       body: JSON.stringify(resumeData),
       credentials: 'include',
     });
@@ -324,6 +388,16 @@ class ApiService {
   }
 
   /**
+   * Get storage quota information
+   */
+  async getStorageQuota(): Promise<{ storage: any }> {
+    return this.request('/api/storage/quota', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
    * Get all cloud files
    */
   async getCloudFiles(folderId?: string, includeDeleted: boolean = false): Promise<any> {
@@ -397,6 +471,29 @@ class ApiService {
       method: 'DELETE',
       credentials: 'include',
     });
+  }
+
+  /**
+   * Download a cloud file (returns Blob)
+   */
+  async downloadCloudFile(id: string): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/files/${id}/download`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to download file';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (parseError) {
+        // Ignore parse errors
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await response.blob();
   }
 
   /**
@@ -588,6 +685,70 @@ class ApiService {
     return this.request('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
+    });
+  }
+
+  // ===== BILLING ENDPOINTS =====
+
+  async getBillingSubscription(): Promise<any> {
+    return this.request('/api/billing/subscription', {
+      method: 'GET',
+      credentials: 'include'
+    });
+  }
+
+  async getBillingInvoices(page?: number, pageSize?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (pageSize) params.append('pageSize', String(pageSize));
+
+    const query = params.toString();
+    return this.request(`/api/billing/invoices${query ? `?${query}` : ''}`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+  }
+
+  async subscribeToPlan(payload: { plan: string; paymentMethodId?: string }): Promise<any> {
+    return this.request('/api/billing/subscribe', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async cancelSubscription(): Promise<any> {
+    return this.request('/api/billing/cancel', {
+      method: 'POST',
+      credentials: 'include'
+    });
+  }
+
+  async getBillingPaymentMethods(): Promise<any> {
+    return this.request('/api/billing/payment-methods', {
+      method: 'GET',
+      credentials: 'include'
+    });
+  }
+
+  async addBillingPaymentMethod(data: {
+    cardNumber: string;
+    cardHolder: string;
+    expiryMonth: string;
+    expiryYear: string;
+    setDefault?: boolean;
+  }): Promise<any> {
+    return this.request('/api/billing/payment-methods', {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteBillingPaymentMethod(paymentMethodId: string): Promise<any> {
+    return this.request(`/api/billing/payment-methods/${paymentMethodId}`, {
+      method: 'DELETE',
+      credentials: 'include'
     });
   }
 

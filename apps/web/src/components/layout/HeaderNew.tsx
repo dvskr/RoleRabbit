@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface HeaderProps {
@@ -12,6 +12,8 @@ interface HeaderProps {
   previousSidebarState: boolean;
   sidebarCollapsed: boolean;
   isPreviewMode?: boolean;
+  lastSavedAt?: Date | null;
+  saveError?: string | null;
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -40,6 +42,8 @@ export default function HeaderNew({
   previousSidebarState,
   sidebarCollapsed,
   isPreviewMode,
+  lastSavedAt,
+  saveError,
   onExport,
   onUndo,
   onRedo,
@@ -58,6 +62,14 @@ export default function HeaderNew({
   previousMainSidebarState,
   setPreviousMainSidebarState
 }: HeaderProps) {
+  const formatSavedTime = (date: Date) => {
+    try {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch {
+      return date.toISOString();
+    }
+  };
+
   const handleToggleAIPanel = () => {
     if (!showRightPanel) {
       if (setPreviousMainSidebarState && mainSidebarCollapsed !== undefined) {
@@ -111,6 +123,16 @@ export default function HeaderNew({
           <div className="flex items-center gap-2 text-sm text-[#34B27B]">
             <div className="w-3 h-3 border-2 border-[#34B27B] border-t-transparent rounded-full animate-spin"></div>
             Saving...
+          </div>
+        )}
+        {!isSaving && saveError && (
+          <div className="text-sm text-red-400 max-w-xs truncate" title={saveError}>
+            {saveError}
+          </div>
+        )}
+        {!isSaving && !saveError && lastSavedAt && (
+          <div className="text-xs text-[#6E7681]">
+            Saved at {formatSavedTime(lastSavedAt)}
           </div>
         )}
         

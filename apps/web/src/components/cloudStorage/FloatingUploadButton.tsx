@@ -24,6 +24,7 @@ export const FloatingUploadButton: React.FC<FloatingUploadButtonProps> = ({
           e.currentTarget.style.opacity = '1';
         }}
         title="Upload Files"
+        data-testid="storage-floating-upload-button"
       >
         <Upload size={20} className="group-hover:scale-110 transition-transform duration-200" />
       </button>

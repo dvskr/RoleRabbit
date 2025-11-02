@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { FileType, SortBy, ViewMode, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
-import { DEFAULT_STORAGE_USED, DEFAULT_STORAGE_LIMIT } from './useCloudStorage/constants/defaults';
 import { filterAndSortFiles } from './useCloudStorage/utils/fileFiltering';
 import { useFileOperations } from './useCloudStorage/hooks/useFileOperations';
 import { useSharingOperations } from './useCloudStorage/hooks/useSharingOperations';
@@ -13,9 +12,61 @@ import { useAccessTracking } from './useCloudStorage/hooks/useAccessTracking';
 import { logger } from '../utils/logger';
 import apiService from '../services/apiService';
 
+export const BYTES_IN_GB = 1024 ** 3;
+
+export const EMPTY_STORAGE_INFO: StorageInfo = {
+  used: 0,
+  limit: 0,
+  percentage: 0,
+  usedBytes: 0,
+  limitBytes: 0,
+};
+
+export const normalizeStorageInfo = (storage?: any): StorageInfo => {
+  if (!storage) {
+    return EMPTY_STORAGE_INFO;
+  }
+
+  const usedBytes = typeof storage.usedBytes === 'number'
+    ? storage.usedBytes
+    : Math.max(0, Math.round((storage.usedGB || 0) * BYTES_IN_GB));
+
+  const limitBytes = typeof storage.limitBytes === 'number'
+    ? storage.limitBytes
+    : Math.max(0, Math.round((storage.limitGB || 0) * BYTES_IN_GB));
+
+  const usedGB = typeof storage.usedGB === 'number'
+    ? storage.usedGB
+    : usedBytes / BYTES_IN_GB;
+
+  const limitGB = typeof storage.limitGB === 'number'
+    ? storage.limitGB
+    : limitBytes / BYTES_IN_GB;
+
+  const percentage = typeof storage.percentage === 'number'
+    ? storage.percentage
+    : limitGB > 0
+      ? (usedGB / limitGB) * 100
+      : 0;
+
+  return {
+    used: Number.isFinite(usedGB) ? Number.parseFloat(usedGB.toFixed(2)) : 0,
+    limit: Number.isFinite(limitGB) ? Number.parseFloat(limitGB.toFixed(2)) : 0,
+    percentage: Number.isFinite(percentage) ? Number.parseFloat(percentage.toFixed(2)) : 0,
+    usedBytes,
+    limitBytes,
+  };
+};
+
 export const useCloudStorage = () => {
   // File operations hook
-  const fileOps = useFileOperations();
+  const [storageInfoState, setStorageInfoState] = useState<StorageInfo>(EMPTY_STORAGE_INFO);
+
+  const handleStorageUpdate = useCallback((storage: any) => {
+    setStorageInfoState(normalizeStorageInfo(storage));
+  }, []);
+
+  const fileOps = useFileOperations({ onStorageUpdate: handleStorageUpdate });
   const { files, setFiles, isLoading, selectedFiles, setSelectedFiles } = fileOps;
 
   // UI state
@@ -41,9 +92,18 @@ export const useCloudStorage = () => {
     public?: boolean;
   }>({});
 
-  // Storage info
-  const [storageUsed, setStorageUsed] = useState(DEFAULT_STORAGE_USED);
-  const [storageLimit, setStorageLimit] = useState(DEFAULT_STORAGE_LIMIT);
+  // Storage info state
+
+  const refreshStorageInfo = useCallback(async () => {
+    try {
+      const response = await apiService.getStorageQuota();
+      if (response && response.storage) {
+        setStorageInfoState(normalizeStorageInfo(response.storage));
+      }
+    } catch (error) {
+      logger.error('Failed to fetch storage quota:', error);
+    }
+  }, []);
 
   // Folder management
   const folderOps = useFolderOperations(files, setFiles);
@@ -121,11 +181,11 @@ export const useCloudStorage = () => {
     });
   }, [files, searchTerm, filterType, sortBy, selectedFolderId, showDeleted, quickFilters]);
 
-  const storageInfo: StorageInfo = useMemo(() => ({
-    used: storageUsed,
-    limit: storageLimit,
-    percentage: (storageUsed / storageLimit) * 100
-  }), [storageUsed, storageLimit]);
+  useEffect(() => {
+    refreshStorageInfo();
+  }, [refreshStorageInfo]);
+
+  const storageInfo: StorageInfo = useMemo(() => storageInfoState, [storageInfoState]);
 
   // Wrapper for handleSelectAll to use filteredFiles
   const handleSelectAll = () => {
@@ -171,8 +231,6 @@ export const useCloudStorage = () => {
     setViewMode,
     setShowUploadModal,
     setShowDeleted,
-    setStorageUsed,
-    setStorageLimit,
     setSelectedFolderId,
     setQuickFilters,
     
@@ -188,7 +246,14 @@ export const useCloudStorage = () => {
     handleShareFile: fileOps.handleShareFile,
     handleUploadFile,
     handleEditFile: fileOps.handleEditFile,
-    handleRefresh: fileOps.handleRefresh,
+    handleRefresh: async () => {
+      try {
+        await fileOps.handleRefresh();
+        await refreshStorageInfo();
+      } catch (error) {
+        logger.error('Failed to refresh storage data:', error);
+      }
+    },
     handleStarFile: fileOps.handleStarFile,
     handleArchiveFile: fileOps.handleArchiveFile,
     

@@ -17,6 +17,7 @@ import {
   duplicateResumeState,
 } from '../utils/resumeDataHelpers';
 import { logger } from '../../../utils/logger';
+import apiService from '../../../services/apiService';
 
 export interface UseDashboardHandlersParams {
   // Resume data
@@ -30,6 +31,18 @@ export interface UseDashboardHandlersParams {
   setCustomSections: (sections: CustomSection[] | ((prev: CustomSection[]) => CustomSection[])) => void;
   resumeFileName: string;
   setResumeFileName: (name: string) => void;
+  currentResumeId: string | null;
+  setCurrentResumeId: (id: string | null) => void;
+  hasChanges: boolean;
+  setHasChanges: (value: boolean) => void;
+  isSaving: boolean;
+  setIsSaving: (saving: boolean) => void;
+  setSaveError: (error: string | null) => void;
+  lastSavedAt: Date | null;
+  setLastSavedAt: (date: Date | null) => void;
+  lastServerUpdatedAt: string | null;
+  setLastServerUpdatedAt: (value: string | null) => void;
+  selectedTemplateId?: string | null;
   history: ResumeData[];
   setHistory: (history: ResumeData[] | ((prev: ResumeData[]) => ResumeData[])) => void;
   historyIndex: number;
@@ -129,6 +142,18 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setCustomSections,
     resumeFileName,
     setResumeFileName,
+    currentResumeId,
+    setCurrentResumeId,
+    hasChanges,
+    setHasChanges,
+    isSaving,
+    setIsSaving,
+    setSaveError,
+    lastSavedAt,
+    setLastSavedAt,
+    lastServerUpdatedAt,
+    setLastServerUpdatedAt,
+    selectedTemplateId,
     history,
     setHistory,
     historyIndex,
@@ -331,9 +356,111 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     aiHelpers.sendAIMessage(aiPrompt, setAiPrompt, aiConversation, setAiConversation);
   }, [aiPrompt, setAiPrompt, aiConversation, setAiConversation]);
 
-  const saveResume = useCallback(() => {
-    resumeHelpers.saveResume();
-  }, []);
+  const saveResume = useCallback(async () => {
+    if (isSaving) {
+      return;
+    }
+
+    if (!hasChanges && currentResumeId) {
+      setSaveError(null);
+      setLastSavedAt(new Date());
+       setHasChanges(false);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    const sanitizedName = resumeFileName && resumeFileName.trim().length > 0
+      ? resumeFileName.trim()
+      : 'Untitled Resume';
+
+    const payload: any = {
+      name: sanitizedName,
+      fileName: sanitizedName,
+      templateId: selectedTemplateId || null,
+      data: {
+        resumeData,
+        sectionOrder,
+        sectionVisibility,
+        customSections,
+        customFields,
+        formatting: {
+          fontFamily,
+          fontSize,
+          lineSpacing,
+          sectionSpacing,
+          margins,
+          headingStyle,
+          bulletStyle,
+        },
+        metadata: {
+          savedAt: new Date().toISOString(),
+        },
+      },
+      lastKnownServerUpdatedAt: lastServerUpdatedAt,
+    };
+
+    try {
+      const response = currentResumeId
+        ? await apiService.updateResume(currentResumeId, payload)
+        : await apiService.saveResume(payload);
+
+      const savedResume = response?.resume;
+      if (savedResume) {
+        if (!currentResumeId) {
+          setCurrentResumeId(savedResume.id);
+        }
+        if (savedResume.name && savedResume.name !== resumeFileName) {
+          setResumeFileName(savedResume.name);
+        }
+        setLastServerUpdatedAt(savedResume.lastUpdated || null);
+        if (savedResume.lastUpdated) {
+          setLastSavedAt(new Date(savedResume.lastUpdated));
+        } else {
+          setLastSavedAt(new Date());
+        }
+      } else {
+        setLastSavedAt(new Date());
+      }
+      setHasChanges(false);
+    } catch (error: any) {
+      logger.error('Failed to save resume:', error);
+      if (error?.statusCode === 409) {
+        setSaveError('Resume has been updated elsewhere. Please reload to sync changes.');
+      } else {
+        setSaveError(error?.message || 'Failed to save resume');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    isSaving,
+    hasChanges,
+    resumeFileName,
+    selectedTemplateId,
+    resumeData,
+    sectionOrder,
+    sectionVisibility,
+    customSections,
+    customFields,
+    fontFamily,
+    fontSize,
+    lineSpacing,
+    sectionSpacing,
+    margins,
+    headingStyle,
+    bulletStyle,
+    lastServerUpdatedAt,
+    currentResumeId,
+    setCurrentResumeId,
+    setResumeFileName,
+    setLastServerUpdatedAt,
+    setLastSavedAt,
+    setHasChanges,
+    setSaveError,
+    setIsSaving,
+  ]);
 
   const undo = useCallback(() => {
     resumeHelpers.undo(history, historyIndex, setHistoryIndex, setResumeData);

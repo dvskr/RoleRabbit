@@ -1,10 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { logger } from '../../../utils/logger';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { validatePasswordChange } from '../../../utils/passwordValidation';
-import { setup2FA, disable2FA, simulatePasswordChange } from '../../../utils/securityHelpers';
+import {
+  setup2FA,
+  enable2FA,
+  disable2FA,
+  changePassword,
+  get2FAStatus,
+  getSessions,
+  revokeSession,
+  revokeOtherSessions,
+  LoginSessionDTO,
+} from '../../../utils/securityHelpers';
 import {
   SecurityHeader,
   PasswordManagementSection,
@@ -14,18 +24,46 @@ import {
   TwoFASetupModal,
 } from './security/components';
 import { usePrivacySettings } from './security/hooks';
-import { ProfileVisibility } from './security/types';
+import { ProfileVisibility, LoginSession } from './security/types';
+
+type TwoFASetupState = {
+  secret: string;
+  qrCode: string;
+  backupCodes: string[];
+};
+
+const mapSessions = (sessions: LoginSessionDTO[]): LoginSession[] =>
+  sessions.map((session) => ({
+    id: session.id,
+    device: session.device,
+    ipAddress: session.ipAddress,
+    lastActive: session.lastActivity,
+    isCurrent: session.isCurrent,
+    userAgent: session.userAgent,
+  }));
 
 export default function SecurityTab() {
   const { theme } = useTheme();
   const colors = theme.colors;
-  
-  // 2FA state
+
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [isTwoFAStatusLoading, setIsTwoFAStatusLoading] = useState(true);
+  const [isTwoFAProcessing, setIsTwoFAProcessing] = useState(false);
+  const [twoFASetupData, setTwoFASetupData] = useState<TwoFASetupState | null>(null);
+  const [twoFAModalError, setTwoFAModalError] = useState<string | null>(null);
+  const [isVerifying2FA, setIsVerifying2FA] = useState(false);
+
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
   const [show2FAModal, setShow2FAModal] = useState(false);
 
-  // Privacy settings
+  const [sessions, setSessions] = useState<LoginSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(true);
+  const [sessionsError, setSessionsError] = useState<string | null>(null);
+
   const {
     profileVisibility,
     showContactInfo,
@@ -33,13 +71,57 @@ export default function SecurityTab() {
     setShowContactInfo,
   } = usePrivacySettings();
 
-  // Handle password change
+  const refresh2FAStatus = useCallback(async () => {
+    setIsTwoFAStatusLoading(true);
+    const status = await get2FAStatus();
+    if (status.success) {
+      setTwoFAEnabled(status.enabled);
+    } else if (status.error) {
+      logger.error('Failed to load 2FA status:', status.error);
+    }
+    setIsTwoFAStatusLoading(false);
+  }, []);
+
+  const refreshSessions = useCallback(async () => {
+    setSessionsLoading(true);
+    setSessionsError(null);
+    const result = await getSessions();
+    if (result.success) {
+      setSessions(mapSessions(result.sessions));
+    } else {
+      setSessionsError(result.error);
+    }
+    setSessionsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    refresh2FAStatus();
+    refreshSessions();
+  }, [refresh2FAStatus, refreshSessions]);
+
+  useEffect(() => {
+    if (!showPasswordModal) {
+      setPasswordError(null);
+      setPasswordSuccess(null);
+    }
+  }, [showPasswordModal]);
+
+  useEffect(() => {
+    if (!show2FAModal) {
+      setTwoFAModalError(null);
+      setTwoFASetupData(null);
+      setIsVerifying2FA(false);
+    }
+  }, [show2FAModal]);
+
   const handlePasswordChange = async (passwordData: {
     currentPassword: string;
     newPassword: string;
     confirmPassword: string;
   }) => {
-    // Validate password
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
     const validation = validatePasswordChange(
       passwordData.currentPassword,
       passwordData.newPassword,
@@ -47,53 +129,115 @@ export default function SecurityTab() {
     );
 
     if (!validation.isValid) {
-      validation.errors.forEach(error => logger.debug(error));
+      const firstError = validation.errors[0];
+      setPasswordError(firstError || 'Password validation failed');
       return;
     }
 
-    // Simulate password change (replace with actual API call)
-    const success = await simulatePasswordChange(
+    setPasswordSubmitting(true);
+    const result = await changePassword(
       passwordData.currentPassword,
-      passwordData.newPassword
+      passwordData.newPassword,
+      passwordData.confirmPassword
     );
+    setPasswordSubmitting(false);
 
-    if (success) {
+    if (!result.success) {
+      setPasswordError(result.error);
+      return;
+    }
+
+    setPasswordSuccess('Password updated successfully.');
+    setTimeout(() => {
       setShowPasswordModal(false);
-    }
+      setPasswordSuccess(null);
+    }, 1500);
   };
 
-  // Handle 2FA enable/disable
-  const handleEnable2FA = async () => {
+  const handleToggleTwoFA = async () => {
+    if (isTwoFAStatusLoading || isTwoFAProcessing) {
+      return;
+    }
+
+    setTwoFAModalError(null);
+
     if (twoFAEnabled) {
-      // Disable 2FA
-      const success = await disable2FA('currentPassword', '999999');
-      if (success) {
-        setTwoFAEnabled(false);
-      } else {
-        alert('Failed to disable 2FA. Please try again.');
+      const currentPassword = window.prompt('Enter your current password to disable 2FA');
+      if (!currentPassword) {
+        return;
       }
+      const token = window.prompt('Enter a current 2FA code or one of your backup codes');
+      if (!token) {
+        return;
+      }
+
+      setIsTwoFAProcessing(true);
+      const result = await disable2FA(currentPassword, token);
+      setIsTwoFAProcessing(false);
+
+      if (!result.success) {
+        alert(result.error || 'Unable to disable 2FA.');
+        return;
+      }
+
+      setTwoFAEnabled(false);
+      alert('Two-factor authentication has been disabled.');
     } else {
-      // Enable 2FA - Setup first
+      setIsTwoFAProcessing(true);
       const result = await setup2FA();
-      if (result.success) {
-        setShow2FAModal(true);
-      } else {
-        alert('Failed to setup 2FA. Is the API server running on port 3001?');
+      setIsTwoFAProcessing(false);
+
+      if (!result.success) {
+        alert(result.error);
+        return;
       }
+
+      setTwoFASetupData({
+        secret: result.secret,
+        qrCode: result.qrCode,
+        backupCodes: result.backupCodes,
+      });
+      setShow2FAModal(true);
     }
   };
 
-  // Handle 2FA verification
   const handleVerify2FA = async (code: string) => {
-    if (code.length === 6) {
-      logger.debug('Verifying 2FA code...');
-      // Simulate verification (replace with actual API call)
-      setTimeout(() => {
-        setTwoFAEnabled(true);
-        setShow2FAModal(false);
-        logger.debug('2FA enabled successfully');
-      }, 1000);
+    if (!twoFASetupData || code.length !== 6) {
+      return;
     }
+
+    setTwoFAModalError(null);
+    setIsVerifying2FA(true);
+    const result = await enable2FA(twoFASetupData.secret, code, twoFASetupData.backupCodes);
+    setIsVerifying2FA(false);
+
+    if (!result.success) {
+      setTwoFAModalError(result.error);
+      return;
+    }
+
+    setTwoFAEnabled(true);
+    setShow2FAModal(false);
+    setTwoFASetupData(null);
+    alert('Two-factor authentication enabled successfully. Don’t forget to store your backup codes safely.');
+  };
+
+  const handleLogoutSession = async (sessionId: string) => {
+    const result = await revokeSession(sessionId);
+    if (!result.success) {
+      alert(result.error);
+      return;
+    }
+    refreshSessions();
+  };
+
+  const handleLogoutAllSessions = async () => {
+    const result = await revokeOtherSessions();
+    if (!result.success) {
+      alert(result.error);
+      return;
+    }
+    refreshSessions();
   };
 
   return (
@@ -105,11 +249,18 @@ export default function SecurityTab() {
           colors={colors}
           onOpenPasswordModal={() => setShowPasswordModal(true)}
           twoFAEnabled={twoFAEnabled}
-          onToggle2FA={handleEnable2FA}
+          onToggle2FA={handleToggleTwoFA}
+          isTwoFAStatusLoading={isTwoFAStatusLoading}
+          isTwoFAProcessing={isTwoFAProcessing}
         />
 
         <LoginActivitySection
           colors={colors}
+          sessions={sessions}
+          isLoading={sessionsLoading}
+          errorMessage={sessionsError}
+          onLogoutSession={handleLogoutSession}
+          onLogoutAllSessions={handleLogoutAllSessions}
         />
 
         <PrivacySettingsSection
@@ -121,12 +272,14 @@ export default function SecurityTab() {
         />
       </div>
 
-      {/* Modals */}
       <PasswordChangeModal
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
         onConfirm={handlePasswordChange}
         colors={colors}
+        isSubmitting={passwordSubmitting}
+        errorMessage={passwordError}
+        successMessage={passwordSuccess}
       />
 
       <TwoFASetupModal
@@ -134,6 +287,11 @@ export default function SecurityTab() {
         onClose={() => setShow2FAModal(false)}
         onVerify={handleVerify2FA}
         colors={colors}
+        qrCode={twoFASetupData?.qrCode}
+        secret={twoFASetupData?.secret}
+        backupCodes={twoFASetupData?.backupCodes}
+        isVerifying={isVerifying2FA}
+        errorMessage={twoFAModalError}
       />
     </div>
   );

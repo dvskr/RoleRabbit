@@ -63,6 +63,8 @@ model User {
   smsNotifications   Boolean @default(false)
   privacyLevel       String? @default("Professional")
   profileVisibility  String? @default("Public")
+  storageLimit       Int     @default(1073741824) // 1GB default limit in bytes
+  storageTier        String  @default("free")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,6 +84,9 @@ model User {
   passwordResetTokens PasswordResetToken[]
   aiUsage             AIUsage[]
   credentials         Credential[]
+  subscriptions       Subscription[]
+  invoices            Invoice[]
+  paymentMethods      PaymentMethod[]
 
   // AI Usage tracking
   totalAIUsage Int @default(0)
@@ -91,6 +96,16 @@ model User {
   twoFactorEnabled     Boolean @default(false)
   twoFactorSecret      String?
   twoFactorBackupCodes String? // JSON array of backup codes
+
+  // Profile Analytics & Metrics
+  profileViews         Int @default(0)
+  applicationsSent     Int @default(0)
+  interviewsScheduled   Int @default(0)
+  offersReceived       Int @default(0)
+  successRate          Int @default(0) // Percentage
+  profileCompleteness   Int @default(0) // Percentage (0-100)
+  skillMatchRate       Int @default(0) // Percentage
+  avgResponseTime      Float @default(0) // Days
 
   @@map("users")
 }
@@ -235,10 +250,12 @@ model CloudFile {
   id            String    @id @default(cuid())
   userId        String
   name          String
+  fileName      String?
   type          String // resume, cover_letter, document, portfolio
   size          Int
   contentType   String
-  data          String // Base64 or file path
+  data          String? // Base64 or file path
+  storagePath   String?
   folderId      String? // Reference to CloudFolder
   tags          String? // Comma-separated tags
   description   String?
@@ -481,6 +498,69 @@ model AIUsage {
   @@index([timestamp])
   @@index([model])
   @@map("ai_usage")
+}
+
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String
+  plan              String
+  status            String   @default("active")
+  price             Float    @default(0)
+  currency          String   @default("USD")
+  billingInterval   String   @default("monthly") // monthly, yearly
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd Boolean  @default(false)
+  trialEndsAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoices  Invoice[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id             String   @id @default(cuid())
+  subscriptionId String
+  userId         String
+  amount         Float
+  currency       String   @default("USD")
+  status         String   @default("paid") // paid, pending, failed
+  plan           String
+  billingInterval String
+  invoiceDate    DateTime @default(now())
+  dueDate        DateTime?
+  paidAt         DateTime?
+  invoiceUrl     String?
+  createdAt      DateTime @default(now())
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@map("invoices")
+}
+
+model PaymentMethod {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // card, paypal, etc.
+  brand       String?
+  last4       String?
+  expiryMonth Int?
+  expiryYear  Int?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("payment_methods")
 }
 
 model Notification {

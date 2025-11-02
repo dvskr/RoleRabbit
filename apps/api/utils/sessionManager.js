@@ -121,6 +121,11 @@ async function getUserSessions(userId) {
       }
     });
     
+    // Update lastActivity for current request if sessions exist
+    if (sessions.length > 0) {
+      // This will be handled by middleware in routes
+    }
+    
     return sessions;
   } catch (error) {
     logger.error('Failed to get user sessions', error);
@@ -137,7 +142,7 @@ async function refreshSession(sessionId) {
       where: { id: sessionId },
       data: {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Extend 7 days
-        lastActivityAt: new Date()
+        lastActivity: new Date()
       }
     });
     

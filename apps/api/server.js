@@ -407,6 +407,7 @@ fastify.register(require('./routes/discussions.routes'));
 fastify.register(require('./routes/agents.routes'));
 fastify.register(require('./routes/ai.routes'));
 fastify.register(require('./routes/dashboard.routes'));
+fastify.register(require('./routes/billing.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {

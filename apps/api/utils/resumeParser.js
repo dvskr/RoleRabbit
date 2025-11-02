@@ -44,49 +44,72 @@ async function parseResumeText(text) {
  * Parse resume using OpenAI
  */
 async function parseWithAI(text) {
-  const prompt = `Extract the following information from this resume and return ONLY valid JSON (no markdown, no code blocks, just pure JSON):
+const prompt = `Extract the following information from this resume and return ONLY valid JSON (no markdown, no code blocks, just pure JSON). Follow the schema exactly and provide empty arrays when data is absent:
 
 {
   "personalInfo": {
-    "firstName": "First name",
-    "lastName": "Last name",
-    "email": "email@example.com",
-    "phone": "phone number",
-    "location": "City, State"
+    "firstName": "",
+    "lastName": "",
+    "email": "",
+    "phone": "",
+    "location": ""
   },
-  "professionalSummary": "Full professional summary/bio",
-  "currentRole": "Current job title",
-  "currentCompany": "Current company name",
+  "professionalSummary": "",
+  "currentRole": "",
+  "currentCompany": "",
   "experience": [{
-    "company": "Company name",
-    "position": "Job title",
-    "period": "Start - End dates",
-    "location": "City, State",
-    "description": "Job description",
-    "client": "Client name (if applicable for consulting/freelance work)",
+    "company": "",
+    "position": "",
+    "location": "",
+    "startDate": "YYYY-MM",
+    "endDate": "YYYY-MM or empty for current",
+    "isCurrent": false,
+    "period": "Start Month YYYY - End Month YYYY or Present",
+    "description": "",
+    "achievements": [""],
+    "technologies": [""],
+    "client": "",
     "projectType": "Full-time | Part-time | Contract | Freelance | Consulting | Client Project"
   }],
-  "skills": ["skill1", "skill2", "skill3"],
   "education": [{
-    "school": "School name",
-    "degree": "Degree name",
-    "field": "Field of study",
-    "period": "Start - End dates"
-  }],
-  "certifications": [{
-    "name": "Certification name",
-    "issuer": "Issuing organization",
-    "date": "Date obtained"
+    "school": "",
+    "degree": "",
+    "field": "",
+    "startDate": "YYYY",
+    "endDate": "YYYY or Present",
+    "period": "Start YYYY - End YYYY",
+    "description": ""
   }],
   "projects": [{
-    "name": "Project name",
-    "description": "Project description",
-    "technologies": ["tech1", "tech2"]
+    "name": "",
+    "description": "",
+    "technologies": [""],
+    "link": "",
+    "github": "",
+    "date": ""
   }],
+  "skills": [""],
+  "certifications": [{
+    "name": "",
+    "issuer": "",
+    "date": "YYYY or Month YYYY",
+    "expiryDate": "",
+    "description": ""
+  }],
+  "volunteerExperiences": [{
+    "organization": "",
+    "role": "",
+    "location": "",
+    "startDate": "",
+    "endDate": "",
+    "description": ""
+  }],
+  "languages": [""],
   "links": {
-    "linkedin": "Full LinkedIn URL",
-    "github": "Full GitHub URL",
-    "website": "Personal website URL"
+    "linkedin": "",
+    "github": "",
+    "website": "",
+    "portfolio": ""
   }
 }
 
@@ -146,6 +169,55 @@ ${text.substring(0, 4000)}`; // Limit to avoid token limits
   }
 }
 
+const MONTH_NAME_TO_NUMBER = {
+  jan: '01',
+  january: '01',
+  feb: '02',
+  february: '02',
+  mar: '03',
+  march: '03',
+  apr: '04',
+  april: '04',
+  may: '05',
+  jun: '06',
+  june: '06',
+  jul: '07',
+  july: '07',
+  aug: '08',
+  august: '08',
+  sep: '09',
+  sept: '09',
+  september: '09',
+  oct: '10',
+  october: '10',
+  nov: '11',
+  november: '11',
+  dec: '12',
+  december: '12'
+};
+
+function normalizeDateFragment(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  if (/^\d{4}$/.test(trimmed)) {
+    return trimmed;
+  }
+  const monthYearMatch = trimmed.match(/([A-Za-z]+)\s+(\d{4})/);
+  if (monthYearMatch) {
+    const monthNum = MONTH_NAME_TO_NUMBER[monthYearMatch[1].toLowerCase()];
+    if (monthNum) {
+      return `${monthYearMatch[2]}-${monthNum}`;
+    }
+    return monthYearMatch[2];
+  }
+  const slashFormat = trimmed.match(/(\d{1,2})[\/](\d{4})/);
+  if (slashFormat) {
+    const month = String(slashFormat[1]).padStart(2, '0');
+    return `${slashFormat[2]}-${month}`;
+  }
+  return trimmed;
+}
+
 /**
  * Parse resume using regex (fallback method)
  */
@@ -169,12 +241,29 @@ function parseWithRegex(text) {
     links: {}
   };
 
-  // Parse name (usually first line with capitalized words)
-  const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/m);
-  if (nameMatch) {
-    const nameParts = nameMatch[1].trim().split(/\s+/);
+  // Parse name (look for first non-empty line without digits or commas)
+  const lines = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const nameLine = lines.find(line => {
+    if (!line) return false;
+    if (/[@\d,]/.test(line)) return false; // skip lines with email, digits, or commas (likely not name)
+    return /^[A-Za-z][A-Za-z\s.'-]+$/.test(line);
+  });
+
+  if (nameLine) {
+    const nameParts = nameLine.trim().split(/\s+/);
     parsed.personalInfo.firstName = nameParts[0] || '';
     parsed.personalInfo.lastName = nameParts.slice(1).join(' ') || '';
+  } else {
+    const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/m);
+    if (nameMatch) {
+      const nameParts = nameMatch[1].trim().split(/\s+/);
+      parsed.personalInfo.firstName = nameParts[0] || '';
+      parsed.personalInfo.lastName = nameParts.slice(1).join(' ') || '';
+    }
   }
 
   // Parse email
@@ -253,19 +342,59 @@ function parseWithRegex(text) {
   }
 
   // Parse experience
+  const extractDatesFromPeriod = (period) => {
+    if (!period) return { startDate: '', endDate: '', isCurrent: false };
+    const rangeMatch = period.match(/(\w+\s+\d{4}|\d{4})(?:\s*[-–]\s*)(\w+\s+\d{4}|\d{4}|Present|Current)/i);
+    if (rangeMatch) {
+      const startDate = normalizeDateFragment(rangeMatch[1]);
+      const endRaw = rangeMatch[2];
+      const isCurrent = /present|current/i.test(endRaw);
+      const endDate = isCurrent ? '' : normalizeDateFragment(endRaw);
+      return { startDate, endDate, isCurrent };
+    }
+
+    const singleYear = period.match(/(\d{4})/);
+    if (singleYear) {
+      return { startDate: singleYear[1], endDate: '', isCurrent: true };
+    }
+
+    return { startDate: '', endDate: '', isCurrent: false };
+  };
+
   const experienceSection = text.match(/(?:EXPERIENCE|WORK HISTORY|EMPLOYMENT)[:\s]*(.*?)(?:EDUCATION|SKILLS|PROJECTS|CERTIFICATIONS)/is);
   if (experienceSection) {
-    const expText = experienceSection[1];
+    const expText = experienceSection[1].replace(/^\s*(?:EXPERIENCE|WORK HISTORY|EMPLOYMENT)[:\s-]*/i, '');
     // Try to extract individual jobs
-    const jobPattern = /([A-Z][^\n]+?)\s+([A-Z][^\n]+?)\s+(\d{4}|\w+)\s*[-–]\s*(\d{4}|Present|Current)/g;
+    const jobPattern = /([^\n]+?)\s{1,}([A-Za-z][^\n]+?)(?=\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December|\d{4}))\s+(?:,\s*)?([A-Za-z]{3,9}\s+\d{4}|\d{4})\s*[-–]\s*([A-Za-z]{3,9}\s+\d{4}|\d{4}|Present|Current)/g;
     let match;
     while ((match = jobPattern.exec(expText)) !== null && parsed.experience.length < 5) {
+      const period = `${match[3]} - ${match[4]}`;
+      const { startDate, endDate, isCurrent } = extractDatesFromPeriod(period);
+      let company = (match[1] || '').trim();
+      let position = (match[2] || '').trim();
+
+      if (!company || /experience/i.test(company) || company.length <= 3 || position.includes(company)) {
+        const combined = `${match[1] || ''} ${match[2] || ''}`.trim();
+        const split = splitCompanyAndRole(combined);
+        if (split) {
+          company = split.company;
+          position = split.position;
+        }
+      }
+
       parsed.experience.push({
-        company: match[1]?.trim() || '',
-        position: match[2]?.trim() || '',
-        period: `${match[3]} - ${match[4]}`,
+        company,
+        position,
+        period,
         location: '',
-        description: ''
+        description: '',
+        achievements: [],
+        technologies: [],
+        startDate,
+        endDate,
+        isCurrent,
+        client: '',
+        projectType: ''
       });
     }
   }
@@ -287,11 +416,27 @@ function parseWithRegex(text) {
     const schoolPattern = /([A-Z][^\n]+?)\s+([A-Z][^\n]*?)\s+(\d{4})\s*[-–]\s*(\d{4}|Present)/g;
     let match;
     while ((match = schoolPattern.exec(eduText)) !== null && parsed.education.length < 5) {
+      const period = `${match[3]} - ${match[4]}`;
+      let schoolName = match[1]?.trim() || '';
+      let degreeInfo = match[2]?.trim() || '';
+
+      const splitDegree = degreeInfo.split(/\s+(?=(?:B\.?(?:A|S)|Bachelor|Master|M\.?(?:A|S)|MBA|MSc|MS|Ph\.?D|Associate|Diploma|Certificate))/i);
+      if (splitDegree.length > 1) {
+        schoolName = `${schoolName} ${splitDegree[0]}`.trim();
+        degreeInfo = splitDegree.slice(1).join(' ').trim();
+      } else if (!schoolName && degreeInfo) {
+        schoolName = degreeInfo;
+        degreeInfo = '';
+      }
+
       parsed.education.push({
-        school: match[1]?.trim() || '',
-        degree: match[2]?.trim() || '',
+        school: schoolName,
+        degree: degreeInfo,
         field: '',
-        period: `${match[3]} - ${match[4]}`
+        period,
+        startDate: match[3] || '',
+        endDate: /present/i.test(match[4]) ? '' : match[4],
+        description: ''
       });
     }
   }
@@ -335,25 +480,311 @@ function parseWithRegex(text) {
 /**
  * Normalize parsed data to ensure consistent format
  */
-function normalizeParsedData(data) {
+function normalizeParsedData(raw) {
+  const source = raw || {};
+  const personalInfo = source.personalInfo || {};
+
+  const normalizeExperienceItem = (item) => {
+    if (!item || typeof item !== 'object') return null;
+
+    const derivedFromPeriod = parsePeriod(item.period);
+
+    let company = item.company || item.employer || '';
+    let position = item.position || item.title || '';
+
+    if (!company || /experience/i.test(company) || company.length <= 3 || position.includes(company)) {
+      const split = splitCompanyAndRole(`${company} ${position}`.trim()) || splitCompanyAndRole(position);
+      if (split) {
+        company = split.company;
+        position = split.position;
+      }
+    }
+
+    company = company.replace(/^[\s:,-]*(?:experience|work history)[:\s-]*/i, '').trim();
+    position = position.replace(/^[\s:,-]*(?:experience|work history)[:\s-]*/i, '').trim();
+
+    let start = item.startDate || derivedFromPeriod.startDate || '';
+    let end = item.endDate || derivedFromPeriod.endDate || '';
+    const isCurrent = typeof item.isCurrent === 'boolean'
+      ? item.isCurrent
+      : derivedFromPeriod.isCurrent;
+
+    const period = item.period || buildPeriodString(start, end, isCurrent);
+
+    const achievements = Array.isArray(item.achievements)
+      ? item.achievements
+      : item.achievements
+        ? [item.achievements]
+        : [];
+    const technologies = Array.isArray(item.technologies)
+      ? item.technologies
+      : item.technologies
+        ? [item.technologies]
+        : [];
+
+    return {
+      company,
+      position,
+      location: item.location || '',
+      startDate: start,
+      endDate: end,
+      isCurrent,
+      period,
+      description: item.description || '',
+      achievements,
+      technologies,
+      client: item.client || '',
+      projectType: item.projectType || ''
+    };
+  };
+
+  const normalizeEducationItem = (item) => {
+    if (!item || typeof item !== 'object') return null;
+    let start = item.startDate || '';
+    let end = item.endDate || '';
+    const derived = parsePeriod(item.period);
+    if (!start && derived.startDate) start = derived.startDate;
+    if (!end && derived.endDate) end = derived.endDate;
+    const period = item.period || buildPeriodString(start, end, false);
+
+    let school = item.school || item.institution || '';
+    let degree = item.degree || '';
+
+    const combined = [school, degree].filter(Boolean).join(' ').replace(/\s{2,}/g, ' ').trim();
+    const degreeMarker = combined.match(/(B\.?(?:A|S)|BSc|BA|BS|Bachelor|Master|M\.?(?:A|S)|MBA|MSc|MS|Ph\.?D|Associate|Diploma|Certificate)/i);
+    if ((!school || school.length <= 3 || /university|college|institute|school/i.test(degree)) && degreeMarker) {
+      const idx = combined.toLowerCase().indexOf(degreeMarker[0].toLowerCase());
+      if (idx > 0) {
+        school = combined.slice(0, idx).trim();
+        degree = combined.slice(idx).trim();
+      }
+    } else {
+      school = school || combined;
+    }
+
+    return {
+      school: school,
+      degree: degree,
+      field: item.field || item.area || '',
+      startDate: start,
+      endDate: end,
+      period,
+      description: item.description || '',
+      gpa: item.gpa || ''
+    };
+  };
+
+  const normalizeProjectItem = (item) => {
+    if (!item || typeof item !== 'object') return null;
+    const technologies = Array.isArray(item.technologies)
+      ? item.technologies
+      : item.technologies
+        ? [item.technologies]
+        : [];
+    return {
+      name: item.name || item.title || '',
+      description: item.description || '',
+      technologies,
+      link: item.link || item.url || '',
+      github: item.github || '',
+      date: item.date || item.period || ''
+    };
+  };
+
+  const normalizeCertification = (item) => {
+    if (!item || typeof item !== 'object') return null;
+    return {
+      name: item.name || '',
+      issuer: item.issuer || item.organization || '',
+      date: item.date || item.issuedDate || '',
+      expiryDate: item.expiryDate || item.validUntil || null,
+      description: item.description || ''
+    };
+  };
+
+  const normalizeVolunteer = (item) => {
+    if (!item || typeof item !== 'object') return null;
+    return {
+      organization: item.organization || '',
+      role: item.role || '',
+      location: item.location || '',
+      startDate: item.startDate || '',
+      endDate: item.endDate || '',
+      description: item.description || ''
+    };
+  };
+
+  const mergeExperienceSources = () => {
+    const experienceArray = Array.isArray(source.experience) ? source.experience : [];
+    const workArray = Array.isArray(source.workExperiences) ? source.workExperiences : [];
+    const combined = [...experienceArray, ...workArray];
+    return combined
+      .map(normalizeExperienceItem)
+      .filter(Boolean);
+  };
+
+  const buildLinks = () => {
+    const links = source.links || {};
+    return {
+      linkedin: links.linkedin || '',
+      github: links.github || '',
+      website: links.website || links.portfolio || '',
+      portfolio: links.portfolio || ''
+    };
+  };
+
   return {
     personalInfo: {
-      firstName: data.personalInfo?.firstName || data.firstName || (data.name?.split(' ')[0] || ''),
-      lastName: data.personalInfo?.lastName || data.lastName || (data.name?.split(' ').slice(1).join(' ') || ''),
-      email: data.personalInfo?.email || data.email || '',
-      phone: data.personalInfo?.phone || data.phone || '',
-      location: data.personalInfo?.location || data.location || ''
+      firstName: personalInfo.firstName || source.firstName || (source.name ? source.name.split(' ')[0] : ''),
+      lastName: personalInfo.lastName || source.lastName || (source.name ? source.name.split(' ').slice(1).join(' ') : ''),
+      email: personalInfo.email || source.email || '',
+      phone: personalInfo.phone || source.phone || '',
+      location: personalInfo.location || source.location || ''
     },
-    professionalSummary: data.professionalSummary || data.summary || data.bio || '',
-    currentRole: data.currentRole || data.title || '',
-    currentCompany: data.currentCompany || data.company || '',
-    experience: Array.isArray(data.experience) ? data.experience : [],
-    skills: Array.isArray(data.skills) ? data.skills : [],
-    education: Array.isArray(data.education) ? data.education : [],
-    certifications: Array.isArray(data.certifications) ? data.certifications : [],
-    projects: Array.isArray(data.projects) ? data.projects : [],
-    links: data.links || {}
+    professionalSummary: source.professionalSummary || source.summary || source.bio || '',
+    currentRole: source.currentRole || source.title || '',
+    currentCompany: source.currentCompany || source.company || '',
+    experience: mergeExperienceSources(),
+    education: (Array.isArray(source.education) ? source.education : [])
+      .map(normalizeEducationItem)
+      .filter(Boolean),
+    certifications: (Array.isArray(source.certifications) ? source.certifications : [])
+      .map(normalizeCertification)
+      .filter(Boolean),
+    projects: (Array.isArray(source.projects) ? source.projects : [])
+      .map(normalizeProjectItem)
+      .filter(Boolean),
+    skills: Array.isArray(source.skills)
+      ? source.skills.filter((skill) => typeof skill === 'string' && skill.trim().length > 0).map((skill) => skill.trim())
+      : [],
+    volunteerExperiences: (Array.isArray(source.volunteerExperiences) ? source.volunteerExperiences : [])
+      .map(normalizeVolunteer)
+      .filter(Boolean),
+    languages: Array.isArray(source.languages)
+      ? source.languages.filter((lang) => typeof lang === 'string' && lang.trim().length > 0).map((lang) => lang.trim())
+      : [],
+    links: buildLinks()
   };
+}
+
+function buildPeriodString(startDate, endDate, isCurrent) {
+  const start = startDate ? formatYearOrMonth(startDate) : '';
+  const end = isCurrent ? 'Present' : endDate ? formatYearOrMonth(endDate) : '';
+  if (!start && !end) return '';
+  if (!start) return end;
+  if (!end) return start;
+  return `${start} - ${end}`;
+}
+
+function formatYearOrMonth(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  if (/^\d{4}$/.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    const [year, month] = trimmed.split('-');
+    return `${month}/${year}`;
+  }
+  if (/^\d{2}\/\d{4}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return trimmed;
+}
+
+function inferIsCurrent(endDate) {
+  if (!endDate) return true;
+  const normalized = String(endDate).toLowerCase();
+  return ['current', 'present', 'ongoing'].includes(normalized);
+}
+
+function parsePeriod(period) {
+  if (!period) {
+    return { startDate: '', endDate: '', isCurrent: false };
+  }
+
+  const rangeMatch = period.match(/([A-Za-z]{3,9}\s+\d{4}|\d{4})\s*[-–]\s*([A-Za-z]{3,9}\s+\d{4}|\d{4}|Present|Current)/i);
+  if (rangeMatch) {
+    const startDate = normalizeDateFragment(rangeMatch[1]);
+    const endRaw = rangeMatch[2];
+    const isCurrent = /present|current/i.test(endRaw);
+    const endDate = isCurrent ? '' : normalizeDateFragment(endRaw);
+    return { startDate, endDate, isCurrent };
+  }
+
+  const singleYear = period.match(/(\d{4})/);
+  if (singleYear) {
+    return { startDate: singleYear[1], endDate: '', isCurrent: true };
+  }
+
+  return { startDate: '', endDate: '', isCurrent: false };
+}
+
+function splitCompanyAndRole(text) {
+  if (!text) return null;
+  const cleaned = text.trim().replace(/\s{2,}/g, ' ');
+  const stripped = cleaned.replace(/^(?:experience|work history)[:\s-]*/i, '').trim();
+  if (!stripped) return null;
+
+  const suffixPattern = /^(.*?\b(?:Inc\.|Incorporated|LLC|Ltd\.?|Corporation|Company|Corp\.|Group|Technologies|Systems|Solutions|Studios|Agency|Partners|Holdings))\s+(.*)$/i;
+  const suffixMatch = stripped.match(suffixPattern);
+  if (suffixMatch) {
+    return {
+      company: suffixMatch[1].trim(),
+      position: suffixMatch[2].trim()
+    };
+  }
+
+  const dotIndex = stripped.indexOf('. ');
+  if (dotIndex !== -1) {
+    return {
+      company: stripped.slice(0, dotIndex + 1).trim(),
+      position: stripped.slice(dotIndex + 1).trim()
+    };
+  }
+
+  const commaIndex = stripped.indexOf(', ');
+  if (commaIndex !== -1) {
+    return {
+      company: stripped.slice(0, commaIndex).trim(),
+      position: stripped.slice(commaIndex + 1).trim()
+    };
+  }
+
+  const atIndex = stripped.toLowerCase().indexOf(' at ');
+  if (atIndex !== -1) {
+    return {
+      company: stripped.slice(atIndex + 4).trim(),
+      position: stripped.slice(0, atIndex).trim()
+    };
+  }
+
+  const withIndex = stripped.toLowerCase().indexOf(' with ');
+  if (withIndex !== -1) {
+    return {
+      company: stripped.slice(withIndex + 6).trim(),
+      position: stripped.slice(0, withIndex).trim()
+    };
+  }
+
+  const segments = stripped.split(/\s[-–—]\s|\s\|\s|\u2022/).filter(Boolean);
+  if (segments.length >= 2) {
+    return {
+      company: segments[0].trim(),
+      position: segments.slice(1).join(' ').trim()
+    };
+  }
+
+  const words = stripped.split(' ');
+  if (words.length > 3) {
+    const pivot = Math.max(1, Math.min(words.length - 1, 3));
+    return {
+      company: words.slice(0, pivot).join(' ').trim(),
+      position: words.slice(pivot).join(' ').trim()
+    };
+  }
+
+  return null;
 }
 
 module.exports = {

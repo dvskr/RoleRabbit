@@ -6,12 +6,20 @@ interface CancelSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  isSubmitting: boolean;
+  planName: string;
+  renewalDate: string | null;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = ({
   isOpen,
   onClose,
-  onConfirm
+  onConfirm,
+  isSubmitting,
+  planName,
+  renewalDate,
+  cancelAtPeriodEnd
 }) => {
   const { theme } = useTheme();
   const colors = theme?.colors;
@@ -116,8 +124,17 @@ export const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = (
               className="text-sm"
               style={{ color: colors.badgeWarningText }}
             >
-              <strong>Current Plan:</strong> Professional Plan ($29/month)<br />
-              <strong>Access until:</strong> January 31, 2025
+              <strong>Current Plan:</strong> {planName}<br />
+              {renewalDate && (
+                <>
+                  <strong>Access until:</strong> {new Date(renewalDate).toLocaleDateString()}<br />
+                </>
+              )}
+              {cancelAtPeriodEnd && (
+                <span>
+                  Cancellation is already scheduled for the end of the period.
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -142,19 +159,26 @@ export const CancelSubscriptionModal: React.FC<CancelSubscriptionModalProps> = (
           </button>
           <button
             onClick={onConfirm}
+            disabled={isSubmitting}
             className="flex-1 px-4 py-2 rounded-lg transition-colors"
             style={{
-              background: colors.errorRed,
-              color: 'white',
+              background: isSubmitting ? colors.inputBackground : colors.errorRed,
+              color: isSubmitting ? colors.tertiaryText : 'white',
+              opacity: isSubmitting ? 0.6 : 1,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
+              if (!isSubmitting) {
+                e.currentTarget.style.opacity = '0.9';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
+              if (!isSubmitting) {
+                e.currentTarget.style.opacity = '1';
+              }
             }}
           >
-            Yes, Cancel Subscription
+            {isSubmitting ? 'Processing…' : 'Yes, Cancel Subscription'}
           </button>
         </div>
       </div>

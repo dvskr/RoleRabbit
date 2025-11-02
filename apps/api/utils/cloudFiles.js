@@ -14,6 +14,7 @@ const logger = require('./logger');
 function transformFile(file) {
   // Get owner email from user relation or fallback to userId
   const owner = file.user?.email || file.userId || 'unknown@example.com';
+  const sizeBytes = typeof file.size === 'number' ? file.size : Number.parseInt(file.size, 10) || 0;
   
   return {
     ...file,
@@ -21,13 +22,16 @@ function transformFile(file) {
     sharedWith: file.shares || [],
     comments: file.comments || [],
     tags: file.tags ? (typeof file.tags === 'string' ? file.tags.split(',').map(t => t.trim()) : file.tags) : [],
-    size: typeof file.size === 'number' ? formatBytes(file.size) : file.size,
+    size: formatBytes(sizeBytes),
+    sizeBytes,
     lastModified: file.updatedAt || file.createdAt,
     version: file.version || 1,
     downloadCount: file.downloadCount || 0,
     viewCount: file.viewCount || 0,
     isStarred: file.isStarred || false,
-    isArchived: file.isArchived || false
+    isArchived: file.isArchived || false,
+    storagePath: file.storagePath || null,
+    fileName: file.fileName || file.name
   };
 }
 
@@ -119,6 +123,12 @@ async function getCloudFileById(fileId) {
  */
 async function createCloudFile(userId, fileData) {
   try {
+    const serializedData = fileData.data !== undefined
+      ? (typeof fileData.data === 'string'
+        ? fileData.data
+        : JSON.stringify(fileData.data))
+      : null;
+
     const file = await prisma.cloudFile.create({
       data: {
         userId,
@@ -126,9 +136,8 @@ async function createCloudFile(userId, fileData) {
         type: fileData.type || 'document',
         size: fileData.size || 0,
         contentType: fileData.contentType || 'application/octet-stream',
-        data: typeof fileData.data === 'string' 
-          ? fileData.data 
-          : JSON.stringify(fileData.data || ''),
+        data: serializedData,
+        storagePath: fileData.storagePath || null,
         folderId: fileData.folderId,
         tags: fileData.tags,
         description: fileData.description,
@@ -238,6 +247,23 @@ async function permanentlyDeleteCloudFile(fileId) {
   }
 }
 
+async function incrementDownloadCount(fileId) {
+  try {
+    await prisma.cloudFile.update({
+      where: {
+        id: fileId
+      },
+      data: {
+        downloadCount: {
+          increment: 1
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Error incrementing download count:', error);
+  }
+}
+
 /**
  * Restore a deleted cloud file from recycle bin
  * @param {string} fileId - File ID
@@ -320,6 +346,7 @@ module.exports = {
   deleteCloudFile,
   permanentlyDeleteCloudFile,
   restoreCloudFile,
-  getCloudFilesByFolder
+  getCloudFilesByFolder,
+  incrementDownloadCount
 };
 

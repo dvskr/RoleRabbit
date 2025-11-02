@@ -6,7 +6,7 @@
  * - Cloud file management
  */
 
-const { 
+const {
   getCloudFilesByUserId,
   getCloudFileById,
   createCloudFile,
@@ -14,7 +14,8 @@ const {
   deleteCloudFile,
   permanentlyDeleteCloudFile,
   restoreCloudFile,
-  getCloudFilesByFolder
+  getCloudFilesByFolder,
+  incrementDownloadCount
 } = require('../utils/cloudFiles');
 const { 
   getFileShares,
@@ -23,6 +24,24 @@ const {
   deleteFileShare
 } = require('../utils/fileShares');
 const { authenticate } = require('../middleware/auth');
+const { ensureWithinQuota, getUserStorageInfo } = require('../utils/storageQuota');
+const path = require('path');
+const fs = require('fs');
+const fsPromises = require('fs/promises');
+const {
+  sanitizeFilename,
+  parseUploadFields,
+  deriveDisplayNameFromFilename,
+  UploadValidationError
+} = require('../utils/uploadUtils');
+
+const UPLOADS_ROOT = process.env.FILES_UPLOAD_DIR
+  ? path.resolve(process.env.FILES_UPLOAD_DIR)
+  : path.join(__dirname, '../../uploads');
+
+async function ensureDirectory(dirPath) {
+  await fsPromises.mkdir(dirPath, { recursive: true });
+}
 
 /**
  * Register all file routes with Fastify instance
@@ -180,8 +199,14 @@ async function fileRoutes(fastify, options) {
         return;
       }
       
+      if (existingFile.storagePath) {
+        const absolutePath = path.join(UPLOADS_ROOT, existingFile.storagePath);
+        await fsPromises.unlink(absolutePath).catch(() => {});
+      }
+
       await permanentlyDeleteCloudFile(id);
-      return { success: true };
+      const storage = await getUserStorageInfo(request.user.userId);
+      return { success: true, storage };
     } catch (error) {
       reply.status(500).send({ error: error.message });
     }
@@ -228,13 +253,23 @@ async function fileRoutes(fastify, options) {
       
       // Transform to legacy format
       const savedResumes = files
-        .filter(file => file.type === 'resume')
-        .map(file => ({
-          id: file.id,
-          name: file.name,
-          data: JSON.parse(file.data),
-          savedAt: file.createdAt
-        }));
+        .filter(file => file.type === 'resume' && file.data)
+        .map(file => {
+          let parsedData = null;
+          try {
+            parsedData = typeof file.data === 'string' ? JSON.parse(file.data) : file.data;
+          } catch (parseError) {
+            parsedData = null;
+          }
+
+          return {
+            id: file.id,
+            name: file.name,
+            data: parsedData,
+            savedAt: file.createdAt
+          };
+        })
+        .filter(file => file.data !== null);
       
       return { 
         success: true, 
@@ -245,57 +280,176 @@ async function fileRoutes(fastify, options) {
     }
   });
 
-  // File upload endpoint
-  fastify.post('/api/files/upload', {
+  fastify.get('/api/storage/quota', {
     preHandler: authenticate
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
+      const storage = await getUserStorageInfo(userId);
+      reply.send({ storage });
+    } catch (error) {
+      reply.status(500).send({ error: error.message });
+    }
+  });
+
+  // File upload endpoint
+  fastify.post('/api/files/upload', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    const userId = request.user?.userId;
+    let savedFilePath = null;
+
+    try {
       const data = await request.file();
-      
+
       if (!data) {
         return reply.status(400).send({ error: 'No file uploaded' });
       }
-      
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'application/msword', 
+
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'image/jpeg', 'image/png', 'image/gif', 'text/plain'];
-      
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'text/plain'
+      ];
+
       if (!allowedTypes.includes(data.mimetype)) {
         return reply.status(400).send({ error: 'Invalid file type' });
       }
-      
-      // Validate file size (10MB max)
+
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (data.file.bytesRead > maxSize) {
         return reply.status(400).send({ error: 'File too large (max 10MB)' });
       }
-      
-      // Generate unique filename
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const filename = `file-${uniqueSuffix}-${data.filename}`;
-      
-      // Save file data to cloud file
+
       const buffer = await data.toBuffer();
+      const fileSize = buffer.length;
+
+      try {
+        await ensureWithinQuota(userId, fileSize);
+      } catch (quotaError) {
+        if (quotaError.code === 'STORAGE_QUOTA_EXCEEDED') {
+          const storage = await getUserStorageInfo(userId);
+          return reply.status(413).send({
+            error: quotaError.message,
+            code: quotaError.code,
+            storage,
+            meta: quotaError.meta
+          });
+        }
+        throw quotaError;
+      }
+
+      const userDir = path.join(UPLOADS_ROOT, userId);
+      await ensureDirectory(userDir);
+
+      const originalName = data.filename || 'untitled';
+      const sanitizedOriginalName = sanitizeFilename(originalName);
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const diskFileName = `${uniqueSuffix}-${sanitizedOriginalName}`;
+      const absoluteFilePath = path.join(userDir, diskFileName);
+
+      await fsPromises.writeFile(absoluteFilePath, buffer);
+      savedFilePath = absoluteFilePath;
+
+      const relativePath = path.relative(UPLOADS_ROOT, absoluteFilePath).replace(/\\/g, '/');
+      const fields = data.fields || {};
+
+      let metadata;
+      try {
+        const defaultDisplayName = deriveDisplayNameFromFilename(sanitizedOriginalName);
+        metadata = parseUploadFields(fields, {
+          defaultDisplayName,
+          defaultType: data.fieldname || 'document'
+        });
+      } catch (validationError) {
+        if (validationError instanceof UploadValidationError) {
+          await fsPromises.unlink(absoluteFilePath).catch(() => {});
+          return reply.status(400).send({ error: validationError.message });
+        }
+        throw validationError;
+      }
+
+      const { displayName, type, tags, description, folderId, isPublic } = metadata;
+      const formattedTags = Array.isArray(tags) && tags.length > 0 ? tags.join(',') : undefined;
+
       const fileData = {
-        name: filename,
-        fileName: data.filename,
-        type: data.fieldname || 'document',
-        size: buffer.length,
+        name: displayName,
+        fileName: originalName,
+        type,
+        size: fileSize,
         contentType: data.mimetype,
-        data: buffer.toString('base64'),
-        folderId: request.body?.folderId,
-        tags: request.body?.tags,
-        description: request.body?.description
+        storagePath: relativePath,
+        folderId,
+        tags: formattedTags,
+        description,
+        isPublic: isPublicRaw ? isPublicRaw === 'true' : false
       };
-      
+
       const cloudFile = await createCloudFile(userId, fileData);
-      
-      return {
+      const storage = await getUserStorageInfo(userId);
+
+      return reply.send({
         success: true,
-        file: cloudFile
-      };
+        file: cloudFile,
+        storage
+      });
+    } catch (error) {
+      if (savedFilePath) {
+        await fsPromises.unlink(savedFilePath).catch(() => {});
+      }
+
+      if (error.code === 'STORAGE_QUOTA_EXCEEDED') {
+        const storage = userId ? await getUserStorageInfo(userId) : null;
+        return reply.status(413).send({
+          error: error.message,
+          code: error.code,
+          storage,
+          meta: error.meta
+        });
+      }
+
+      reply.status(500).send({ error: error.message });
+    }
+  });
+
+  // File download endpoint
+  fastify.get('/api/files/:id/download', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const userId = request.user.userId;
+
+      const file = await getCloudFileById(id);
+      if (!file) {
+        return reply.status(404).send({ error: 'File not found' });
+      }
+      if (file.userId !== userId) {
+        reply.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
+      if (!file.storagePath) {
+        return reply.status(400).send({ error: 'File storage path missing' });
+      }
+
+      const absolutePath = path.join(UPLOADS_ROOT, file.storagePath);
+
+      if (!fs.existsSync(absolutePath)) {
+        return reply.status(410).send({ error: 'File is no longer available on the server' });
+      }
+
+      await incrementDownloadCount(id);
+
+      reply.header('Content-Type', file.contentType || 'application/octet-stream');
+      reply.header('Content-Disposition', `attachment; filename="${file.fileName || file.name}"`);
+
+      const stream = fs.createReadStream(absolutePath);
+      return reply.send(stream);
     } catch (error) {
       reply.status(500).send({ error: error.message });
     }

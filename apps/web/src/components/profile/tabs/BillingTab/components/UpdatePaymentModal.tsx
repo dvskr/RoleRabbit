@@ -8,9 +8,11 @@ interface UpdatePaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   paymentData: PaymentData;
-  onUpdatePaymentData: (field: keyof PaymentData, value: string) => void;
+  onUpdatePaymentData: (field: keyof PaymentData, value: string | boolean) => void;
   onSubmit: () => void;
   isValid: boolean;
+  isSubmitting: boolean;
+  errorMessage?: string | null;
 }
 
 export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
@@ -19,7 +21,9 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
   paymentData,
   onUpdatePaymentData,
   onSubmit,
-  isValid
+  isValid,
+  isSubmitting,
+  errorMessage
 }) => {
   const { theme } = useTheme();
   const colors = theme?.colors;
@@ -78,6 +82,19 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
             <X size={20} />
           </button>
         </div>
+
+        {errorMessage && (
+          <div
+            className="mb-4 p-3 rounded-lg text-sm"
+            style={{
+              background: colors.badgeErrorBg,
+              border: `1px solid ${colors.badgeErrorBorder}`,
+              color: colors.badgeErrorText
+            }}
+          >
+            {errorMessage}
+          </div>
+        )}
 
         <div className="space-y-4">
           {/* Card Number */}
@@ -254,6 +271,19 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
               Your payment information is encrypted and secure. We never store your full card number.
             </p>
           </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              id="set-default-method"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={paymentData.setAsDefault}
+              onChange={(e) => onUpdatePaymentData('setAsDefault', e.target.checked)}
+            />
+            <label htmlFor="set-default-method" className="text-sm" style={{ color: colors.primaryText }}>
+              Set as default payment method
+            </label>
+          </div>
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -276,26 +306,26 @@ export const UpdatePaymentModal: React.FC<UpdatePaymentModalProps> = ({
           </button>
           <button
             onClick={onSubmit}
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
             className="flex-1 px-4 py-2 rounded-lg transition-colors"
             style={{
-              background: !isValid ? colors.inputBackground : colors.primaryBlue,
-              color: !isValid ? colors.tertiaryText : 'white',
-              opacity: !isValid ? 0.5 : 1,
-              cursor: !isValid ? 'not-allowed' : 'pointer',
+              background: !isValid || isSubmitting ? colors.inputBackground : colors.primaryBlue,
+              color: !isValid || isSubmitting ? colors.tertiaryText : 'white',
+              opacity: !isValid || isSubmitting ? 0.5 : 1,
+              cursor: !isValid || isSubmitting ? 'not-allowed' : 'pointer',
             }}
             onMouseEnter={(e) => {
-              if (isValid) {
+              if (isValid && !isSubmitting) {
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
             onMouseLeave={(e) => {
-              if (isValid) {
+              if (isValid && !isSubmitting) {
                 e.currentTarget.style.opacity = '1';
               }
             }}
           >
-            Update Payment Method
+            {isSubmitting ? 'Saving…' : 'Update Payment Method'}
           </button>
         </div>
       </div>

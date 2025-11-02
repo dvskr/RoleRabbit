@@ -465,6 +465,66 @@ async function authRoutes(fastify, options) {
       });
     }
   });
+
+  // Change password endpoint (for authenticated users)
+  const changePasswordHandler = async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { currentPassword, newPassword, confirmPassword } = request.body;
+      
+      // Validate required fields
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Current password, new password, and confirmation are required'
+        });
+      }
+      
+      // Validate passwords match
+      if (newPassword !== confirmPassword) {
+        return reply.status(400).send({
+          success: false,
+          error: 'New password and confirmation do not match'
+        });
+      }
+      
+      // Validate password strength
+      if (!validatePassword(newPassword)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Password must be at least 8 characters with uppercase, lowercase, and number'
+        });
+      }
+      
+      // Update password using auth utility
+      const { updateUserPassword } = require('../auth');
+      await updateUserPassword(userId, currentPassword, newPassword);
+      
+      reply.send({
+        success: true,
+        message: 'Password changed successfully'
+      });
+    } catch (error) {
+      logger.error('Error changing password:', error);
+      reply.status(400).send({
+        success: false,
+        error: error.message || 'Failed to change password'
+      });
+    }
+  };
+
+  fastify.put('/api/auth/password', {
+    preHandler: authenticate
+  }, changePasswordHandler);
+
+  // Backwards compatibility for older clients hitting /password/change
+  fastify.put('/api/auth/password/change', {
+    preHandler: authenticate
+  }, changePasswordHandler);
+
+  fastify.post('/api/auth/password/change', {
+    preHandler: authenticate
+  }, changePasswordHandler);
 }
 
 module.exports = authRoutes;

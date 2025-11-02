@@ -6,7 +6,7 @@
  * - Resume export functionality
  */
 
-const { 
+const {
   getResumesByUserId,
   getResumeById,
   createResume,
@@ -22,6 +22,112 @@ const CrudService = require('../utils/crudService');
 
 const resumesService = new CrudService('resume');
 
+function sanitizeFileName(name = '') {
+  const fallback = 'resume';
+  if (typeof name !== 'string') return fallback;
+  const trimmed = name.trim();
+  if (!trimmed) return fallback;
+  return trimmed
+    .replace(/[^a-z0-9\-_.\s]/gi, '')
+    .replace(/\s+/g, '_')
+    .replace(/_{2,}/g, '_')
+    .substring(0, 120) || fallback;
+}
+
+function parseResumeDataPayload(data) {
+  if (!data) return {};
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch (error) {
+      return {};
+    }
+  }
+  if (typeof data === 'object') {
+    return data;
+  }
+  return {};
+}
+
+function mapResumeToResponse(resume) {
+  if (!resume) return null;
+  const parsedData = parseResumeDataPayload(resume.data);
+  return {
+    id: resume.id,
+    name: resume.name,
+    fileName: resume.fileName,
+    templateId: resume.templateId,
+    data: parsedData,
+    version: resume.version,
+    isPublic: resume.isPublic,
+    createdAt: resume.createdAt,
+    lastUpdated: resume.lastUpdated,
+  };
+}
+
+function normalizeCreatePayload(payload = {}) {
+  const normalizedName = typeof payload.name === 'string' && payload.name.trim().length > 0
+    ? payload.name.trim()
+    : 'Untitled Resume';
+
+  const normalizedFileName = payload.fileName
+    ? sanitizeFileName(payload.fileName)
+    : sanitizeFileName(normalizedName);
+
+  return {
+    ...payload,
+    name: normalizedName,
+    fileName: normalizedFileName,
+  };
+}
+
+function normalizeUpdatePayload(payload = {}, existingResume = null) {
+  const updates = {};
+
+  if (payload.data !== undefined) {
+    updates.data = payload.data;
+  }
+
+  if (payload.templateId !== undefined) {
+    updates.templateId = payload.templateId;
+  }
+
+  if (payload.isPublic !== undefined) {
+    updates.isPublic = payload.isPublic;
+  }
+
+  if (payload.name !== undefined) {
+    const normalizedName = typeof payload.name === 'string' && payload.name.trim().length > 0
+      ? payload.name.trim()
+      : existingResume?.name || 'Untitled Resume';
+    updates.name = normalizedName;
+
+    const fileNameSource = payload.fileName ?? normalizedName;
+    updates.fileName = sanitizeFileName(fileNameSource);
+  } else if (payload.fileName !== undefined) {
+    updates.fileName = sanitizeFileName(payload.fileName);
+  }
+
+  updates.version = { increment: 1 };
+
+  return updates;
+}
+
+function ensureNoConflicts(existingResume, lastKnownServerUpdatedAt) {
+  if (!existingResume || !lastKnownServerUpdatedAt) {
+    return;
+  }
+
+  const clientTimestamp = new Date(lastKnownServerUpdatedAt).getTime();
+  const serverTimestamp = new Date(existingResume.lastUpdated).getTime();
+
+  if (!Number.isNaN(clientTimestamp) && clientTimestamp !== serverTimestamp) {
+    throw new ApiError(409, 'Resume has been updated in another session', true, {
+      lastUpdated: existingResume.lastUpdated,
+    });
+  }
+}
+
 /**
  * Register all resume routes with Fastify instance
  * @param {FastifyInstance} fastify - Fastify instance
@@ -33,7 +139,9 @@ async function resumeRoutes(fastify, options) {
   }, errorHandler(async (request, reply) => {
     const userId = request.user.userId;
     const resumes = await getResumesByUserId(userId);
-    return { resumes };
+    return {
+      resumes: resumes.map(mapResumeToResponse)
+    };
   }));
 
   // Create new resume
@@ -41,8 +149,8 @@ async function resumeRoutes(fastify, options) {
     preHandler: authenticate
   }, errorHandler(async (request, reply) => {
     const userId = request.user.userId;
-    const resumeData = request.body;
-    
+    const resumeData = normalizeCreatePayload(request.body || {});
+
     // Validate resume data
     const validation = validateResumeData(resumeData);
     if (!validation.isValid) {
@@ -50,9 +158,9 @@ async function resumeRoutes(fastify, options) {
     }
     
     const resume = await createResume(userId, resumeData);
-    return { 
-      success: true, 
-      resume 
+    return {
+      success: true,
+      resume: mapResumeToResponse(resume)
     };
   }));
 
@@ -67,7 +175,9 @@ async function resumeRoutes(fastify, options) {
     await requireOwnership(resumesService, id, userId);
     const resume = await getResumeById(id);
 
-    return { resume };
+    return {
+      resume: mapResumeToResponse(resume)
+    };
   }));
 
   // Export resume endpoint
@@ -105,15 +215,42 @@ async function resumeRoutes(fastify, options) {
   }, errorHandler(async (request, reply) => {
     const { id } = request.params;
     const userId = request.user.userId;
-    const updates = request.body;
+    const updates = request.body || {};
 
-    // Verify ownership
-    await requireOwnership(resumesService, id, userId);
+    const existingResume = await requireOwnership(resumesService, id, userId);
 
-    const resume = await updateResume(id, updates);
-    return { 
-      success: true, 
-      resume 
+    ensureNoConflicts(existingResume, updates.lastKnownServerUpdatedAt);
+
+    const updatePayload = normalizeUpdatePayload(updates, existingResume);
+    const resume = await updateResume(id, updatePayload);
+    return {
+      success: true,
+      resume: mapResumeToResponse(resume)
+    };
+  }));
+
+  // Auto-save resume
+  fastify.post('/api/resumes/:id/autosave', {
+    preHandler: authenticate
+  }, errorHandler(async (request, reply) => {
+    const { id } = request.params;
+    const userId = request.user.userId;
+    const updates = request.body || {};
+
+    if (updates.data === undefined) {
+      throw new ApiError(400, 'Resume data is required for auto-save');
+    }
+
+    const existingResume = await requireOwnership(resumesService, id, userId);
+
+    ensureNoConflicts(existingResume, updates.lastKnownServerUpdatedAt);
+
+    const updatePayload = normalizeUpdatePayload(updates, existingResume);
+    const resume = await updateResume(id, updatePayload);
+
+    return {
+      success: true,
+      resume: mapResumeToResponse(resume)
     };
   }));
 

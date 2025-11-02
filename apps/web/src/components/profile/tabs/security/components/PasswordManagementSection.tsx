@@ -11,7 +11,17 @@ export const PasswordManagementSection: React.FC<PasswordManagementSectionProps>
   onOpenPasswordModal,
   twoFAEnabled,
   onToggle2FA,
+  isTwoFAStatusLoading = false,
+  isTwoFAProcessing = false,
 }) => {
+  const twoFAStatusLabel = isTwoFAStatusLoading
+    ? 'Checking two-factor status…'
+    : twoFAEnabled
+      ? 'Enabled'
+      : 'Add an extra layer of security';
+
+  const isToggleDisabled = isTwoFAStatusLoading || isTwoFAProcessing;
+
   return (
     <SecurityCard colors={colors} title="Password & Authentication">
       <div className="space-y-6">
@@ -89,7 +99,7 @@ export const PasswordManagementSection: React.FC<PasswordManagementSectionProps>
                 className="text-sm"
                 style={{ color: colors.secondaryText }}
               >
-                {twoFAEnabled ? 'Enabled' : 'Add an extra layer of security'}
+                {twoFAStatusLabel}
               </p>
             </div>
           </div>
@@ -100,7 +110,10 @@ export const PasswordManagementSection: React.FC<PasswordManagementSectionProps>
             style={{
               background: twoFAEnabled ? colors.successGreen : colors.inputBackground,
               border: `1px solid ${colors.border}`,
+              opacity: isToggleDisabled ? 0.6 : 1,
+              cursor: isToggleDisabled ? 'not-allowed' : 'pointer',
             }}
+            disabled={isToggleDisabled}
             aria-label={twoFAEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication'}
             title={twoFAEnabled ? 'Disable Two-Factor Authentication' : 'Enable Two-Factor Authentication'}
           >

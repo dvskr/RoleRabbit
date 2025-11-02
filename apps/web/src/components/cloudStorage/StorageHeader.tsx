@@ -43,7 +43,14 @@ export default function StorageHeader({
     return colors.successGreen;
   };
 
-  const storageBarColor = getStorageBarColor(storageInfo.percentage);
+  const storageBarColor = getStorageBarColor(Number.isFinite(storageInfo.percentage) ? storageInfo.percentage : 0);
+  const safeUsed = Number.isFinite(storageInfo.used) ? storageInfo.used : 0;
+  const safeLimit = Number.isFinite(storageInfo.limit) ? storageInfo.limit : 0;
+  const safePercentage = Number.isFinite(storageInfo.percentage) ? storageInfo.percentage : 0;
+  const limitLabel = safeLimit > 0 ? `${safeLimit.toFixed(2)} GB` : '—';
+  const usedLabel = safeUsed.toFixed(2);
+  const percentageLabel = safeLimit > 0 ? safePercentage.toFixed(1) : '0.0';
+  const progressWidth = safeLimit > 0 ? Math.min(safePercentage, 100) : 0;
   
   return (
     <div 
@@ -52,6 +59,7 @@ export default function StorageHeader({
         background: colors.headerBackground,
         borderBottom: `1px solid ${colors.border}`,
       }}
+      data-testid="storage-header"
     >
       <div className="flex items-center justify-between">
         {/* Left Section: Title and Subtitle */}
@@ -99,20 +107,21 @@ export default function StorageHeader({
               e.currentTarget.style.borderColor = colors.border;
               e.currentTarget.style.background = colors.cardBackground;
             }}
+            data-testid="storage-usage-card"
           >
             {/* Storage Text - Compact & Elegant */}
             <div className="flex flex-col items-start min-w-[80px]">
-              <div 
+              <div
                 className="text-sm font-semibold leading-tight"
                 style={{ color: colors.primaryText }}
               >
-                {storageInfo.used} <span style={{ color: colors.tertiaryText, fontWeight: 'normal' }}>/ {storageInfo.limit} GB</span>
+                {usedLabel} GB <span style={{ color: colors.tertiaryText, fontWeight: 'normal' }}> / {limitLabel}</span>
               </div>
-              <div 
+              <div
                 className="text-xs font-semibold mt-0.5"
                 style={{ color: storageBarColor }}
               >
-                {storageInfo.percentage.toFixed(1)}%
+                {percentageLabel}%
               </div>
             </div>
             
@@ -128,7 +137,7 @@ export default function StorageHeader({
                 <div 
                   className="h-full rounded-full transition-all duration-500 ease-out relative"
                   style={{
-                    width: `${Math.min(storageInfo.percentage, 100)}%`,
+                    width: `${progressWidth}%`,
                     background: storageInfo.percentage >= 90
                       ? `linear-gradient(90deg, ${storageBarColor} 0%, ${colors.errorRed} 100%)`
                       : storageInfo.percentage >= 75
@@ -148,6 +157,49 @@ export default function StorageHeader({
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+              style={{
+                background: colors.inputBackground,
+                color: colors.secondaryText,
+                border: `1px solid ${colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                e.currentTarget.style.color = colors.primaryText;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = colors.inputBackground;
+                e.currentTarget.style.color = colors.secondaryText;
+              }}
+              data-testid="storage-refresh-button"
+            >
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              onClick={onUpload}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+              style={{
+                background: colors.primaryBlue,
+                color: 'white',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+              data-testid="storage-upload-button"
+            >
+              Upload
+            </button>
           </div>
         </div>
       </div>
