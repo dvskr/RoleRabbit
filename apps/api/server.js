@@ -1,3 +1,6 @@
+// Load environment variables FIRST before anything else
+require('dotenv').config();
+
 const fastify = require('fastify')({
   bodyLimit: 10485760, // 10MB body limit for JSON requests
   requestTimeout: 120000, // 120 second request timeout
@@ -72,9 +75,6 @@ const fastify = require('fastify')({
     }
   }
 });
-
-// Load environment variables
-require('dotenv').config();
 
 // Custom logger
 const logger = require('./utils/logger');
