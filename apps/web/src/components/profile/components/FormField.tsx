@@ -28,8 +28,22 @@ export default function FormField({
       };
     }
 
-    const normalizedLabel = typeof label === 'string' && label.trim().length > 0
-      ? label.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    // Extract text from label if it's a ReactNode
+    let labelText = '';
+    if (typeof label === 'string') {
+      labelText = label.trim();
+    } else if (React.isValidElement(label)) {
+      // Try to extract text from React element (for icons with text)
+      const children = label.props?.children;
+      if (Array.isArray(children)) {
+        labelText = children.find(child => typeof child === 'string') || '';
+      } else if (typeof children === 'string') {
+        labelText = children;
+      }
+    }
+
+    const normalizedLabel = labelText.length > 0
+      ? labelText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
       : 'field';
 
     const generatedId = `field-${normalizedLabel}-${reactId.replace(/[:]/g, '-')}`;

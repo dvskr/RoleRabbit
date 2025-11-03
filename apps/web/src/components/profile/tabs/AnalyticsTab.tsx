@@ -15,19 +15,6 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
-          Profile Analytics
-        </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
-          Track your profile performance and visibility metrics
-        </p>
-      </div>
       
       {/* Enhanced Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 sm:gap-6 mb-8">

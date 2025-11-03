@@ -27,20 +27,6 @@ export default function PreferencesTab({
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
-          Preferences & Settings
-        </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
-          Manage your notification and privacy preferences
-        </p>
-      </div>
-      
       <div className="space-y-8">
         {/* Preferences Summary */}
         <div 

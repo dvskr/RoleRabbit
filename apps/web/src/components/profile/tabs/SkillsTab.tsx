@@ -231,19 +231,6 @@ export default function SkillsTab({
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
-          Skills & Expertise
-        </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
-          Showcase your technical skills, certifications, and language abilities
-        </p>
-      </div>
       
       <div className="space-y-8">
         {/* Statistics Summary */}

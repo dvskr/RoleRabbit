@@ -87,17 +87,19 @@ export default function ProfileTab({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Mail size={16} style={{ color: colors.secondaryText }} />
-                <FormField
-                  label="Email Address"
-                  type="email"
-                  value={userData.email}
-                  onChange={(value) => onUserDataChange({ email: value })}
-                  disabled={!isEditing}
-                  placeholder="Enter your email address"
-                />
-              </div>
+              <FormField
+                label={
+                  <span className="flex items-center gap-2">
+                    <Mail size={16} style={{ color: colors.secondaryText }} />
+                    Email Address
+                  </span>
+                }
+                type="email"
+                value={userData.email}
+                onChange={(value) => onUserDataChange({ email: value })}
+                disabled={!isEditing}
+                placeholder="Enter your email address"
+              />
               {!userData.email && isEditing && (
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.errorRed }}>
                   <AlertCircle size={12} />
@@ -106,31 +108,35 @@ export default function ProfileTab({
               )}
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Phone size={16} style={{ color: colors.secondaryText }} />
-                <FormField
-                  label="Phone Number"
-                  type="tel"
-                  value={userData.phone}
-                  onChange={(value) => onUserDataChange({ phone: value })}
-                  disabled={!isEditing}
-                  placeholder="Enter your phone number"
-                />
-              </div>
+              <FormField
+                label={
+                  <span className="flex items-center gap-2">
+                    <Phone size={16} style={{ color: colors.secondaryText }} />
+                    Phone Number
+                  </span>
+                }
+                type="tel"
+                value={userData.phone}
+                onChange={(value) => onUserDataChange({ phone: value })}
+                disabled={!isEditing}
+                placeholder="Enter your phone number"
+              />
             </div>
           </div>
 
           <div className="mt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin size={16} style={{ color: colors.secondaryText }} />
-              <FormField
-                label="Location"
-                value={userData.location}
-                onChange={(value) => onUserDataChange({ location: value })}
-                disabled={!isEditing}
-                placeholder="Enter your location (City, Country)"
-              />
-            </div>
+            <FormField
+              label={
+                <span className="flex items-center gap-2">
+                  <MapPin size={16} style={{ color: colors.secondaryText }} />
+                  Location
+                </span>
+              }
+              value={userData.location}
+              onChange={(value) => onUserDataChange({ location: value })}
+              disabled={!isEditing}
+              placeholder="Enter your location (City, Country)"
+            />
           </div>
         </div>
 

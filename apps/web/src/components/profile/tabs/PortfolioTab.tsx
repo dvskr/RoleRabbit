@@ -46,15 +46,6 @@ export default function PortfolioTab({
   return (
     // eslint-disable-next-line react/forbid-dom-props
     <div className={styles.portfolioContainer} style={portfolioStyles}>
-      <div className={styles.portfolioHeader}>
-        <h2 className={styles.portfolioTitle}>
-          Portfolio & Achievements
-        </h2>
-        <p className={styles.portfolioDescription}>
-          Showcase your work, projects, and professional achievements
-        </p>
-      </div>
-      
       <div className="space-y-8">
         {/* Statistics Overview */}
         {(userData.socialLinks && userData.socialLinks.length > 0) || (userData.achievements && userData.achievements.length > 0) || userData.portfolio ? (

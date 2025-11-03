@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 export interface Skill {
   name: string;
   proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
@@ -265,7 +267,7 @@ export interface ProfileSidebarProps {
 }
 
 export interface FormFieldProps {
-  label: string;
+  label: string | ReactNode;
   type?: 'text' | 'email' | 'tel' | 'url' | 'textarea';
   value: string;
   onChange: (value: string) => void;

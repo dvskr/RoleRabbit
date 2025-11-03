@@ -263,40 +263,32 @@ export default function SidebarNew({
 
       {/* Collapse Toggle Button - Bottom of Sidebar */}
       <div 
-        className="flex-shrink-0 p-4 border-t"
+        className="flex-shrink-0 flex justify-center p-1.5 border-t"
         style={{
           borderTop: `1px solid ${colors.border}`,
         }}
       >
         <button
           onClick={onToggleSidebar}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200 ${
-            sidebarCollapsed ? 'justify-center' : ''
-          }`}
+          className="p-1 rounded transition-all duration-200 flex items-center justify-center"
           style={{
-            background: colors.inputBackground,
-            border: `1px solid ${colors.border}`,
+            background: 'transparent',
             color: colors.secondaryText,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = colors.hoverBackground;
             e.currentTarget.style.color = colors.primaryText;
-            e.currentTarget.style.borderColor = colors.borderFocused;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = colors.inputBackground;
+            e.currentTarget.style.background = 'transparent';
             e.currentTarget.style.color = colors.secondaryText;
-            e.currentTarget.style.borderColor = colors.border;
           }}
           title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {sidebarCollapsed ? (
             <ChevronRight size={18} />
           ) : (
-            <>
-              <ChevronLeft size={18} />
-              <span className="text-sm font-medium">Collapse</span>
-            </>
+            <ChevronLeft size={18} />
           )}
         </button>
       </div>

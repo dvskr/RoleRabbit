@@ -10,20 +10,6 @@ export default function SupportTab() {
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
-          Help & Support
-        </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
-          Get assistance with your account and learn how to use our platform
-        </p>
-      </div>
-      
       <div className="space-y-6">
         <div 
           className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"

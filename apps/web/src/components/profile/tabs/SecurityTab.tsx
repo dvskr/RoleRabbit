@@ -16,7 +16,6 @@ import {
   LoginSessionDTO,
 } from '../../../utils/securityHelpers';
 import {
-  SecurityHeader,
   PasswordManagementSection,
   LoginActivitySection,
   PrivacySettingsSection,
@@ -242,8 +241,6 @@ export default function SecurityTab() {
 
   return (
     <div className="max-w-4xl">
-      <SecurityHeader colors={colors} />
-      
       <div className="space-y-8">
         <PasswordManagementSection
           colors={colors}

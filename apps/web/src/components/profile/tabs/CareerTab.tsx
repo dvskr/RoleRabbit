@@ -162,20 +162,6 @@ export default function CareerTab({
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
-          Career Goals & Aspirations
-        </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
-          Track your career goals and measure your progress
-        </p>
-      </div>
-      
       <div className="space-y-8">
         {/* Statistics Overview */}
         {careerGoals.length > 0 && (
