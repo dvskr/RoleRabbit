@@ -1,4 +1,4 @@
-// Prisma schema for RoleReady Database
+// Prisma schema for RoleReady Database - Profile Feature Only
 
 generator client {
   provider = "prisma-client-js"
@@ -63,8 +63,6 @@ model User {
   smsNotifications   Boolean @default(false)
   privacyLevel       String? @default("Professional")
   profileVisibility  String? @default("Public")
-  storageLimit       Int     @default(1073741824) // 1GB default limit in bytes
-  storageTier        String  @default("free")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -73,7 +71,6 @@ model User {
   refreshTokens       RefreshToken[]
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
-  aiUsage             AIUsage[]
 
   // AI Usage tracking
   totalAIUsage Int @default(0)
@@ -86,9 +83,6 @@ model User {
 
   // Profile Analytics & Metrics
   profileViews         Int @default(0)
-  applicationsSent     Int @default(0)
-  interviewsScheduled   Int @default(0)
-  offersReceived       Int @default(0)
   successRate          Int @default(0) // Percentage
   profileCompleteness   Int @default(0) // Percentage (0-100)
   skillMatchRate       Int @default(0) // Percentage
@@ -141,56 +135,4 @@ model PasswordResetToken {
   @@index([token])
   @@index([expiresAt])
   @@map("password_reset_tokens")
-}
-
-
-model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  action     String // USER_LOGIN, USER_REGISTER, USER_PROFILE_UPDATE, etc.
-  resource   String? // user, profile
-  resourceId String?
-  details    String? // JSON details
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
-}
-
-
-model AIUsage {
-  id         String   @id @default(cuid())
-  userId     String
-  model      String // gpt-4, gpt-4o-mini, etc.
-  tokensUsed Int
-  cost       Float
-  endpoint   String? // generate, analyze, ats-score
-  timestamp  DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([timestamp])
-  @@index([model])
-  @@map("ai_usage")
-}
-
-
-model Notification {
-  id        String    @id @default(cuid())
-  userId    String
-  type      String // info, success, warning, error
-  title     String
-  message   String
-  metadata  String? // JSON metadata
-  read      Boolean   @default(false)
-  readAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  @@index([userId])
-  @@index([read])
-  @@map("notifications")
 }

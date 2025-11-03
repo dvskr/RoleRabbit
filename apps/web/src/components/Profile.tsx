@@ -56,7 +56,7 @@ export default function Profile() {
   const [localProfileData, setLocalProfileData] = useState<UserData | null>(null);
 
   const tabs: ProfileTabConfig[] = [
-    { id: 'profile', label: 'Personal Information', icon: UserCircle },
+    { id: 'profile', label: 'Profile', icon: UserCircle },
     { id: 'professional', label: 'Professional', icon: Briefcase },
     { id: 'skills', label: 'Skills & Expertise', icon: Award },
     { id: 'career', label: 'Career Goals', icon: Target },
@@ -140,6 +140,78 @@ export default function Profile() {
   const displayData = isEditing 
     ? (localProfileData !== null ? (localProfileData || defaultUserData) : (userData || defaultUserData))
     : (userData || defaultUserData);
+
+  // Calculate profile completeness
+  const calculateCompleteness = (): number => {
+    const data = displayData;
+    let completed = 0;
+    
+    // Helper function to safely parse JSON arrays
+    const safeParseArray = (data: any): any[] => {
+      if (Array.isArray(data)) return data;
+      if (typeof data === 'string' && data) {
+        try {
+          const parsed = JSON.parse(data);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+    
+    // Personal Information (8 points)
+    const personalInfo = {
+      firstName: !!data.firstName,
+      lastName: !!data.lastName,
+      email: !!data.email,
+      phone: !!data.phone,
+      location: !!data.location,
+      bio: !!(data.bio && data.bio.length > 50),
+      profilePicture: !!data.profilePicture,
+      currentRole: !!data.currentRole
+    };
+    const personalCompleted = Object.values(personalInfo).filter(Boolean).length;
+    completed += personalCompleted;
+    
+    // Skills (1 point if at least 3 skills)
+    const skills = safeParseArray(data.skills);
+    if (skills.length >= 3) completed++;
+    
+    // Certifications (1 point if at least 1)
+    const certs = safeParseArray(data.certifications);
+    if (certs.length >= 1) completed++;
+    
+    // Languages (1 point if at least 1)
+    const languages = safeParseArray(data.languages);
+    if (languages.length >= 1) completed++;
+    
+    // Work Experience (1 point if at least 1)
+    const workExp = safeParseArray(data.workExperiences);
+    if (workExp.length >= 1) completed++;
+    
+    // Projects (1 point if at least 1)
+    const projects = safeParseArray(data.projects);
+    if (projects.length >= 1) completed++;
+    
+    // Career Goals (1 point if at least 1)
+    const careerGoals = safeParseArray(data.careerGoals);
+    if (careerGoals.length >= 1) completed++;
+    
+    // Education (1 point if present)
+    const education = safeParseArray(data.education);
+    if (education.length >= 1) completed++;
+    
+    // Social Links (1 point if at least 1)
+    const socialLinks = safeParseArray(data.socialLinks);
+    if (socialLinks.length >= 1) completed++;
+    
+    // Total: 8 (personal) + 8 (other sections) = 16 points max
+    const total = 16;
+    return Math.round((completed / total) * 100);
+  };
+
+  const profileCompleteness = calculateCompleteness();
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -326,6 +398,7 @@ export default function Profile() {
         isEditing={isEditing}
         isSaving={isSaving}
         isSaved={isSaved}
+        profileCompleteness={profileCompleteness}
         onEdit={() => {
           setIsEditing(true);
           setIsSaved(false); // Reset saved state when entering edit mode

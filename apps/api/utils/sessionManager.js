@@ -9,10 +9,15 @@ const logger = require('./logger');
 
 /**
  * Create a new session for user
+ * Sessions now persist until explicit logout (10 years expiration for database purposes)
  */
-async function createSession(userId, ipAddress, userAgent, daysToExpire = 7) {
+async function createSession(userId, ipAddress, userAgent, daysToExpire = 3650) {
   try {
     const sessionId = crypto.randomBytes(32).toString('hex');
+    
+    // Set expiration to 10 years (effectively never expires until logout)
+    // This is much longer than cookie expiration, so session persists until user logs out
+    const expirationDate = new Date(Date.now() + daysToExpire * 24 * 60 * 60 * 1000);
     
     const session = await prisma.session.create({
       data: {
@@ -20,11 +25,12 @@ async function createSession(userId, ipAddress, userAgent, daysToExpire = 7) {
         userId,
         ipAddress,
         userAgent,
-        expiresAt: new Date(Date.now() + daysToExpire * 24 * 60 * 60 * 1000)
+        expiresAt: expirationDate,
+        lastActivity: new Date()
       }
     });
     
-    logger.info(`Session created for user ${userId}`);
+    logger.info(`Session created for user ${userId} (persists until logout)`);
     
     return sessionId; // Return sessionId, not the full session object
   } catch (error) {
@@ -35,6 +41,7 @@ async function createSession(userId, ipAddress, userAgent, daysToExpire = 7) {
 
 /**
  * Get active session by ID
+ * Sessions persist until explicit logout - no expiration check
  */
 async function getSession(sessionId) {
   try {
@@ -47,16 +54,19 @@ async function getSession(sessionId) {
       return null;
     }
     
-    // Check if session is expired
-    if (new Date() > session.expiresAt) {
-      await deactivateSession(sessionId);
-      return null;
-    }
-    
-    // Check if session is active
+    // Only check if session is active (not expired - sessions persist until logout)
     if (!session.isActive) {
       return null;
     }
+    
+    // Update lastActivity on each access to track user activity
+    // Don't await to avoid blocking the request
+    prisma.session.update({
+      where: { id: sessionId },
+      data: { lastActivity: new Date() }
+    }).catch(err => {
+      logger.error('Failed to update session lastActivity', err);
+    });
     
     return session;
   } catch (error) {
@@ -105,26 +115,20 @@ async function deactivateAllUserSessions(userId) {
 
 /**
  * Get all active sessions for a user
+ * Sessions persist until logout - no expiration filter
  */
 async function getUserSessions(userId) {
   try {
     const sessions = await prisma.session.findMany({
       where: {
         userId,
-        isActive: true,
-        expiresAt: {
-          gt: new Date()
-        }
+        isActive: true
+        // No expiration check - sessions persist until logout
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
-    
-    // Update lastActivity for current request if sessions exist
-    if (sessions.length > 0) {
-      // This will be handled by middleware in routes
-    }
     
     return sessions;
   } catch (error) {
@@ -134,15 +138,16 @@ async function getUserSessions(userId) {
 }
 
 /**
- * Refresh session expiry
+ * Refresh session activity (update lastActivity)
+ * Sessions persist until logout, so we just update activity timestamp
  */
 async function refreshSession(sessionId) {
   try {
     const session = await prisma.session.update({
       where: { id: sessionId },
       data: {
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Extend 7 days
         lastActivity: new Date()
+        // Don't update expiresAt - sessions persist until logout
       }
     });
     

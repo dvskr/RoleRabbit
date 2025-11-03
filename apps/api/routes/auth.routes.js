@@ -108,12 +108,12 @@ async function authRoutes(fastify, options) {
         path: '/'
       });
       
-      // Set session ID in httpOnly cookie
+      // Set session ID in httpOnly cookie (1 year expiration, session persists until logout)
       reply.setCookie('session_id', sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (cookie expiration, session persists longer)
         path: '/'
       });
       
@@ -177,10 +177,10 @@ async function authRoutes(fastify, options) {
       // Create refresh token (long-lived: 7 days)
       const refreshToken = await createRefreshToken(user.id, 7);
       
-      // Create session
+      // Create session (persists until logout - 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 30);
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650); // 10 years
       
       // Prepare user object first - ensure it's serializable
       const safeUser = {
@@ -230,7 +230,7 @@ async function authRoutes(fastify, options) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (cookie expiration, session persists until logout)
         path: '/'
       });
       

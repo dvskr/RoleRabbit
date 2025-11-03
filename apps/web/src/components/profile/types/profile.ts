@@ -255,6 +255,7 @@ export interface ProfileHeaderProps {
   onEdit: () => void;
   onCancel: () => void;
   onSave: () => void;
+  profileCompleteness?: number;
 }
 
 export interface ProfileSidebarProps {

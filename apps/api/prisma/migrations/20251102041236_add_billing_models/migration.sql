@@ -1,11 +1,4 @@
--- AlterTable
-ALTER TABLE "cloud_files" ADD COLUMN     "fileName" TEXT,
-ADD COLUMN     "storagePath" TEXT,
-ALTER COLUMN "data" DROP NOT NULL;
-
--- AlterTable
-ALTER TABLE "users" ADD COLUMN     "storageLimit" INTEGER NOT NULL DEFAULT 1073741824,
-ADD COLUMN     "storageTier" TEXT NOT NULL DEFAULT 'free';
+-- Note: cloud_files table removed, storageLimit and storageTier fields removed from users
 
 -- CreateTable
 CREATE TABLE "subscriptions" (
