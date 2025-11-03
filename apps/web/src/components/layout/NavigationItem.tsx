@@ -60,7 +60,12 @@ export default function NavigationItem({
   
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }}
       className={`nav-item w-full flex items-center rounded-lg relative overflow-hidden ${
         isCollapsed ? 'justify-center px-3 py-2.5' : 'gap-3 px-3 py-2.5'
       } ${isActive ? 'nav-item-active' : ''}`}

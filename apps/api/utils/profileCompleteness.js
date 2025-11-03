@@ -28,7 +28,6 @@ function calculateProfileCompleteness(user) {
   const skills = parseJsonField(user.skills);
   const education = parseJsonField(user.education);
   const workExperiences = parseJsonField(user.workExperiences);
-  const careerGoals = parseJsonField(user.careerGoals);
   const targetRoles = parseJsonField(user.targetRoles);
   const targetCompanies = parseJsonField(user.targetCompanies);
   
@@ -103,16 +102,14 @@ function calculateProfileCompleteness(user) {
   };
   score += experienceScore;
   
-  // Career Goals (10%)
+  // Career Preferences (10%)
   let careerScore = 0;
-  if (careerGoals.length > 0) careerScore += 5;
-  if (targetRoles.length > 0) careerScore += 3;
-  if (targetCompanies.length > 0) careerScore += 2;
-  breakdown.careerGoals = {
+  if (targetRoles.length > 0) careerScore += 5;
+  if (targetCompanies.length > 0) careerScore += 5;
+  breakdown.careerPreferences = {
     score: careerScore,
     maxScore: 10,
     percentage: Math.round((careerScore / 10) * 100),
-    careerGoals: careerGoals.length,
     targetRoles: targetRoles.length,
     targetCompanies: targetCompanies.length
   };

@@ -816,6 +816,16 @@ All development documentation has been organized in the `docs/` folder:
 
 ## 🚀 Deployment
 
+### **🎯 Recommended Hosting Setup**
+
+**Best Options:**
+1. **All-in-One:** [Railway](https://railway.app) - Host everything (Frontend + Backends + Database) in one place ⭐ Simplest
+2. **Separate:** [Vercel](https://vercel.com) (Frontend) + [Railway](https://railway.app) (Backends + Database) ⭐ Best Performance
+
+📖 **See:**
+- **[All-in-One Hosting Guide](./docs/ALL_IN_ONE_HOSTING.md)** - Host everything on one platform
+- **[Hosting Recommendations](./docs/HOSTING_RECOMMENDATIONS.md)** - Compare all platforms and options
+
 ### **🌍 Production Build**
 
 1. **Build all services**
@@ -823,10 +833,11 @@ All development documentation has been organized in the `docs/` folder:
    pnpm run build
    ```
 
-2. **Deploy services**
-   - **Frontend**: Deploy `apps/web/.next` to Vercel/Netlify
-   - **Node.js API**: Deploy `apps/api` to Railway/Heroku
-   - **Python API**: Deploy `apps/api-python` to Railway/Heroku
+2. **Deploy services** (Recommended: Vercel + Railway)
+   - **Frontend**: Deploy to [Vercel](https://vercel.com) - See [Vercel Deployment Guide](./docs/VERCEL_DEPLOYMENT_GUIDE.md) or [Quick Start](./docs/VERCEL_QUICK_START.md)
+   - **Node.js API**: Deploy `apps/api` to [Railway](https://railway.app) (recommended) or Render/Fly.io
+   - **Python API**: Deploy `apps/api-python` to [Railway](https://railway.app) (recommended) or Render/Fly.io
+   - **Database**: PostgreSQL included with Railway, or use Supabase/Neon
 
 3. **Environment Variables**
    ```env

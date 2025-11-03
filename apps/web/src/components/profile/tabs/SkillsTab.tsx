@@ -72,7 +72,15 @@ export default function SkillsTab({
   };
 
   const removeSkill = (index: number) => {
-    onUserDataChange({ skills: skills.filter((_, i) => i !== index) });
+    const updatedSkills = skills.filter((_, i) => i !== index);
+    onUserDataChange({ skills: updatedSkills });
+    // Reset editing state if the removed skill was being edited
+    if (editingSkillId === index) {
+      setEditingSkillId(null);
+    } else if (editingSkillId !== null && editingSkillId > index) {
+      // Adjust editing index if a skill before the edited one was removed
+      setEditingSkillId(editingSkillId - 1);
+    }
   };
 
   // Normalize certifications to always be an array
@@ -303,220 +311,55 @@ export default function SkillsTab({
           </div>
           
           {skills.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="flex flex-wrap gap-2 mb-6">
               {skills.map((skill, index) => {
-                const badgeStyle = getProficiencyBadgeStyle(skill.proficiency);
-                const isEditing = editingSkillId === index;
-                
                 return (
                   <div 
                     key={index} 
-                    className="p-4 rounded-xl transition-all"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group"
                     style={{
                       background: colors.inputBackground,
                       border: `1px solid ${colors.border}`,
                     }}
                     onMouseEnter={(e) => {
-                      if (!isEditing) {
-                        e.currentTarget.style.background = colors.hoverBackground;
-                        e.currentTarget.style.borderColor = colors.borderFocused;
-                      }
+                      e.currentTarget.style.borderColor = colors.borderFocused;
                     }}
                     onMouseLeave={(e) => {
-                      if (!isEditing) {
-                        e.currentTarget.style.background = colors.inputBackground;
-                        e.currentTarget.style.borderColor = colors.border;
-                      }
+                      e.currentTarget.style.borderColor = colors.border;
                     }}
                   >
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold" style={{ color: colors.primaryText }}>Edit Skill</h4>
-                          <button
-                            onClick={() => setEditingSkillId(null)}
-                            className="p-1 rounded"
-                            style={{ color: colors.secondaryText }}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                        <input
-                          id={`skill-name-${index}`}
-                          name={`skill-name-${index}`}
-                          type="text"
-                          value={skill.name}
-                          onChange={(e) => updateSkill(index, { name: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg"
-                          style={{
-                            background: colors.cardBackground,
-                            border: `1px solid ${colors.border}`,
-                            color: colors.primaryText,
-                          }}
-                          placeholder="Skill name"
-                        />
-                        <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>
-                            Proficiency Level
-                          </label>
-                          <select
-                            id={`skill-proficiency-${index}`}
-                            name={`skill-proficiency-${index}`}
-                            value={skill.proficiency}
-                            onChange={(e) => updateSkill(index, { proficiency: e.target.value as Skill['proficiency'] })}
-                            className="w-full px-3 py-2 rounded-lg"
-                            style={{
-                              background: colors.cardBackground,
-                              border: `1px solid ${colors.border}`,
-                              color: colors.primaryText,
-                            }}
-                          >
-                            {proficiencyLevels.map(level => (
-                              <option key={level} value={level}>{level}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>
-                            Years of Experience (optional)
-                          </label>
-                          <input
-                            id={`skill-years-${index}`}
-                            name={`skill-years-${index}`}
-                            type="number"
-                            min="0"
-                            max="50"
-                            value={skill.yearsOfExperience || ''}
-                            onChange={(e) => updateSkill(index, { yearsOfExperience: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full px-3 py-2 rounded-lg"
-                            style={{
-                              background: colors.cardBackground,
-                              border: `1px solid ${colors.border}`,
-                              color: colors.primaryText,
-                            }}
-                            placeholder="e.g., 5"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id={`verified-${index}`}
-                            name={`verified-${index}`}
-                            checked={skill.verified || false}
-                            onChange={(e) => updateSkill(index, { verified: e.target.checked })}
-                            className="rounded"
-                          />
-                          <label htmlFor={`verified-${index}`} className="text-xs" style={{ color: colors.secondaryText }}>
-                            Verified skill
-                          </label>
-                        </div>
-                        <button
-                          onClick={() => setEditingSkillId(null)}
-                          className="w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          style={{
-                            background: colors.primaryBlue,
-                            color: 'white',
-                          }}
-                        >
-                          <Save size={14} />
-                          Save Changes
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between mb-3">
-                          <span 
-                            className="font-semibold"
-                            style={{ color: colors.primaryText }}
-                          >
-                            {skill.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {isEditing && (
-                              <>
-                                <button
-                                  onClick={() => setEditingSkillId(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.primaryBlue }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeInfoBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Edit ${skill.name}`}
-                                  title={`Edit ${skill.name}`}
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeSkill(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.errorRed }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeErrorBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Remove ${skill.name}`}
-                                  title={`Remove ${skill.name}`}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Proficiency Progress Bar */}
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <span 
-                              className="px-2 py-0.5 rounded text-xs font-medium"
-                              style={{
-                                background: badgeStyle.background,
-                                color: badgeStyle.color,
-                                border: `1px solid ${badgeStyle.border}`,
-                              }}
-                            >
-                              {skill.proficiency}
-                            </span>
-                            {skill.yearsOfExperience && (
-                              <span 
-                                className="text-xs"
-                                style={{ color: colors.secondaryText }}
-                              >
-                                {skill.yearsOfExperience} {skill.yearsOfExperience === 1 ? 'year' : 'years'}
-                              </span>
-                            )}
-                          </div>
-                          <div 
-                            className="w-full rounded-full h-1.5"
-                            style={{ background: colors.inputBackground }}
-                          >
-                            <div 
-                              className="h-1.5 rounded-full transition-all duration-500"
-                              style={{ 
-                                width: `${getProficiencyValue(skill.proficiency)}%`,
-                                background: `linear-gradient(90deg, ${badgeStyle.border}, ${badgeStyle.color})`
-                              }}
-                            />
-                          </div>
-                        </div>
-                        
-                        {skill.verified && (
-                          <div className="flex items-center gap-1 mt-2">
-                            <CheckCircle size={12} style={{ color: colors.badgeInfoText }} />
-                            <span 
-                              className="text-xs"
-                              style={{ color: colors.badgeInfoText }}
-                            >
-                              Verified
-                            </span>
-                          </div>
-                        )}
-                      </>
+                    <span 
+                      className="font-medium text-sm whitespace-nowrap"
+                      style={{ color: colors.primaryText }}
+                    >
+                      {skill.name}
+                    </span>
+                    {isEditing && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeSkill(index);
+                        }}
+                        className="opacity-70 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
+                        style={{ 
+                          color: colors.errorRed,
+                          background: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = colors.badgeErrorBg;
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.opacity = '0.7';
+                        }}
+                        aria-label={`Remove ${skill.name}`}
+                        title={`Remove ${skill.name}`}
+                        type="button"
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                      </button>
                     )}
                   </div>
                 );
@@ -548,8 +391,10 @@ export default function SkillsTab({
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = colors.border;
                 }}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const target = e.target as HTMLInputElement;
                     const skill = target.value.trim();
                     if (skill) {
@@ -560,7 +405,10 @@ export default function SkillsTab({
                 }}
               />
               <button 
-                onClick={() => {
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   const input = document.querySelector('input[placeholder*="Add a technical skill"]') as HTMLInputElement;
                   if (input && input.value.trim()) {
                     addSkill(input.value.trim());
@@ -605,7 +453,12 @@ export default function SkillsTab({
             </h3>
             {isEditing && (
               <button
-                onClick={addCertification}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addCertification();
+                }}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg"
                 style={{
                   background: colors.primaryBlue,
@@ -703,7 +556,12 @@ export default function SkillsTab({
                       
                       <div className="flex gap-2 pt-2">
                         <button
-                          onClick={() => setEditingCertId(null)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingCertId(null);
+                          }}
                           className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                           style={{
                             background: colors.primaryBlue,
@@ -714,7 +572,12 @@ export default function SkillsTab({
                           Save
                         </button>
                         <button
-                          onClick={() => removeCertification(index)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeCertification(index);
+                          }}
                           className="px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                           style={{
                             background: colors.errorRed,
@@ -840,7 +703,12 @@ export default function SkillsTab({
                 <p>No certifications added yet</p>
                 {isEditing && (
                   <button
-                    onClick={addCertification}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      addCertification();
+                    }}
                     className="mt-4 px-6 py-3 rounded-xl"
                     style={{
                       background: colors.primaryBlue,

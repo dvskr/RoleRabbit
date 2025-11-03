@@ -11,7 +11,8 @@
     "seed": "node utils/seeder.js",
     "db:seed": "node utils/seeder.js",
     "db:generate": "npx prisma generate",
-    "db:migrate": "npx prisma migrate dev"
+    "db:migrate": "npx prisma migrate dev",
+    "migrate:profile-pictures": "node scripts/migrate-profile-pictures.js"
   },
   "dependencies": {
     "@fastify/compress": "^8.1.0",
@@ -26,6 +27,7 @@
     "@fastify/websocket": "^11.2.0",
     "@prisma/client": "^5.7.0",
     "@sendgrid/mail": "^8.1.6",
+    "@supabase/supabase-js": "^2.78.0",
     "@types/multer": "^2.0.0",
     "bcrypt": "^6.0.0",
     "docx": "^9.5.1",

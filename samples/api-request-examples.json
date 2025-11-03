@@ -1,0 +1,170 @@
+{
+  "authentication": {
+    "login": {
+      "method": "POST",
+      "url": "/api/auth/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "email": "user@example.com",
+        "password": "securePassword123"
+      },
+      "expectedResponse": {
+        "status": 200,
+        "data": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "refreshToken": "refresh_token_string",
+          "user": {
+            "id": "user123",
+            "email": "user@example.com",
+            "name": "John Doe"
+          }
+        }
+      }
+    },
+    "register": {
+      "method": "POST",
+      "url": "/api/auth/register",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "email": "newuser@example.com",
+        "password": "securePassword123",
+        "name": "Jane Doe",
+        "confirmPassword": "securePassword123"
+      },
+      "expectedResponse": {
+        "status": 201,
+        "data": {
+          "message": "User created successfully",
+          "user": {
+            "id": "user456",
+            "email": "newuser@example.com",
+            "name": "Jane Doe"
+          }
+        }
+      }
+    }
+  },
+  "resume": {
+    "save": {
+      "method": "POST",
+      "url": "/api/resumes",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer {token}"
+      },
+      "body": {
+        "title": "Software Engineer Resume",
+        "data": {
+          "personalInfo": {
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john@example.com"
+          }
+        }
+      },
+      "expectedResponse": {
+        "status": 200,
+        "data": {
+          "id": "resume123",
+          "title": "Software Engineer Resume",
+          "createdAt": "2024-01-15T10:30:00Z"
+        }
+      }
+    },
+    "get": {
+      "method": "GET",
+      "url": "/api/resumes/{resumeId}",
+      "headers": {
+        "Authorization": "Bearer {token}"
+      },
+      "expectedResponse": {
+        "status": 200,
+        "data": {
+          "id": "resume123",
+          "title": "Software Engineer Resume",
+          "data": {}
+        }
+      }
+    }
+  },
+  "ai": {
+    "generateContent": {
+      "method": "POST",
+      "url": "/api/ai/generate",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer {token}"
+      },
+      "body": {
+        "type": "summary",
+        "context": {
+          "experience": ["5 years software development"],
+          "targetRole": "Senior Software Engineer"
+        },
+        "tone": "professional"
+      },
+      "expectedResponse": {
+        "status": 200,
+        "data": {
+          "content": "Experienced software engineer with 5+ years...",
+          "suggestions": []
+        }
+      }
+    },
+    "optimizeResume": {
+      "method": "POST",
+      "url": "/api/ai/optimize",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer {token}"
+      },
+      "body": {
+        "resumeId": "resume123",
+        "jobDescription": "We are looking for a senior software engineer...",
+        "optimizationLevel": "full"
+      },
+      "expectedResponse": {
+        "status": 200,
+        "data": {
+          "optimizedResume": {},
+          "improvements": [
+            "Added keywords: React, TypeScript",
+            "Enhanced experience descriptions"
+          ],
+          "score": 85
+        }
+      }
+    }
+  },
+  "jobTracker": {
+    "create": {
+      "method": "POST",
+      "url": "/api/jobs",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer {token}"
+      },
+      "body": {
+        "title": "Senior Software Engineer",
+        "company": "Tech Corp",
+        "status": "applied",
+        "appliedDate": "2024-01-10",
+        "notes": "Applied through company website"
+      },
+      "expectedResponse": {
+        "status": 201,
+        "data": {
+          "id": "job123",
+          "title": "Senior Software Engineer",
+          "company": "Tech Corp",
+          "status": "applied"
+        }
+      }
+    }
+  }
+}
+

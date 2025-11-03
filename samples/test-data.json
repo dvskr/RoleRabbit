@@ -1,0 +1,85 @@
+{
+  "users": [
+    {
+      "id": "user1",
+      "email": "test.user1@example.com",
+      "password": "TestPassword123!",
+      "name": "Test User One",
+      "profile": {
+        "title": "Software Engineer",
+        "location": "San Francisco, CA",
+        "bio": "Experienced developer with passion for clean code"
+      }
+    },
+    {
+      "id": "user2",
+      "email": "test.user2@example.com",
+      "password": "TestPassword123!",
+      "name": "Test User Two",
+      "profile": {
+        "title": "Data Scientist",
+        "location": "New York, NY",
+        "bio": "ML engineer specializing in NLP"
+      }
+    }
+  ],
+  "resumes": [
+    {
+      "id": "resume1",
+      "userId": "user1",
+      "title": "Software Engineer Resume",
+      "template": "modern",
+      "data": {
+        "personalInfo": {
+          "firstName": "Test",
+          "lastName": "User",
+          "email": "test@example.com"
+        }
+      }
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job1",
+      "userId": "user1",
+      "title": "Senior Frontend Developer",
+      "company": "Tech Startup Inc.",
+      "status": "applied",
+      "appliedDate": "2024-01-15",
+      "location": "Remote",
+      "salary": "$120,000 - $150,000",
+      "notes": "Great company culture"
+    },
+    {
+      "id": "job2",
+      "userId": "user1",
+      "title": "Full Stack Engineer",
+      "company": "Enterprise Corp",
+      "status": "interview",
+      "appliedDate": "2024-01-10",
+      "interviewDate": "2024-01-25",
+      "location": "New York, NY",
+      "notes": "Technical interview scheduled"
+    }
+  ],
+  "aiPrompts": [
+    {
+      "type": "summary",
+      "input": {
+        "experience": "5 years React development",
+        "skills": ["React", "TypeScript", "Node.js"]
+      },
+      "expectedOutput": "Experienced React developer..."
+    },
+    {
+      "type": "experience",
+      "input": {
+        "role": "Software Engineer",
+        "company": "Tech Corp",
+        "achievements": ["Built feature", "Improved performance"]
+      },
+      "expectedOutput": "Developed and deployed..."
+    }
+  ]
+}
+

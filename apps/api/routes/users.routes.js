@@ -4,11 +4,65 @@
  * Handles user profile and user-related routes
  */
 
+const path = require('path');
 const { getUserById } = require('../auth');
 const { authenticate } = require('../middleware/auth');
 const { validateEmail } = require('../utils/validation');
 const { errorHandler } = require('../utils/errorMiddleware');
 const logger = require('../utils/logger');
+
+/**
+ * Extract storage path from Supabase URL or return path as-is
+ * Handles: public URLs, signed URLs, local storage paths
+ */
+function extractStoragePath(urlOrPath) {
+  if (!urlOrPath) return null;
+  
+  // If it's base64 data URL, return null (can't extract path)
+  if (urlOrPath.startsWith('data:')) {
+    return null;
+  }
+  
+  // If it's already a simple path (no http), return as-is
+  if (!urlOrPath.startsWith('http')) {
+    // Remove local storage prefix if present
+    return urlOrPath.replace('/api/storage/files/', '');
+  }
+  
+  // Supabase public URL: https://xxx.supabase.co/storage/v1/object/public/bucket-name/path/to/file
+  if (urlOrPath.includes('/storage/v1/object/public/')) {
+    const urlParts = urlOrPath.split('/storage/v1/object/public/');
+    if (urlParts.length > 1) {
+      const afterBucket = urlParts[1];
+      const bucketAndPath = afterBucket.split('/');
+      // Remove bucket name (first part) and join the rest as path
+      if (bucketAndPath.length > 1) {
+        return bucketAndPath.slice(1).join('/');
+      }
+    }
+  }
+  
+  // Supabase signed URL: https://xxx.supabase.co/storage/v1/object/sign/bucket-name/path?token=...
+  if (urlOrPath.includes('/storage/v1/object/sign/')) {
+    const urlParts = urlOrPath.split('/storage/v1/object/sign/');
+    if (urlParts.length > 1) {
+      const pathAndQuery = urlParts[1].split('?')[0]; // Remove query params
+      const bucketAndPath = pathAndQuery.split('/');
+      if (bucketAndPath.length > 1) {
+        return bucketAndPath.slice(1).join('/');
+      }
+    }
+  }
+  
+  // Local storage path with /api/storage/files/ prefix
+  if (urlOrPath.includes('/api/storage/files/')) {
+    return urlOrPath.replace('/api/storage/files/', '');
+  }
+  
+  // Unknown URL format
+  logger.warn('Unknown URL format for storage path extraction:', urlOrPath);
+  return null;
+}
 
 /**
  * Register all user routes with Fastify instance
@@ -37,49 +91,30 @@ async function userRoutes(fastify, options) {
           id: true,
           email: true,
           name: true,
-          profilePicture: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          location: true,
-          bio: true,
-          currentRole: true,
-          currentCompany: true,
-          experience: true,
-          industry: true,
-          jobLevel: true,
-          employmentType: true,
-          availability: true,
-          salaryExpectation: true,
-          workPreference: true,
-          linkedin: true,
-          github: true,
-          website: true,
-          skills: true,
-          certifications: true,
-          languages: true,
-          education: true,
-          careerGoals: true,
-          targetRoles: true,
-          targetCompanies: true,
-          socialLinks: true,
-          projects: true,
-          achievements: true,
-          careerTimeline: true,
-          workExperiences: true,
-          volunteerExperiences: true,
-          recommendations: true,
-          publications: true,
-          patents: true,
-          organizations: true,
-          testScores: true,
-          jobAlerts: true,
           emailNotifications: true,
           smsNotifications: true,
           privacyLevel: true,
           profileVisibility: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          profile: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+              personalEmail: true,
+              location: true,
+              bio: true,
+              profilePicture: true,
+              currentRole: true,
+              currentCompany: true,
+              linkedin: true,
+              github: true,
+              website: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          }
         }
       });
       
@@ -88,20 +123,12 @@ async function userRoutes(fastify, options) {
         return;
       }
       
-      // Parse JSON fields back to arrays/objects
-      const parsedUser = { ...user };
-      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
-      jsonFields.forEach(field => {
-        if (parsedUser[field]) {
-          try {
-            parsedUser[field] = JSON.parse(parsedUser[field]);
-          } catch (e) {
-            parsedUser[field] = [];
-          }
-        } else {
-          parsedUser[field] = [];
-        }
-      });
+      // Merge profile data into user object for flat structure (for backward compatibility)
+      const { profile, ...userData } = user;
+      const parsedUser = {
+        ...userData,
+        ...(profile || {})
+      };
       
       return { user: parsedUser };
     } catch (error) {
@@ -126,9 +153,18 @@ async function userRoutes(fastify, options) {
     
     const updates = request.body;
     
-    // SECURITY: Explicitly reject any attempt to change user ID
+    // SECURITY: Explicitly reject any attempt to change user ID or login email
     if (updates.id !== undefined || updates.userId !== undefined) {
       reply.status(400).send({ error: 'Cannot modify user ID' });
+      return;
+    }
+    
+    // SECURITY: Prevent editing login email (it's used for authentication)
+    if (updates.email !== undefined) {
+      reply.status(400).send({ 
+        error: 'Login email cannot be changed. Use personal email field for contact information.',
+        hint: 'The email you use to log in cannot be modified. If you need to update your contact email, use the "Personal Email" field in your profile.'
+      });
       return;
     }
     
@@ -139,53 +175,59 @@ async function userRoutes(fastify, options) {
       return;
     }
 
-    // Define allowed fields that exist in schema
-    const allowedFields = [
-      'name', 'email', 'profilePicture',
-      'firstName', 'lastName', 'phone', 'location', 'bio',
-      'currentRole', 'currentCompany', 'experience', 'industry',
-      'jobLevel', 'employmentType', 'availability', 'salaryExpectation', 'workPreference',
-      'linkedin', 'github', 'website',
-      'skills', 'certifications', 'languages', 'education',
-      'careerGoals', 'targetRoles', 'targetCompanies',
-      'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores',
-      'jobAlerts', 'emailNotifications', 'smsNotifications',
+    // Separate fields by model
+    // User model fields (excluding 'email' - login email cannot be changed)
+    const userFields = [
+      'name',
+      'emailNotifications', 'smsNotifications',
       'privacyLevel', 'profileVisibility'
     ];
     
-    const updateData = {};
+    // UserProfile model fields
+    const profileFields = [
+      'firstName', 'lastName', 'phone', 'personalEmail', 'location', 'bio', 'profilePicture',
+      'currentRole', 'currentCompany',
+      'linkedin', 'github', 'website'
+    ];
     
-    for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        // Handle JSON array fields - stringify arrays/objects
-        const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
-        if (jsonFields.includes(field)) {
-          if (Array.isArray(updates[field]) || typeof updates[field] === 'object') {
-            updateData[field] = JSON.stringify(updates[field]);
-          } else if (updates[field] === null || updates[field] === undefined) {
-            updateData[field] = null;
-          }
-        } else {
-          updateData[field] = updates[field];
+    const userUpdateData = {};
+    const profileUpdateData = {};
+    
+    // Collect User fields - only include known fields from the schema
+    for (const field of userFields) {
+      if (updates.hasOwnProperty(field)) {
+        // Skip empty strings for name and email (required fields)
+        if ((field === 'name' || field === 'email') && updates[field] === '') {
+          continue;
         }
+        // Convert empty strings to null for optional fields
+        userUpdateData[field] = updates[field] === '' ? null : updates[field];
+      }
+    }
+    
+    // Collect UserProfile fields - only include known fields from the schema
+    for (const field of profileFields) {
+      if (updates.hasOwnProperty(field)) {
+        // Convert empty strings to null for optional profile fields
+        profileUpdateData[field] = updates[field] === '' ? null : updates[field];
       }
     }
 
-    // If email is being updated, validate it
-    if (updateData.email && !validateEmail(updateData.email)) {
-      reply.status(400).send({ error: 'Invalid email format' });
-      return;
+    // Validate personalEmail if provided (must be valid email format if not empty)
+    if (profileUpdateData.hasOwnProperty('personalEmail') && profileUpdateData.personalEmail) {
+      if (!validateEmail(profileUpdateData.personalEmail)) {
+        reply.status(400).send({ error: 'Invalid personal email format' });
+        return;
+      }
     }
 
     // Update name field if firstName/lastName are provided but name is not
-    // Note: firstName/lastName are now in user_profiles table, not users table
-    // For now, we'll just use the name field if provided
-    if (updateData.firstName || updateData.lastName) {
-      const firstName = updateData.firstName || '';
-      const lastName = updateData.lastName || '';
+    if (profileUpdateData.firstName || profileUpdateData.lastName) {
+      const firstName = profileUpdateData.firstName || '';
+      const lastName = profileUpdateData.lastName || '';
       const fullName = `${firstName} ${lastName}`.trim();
-      if (fullName && !updateData.name) {
-        updateData.name = fullName || user.name;
+      if (fullName && !userUpdateData.name) {
+        userUpdateData.name = fullName || user.name;
       }
     }
 
@@ -193,82 +235,74 @@ async function userRoutes(fastify, options) {
     const { prisma } = require('../utils/db');
     
     try {
+      // Build update data
+      const dataToUpdate = { ...userUpdateData };
+      
+      // Update or create UserProfile using nested write if there are profile fields to update
+      if (Object.keys(profileUpdateData).length > 0) {
+        dataToUpdate.profile = {
+          upsert: {
+            create: {
+              ...profileUpdateData
+            },
+            update: profileUpdateData
+          }
+        };
+      }
+      
+      // Update User model
       const updatedUser = await prisma.user.update({
         where: { id: userId },
-        data: updateData,
+        data: dataToUpdate,
         select: {
           id: true,
           email: true,
           name: true,
-          profilePicture: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          location: true,
-          bio: true,
-          currentRole: true,
-          currentCompany: true,
-          experience: true,
-          industry: true,
-          jobLevel: true,
-          employmentType: true,
-          availability: true,
-          salaryExpectation: true,
-          workPreference: true,
-          linkedin: true,
-          github: true,
-          website: true,
-          skills: true,
-          certifications: true,
-          languages: true,
-          education: true,
-          careerGoals: true,
-          targetRoles: true,
-          targetCompanies: true,
-          socialLinks: true,
-          projects: true,
-          achievements: true,
-          careerTimeline: true,
-          workExperiences: true,
-          volunteerExperiences: true,
-          recommendations: true,
-          publications: true,
-          patents: true,
-          organizations: true,
-          testScores: true,
-          jobAlerts: true,
           emailNotifications: true,
           smsNotifications: true,
           privacyLevel: true,
           profileVisibility: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          profile: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+              personalEmail: true,
+              location: true,
+              bio: true,
+              profilePicture: true,
+              currentRole: true,
+              currentCompany: true,
+              linkedin: true,
+              github: true,
+              website: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          }
         }
       });
 
-      // Parse JSON fields back to arrays/objects
-      const parsedUser = { ...updatedUser };
-      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
-      jsonFields.forEach(field => {
-        if (parsedUser[field]) {
-          try {
-            parsedUser[field] = JSON.parse(parsedUser[field]);
-          } catch (e) {
-            parsedUser[field] = [];
-          }
-        } else {
-          parsedUser[field] = [];
-        }
-      });
+      // Merge profile data into user object for flat structure (for backward compatibility)
+      const { profile, ...userData } = updatedUser;
+      const parsedUser = {
+        ...userData,
+        ...(profile || {})
+      };
 
       // Auto-calculate and update profile completeness
       try {
         const { calculateProfileCompleteness } = require('../utils/profileCompleteness');
         const completeness = calculateProfileCompleteness(parsedUser);
-        await prisma.user.update({
-          where: { id: userId },
-          data: { profileCompleteness: completeness.score }
-        });
+        // Update profileCompleteness in UserProfile if profile exists
+        if (updatedUser.profile) {
+          await prisma.userProfile.update({
+            where: { userId: userId },
+            data: { profileCompleteness: completeness.score }
+          });
+        }
       } catch (completenessError) {
         // Don't fail the update if completeness calculation fails
         console.error('Error calculating completeness:', completenessError);
@@ -301,28 +335,108 @@ async function userRoutes(fastify, options) {
         return reply.status(400).send({ error: 'Invalid file type. Only images are allowed.' });
       }
       
-      // Validate file size (5MB max for profile pictures)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // Validate file size (10MB max for profile pictures - cropped images are already optimized)
+      const maxSize = 10 * 1024 * 1024; // 10MB
       const buffer = await data.toBuffer();
       
       if (buffer.length > maxSize) {
-        return reply.status(400).send({ error: 'File too large (max 5MB)' });
+        return reply.status(400).send({ error: 'File too large (max 10MB)' });
       }
       
-      // Convert image to base64 data URL for storage
-      const base64Data = buffer.toString('base64');
-      const dataUrl = `data:${data.mimetype};base64,${base64Data}`;
-      
-      // Update user's profile picture
+      // Get existing profile picture to delete old one
       const { prisma } = require('../utils/db');
-      const updatedUser = await prisma.user.update({
+      const existingProfile = await prisma.userProfile.findUnique({
+        where: { userId: userId },
+        select: { profilePicture: true }
+      });
+      
+      // Upload to Supabase Storage
+      const storageHandler = require('../utils/storageHandler');
+      const { Readable } = require('stream');
+      const fileStream = Readable.from(buffer);
+      
+      // Generate filename for profile picture
+      // Use fixed filename pattern so we can overwrite old pictures
+      const fileExtension = data.filename ? path.extname(data.filename) : '.jpg';
+      const fileName = `profile-picture${fileExtension}`;
+      
+      // For profile pictures, we want to overwrite the old one
+      // So we'll use a consistent path pattern: userId/profile-picture.ext
+      // But first, delete the old one if it exists
+      
+      // Get old profile picture path BEFORE uploading new one
+      let oldPicturePath = null;
+      if (existingProfile?.profilePicture) {
+        oldPicturePath = extractStoragePath(existingProfile.profilePicture);
+        logger.info(`📸 Found existing profile picture, extracted path: ${oldPicturePath || 'failed to extract'}`);
+      }
+      
+      // Upload to storage (Supabase or local)
+      const uploadResult = await storageHandler.upload(
+        fileStream,
+        userId,
+        fileName,
+        data.mimetype
+      );
+      
+      // Get public URL for the uploaded file
+      let profilePictureUrl = uploadResult.publicUrl;
+      
+      // If no public URL, generate a signed/download URL
+      if (!profilePictureUrl) {
+        profilePictureUrl = await storageHandler.getDownloadUrl(uploadResult.path, 31536000); // 1 year expiry
+      }
+      
+      // If still no URL, use the path (for local storage)
+      if (!profilePictureUrl) {
+        profilePictureUrl = uploadResult.path;
+      }
+      
+      // Delete old profile picture from storage if it exists and is not base64
+      // Use the path we extracted earlier, or try extracting again if needed
+      const oldStoragePath = oldPicturePath || (existingProfile?.profilePicture ? extractStoragePath(existingProfile.profilePicture) : null);
+      
+      if (oldStoragePath) {
+        logger.info(`🗑️  Deleting old profile picture: ${oldStoragePath}`);
+        try {
+          await storageHandler.deleteFile(oldStoragePath);
+          logger.info(`✅ Successfully deleted old profile picture: ${oldStoragePath}`);
+        } catch (deleteErr) {
+          // If file doesn't exist, that's okay - it might have been manually deleted
+          if (deleteErr.message?.includes('not found') || deleteErr.message?.includes('does not exist')) {
+            logger.info(`ℹ️  Old profile picture already deleted: ${oldStoragePath}`);
+          } else {
+            logger.warn(`⚠️  Could not delete old profile picture: ${deleteErr.message}`);
+            logger.debug('Delete error details:', { path: oldStoragePath, error: deleteErr });
+          }
+        }
+      } else if (existingProfile?.profilePicture) {
+        // Old picture exists but we couldn't extract the path
+        logger.warn('⚠️  Old profile picture exists but path extraction failed. URL format:', existingProfile.profilePicture.substring(0, 100));
+      }
+      
+      // Update user's profile picture in UserProfile with Supabase URL
+      const updatedProfile = await prisma.userProfile.upsert({
+        where: { userId: userId },
+        create: {
+          userId: userId,
+          profilePicture: profilePictureUrl
+        },
+        update: {
+          profilePicture: profilePictureUrl
+        },
+        select: {
+          profilePicture: true
+        }
+      });
+      
+      // Get user data for response
+      const updatedUser = await prisma.user.findUnique({
         where: { id: userId },
-        data: { profilePicture: dataUrl },
         select: {
           id: true,
           email: true,
           name: true,
-          profilePicture: true,
           createdAt: true,
           updatedAt: true
         }
@@ -330,12 +444,71 @@ async function userRoutes(fastify, options) {
       
       return {
         success: true,
-        profilePicture: updatedUser.profilePicture,
-        user: updatedUser
+        profilePicture: updatedProfile.profilePicture,
+        user: {
+          ...updatedUser,
+          profilePicture: updatedProfile.profilePicture
+        }
       };
     } catch (error) {
       console.error('Error uploading profile picture:', error);
       reply.status(500).send({ error: 'Failed to upload profile picture', details: error.message });
+      return;
+    }
+  });
+
+  // Delete profile picture
+  fastify.delete('/api/users/profile/picture', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { prisma } = require('../utils/db');
+      const logger = require('../utils/logger');
+      
+      // Get existing profile picture before deleting
+      const existingProfile = await prisma.userProfile.findUnique({
+        where: { userId: userId },
+        select: { profilePicture: true }
+      });
+      
+      // Delete file from Supabase Storage if it exists
+      if (existingProfile?.profilePicture) {
+        try {
+          const storageHandler = require('../utils/storageHandler');
+          
+          // Extract storage path from URL
+          const storagePath = extractStoragePath(existingProfile.profilePicture);
+          
+          // Delete from storage
+          if (storagePath) {
+            await storageHandler.deleteFile(storagePath).catch(err => {
+              // Non-fatal - log but continue with database update
+              logger.warn('Could not delete profile picture from storage:', err.message);
+            });
+          }
+        } catch (deleteError) {
+          // Non-fatal - log but continue with database update
+          logger.warn('Error deleting profile picture from storage:', deleteError.message);
+        }
+      }
+      
+      // Update profile to remove profile picture URL from database
+      await prisma.userProfile.updateMany({
+        where: { userId: userId },
+        data: {
+          profilePicture: null
+        }
+      });
+      
+      return {
+        success: true,
+        message: 'Profile picture removed successfully',
+        profilePicture: null
+      };
+    } catch (error) {
+      console.error('Error deleting profile picture:', error);
+      reply.status(500).send({ error: 'Failed to delete profile picture', details: error.message });
       return;
     }
   });
@@ -355,21 +528,16 @@ async function userRoutes(fastify, options) {
         select: {
           name: true,
           email: true,
-          phone: true,
-          location: true,
-          bio: true,
-          profilePicture: true,
-          currentRole: true,
-          currentCompany: true,
-          experience: true,
-          industry: true,
-          jobLevel: true,
-          skills: true,
-          education: true,
-          workExperiences: true,
-          careerGoals: true,
-          targetRoles: true,
-          targetCompanies: true
+          profile: {
+            select: {
+              phone: true,
+              location: true,
+              bio: true,
+              profilePicture: true,
+              currentRole: true,
+              currentCompany: true
+            }
+          }
         }
       });
       
@@ -377,15 +545,23 @@ async function userRoutes(fastify, options) {
         return reply.status(404).send({ error: 'User not found' });
       }
       
-      const completeness = calculateProfileCompleteness(user);
+      // Merge profile data for completeness calculation
+      const userForCompleteness = {
+        ...user,
+        ...(user.profile || {})
+      };
       
-      // Update completeness in database
-      await prisma.user.update({
-        where: { id: userId },
-        data: { 
-          profileCompleteness: completeness.score
-        }
-      });
+      const completeness = calculateProfileCompleteness(userForCompleteness);
+      
+      // Update completeness in UserProfile
+      if (user.profile) {
+        await prisma.userProfile.update({
+          where: { userId: userId },
+          data: { 
+            profileCompleteness: completeness.score
+          }
+        });
+      }
       
       return {
         completeness: completeness.score,
@@ -576,7 +752,7 @@ async function userRoutes(fastify, options) {
       
       // Parse JSON fields
       const parsedUser = { ...user };
-      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'careerGoals', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
+      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
       jsonFields.forEach(field => {
         if (parsedUser[field]) {
           try {

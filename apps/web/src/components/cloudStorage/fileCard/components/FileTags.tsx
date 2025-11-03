@@ -16,7 +16,8 @@ export const FileTags: React.FC<FileTagsProps> = ({
   colors,
   maxVisible = 3,
 }) => {
-  if (tags.length === 0) return null;
+  // Handle undefined/null tags
+  if (!tags || !Array.isArray(tags) || tags.length === 0) return null;
 
   return (
     <div className="mb-2">

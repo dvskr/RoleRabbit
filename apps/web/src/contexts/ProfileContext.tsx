@@ -20,8 +20,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Load profile data once when user is authenticated
+  // Load profile data when user is authenticated
   useEffect(() => {
     // Wait for auth to finish loading before attempting to load profile
     if (authLoading) {
@@ -29,10 +30,16 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
 
     const loadProfile = async () => {
-      // Don't reload if already loaded
-      if (hasLoaded) {
-        setIsLoading(false); // Ensure loading is false if already loaded
+      // Always reload on initial mount (page refresh)
+      // Skip if we already have data and it's not the initial load
+      if (!isInitialLoad && hasLoaded && userData) {
+        setIsLoading(false);
         return;
+      }
+
+      // Mark as not initial load if we're going to fetch
+      if (isInitialLoad) {
+        setIsInitialLoad(false);
       }
 
       // Only set loading to true if we're actually going to fetch
@@ -90,6 +97,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             
             // Career Timeline
             careerTimeline: userProfile.careerTimeline || [],
+            workExperiences: userProfile.workExperiences || [],
+            volunteerExperiences: userProfile.volunteerExperiences || [],
+            recommendations: userProfile.recommendations || [],
+            publications: userProfile.publications || [],
+            patents: userProfile.patents || [],
+            organizations: userProfile.organizations || [],
+            testScores: userProfile.testScores || [],
+            personalEmail: userProfile.personalEmail || '',
             
             // Preferences
             emailNotifications: userProfile.emailNotifications ?? true,
@@ -117,20 +132,18 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    if (isAuthenticated && user && !hasLoaded) {
-      // User is authenticated but profile not loaded - set loading and fetch
+    if (isAuthenticated && user) {
+      // User is authenticated - load profile (will check hasLoaded inside loadProfile)
       setIsLoading(true);
       loadProfile();
     } else if (!isAuthenticated && !authLoading) {
       // Clear profile data when user logs out (only if auth is done loading)
       setUserData(null);
       setHasLoaded(false);
-      setIsLoading(false);
-    } else if (isAuthenticated && user && hasLoaded) {
-      // User is authenticated and profile already loaded, ensure loading is false
+      setIsInitialLoad(true);
       setIsLoading(false);
     }
-  }, [isAuthenticated, user, hasLoaded, authLoading]);
+  }, [isAuthenticated, user, authLoading]);
 
   const refreshProfile = async () => {
     setHasLoaded(false);
@@ -175,6 +188,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           projects: userProfile.projects || [],
           achievements: userProfile.achievements || [],
           careerTimeline: userProfile.careerTimeline || [],
+          workExperiences: userProfile.workExperiences || [],
+          volunteerExperiences: userProfile.volunteerExperiences || [],
+          recommendations: userProfile.recommendations || [],
+          publications: userProfile.publications || [],
+          patents: userProfile.patents || [],
+          organizations: userProfile.organizations || [],
+          testScores: userProfile.testScores || [],
+          personalEmail: userProfile.personalEmail || '',
           emailNotifications: userProfile.emailNotifications ?? true,
           smsNotifications: userProfile.smsNotifications ?? false,
           privacyLevel: userProfile.privacyLevel || 'Professional',

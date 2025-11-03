@@ -3,6 +3,15 @@ import { ResumeFile } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 
+// Helper to format file size
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+};
+
 type UploadPayload = {
   file: File;
   displayName?: string;
@@ -29,23 +38,53 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const [files, setFiles] = useState<ResumeFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [storageInfo, setStorageInfo] = useState({ usedGB: 0, limitGB: 0, percentage: 0 });
 
   const loadFilesFromAPI = useCallback(async (includeDeleted: boolean = false) => {
     setIsLoading(true);
     try {
+      logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, ')');
       const response = await apiService.getCloudFiles(undefined, includeDeleted);
+      logger.info('📥 API response:', { 
+        filesCount: response?.files?.length || 0,
+        success: response?.success
+      });
+      
       if (response && response.files) {
-        setFiles(response.files as ResumeFile[]);
+        const formattedFiles = (response.files as ResumeFile[]).map(file => ({
+          ...file,
+          tags: file.tags || [],
+          sharedWith: file.sharedWith || [],
+          comments: file.comments || [],
+          downloadCount: file.downloadCount || 0,
+          viewCount: file.viewCount || 0,
+          isStarred: file.isStarred || false,
+          isArchived: file.isArchived || false,
+          version: file.version || 1,
+          owner: file.owner || file.userId || '',
+          lastModified: file.lastModified || file.createdAt || file.updatedAt || new Date().toISOString(),
+          size: typeof file.size === 'number' ? formatBytes(file.size) : (file.size || '0 B'),
+          sizeBytes: typeof file.size === 'number' ? file.size : (file.sizeBytes || 0),
+        }));
+        setFiles(formattedFiles);
+        logger.info(`✅ Loaded ${formattedFiles.length} files from API`);
       } else {
+        logger.warn('⚠️ No files in API response');
         setFiles([]);
       }
-    } catch (error) {
-      logger.error('Failed to load files from API:', error);
+      
+      if (response?.storage) {
+        setStorageInfo(response.storage);
+        onStorageUpdate?.(response.storage);
+      }
+    } catch (error: any) {
+      logger.error('❌ Failed to load files from API:', error);
+      logger.error('Error details:', error.message);
       setFiles([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onStorageUpdate]);
 
   const handleFileSelect = useCallback((fileId: string) => {
     setSelectedFiles(prev => 
@@ -161,16 +200,64 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
         formData.append('isPublic', String(payload.isPublic));
       }
 
+      logger.info('📤 Uploading file to API...');
       const response = await apiService.uploadStorageFile(formData);
+      logger.info('📤 Upload response:', { 
+        success: response?.success,
+        hasFile: !!response?.file,
+        fileId: response?.file?.id 
+      });
+      
       if (response && response.file) {
-        setFiles(prev => [response.file as ResumeFile, ...prev]);
+        // Transform API response to ResumeFile format
+        const uploadedFile: ResumeFile = {
+          ...response.file,
+          // Ensure all required fields have defaults
+          tags: response.file.tags || [],
+          sharedWith: response.file.sharedWith || [],
+          comments: response.file.comments || [],
+          downloadCount: response.file.downloadCount || 0,
+          viewCount: response.file.viewCount || 0,
+          isStarred: response.file.isStarred || false,
+          isArchived: response.file.isArchived || false,
+          version: response.file.version || 1,
+          owner: response.file.owner || response.file.userId || '',
+          lastModified: response.file.createdAt || response.file.updatedAt || new Date().toISOString(),
+          size: typeof response.file.size === 'number' 
+            ? formatBytes(response.file.size) 
+            : (response.file.size || '0 B'),
+          sizeBytes: typeof response.file.size === 'number' ? response.file.size : (response.file.sizeBytes || 0),
+        };
+        logger.info(`✅ File uploaded successfully: ${uploadedFile.id}`);
+        
+        // Add to local state
+        setFiles(prev => {
+          // Check if file already exists (prevent duplicates)
+          const exists = prev.find(f => f.id === uploadedFile.id);
+          if (exists) {
+            logger.warn('File already in list, updating instead of adding');
+            return prev.map(f => f.id === uploadedFile.id ? uploadedFile : f);
+          }
+          return [uploadedFile, ...prev];
+        });
+      } else {
+        logger.warn('⚠️ Upload response missing file data');
       }
 
-      if (response?.storage && onStorageUpdate) {
-        onStorageUpdate(response.storage);
+      if (response?.storage) {
+        setStorageInfo(response.storage);
+        onStorageUpdate?.(response.storage);
       }
 
       onComplete?.();
+      
+      // Reload files from API to ensure we have the latest data from database
+      logger.info('🔄 Reloading files from API after upload...');
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(err => {
+          logger.error('Failed to reload files after upload:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to save file to API:', error);
       if ((error as any)?.storage && onStorageUpdate) {
@@ -178,7 +265,7 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
       throw error;
     }
-  }, [onStorageUpdate]);
+  }, [onStorageUpdate, loadFilesFromAPI]);
 
   const handleEditFile = useCallback(async (fileId: string, updates: Partial<ResumeFile>) => {
     try {

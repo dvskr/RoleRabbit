@@ -97,22 +97,42 @@ export default function ProfileTab({
                 label={
                   <span className="flex items-center gap-2">
                     <Mail size={16} style={{ color: colors.secondaryText }} />
-                    Email Address
+                    Login Email (Username)
                   </span>
                 }
                 type="email"
                 value={userData.email}
-                onChange={(value) => onUserDataChange({ email: value })}
-                disabled={!isEditing}
-                placeholder="Enter your email address"
+                onChange={() => {}} // Read-only, cannot be changed
+                disabled={true}
+                placeholder="Login email"
               />
-              {!userData.email && isEditing && (
-                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.errorRed }}>
-                  <AlertCircle size={12} />
-                  Required field
-                </p>
-              )}
+              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.secondaryText }}>
+                <AlertCircle size={12} />
+                This is your login email and cannot be changed
+              </p>
             </div>
+            <div>
+              <FormField
+                id="profile-personal-email"
+                name="personalEmail"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Mail size={16} style={{ color: colors.secondaryText }} />
+                    Personal Email
+                  </span>
+                }
+                type="email"
+                value={userData.personalEmail || ''}
+                onChange={(value) => onUserDataChange({ personalEmail: value })}
+                disabled={!isEditing}
+                placeholder="Enter your personal/contact email"
+              />
+              <p className="text-xs mt-1" style={{ color: colors.secondaryText }}>
+                Optional: Your personal or contact email (different from login email)
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
               <FormField
                 id="profile-phone"

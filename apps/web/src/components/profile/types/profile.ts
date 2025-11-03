@@ -165,7 +165,8 @@ export interface UserData {
   // Basic Info
   firstName: string;
   lastName: string;
-  email: string;
+  email: string;  // Login email (read-only, used for authentication)
+  personalEmail?: string;  // Personal/contact email (editable, separate from login email)
   phone: string;
   location: string;
   bio: string;

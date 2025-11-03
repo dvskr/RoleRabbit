@@ -319,7 +319,7 @@ const FileCard = React.memo(function FileCard({
         </div>
 
         {/* Tags */}
-        <FileTags tags={file.tags} colors={colors} />
+        <FileTags tags={file.tags || []} colors={colors} />
 
         {/* Shared Users */}
         <SharedUsers sharedWith={file.sharedWith} colors={colors} />
@@ -604,7 +604,7 @@ const FileCard = React.memo(function FileCard({
     const typeColorStyleList = getTypeColor(file.type, colors);
   return (
     <div 
-      className="group flex flex-col p-2 sm:p-3 rounded-lg hover:shadow-md transition-all duration-300 overflow-hidden w-full max-w-full"
+      className="group flex flex-col p-2 sm:p-3 rounded-lg hover:shadow-md transition-all duration-300 w-full max-w-full"
       style={{
         border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
         background: isSelected ? colors.badgeInfoBg : colors.cardBackground,
@@ -748,129 +748,115 @@ const FileCard = React.memo(function FileCard({
         </div>
       </div>
 
-      <div className="flex items-center space-x-1 flex-shrink-0 ml-0 sm:ml-2 flex-wrap gap-1 sm:gap-0">
-        {/* Hide normal actions for deleted files */}
-        {!(showDeleted && file.deletedAt) && (
-          <>
+      {/* Redesigned Clean Toolbar - Only Primary Actions Visible */}
+      <div className="flex items-center gap-1 flex-shrink-0 ml-0 sm:ml-2">
+        {/* Primary Actions Group - Most Used */}
+        <div className="flex items-center gap-0.5 border-r pr-1.5" style={{ borderColor: colors.border }}>
+          {/* Download with dropdown */}
+          <div className="relative flex-shrink-0">
             <button
-              onClick={() => onStar(file.id)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{
-                color: file.isStarred ? colors.badgeWarningText : colors.tertiaryText,
-                background: file.isStarred ? colors.badgeWarningBg : 'transparent',
+              onClick={() => {
+                setShowDownloadFormat(!showDownloadFormat);
+                if (!showDownloadFormat) setShowMoreMenu(false);
+              }}
+              className="p-2 rounded-lg transition-all flex-shrink-0"
+              style={{ 
+                color: showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
+                background: showDownloadFormat ? colors.hoverBackground : 'transparent'
               }}
               onMouseEnter={(e) => {
-                if (!file.isStarred) {
-                  e.currentTarget.style.color = colors.badgeWarningText;
-                  e.currentTarget.style.background = colors.badgeWarningBg;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!file.isStarred) {
-                  e.currentTarget.style.color = colors.tertiaryText;
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-              title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
-            >
-              <Star size={16} className={file.isStarred ? 'fill-current' : ''} />
-            </button>
-            <button
-              onClick={() => onTogglePublic(file.id)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{
-                color: file.isPublic ? colors.successGreen : colors.tertiaryText,
-                background: file.isPublic ? colors.badgeSuccessBg : 'transparent',
-              }}
-              onMouseEnter={(e) => {
-                if (!file.isPublic) {
-                  e.currentTarget.style.color = colors.primaryText;
-                  e.currentTarget.style.background = colors.hoverBackground;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!file.isPublic) {
-                  e.currentTarget.style.color = colors.tertiaryText;
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-              title={file.isPublic ? 'Make private' : 'Make public'}
-            >
-              {file.isPublic ? <Eye size={16} /> : <EyeOff size={16} />}
-            </button>
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={() => setShowDownloadFormat(!showDownloadFormat)}
-                className="p-2 rounded-lg transition-colors flex-shrink-0"
-                style={{ color: colors.secondaryText }}
-                onMouseEnter={(e) => {
+                if (!showDownloadFormat) {
                   e.currentTarget.style.color = colors.primaryBlue;
                   e.currentTarget.style.background = colors.hoverBackground;
-                }}
-                onMouseLeave={(e) => {
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!showDownloadFormat) {
                   e.currentTarget.style.color = colors.secondaryText;
                   e.currentTarget.style.background = 'transparent';
-                }}
-                title="Download"
-              >
-                <Download size={16} />
-              </button>
-          {showDownloadFormat && (
-            <div 
-              className="absolute right-0 mt-2 w-32 rounded-lg shadow-lg z-10"
-              style={{
-                background: colors.cardBackground,
-                border: `1px solid ${colors.border}`,
+                }
               }}
+              title="Download"
             >
-              <button
-                onClick={() => {
-                  onDownload(file, 'pdf');
-                  setShowDownloadFormat(false);
-                }}
-                className="w-full px-3 py-2 text-left text-sm transition-colors rounded-t-lg"
+              <Download size={16} />
+            </button>
+            {showDownloadFormat && (
+              <div 
+                className="absolute right-0 mt-2 w-40 rounded-lg shadow-lg z-50"
                 style={{
-                  color: colors.primaryText,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                  e.currentTarget.style.color = colors.primaryBlue;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = colors.primaryText;
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                  boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`,
                 }}
               >
-                📄 Download PDF
-              </button>
-              <button
-                onClick={() => {
-                  onDownload(file, 'doc');
-                  setShowDownloadFormat(false);
-                }}
-                className="w-full px-3 py-2 text-left text-sm transition-colors rounded-b-lg"
-                style={{
-                  color: colors.primaryText,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                  e.currentTarget.style.color = colors.primaryBlue;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = colors.primaryText;
-                }}
-              >
-                📝 Download DOC
-              </button>
-            </div>
+                <button
+                  onClick={() => {
+                    onDownload(file, 'pdf');
+                    setShowDownloadFormat(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm transition-colors rounded-t-lg flex items-center gap-2"
+                  style={{ color: colors.primaryText }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = colors.primaryText;
+                  }}
+                >
+                  <span>📄</span>
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onDownload(file, 'doc');
+                    setShowDownloadFormat(false);
+                  }}
+                  className="w-full px-4 py-2.5 text-left text-sm transition-colors rounded-b-lg flex items-center gap-2"
+                  style={{ color: colors.primaryText }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = colors.primaryText;
+                  }}
+                >
+                  <span>📝</span>
+                  <span>Download DOC</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Share - Always visible */}
+          {!showDeleted && (
+            <button
+              onClick={() => {
+                fileSharing.setShowShareModal(true);
+                setShowDownloadFormat(false);
+                setShowMoreMenu(false);
+              }}
+              className="p-2 rounded-lg transition-colors flex-shrink-0"
+              style={{ color: colors.secondaryText }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = colors.successGreen;
+                e.currentTarget.style.background = colors.badgeSuccessBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.background = 'transparent';
+              }}
+              title="Share"
+            >
+              <Share2 size={16} />
+            </button>
           )}
-            </div>
-          </>
-        )}
-        {showDeleted && file.deletedAt && (
-          <>
-            {/* Show only restore and permanent delete for deleted files */}
+
+          {/* Restore for deleted files */}
+          {showDeleted && file.deletedAt && (
             <button
               onClick={() => onRestore(file.id)}
               className="p-2 rounded-lg transition-colors flex-shrink-0"
@@ -887,131 +873,34 @@ const FileCard = React.memo(function FileCard({
             >
               <RotateCcw size={16} />
             </button>
-            <button
-              onClick={() => onPermanentlyDelete(file.id)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{ color: colors.secondaryText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = colors.errorRed;
-                e.currentTarget.style.background = colors.badgeErrorBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = colors.secondaryText;
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Permanently Delete"
-            >
-              <Trash size={16} />
-            </button>
-          </>
-        )}
-        {!showDeleted && (
-          <>
-            <button
-              onClick={() => fileSharing.setShowShareModal(true)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{ color: colors.secondaryText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = colors.successGreen;
-                e.currentTarget.style.background = colors.badgeSuccessBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = colors.secondaryText;
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Share"
-            >
-              <Share2 size={16} />
-            </button>
-            <button
-              onClick={() => {
-                logger.debug('Comment button clicked (list view)! Current state:', comments.showComments);
-                comments.setShowComments(!comments.showComments);
-              }}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{
-                color: comments.showComments ? colors.badgePurpleText : colors.secondaryText,
-                background: comments.showComments ? colors.badgePurpleBg : 'transparent',
-              }}
-              onMouseEnter={(e) => {
-                if (!comments.showComments) {
-                  e.currentTarget.style.color = colors.badgePurpleText;
-                  e.currentTarget.style.background = colors.badgePurpleBg;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!comments.showComments) {
-                  e.currentTarget.style.color = colors.secondaryText;
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-              title="Comments"
-            >
-              <MessageCircle size={16} />
-            </button>
-            <button
-              onClick={() => onEdit(file.id)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{ color: colors.secondaryText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = colors.primaryText;
-                e.currentTarget.style.background = colors.hoverBackground;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = colors.secondaryText;
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Edit"
-            >
-              <Edit size={16} />
-            </button>
-            <button
-              onClick={() => onArchive(file.id)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{ color: colors.secondaryText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = colors.badgeWarningText;
-                e.currentTarget.style.background = colors.badgeWarningBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = colors.secondaryText;
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title={file.isArchived ? 'Unarchive' : 'Archive'}
-            >
-              <Archive size={16} />
-            </button>
-            <button
-              onClick={() => onDelete(file.id)}
-              className="p-2 rounded-lg transition-colors flex-shrink-0"
-              style={{ color: colors.secondaryText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = colors.errorRed;
-                e.currentTarget.style.background = colors.badgeErrorBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = colors.secondaryText;
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Delete"
-            >
-              <Trash2 size={16} />
-            </button>
-          </>
-        )}
-        {/* More options menu - shown for all files */}
+          )}
+        </div>
+
+        {/* More Menu - All Secondary Actions Organized */}
         <div className="relative flex-shrink-0">
           <button 
-            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            onClick={() => {
+              setShowMoreMenu(!showMoreMenu);
+              if (!showMoreMenu) {
+                setShowDownloadFormat(false);
+              }
+            }}
             className="p-2 rounded-lg transition-colors flex-shrink-0"
-            style={{ color: colors.secondaryText }}
+            style={{ 
+              color: showMoreMenu ? colors.primaryBlue : colors.secondaryText,
+              background: showMoreMenu ? colors.hoverBackground : 'transparent'
+            }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = colors.primaryText;
-              e.currentTarget.style.background = colors.hoverBackground;
+              if (!showMoreMenu) {
+                e.currentTarget.style.color = colors.primaryText;
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = colors.secondaryText;
-              e.currentTarget.style.background = 'transparent';
+              if (!showMoreMenu) {
+                e.currentTarget.style.color = colors.secondaryText;
+                e.currentTarget.style.background = 'transparent';
+              }
             }}
             title="More options"
           >
@@ -1020,92 +909,242 @@ const FileCard = React.memo(function FileCard({
           {showMoreMenu && (
             <div 
               ref={moreMenuRef} 
-              className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-20"
+              className="absolute right-0 top-full mt-2 w-52 rounded-lg shadow-lg z-50"
               style={{
                 background: colors.cardBackground,
                 border: `1px solid ${colors.border}`,
+                boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`,
               }}
             >
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(file.id);
-                  setShowMoreMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm transition-colors rounded-t-lg flex items-center space-x-2"
-                style={{
-                  color: colors.primaryText,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                  e.currentTarget.style.color = colors.primaryBlue;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = colors.primaryText;
-                }}
-              >
-                <Copy size={14} />
-                <span>Copy ID</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowMoreMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
-                style={{
-                  color: colors.primaryText,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                  e.currentTarget.style.color = colors.primaryBlue;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = colors.primaryText;
-                }}
-              >
-                <Calendar size={14} />
-                <span>View History</span>
-              </button>
-              <button
-                onClick={() => {
-                  setShowMoreMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm transition-colors flex items-center space-x-2"
-                style={{
-                  color: colors.primaryText,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                  e.currentTarget.style.color = colors.primaryBlue;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = colors.primaryText;
-                }}
-              >
-                <Tag size={14} />
-                <span>Manage Tags</span>
-              </button>
-              <div style={{ borderTop: `1px solid ${colors.border}` }}></div>
-              <button
-                onClick={() => {
-                  setShowMoreMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm transition-colors rounded-b-lg flex items-center space-x-2"
-                style={{
-                  color: colors.errorRed,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.badgeErrorBg;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <Trash2 size={14} />
-                <span>Delete Permanently</span>
-              </button>
+              {/* Quick Actions Section */}
+              {!showDeleted && (
+                <div className="px-2 py-1.5">
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 px-2" style={{ color: colors.tertiaryText }}>
+                    Quick Actions
+                  </div>
+                  <button
+                    onClick={() => {
+                      onStar(file.id);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5 mb-1"
+                    style={{ color: colors.primaryText }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = file.isStarred ? colors.badgeWarningText : colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
+                  >
+                    <Star size={14} style={{ 
+                      fill: file.isStarred ? colors.badgeWarningText : 'none',
+                      color: file.isStarred ? colors.badgeWarningText : colors.secondaryText
+                    }} />
+                    <span>{file.isStarred ? 'Unstar' : 'Star'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onTogglePublic(file.id);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5 mb-1"
+                    style={{ color: colors.primaryText }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
+                  >
+                    {file.isPublic ? <Eye size={14} /> : <EyeOff size={14} />}
+                    <span>{file.isPublic ? 'Make Private' : 'Make Public'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      comments.setShowComments(!comments.showComments);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5 mb-1"
+                    style={{ 
+                      color: comments.showComments ? colors.badgePurpleText : colors.primaryText,
+                      background: comments.showComments ? colors.badgePurpleBg : 'transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!comments.showComments) {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                        e.currentTarget.style.color = colors.primaryBlue;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!comments.showComments) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = colors.primaryText;
+                      }
+                    }}
+                  >
+                    <MessageCircle size={14} />
+                    <span>Comments</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onEdit(file.id);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5"
+                    style={{ color: colors.primaryText }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.color = colors.primaryBlue;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = colors.primaryText;
+                    }}
+                  >
+                    <Edit size={14} />
+                    <span>Edit</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Organization Section */}
+              {!showDeleted && (
+                <>
+                  <div style={{ borderTop: `1px solid ${colors.border}`, margin: '4px 0' }}></div>
+                  <div className="px-2 py-1.5">
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 px-2" style={{ color: colors.tertiaryText }}>
+                      Organize
+                    </div>
+                    <button
+                      onClick={() => {
+                        onArchive(file.id);
+                        setShowMoreMenu(false);
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5 mb-1"
+                      style={{ color: colors.primaryText }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                        e.currentTarget.style.color = colors.badgeWarningText;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = colors.primaryText;
+                      }}
+                    >
+                      <Archive size={14} />
+                      <span>{file.isArchived ? 'Unarchive' : 'Archive'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        // TODO: Implement tag management
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5"
+                      style={{ color: colors.primaryText }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = colors.hoverBackground;
+                        e.currentTarget.style.color = colors.primaryBlue;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = colors.primaryText;
+                      }}
+                    >
+                      <Tag size={14} />
+                      <span>Manage Tags</span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Info & History Section */}
+              <div style={{ borderTop: `1px solid ${colors.border}`, margin: '4px 0' }}></div>
+              <div className="px-2 py-1.5">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(file.id);
+                    setShowMoreMenu(false);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5 mb-1"
+                  style={{ color: colors.primaryText }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = colors.primaryText;
+                  }}
+                >
+                  <Copy size={14} />
+                  <span>Copy ID</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    // TODO: Implement view history
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5"
+                  style={{ color: colors.primaryText }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = colors.hoverBackground;
+                    e.currentTarget.style.color = colors.primaryBlue;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = colors.primaryText;
+                  }}
+                >
+                  <Calendar size={14} />
+                  <span>View History</span>
+                </button>
+              </div>
+
+              {/* Dangerous Actions */}
+              <div style={{ borderTop: `1px solid ${colors.border}`, margin: '4px 0' }}></div>
+              <div className="px-2 py-1.5">
+                {!showDeleted ? (
+                  <button
+                    onClick={() => {
+                      onDelete(file.id);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5"
+                    style={{ color: colors.errorRed }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.badgeErrorBg;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      onPermanentlyDelete(file.id);
+                      setShowMoreMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg flex items-center gap-2.5"
+                    style={{ color: colors.errorRed }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.badgeErrorBg;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Trash size={14} />
+                    <span>Delete Permanently</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

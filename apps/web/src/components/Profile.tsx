@@ -9,7 +9,6 @@ import {
   HelpCircle, 
   Briefcase,
   Award,
-  Target,
   FileText,
   BarChart3,
   LogOut
@@ -27,7 +26,6 @@ import {
   ProfileTab,
   ProfessionalTab,
   SkillsTab,
-  CareerTab,
   PortfolioTab,
   SecurityTab,
   PreferencesTab,
@@ -55,7 +53,22 @@ export default function Profile() {
     );
   }
   
-  const [activeTab, setActiveTab] = useState('profile');
+  // Persist active tab across page refreshes
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedTab = localStorage.getItem('profileActiveTab');
+      return savedTab || 'profile';
+    }
+    return 'profile';
+  });
+  
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('profileActiveTab', activeTab);
+    }
+  }, [activeTab]);
+  
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -72,7 +85,6 @@ export default function Profile() {
     { id: 'profile', label: 'Profile', icon: UserCircle },
     { id: 'professional', label: 'Professional', icon: Briefcase },
     { id: 'skills', label: 'Skills & Expertise', icon: Award },
-    { id: 'career', label: 'Career Goals', icon: Target },
     { id: 'portfolio', label: 'Portfolio', icon: FileText },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'security', label: 'Security', icon: Shield },
@@ -139,11 +151,12 @@ export default function Profile() {
       return;
     }
     
-    if (userData && !localProfileData) {
-      setLocalProfileData(userData);
-    } else if (userData && !isEditing) {
-      // Sync local state with context when not editing
-      setLocalProfileData(userData);
+    // Always sync with context data when available
+    if (userData) {
+      // Initialize if missing, or sync when not editing
+      if (!localProfileData || !isEditing) {
+        setLocalProfileData(userData);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData, isEditing, isSaving, isSaved]);
@@ -207,9 +220,6 @@ export default function Profile() {
     const projects = safeParseArray(data.projects);
     if (projects.length >= 1) completed++;
     
-    // Career Goals (1 point if at least 1)
-    const careerGoals = safeParseArray(data.careerGoals);
-    if (careerGoals.length >= 1) completed++;
     
     // Education (1 point if present)
     const education = safeParseArray(data.education);
@@ -235,9 +245,14 @@ export default function Profile() {
       
       // Clean up data before sending - remove null/undefined values and ensure arrays are arrays
       // Also exclude large base64 profile pictures (those should be uploaded separately)
+      // Exclude email field - login email cannot be changed
       const cleanedData: Partial<UserData> = {};
       Object.keys(dataToSave).forEach(key => {
         const value = (dataToSave as any)[key];
+        // Skip email field - login email cannot be changed
+        if (key === 'email') {
+          return;
+        }
         // Skip profile picture if it's a large base64 string (upload separately)
         if (key === 'profilePicture' && typeof value === 'string' && value.startsWith('data:') && value.length > 10000) {
           // Profile picture will be uploaded separately, skip from general update
@@ -328,13 +343,14 @@ export default function Profile() {
     updateProfileData(data);
   };
 
-  const handleChangePhoto = async (newPictureUrl: string) => {
+  const handleChangePhoto = async (newPictureUrl: string | null) => {
     try {
       // Update the profile picture in local state
       updateProfileData({ profilePicture: newPictureUrl });
       // Refresh profile to get the latest data
       await refreshProfile();
-      setSaveMessage({ type: 'success', text: 'Profile picture updated successfully!' });
+      const message = newPictureUrl ? 'Profile picture updated successfully!' : 'Profile picture removed successfully!';
+      setSaveMessage({ type: 'success', text: message });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error: any) {
       logger.error('Failed to update profile picture:', error);
@@ -372,8 +388,6 @@ export default function Profile() {
         return <ProfessionalTab {...commonProps} />;
       case 'skills':
         return <SkillsTab {...commonProps} />;
-      case 'career':
-        return <CareerTab {...commonProps} />;
       case 'portfolio':
         return <PortfolioTab {...commonProps} />;
       case 'security':

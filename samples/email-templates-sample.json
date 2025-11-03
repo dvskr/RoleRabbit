@@ -1,0 +1,23 @@
+{
+  "coldEmail": {
+    "subject": "Application for [Job Title] Position",
+    "body": "Dear [Hiring Manager Name],\n\nI am writing to express my interest in the [Job Title] position at [Company Name]. With [X years] of experience in [relevant field], I am confident that I would be a valuable addition to your team.\n\n[Personalized paragraph about why you're interested]\n\nI have attached my resume for your review and would welcome the opportunity to discuss how my skills and experience align with your needs.\n\nThank you for your time and consideration.\n\nBest regards,\n[Your Name]"
+  },
+  "followUp": {
+    "subject": "Following up on [Job Title] Application",
+    "body": "Dear [Hiring Manager Name],\n\nI wanted to follow up on my application for the [Job Title] position that I submitted on [Date]. I remain very interested in this opportunity and believe my background in [relevant experience] would be a great fit.\n\n[Additional relevant information or updates]\n\nI would appreciate any updates you might have regarding the status of my application. Please don't hesitate to reach out if you need any additional information.\n\nThank you again for your consideration.\n\nBest regards,\n[Your Name]"
+  },
+  "thankYou": {
+    "subject": "Thank You - [Job Title] Interview",
+    "body": "Dear [Interviewer Name],\n\nThank you for taking the time to speak with me today about the [Job Title] position at [Company Name]. I enjoyed learning more about [specific topic discussed] and I'm even more excited about the opportunity to join your team.\n\n[Specific points from the conversation]\n\nI am confident that my experience in [relevant skills] would allow me to make significant contributions to [specific project/team]. I look forward to the next steps in the process.\n\nThank you again for your time and consideration.\n\nBest regards,\n[Your Name]"
+  },
+  "acceptance": {
+    "subject": "Accepting the [Job Title] Offer",
+    "body": "Dear [Hiring Manager Name],\n\nI am thrilled to accept the offer for the [Job Title] position at [Company Name]. Thank you for this wonderful opportunity.\n\nI am excited to begin on [Start Date] and look forward to contributing to the team. [Specific reason you're excited]\n\nPlease let me know what next steps I need to take before my start date. I'm ready to get started!\n\nThank you again for this opportunity.\n\nBest regards,\n[Your Name]"
+  },
+  "negotiation": {
+    "subject": "Regarding the [Job Title] Offer",
+    "body": "Dear [Hiring Manager Name],\n\nThank you for extending the offer for the [Job Title] position at [Company Name]. I'm very excited about this opportunity.\n\nBefore I can accept, I'd like to discuss the compensation package. Based on my research and experience in [relevant field], I was hoping we could discuss [specific point - salary, benefits, etc.].\n\n[Rationale for negotiation]\n\nI'm very interested in joining your team and believe we can reach an agreement that works for both of us. Would it be possible to schedule a brief call to discuss?\n\nThank you for your understanding.\n\nBest regards,\n[Your Name]"
+  }
+}
+

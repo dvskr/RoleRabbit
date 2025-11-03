@@ -280,6 +280,7 @@ fastify.get('/api/status', async (request) => ({
 // Register route modules
 fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
+fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -348,7 +349,8 @@ fastify.setNotFoundHandler(async (request, reply) => {
       health: 'GET /health',
       status: 'GET /api/status',
       auth: '/api/auth/*',
-      users: '/api/users/*'
+      users: '/api/users/*',
+      storage: '/api/storage/*'
     }
   });
 });
