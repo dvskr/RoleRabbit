@@ -5,10 +5,8 @@ import {
   UserProfile, 
   SecuritySettings, 
   UserPreferences, 
-  BillingInfo, 
   SupportTicket, 
   FeedbackForm, 
-  JobApplication, 
   UserProfileTab 
 } from '../types/userProfile';
 
@@ -81,41 +79,6 @@ export const useUserProfile = () => {
     }
   });
   
-  // Billing information
-  const [billingInfo, setBillingInfo] = useState<BillingInfo>({
-    plan: 'premium',
-    status: 'active',
-    nextBillingDate: '2024-02-01',
-    paymentMethod: {
-      type: 'card',
-      last4: '4242',
-      brand: 'Visa'
-    },
-    billingAddress: {
-      street: '123 Main St',
-      city: 'San Francisco',
-      state: 'CA',
-      zipCode: '94105',
-      country: 'USA'
-    },
-    invoices: [
-      {
-        id: 'inv_001',
-        date: '2024-01-01',
-        amount: 29.99,
-        status: 'paid',
-        downloadUrl: '#'
-      },
-      {
-        id: 'inv_002',
-        date: '2023-12-01',
-        amount: 29.99,
-        status: 'paid',
-        downloadUrl: '#'
-      }
-    ]
-  });
-  
   // Support tickets
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([
     {
@@ -147,57 +110,6 @@ export const useUserProfile = () => {
     description: '',
     priority: 'medium'
   });
-  
-  // Job applications
-  const [jobs, setJobs] = useState<JobApplication[]>([
-    {
-      id: 'job_001',
-      title: 'Senior Frontend Developer',
-      company: 'TechCorp',
-      location: 'San Francisco, CA',
-      status: 'interview',
-      appliedDate: '2024-01-15',
-      salary: '$120,000 - $150,000',
-      description: 'Looking for a senior frontend developer with React experience',
-      url: 'https://techcorp.com/jobs/senior-frontend',
-      notes: 'Great company culture, remote friendly',
-      priority: 'high',
-      contact: {
-        name: 'Sarah Johnson',
-        email: 'sarah@techcorp.com',
-        phone: '+1 (555) 987-6543'
-      }
-    },
-    {
-      id: 'job_002',
-      title: 'Full Stack Engineer',
-      company: 'StartupXYZ',
-      location: 'New York, NY',
-      status: 'applied',
-      appliedDate: '2024-01-10',
-      salary: '$100,000 - $130,000',
-      description: 'Full stack position with modern tech stack',
-      url: 'https://startupxyz.com/careers',
-      notes: 'Fast-growing startup, equity options',
-      priority: 'medium'
-    }
-  ]);
-  
-  const [newJob, setNewJob] = useState<Partial<JobApplication>>({
-    title: '',
-    company: '',
-    location: '',
-    status: 'applied',
-    appliedDate: new Date().toISOString().split('T')[0],
-    salary: '',
-    description: '',
-    url: '',
-    notes: '',
-    priority: 'medium'
-  });
-  
-  const [showAddJob, setShowAddJob] = useState(false);
-  const [jobFilter, setJobFilter] = useState('all');
   
   // Action handlers
   const handleLogin = useCallback(async (email: string, password: string) => {
@@ -245,51 +157,6 @@ export const useUserProfile = () => {
     // TODO: Implement actual feedback submission logic
   }, []);
   
-  const handleAddJob = useCallback(async (jobData: Partial<JobApplication>) => {
-    const newJobData: JobApplication = {
-      id: `job_${Date.now()}`,
-      title: jobData.title || '',
-      company: jobData.company || '',
-      location: jobData.location || '',
-      status: jobData.status || 'applied',
-      appliedDate: jobData.appliedDate || new Date().toISOString().split('T')[0],
-      salary: jobData.salary || '',
-      description: jobData.description || '',
-      url: jobData.url || '',
-      notes: jobData.notes || '',
-      priority: jobData.priority || 'medium',
-      contact: jobData.contact
-    };
-    
-    setJobs(prev => [...prev, newJobData]);
-    setNewJob({
-      title: '',
-      company: '',
-      location: '',
-      status: 'applied',
-      appliedDate: new Date().toISOString().split('T')[0],
-      salary: '',
-      description: '',
-      url: '',
-      notes: '',
-      priority: 'medium'
-    });
-    setShowAddJob(false);
-    // TODO: Implement actual job addition logic
-  }, []);
-  
-  const handleUpdateJob = useCallback(async (jobId: string, jobData: Partial<JobApplication>) => {
-    setJobs(prev => prev.map(job => 
-      job.id === jobId ? { ...job, ...jobData } : job
-    ));
-    // TODO: Implement actual job update logic
-  }, []);
-  
-  const handleDeleteJob = useCallback(async (jobId: string) => {
-    setJobs(prev => prev.filter(job => job.id !== jobId));
-    // TODO: Implement actual job deletion logic
-  }, []);
-  
   return {
     // State
     activeTab,
@@ -301,13 +168,8 @@ export const useUserProfile = () => {
     profileForm,
     securityForm,
     preferences,
-    billingInfo,
     supportTickets,
     feedbackForm,
-    jobs,
-    newJob,
-    showAddJob,
-    jobFilter,
     
     // Setters
     setActiveTab,
@@ -319,13 +181,8 @@ export const useUserProfile = () => {
     setProfileForm,
     setSecurityForm,
     setPreferences,
-    setBillingInfo,
     setSupportTickets,
     setFeedbackForm,
-    setJobs,
-    setNewJob,
-    setShowAddJob,
-    setJobFilter,
     
     // Actions
     handleLogin,
@@ -334,9 +191,6 @@ export const useUserProfile = () => {
     handleSaveProfile,
     handleUpdateSecurity,
     handleUpdatePreferences,
-    handleSubmitFeedback,
-    handleAddJob,
-    handleUpdateJob,
-    handleDeleteJob
+    handleSubmitFeedback
   };
 };

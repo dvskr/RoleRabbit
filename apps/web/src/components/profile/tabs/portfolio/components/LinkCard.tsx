@@ -58,6 +58,8 @@ export default function LinkCard({
       {isCurrentlyEditing ? (
         <div className="flex-1 space-y-2">
           <input
+            id={`link-platform-${link.id}`}
+            name={`link-platform-${link.id}`}
             type="text"
             value={tempLink.platform}
             onChange={(e) => onTempLinkChange({ ...tempLink, platform: e.target.value })}
@@ -65,6 +67,8 @@ export default function LinkCard({
             placeholder="Platform"
           />
           <input
+            id={`link-url-${link.id}`}
+            name={`link-url-${link.id}`}
             type="url"
             value={tempLink.url}
             onChange={(e) => onTempLinkChange({ ...tempLink, url: e.target.value })}

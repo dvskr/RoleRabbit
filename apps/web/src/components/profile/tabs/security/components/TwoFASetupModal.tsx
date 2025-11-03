@@ -10,6 +10,11 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
   onClose,
   onVerify,
   colors,
+  qrCode,
+  secret,
+  backupCodes = [],
+  isVerifying = false,
+  errorMessage,
 }) => {
   const [code, setCode] = React.useState('');
 
@@ -27,16 +32,18 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
   };
 
   const handleSubmit = () => {
-    if (code.length === 6) {
+    if (code.length === 6 && !isVerifying) {
       onVerify(code);
     }
   };
+
+  const isCodeValid = code.length === 6;
 
   return (
     <div 
       className="fixed inset-0 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"
       style={{ 
-        background: 'rgba(0, 0, 0, 0.75)',
+        background: MODAL_BACKDROP_STYLE,
         position: 'fixed',
         top: 0,
         left: 0,
@@ -87,6 +94,12 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
           </button>
         </div>
 
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-700 border border-red-200 text-sm font-medium">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="space-y-4">
           <div 
             className="rounded-lg p-4"
@@ -112,8 +125,44 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
             </p>
           </div>
 
+          {(qrCode || secret) && (
+            <div
+              className="rounded-lg p-4"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              <h4
+                className="text-sm font-semibold mb-3"
+                style={{ color: colors.primaryText }}
+              >
+                Scan the QR code with your authenticator app
+              </h4>
+              {qrCode && (
+                <div className="flex justify-center mb-3">
+                  <img src={qrCode} alt="2FA QR code" className="w-40 h-40 object-contain" />
+                </div>
+              )}
+              {secret && (
+                <div
+                  className="text-xs rounded-md px-3 py-2 break-all"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `1px dashed ${colors.border}`,
+                    color: colors.secondaryText,
+                  }}
+                >
+                  Can’t scan? Enter this key manually:&nbsp;
+                  <span className="font-semibold" style={{ color: colors.primaryText }}>{secret}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label 
+              htmlFor="twofa-code-input"
               className="block text-sm font-medium mb-2"
               style={{ color: colors.primaryText }}
             >
@@ -121,6 +170,8 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
             </label>
             <div className="relative">
               <input
+                id="twofa-code-input"
+                name="twofa-code"
                 type="text"
                 value={code}
                 onChange={handleCodeChange}
@@ -148,20 +199,37 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
             </p>
           </div>
 
-          <div 
-            className="rounded-lg p-3"
-            style={{
-              background: colors.badgeWarningBg,
-              border: `1px solid ${colors.badgeWarningBorder}`,
-            }}
-          >
-            <p 
-              className="text-sm"
-              style={{ color: colors.badgeWarningText }}
+          {backupCodes.length > 0 && (
+            <div 
+              className="rounded-lg p-3"
+              style={{
+                background: colors.badgeWarningBg,
+                border: `1px solid ${colors.badgeWarningBorder}`,
+              }}
             >
-              <strong>Note:</strong> Make sure to save your backup codes in a safe place. You'll need them if you lose access to your authenticator app.
-            </p>
-          </div>
+              <p 
+                className="text-sm mb-2"
+                style={{ color: colors.badgeWarningText }}
+              >
+                <strong>Backup Codes:</strong> Store these codes securely. Each code can be used once if you cannot access your authenticator app.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                {backupCodes.map((backupCode) => (
+                  <div
+                    key={backupCode}
+                    className="px-2 py-1 rounded-md"
+                    style={{
+                      background: colors.cardBackground,
+                      border: `1px solid ${colors.badgeWarningBorder}`,
+                      color: colors.primaryText,
+                    }}
+                  >
+                    {backupCode}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -184,26 +252,26 @@ export const TwoFASetupModal: React.FC<TwoFASetupModalProps> = ({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={code.length !== 6}
+            disabled={!isCodeValid || isVerifying}
             className="flex-1 px-4 py-2 rounded-lg transition-colors"
             style={{
-              background: code.length !== 6 ? colors.inputBackground : colors.primaryBlue,
-              color: code.length !== 6 ? colors.tertiaryText : 'white',
-              opacity: code.length !== 6 ? 0.5 : 1,
-              cursor: code.length !== 6 ? 'not-allowed' : 'pointer',
+              background: !isCodeValid || isVerifying ? colors.inputBackground : colors.primaryBlue,
+              color: !isCodeValid || isVerifying ? colors.tertiaryText : 'white',
+              opacity: !isCodeValid || isVerifying ? 0.5 : 1,
+              cursor: !isCodeValid || isVerifying ? 'not-allowed' : 'pointer',
             }}
             onMouseEnter={(e) => {
-              if (code.length === 6) {
+              if (isCodeValid && !isVerifying) {
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
             onMouseLeave={(e) => {
-              if (code.length === 6) {
+              if (isCodeValid && !isVerifying) {
                 e.currentTarget.style.opacity = '1';
               }
             }}
           >
-            Verify & Enable
+            {isVerifying ? 'Verifying…' : 'Verify & Enable'}
           </button>
         </div>
       </div>

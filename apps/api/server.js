@@ -1,6 +1,6 @@
 const fastify = require('fastify')({
   bodyLimit: 10485760, // 10MB body limit for JSON requests
-  requestTimeout: 30000, // 30 second request timeout
+  requestTimeout: 120000, // 120 second request timeout
   keepAliveTimeout: 65000, // 65 seconds for keep-alive  
   connectionTimeout: 10000, // 10 second connection timeout
   logger: {
@@ -87,9 +87,7 @@ const {
   validateEmail, 
   validatePassword, 
   validateRequired, 
-  validateLength,
-  validateResumeData,
-  validateJobApplication 
+  validateLength
 } = require('./utils/validation');
 
 // Database connection
@@ -101,86 +99,8 @@ const { createRefreshToken, verifyRefreshToken, deleteAllUserRefreshTokens } = r
 const { createSession, getUserSessions, deactivateAllUserSessions, deactivateSession } = require('./utils/sessionManager');
 const { createPasswordResetToken, verifyPasswordResetToken } = require('./utils/passwordReset');
 
-// Jobs utilities
-const { 
-  getJobsByUserId, 
-  getJobById, 
-  createJob, 
-  updateJob, 
-  deleteJob 
-} = require('./utils/jobs');
-
-// Resumes utilities
-const { 
-  getResumesByUserId,
-  getResumeById,
-  createResume,
-  updateResume,
-  deleteResume
-} = require('./utils/resumes');
-
-// Emails utilities
-const { 
-  getEmailsByUserId,
-  getEmailById,
-  createEmail,
-  updateEmail,
-  deleteEmail,
-  getEmailsByJobId
-} = require('./utils/emails');
-
-// Cover Letters utilities
-const { 
-  getCoverLettersByUserId,
-  getCoverLetterById,
-  createCoverLetter,
-  updateCoverLetter,
-  deleteCoverLetter,
-  getCoverLettersByJobId
-} = require('./utils/coverLetters');
-
-// Portfolios utilities
-const { 
-  getPortfoliosByUserId,
-  getPortfolioById,
-  createPortfolio,
-  updatePortfolio,
-  deletePortfolio
-} = require('./utils/portfolios');
-
-// Cloud Files utilities
-const { 
-  getCloudFilesByUserId,
-  getCloudFileById,
-  createCloudFile,
-  updateCloudFile,
-  deleteCloudFile,
-  getCloudFilesByFolder
-} = require('./utils/cloudFiles');
-
-// File Upload utilities
-const { uploadSingle, uploadMultiple, deleteFile, getFilePath, fileExists } = require('./utils/fileUpload');
-
-// Email service
-const { sendEmail, sendWelcomeEmail, sendPasswordResetEmail, sendJobReminderEmail } = require('./utils/emailService');
-
-// Resume export utilities
-const { exportResume } = require('./utils/resumeExport');
-
-// AI Agents utilities (from agentExecutor)
-const { 
-  executeAgentTask, 
-  runActiveAgentsForUser,
-  AGENT_TYPES, 
-  getAgentTaskHistory
-} = require('./utils/agentExecutor');
-
-// Job Analytics utilities
-const {
-  getJobAnalytics,
-  getApplicationTrends,
-  getSuccessMetrics
-} = require('./utils/jobAnalytics');
+// Email service (auth emails only)
+const { sendEmail, sendWelcomeEmail, sendPasswordResetEmail } = require('./utils/emailService');
 
 // WebSocket Server
 const WebSocketServer = require('./utils/websocketServer');
@@ -201,41 +121,6 @@ const {
 // Sanitization utilities
 const { sanitizationMiddleware } = require('./utils/sanitizer');
 
-// Analytics utilities
-const { 
-  getAnalyticsByUserId,
-  getAnalyticsById,
-  createAnalytics,
-  updateAnalytics,
-  deleteAnalytics,
-  getAnalyticsByType
-} = require('./utils/analytics');
-
-// Discussion utilities
-const { 
-  getDiscussionPosts,
-  getDiscussionPostById,
-  createDiscussionPost,
-  updateDiscussionPost,
-  deleteDiscussionPost,
-  getCommentsByPostId,
-  createComment,
-  updateComment,
-  deleteComment
-} = require('./utils/discussions');
-
-// AI Agents utilities (from aiAgents)
-const {
-  getAgentsByUserId,
-  getAgentById,
-  createAgent,
-  updateAgent,
-  deleteAgent,
-  getAgentTasks,
-  createAgentTask,
-  updateAgentTask,
-  getAgentStats
-} = require('./utils/aiAgents');
 
 // Register compression with disabled global compression to prevent premature close warnings
 // Fastify v5 compress plugin can cause premature close warnings - disable global compression
@@ -267,9 +152,13 @@ fastify.register(require('@fastify/cors'), {
 fastify.register(require('@fastify/rate-limit'), {
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  skip: (request) => {
+    // Skip rate limiting for long-running operations if needed
+    return false;
+  },
   errorResponseBuilder: (request, context) => {
     return {
-      error: 'Too many requests',
+      error: 'Rate limit exceeded. Please try again later.',
       message: 'Rate limit exceeded. Please try again later.',
       retryAfter: Math.round(context.ttl / 1000)
     };
@@ -384,9 +273,6 @@ fastify.get('/api/status', async (request) => ({
   endpoints: {
     auth: '/api/auth/*',
     users: '/api/users/*',
-    resumes: '/api/resumes/*',
-    jobs: '/api/jobs/*',
-    cloud: '/api/cloud/*',
     health: '/health'
   }
 }));
@@ -394,19 +280,6 @@ fastify.get('/api/status', async (request) => ({
 // Register route modules
 fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
-fastify.register(require('./routes/resumes.routes'));
-fastify.register(require('./routes/jobs.routes'));
-fastify.register(require('./routes/emails.routes'));
-fastify.register(require('./routes/coverLetters.routes'));
-fastify.register(require('./routes/portfolios.routes'));
-fastify.register(require('./routes/files.routes'));
-fastify.register(require('./routes/folders.routes'));
-fastify.register(require('./routes/credentials.routes'));
-fastify.register(require('./routes/analytics.routes'));
-fastify.register(require('./routes/discussions.routes'));
-fastify.register(require('./routes/agents.routes'));
-fastify.register(require('./routes/ai.routes'));
-fastify.register(require('./routes/dashboard.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -475,10 +348,7 @@ fastify.setNotFoundHandler(async (request, reply) => {
       health: 'GET /health',
       status: 'GET /api/status',
       auth: '/api/auth/*',
-      users: '/api/users/*',
-      resumes: '/api/resumes/*',
-      jobs: '/api/jobs/*',
-      cloud: '/api/cloud/*'
+      users: '/api/users/*'
     }
   });
 });

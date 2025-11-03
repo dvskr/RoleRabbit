@@ -1,57 +1,109 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, X, FileText, Tag } from 'lucide-react';
-import { ResumeFile } from '../../types/cloudStorage';
 import { useTheme } from '../../contexts/ThemeContext';
+import { logger } from '../../utils/logger';
+
+type UploadModalPayload = {
+  file: File;
+  displayName: string;
+  type: 'resume' | 'template' | 'backup' | 'document';
+  tags: string[];
+  isPublic: boolean;
+  folderId?: string | null;
+};
 
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (fileData: Partial<ResumeFile>) => void;
+  onUpload: (payload: UploadModalPayload) => Promise<void> | void;
+  activeFolderId?: string | null;
 }
 
-export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId }: UploadModalProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState<'resume' | 'template' | 'backup'>('resume');
+  const [fileType, setFileType] = useState<'resume' | 'template' | 'backup' | 'document'>('resume');
   const [tags, setTags] = useState('');
   const [isPublic, setIsPublic] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleUpload = async () => {
-    if (!fileName.trim()) return;
-
-    setIsUploading(true);
-    
-    // Simulate upload delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const fileData: Partial<ResumeFile> = {
-      name: fileName.trim(),
-      type: fileType,
-      tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-      isPublic,
-      size: '1.2 MB' // This would be calculated from actual file
-    };
-
-    onUpload(fileData);
-    
-    // Reset form
+  const resetForm = () => {
     setFileName('');
     setFileType('resume');
     setTags('');
     setIsPublic(false);
+    setSelectedFile(null);
+    setErrorMessage(null);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setErrorMessage('Please choose a file to upload.');
+      return;
+    }
+
+    const trimmedName = fileName.trim() || selectedFile.name.replace(/\.[^/.]+$/, '');
+    if (!trimmedName) {
+      setErrorMessage('Please provide a name for the file.');
+      return;
+    }
+
+    setIsUploading(true);
+    setErrorMessage(null);
+
+    const tagsList = tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(Boolean);
+    
+    const payload: UploadModalPayload = {
+      file: selectedFile,
+      displayName: trimmedName,
+      type: fileType,
+      tags: tagsList,
+      isPublic,
+      folderId: activeFolderId ?? null,
+    };
+
+    try {
+      await onUpload(payload);
+      resetForm();
+    } catch (error) {
+      logger.error('Failed to upload file:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to upload file');
+    } finally {
     setIsUploading(false);
+    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setFileName(file.name.replace(/\.[^/.]+$/, '')); // Remove extension
+    if (!file) return;
+
+    setSelectedFile(file);
+    setFileName(file.name.replace(/\.[^/.]+$/, ''));
+    setErrorMessage(null);
+
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (extension === 'pdf') {
+      setFileType('resume');
+    } else if (extension === 'doc' || extension === 'docx') {
+      setFileType('template');
+    } else {
+      setFileType('document');
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,13 +111,16 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
     <div 
       className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto"
       style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}
+      data-testid="storage-upload-modal"
     >
       <div 
         className="rounded-lg p-4 w-full max-w-lg my-auto"
         style={{
           background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
           border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
-          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: theme.mode === 'light'
+            ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+            : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -92,7 +147,10 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm();
+              onClose();
+            }}
             className="p-1.5 transition-colors"
             style={{ color: colors.secondaryText }}
             onMouseEnter={(e) => {
@@ -111,12 +169,9 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
         </div>
 
         <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
-          {/* File Upload Area */}
           <div 
             className="border-2 border-dashed rounded-lg p-4 text-center transition-colors"
-            style={{
-              borderColor: colors.border,
-            }}
+            style={{ borderColor: colors.border }}
             onMouseEnter={(e) => {
               e.currentTarget.style.borderColor = colors.borderFocused;
             }}
@@ -137,13 +192,12 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
               accept=".pdf,.doc,.docx,.txt"
               className="hidden"
               id="file-upload"
+              data-testid="storage-file-input"
             />
             <label
               htmlFor="file-upload"
               className="inline-block text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-sm"
-              style={{
-                background: colors.primaryBlue,
-              }}
+              style={{ background: colors.primaryBlue }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.opacity = '0.9';
               }}
@@ -159,9 +213,16 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
             >
               Supports PDF, DOC, DOCX, TXT
             </p>
+            {selectedFile && (
+              <p
+                className="text-[10px] mt-1"
+                style={{ color: colors.secondaryText }}
+              >
+                Selected: {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+            )}
           </div>
 
-          {/* File Details */}
           <div className="space-y-2">
             <div>
               <label 
@@ -202,7 +263,7 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
               </label>
               <select
                 value={fileType}
-                onChange={(e) => setFileType(e.target.value as 'resume' | 'template' | 'backup')}
+                onChange={(e) => setFileType(e.target.value as 'resume' | 'template' | 'backup' | 'document')}
                 className="w-full px-2 py-1.5 text-sm rounded-lg focus:outline-none transition-all"
                 aria-label="File type"
                 title="File type"
@@ -221,6 +282,7 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
                 <option value="resume" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Resume</option>
                 <option value="template" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Template</option>
                 <option value="backup" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Backup</option>
+                <option value="document" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Document</option>
               </select>
             </div>
 
@@ -267,10 +329,7 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
                 className="w-3.5 h-3.5 rounded focus:ring-2 transition-all"
-                style={{
-                  accentColor: colors.primaryBlue,
-                  borderColor: colors.border,
-                }}
+                style={{ accentColor: colors.primaryBlue, borderColor: colors.border }}
               />
               <label 
                 htmlFor="isPublic" 
@@ -283,13 +342,15 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div 
           className="flex justify-end space-x-2 mt-4 pt-4"
           style={{ borderTop: `1px solid ${colors.border}` }}
         >
           <button
-            onClick={onClose}
+            onClick={() => {
+              resetForm();
+              onClose();
+            }}
             disabled={isUploading}
             className="px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50"
             style={{
@@ -310,24 +371,25 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
           </button>
           <button
             onClick={handleUpload}
-            disabled={!fileName.trim() || isUploading}
+            disabled={!selectedFile || isUploading}
             className="px-3 py-1.5 text-xs rounded-lg transition-colors flex items-center space-x-1.5"
             style={{
-              background: (!fileName.trim() || isUploading) ? colors.inputBackground : colors.primaryBlue,
-              color: (!fileName.trim() || isUploading) ? colors.tertiaryText : 'white',
-              opacity: (!fileName.trim() || isUploading) ? 0.5 : 1,
-              cursor: (!fileName.trim() || isUploading) ? 'not-allowed' : 'pointer',
+              background: (!selectedFile || isUploading) ? colors.inputBackground : colors.primaryBlue,
+              color: (!selectedFile || isUploading) ? colors.tertiaryText : 'white',
+              opacity: (!selectedFile || isUploading) ? 0.5 : 1,
+              cursor: (!selectedFile || isUploading) ? 'not-allowed' : 'pointer',
             }}
             onMouseEnter={(e) => {
-              if (fileName.trim() && !isUploading) {
+              if (selectedFile && !isUploading) {
                 e.currentTarget.style.opacity = '0.9';
               }
             }}
             onMouseLeave={(e) => {
-              if (fileName.trim() && !isUploading) {
+              if (selectedFile && !isUploading) {
                 e.currentTarget.style.opacity = '1';
               }
             }}
+            data-testid="storage-upload-submit"
           >
             {isUploading ? (
               <>
@@ -345,6 +407,12 @@ export default function UploadModal({ isOpen, onClose, onUpload }: UploadModalPr
             )}
           </button>
         </div>
+
+        {errorMessage && (
+          <p className="mt-3 text-xs" style={{ color: colors.errorRed }} data-testid="storage-upload-error">
+            {errorMessage}
+          </p>
+        )}
       </div>
     </div>
   );

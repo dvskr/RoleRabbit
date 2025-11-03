@@ -2,9 +2,30 @@ import { useState, useCallback } from 'react';
 import { ResumeFile } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
-import { createDefaultFile } from '../utils/fileOperations';
 
-export const useFileOperations = () => {
+type UploadPayload = {
+  file: File;
+  displayName?: string;
+  type?: ResumeFile['type'] | string;
+  tags?: string[];
+  description?: string;
+  isPublic?: boolean;
+  folderId?: string | null;
+};
+
+type StorageCallback = (storage: {
+  usedBytes: number;
+  limitBytes: number;
+  percentage: number;
+  usedGB?: number;
+  limitGB?: number;
+}) => void;
+
+interface UseFileOperationsOptions {
+  onStorageUpdate?: StorageCallback;
+}
+
+export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions = {}) => {
   const [files, setFiles] = useState<ResumeFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,33 +103,82 @@ export const useFileOperations = () => {
     }
   }, [files]);
 
-  const handleDownloadFile = useCallback((file: ResumeFile) => {
-    logger.debug('Downloading file:', file.name);
-    // TODO: Implement actual download logic
-  }, []);
+  const handleDownloadFile = useCallback(async (file: ResumeFile, format?: 'pdf' | 'doc') => {
+    try {
+      if (format && file.fileName && !file.fileName.toLowerCase().endsWith(`.${format}`)) {
+        logger.debug(`Requested ${format.toUpperCase()} download for ${file.name}, delivering original file format.`);
+      }
+
+      const blob = await apiService.downloadCloudFile(file.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const fallbackExtension = file.contentType?.split('/').pop() || 'bin';
+      const downloadName = file.fileName || `${file.name}.${fallbackExtension}`;
+
+      link.href = url;
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setFiles(prev => prev.map(existing =>
+        existing.id === file.id
+          ? { ...existing, downloadCount: (existing.downloadCount || 0) + 1 }
+          : existing
+      ));
+    } catch (error) {
+      logger.error('Failed to download file:', error);
+    }
+  }, [setFiles]);
 
   const handleShareFile = useCallback((file: ResumeFile) => {
     logger.debug('Sharing file:', file.name);
     // TODO: Implement actual share logic
   }, []);
 
-  const handleUploadFile = useCallback(async (fileData: Partial<ResumeFile> | { data: any; name?: string }, onComplete?: () => void) => {
+  const handleUploadFile = useCallback(async (payload: UploadPayload, onComplete?: () => void) => {
     try {
-      // Save to API
-      const response = await apiService.saveToCloud('data' in fileData ? fileData.data : fileData, fileData.name || 'Untitled');
-      if (response && response.savedResume) {
-        const newFile: ResumeFile = response.savedResume as ResumeFile;
-        setFiles(prev => [newFile, ...prev]);
+      const formData = new FormData();
+      formData.append('file', payload.file);
+
+      if (payload.displayName) {
+        formData.append('displayName', payload.displayName);
       }
+      if (payload.type) {
+        formData.append('type', payload.type);
+      }
+      if (payload.folderId) {
+        formData.append('folderId', payload.folderId);
+      }
+      if (payload.tags && payload.tags.length > 0) {
+        formData.append('tags', JSON.stringify(payload.tags));
+      }
+      if (payload.description) {
+        formData.append('description', payload.description);
+      }
+      if (typeof payload.isPublic === 'boolean') {
+        formData.append('isPublic', String(payload.isPublic));
+      }
+
+      const response = await apiService.uploadStorageFile(formData);
+      if (response && response.file) {
+        setFiles(prev => [response.file as ResumeFile, ...prev]);
+      }
+
+      if (response?.storage && onStorageUpdate) {
+        onStorageUpdate(response.storage);
+      }
+
+      onComplete?.();
     } catch (error) {
       logger.error('Failed to save file to API:', error);
-      // Fallback to local
-      const newFile = createDefaultFile(fileData);
-      setFiles(prev => [newFile, ...prev]);
-    } finally {
-      onComplete?.();
+      if ((error as any)?.storage && onStorageUpdate) {
+        onStorageUpdate((error as any).storage);
+      }
+      throw error;
     }
-  }, []);
+  }, [onStorageUpdate]);
 
   const handleEditFile = useCallback(async (fileId: string, updates: Partial<ResumeFile>) => {
     try {
@@ -211,14 +281,17 @@ export const useFileOperations = () => {
   // Permanently delete file
   const handlePermanentlyDeleteFile = useCallback(async (fileId: string) => {
     try {
-      await apiService.permanentlyDeleteCloudFile(fileId);
+      const response = await apiService.permanentlyDeleteCloudFile(fileId);
       setFiles(prev => prev.filter(file => file.id !== fileId));
+      if (response?.storage && onStorageUpdate) {
+        onStorageUpdate(response.storage);
+      }
     } catch (error) {
       logger.error('Failed to permanently delete file:', error);
       // Fallback to local state update
       setFiles(prev => prev.filter(file => file.id !== fileId));
     }
-  }, []);
+  }, [onStorageUpdate]);
 
   return {
     files,

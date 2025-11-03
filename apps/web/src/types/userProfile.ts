@@ -46,33 +46,6 @@ export interface UserPreferences {
   };
 }
 
-export interface BillingInfo {
-  plan: 'free' | 'basic' | 'premium' | 'enterprise';
-  status: 'active' | 'cancelled' | 'past_due';
-  nextBillingDate: string;
-  paymentMethod: {
-    type: 'card' | 'paypal' | 'bank';
-    last4: string;
-    brand?: string;
-  };
-  billingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  invoices: Invoice[];
-}
-
-export interface Invoice {
-  id: string;
-  date: string;
-  amount: number;
-  status: 'paid' | 'pending' | 'failed';
-  downloadUrl: string;
-}
-
 export interface SupportTicket {
   id: string;
   subject: string;
@@ -92,28 +65,9 @@ export interface FeedbackForm {
   attachments?: File[];
 }
 
-export interface JobApplication {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  status: 'applied' | 'interview' | 'offer' | 'rejected';
-  appliedDate: string;
-  salary?: string;
-  description?: string;
-  url?: string;
-  notes?: string;
-  priority?: 'low' | 'medium' | 'high';
-  contact?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-  };
-}
-
 export interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export type UserProfileTab = 'profile' | 'security' | 'preferences' | 'billing' | 'support' | 'jobs' | 'auth';
+export type UserProfileTab = 'profile' | 'security' | 'preferences' | 'support' | 'auth';

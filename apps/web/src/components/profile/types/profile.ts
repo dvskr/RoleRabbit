@@ -1,3 +1,5 @@
+import { ReactNode } from 'react';
+
 export interface Skill {
   name: string;
   proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
@@ -227,7 +229,6 @@ export interface UserData {
   testScores: TestScore[];
   
   // Preferences
-  jobAlerts: boolean;
   emailNotifications: boolean;
   smsNotifications: boolean;
   privacyLevel: string;
@@ -235,9 +236,6 @@ export interface UserData {
   
   // Analytics & Insights (Enhanced)
   profileViews: number;
-  applicationsSent: number;
-  interviewsScheduled: number;
-  offersReceived: number;
   successRate: number;
   profileCompleteness: number;
   skillMatchRate: number;
@@ -259,6 +257,7 @@ export interface ProfileHeaderProps {
   onEdit: () => void;
   onCancel: () => void;
   onSave: () => void;
+  profileCompleteness?: number;
 }
 
 export interface ProfileSidebarProps {
@@ -268,12 +267,18 @@ export interface ProfileSidebarProps {
 }
 
 export interface FormFieldProps {
-  label: string;
+  label: string | ReactNode;
   type?: 'text' | 'email' | 'tel' | 'url' | 'textarea';
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   placeholder?: string;
   rows?: number;
+  maxLength?: number;
+  showCounter?: boolean;
+  autoResize?: boolean;
+  allowBullets?: boolean;
   className?: string;
+  id?: string;
+  name?: string;
 }

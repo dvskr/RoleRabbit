@@ -2,7 +2,7 @@
  * Dashboard helper functions for tab metadata
  */
 
-import { HomeIcon, FolderOpen, Briefcase, MessageSquare, Mail, FileText, Globe, LayoutTemplate, UserIcon, GraduationCap, Sparkles } from 'lucide-react';
+import { HomeIcon, FolderOpen, Briefcase, MessageSquare, Mail, FileText, Globe, LayoutTemplate, UserIcon, Sparkles } from 'lucide-react';
 import type { DashboardTab } from '../constants/dashboard.constants';
 
 export function getDashboardTabTitle(tab: DashboardTab): string {
@@ -16,7 +16,6 @@ export function getDashboardTabTitle(tab: DashboardTab): string {
     case 'portfolio': return 'Portfolio';
     case 'templates': return 'Templates';
     case 'profile': return 'Profile';
-    case 'learning': return 'Learning Hub';
     case 'dashboard': return 'Dashboard';
     case 'ai-agents':
     case 'agents': return 'AI Agents';
@@ -36,7 +35,6 @@ export function getDashboardTabSubtitle(tab: DashboardTab): string | undefined {
     case 'portfolio': return 'Build your online portfolio';
     case 'templates': return 'Browse resume templates';
     case 'profile': return 'Manage your profile settings';
-    case 'learning': return 'Learn new skills';
     case 'ai-agents':
     case 'agents': return 'AI-powered assistants';
     default: return undefined;
@@ -57,7 +55,6 @@ export function getDashboardTabIcon(tab: DashboardTab) {
     case 'profile': return UserIcon;
     case 'agents':
     case 'ai-agents': return Sparkles;
-    case 'learning': return GraduationCap;
     default: return undefined;
   }
 }
@@ -76,7 +73,6 @@ export function getDashboardTabIconColor(tab: DashboardTab): string {
     case 'profile': return 'text-slate-600';
     case 'agents':
     case 'ai-agents': return 'text-purple-600';
-    case 'learning': return 'text-sky-600';
     default: return 'text-blue-600';
   }
 }

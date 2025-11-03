@@ -34,63 +34,17 @@ Server will run on `http://localhost:3001`
 - `GET /api/auth/verify` - Verify token
 - `POST /api/auth/refresh` - Refresh access token
 
-### Resumes
-- `GET /api/resumes` - Get all user resumes
-- `POST /api/resumes` - Create new resume
-- `GET /api/resumes/:id` - Get resume by ID
-- `PUT /api/resumes/:id` - Update resume
-- `DELETE /api/resumes/:id` - Delete resume
-- `POST /api/resumes/:id/export` - Export resume (PDF/DOCX)
-
-### Jobs
-- `GET /api/jobs` - Get all user jobs
-- `POST /api/jobs` - Create new job application
-- `GET /api/jobs/:id` - Get job by ID
-- `PUT /api/jobs/:id` - Update job
-- `DELETE /api/jobs/:id` - Delete job
-- `POST /api/jobs/:id/analytics` - Get job analytics
-- `GET /api/jobs/analytics/summary` - Get success metrics
-
-### Emails
-- `GET /api/emails` - Get all user emails
-- `POST /api/emails` - Create new email
-- `GET /api/emails/:id` - Get email by ID
-- `PUT /api/emails/:id` - Update email
-- `DELETE /api/emails/:id` - Delete email
-
-### Cover Letters
-- `GET /api/cover-letters` - Get all cover letters
-- `POST /api/cover-letters` - Create new cover letter
-- `GET /api/cover-letters/:id` - Get cover letter by ID
-- `PUT /api/cover-letters/:id` - Update cover letter
-- `DELETE /api/cover-letters/:id` - Delete cover letter
-
-### Portfolios
-- `GET /api/portfolios` - Get all portfolios
-- `POST /api/portfolios` - Create new portfolio
-- `GET /api/portfolios/:id` - Get portfolio by ID
-- `PUT /api/portfolios/:id` - Update portfolio
-- `DELETE /api/portfolios/:id` - Delete portfolio
-
-### Cloud Files
-- `GET /api/cloud-files` - Get all cloud files
-- `POST /api/cloud-files` - Create new cloud file
-- `GET /api/cloud-files/:id` - Get cloud file by ID
-- `PUT /api/cloud-files/:id` - Update cloud file
-- `DELETE /api/cloud-files/:id` - Delete cloud file
-
-### Files
-- `POST /api/files/upload` - Upload file
-
-### AI Agents
-- `GET /api/agents` - Get all agents
-- `POST /api/agents` - Create new agent
-- `GET /api/agents/:id` - Get agent by ID
-- `PUT /api/agents/:id` - Update agent
-- `DELETE /api/agents/:id` - Delete agent
-- `POST /api/agents/:id/execute` - Execute agent
-- `GET /api/agents/:id/tasks` - Get agent tasks
-- `POST /api/agents/run-all` - Run all active agents
+### Users/Profile
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update user profile
+- `POST /api/users/profile/picture` - Upload profile picture
+- `GET /api/users/profile/completeness` - Get profile completeness score
+- `GET /api/users/profile/analytics` - Get profile analytics
+- `GET /api/users/profile/export` - Export profile (JSON)
+- `GET /api/users/profile/public/:userId` - Get public profile
+- `GET /api/users/sessions` - Get user sessions
+- `DELETE /api/users/sessions/:id` - Revoke session
+- `DELETE /api/users/sessions` - Revoke all sessions
 
 ### System
 - `GET /health` - Health check
@@ -107,44 +61,22 @@ Server will run on `http://localhost:3001`
 - `utils/passwordReset.js` - Password reset flow
 - `utils/security.js` - Security utilities
 
-### AI & Agents
-- `utils/aiAgents.js` - AI agent utilities
-- `utils/agentExecutor.js` - Agent execution
-- `utils/agentScheduler.js` - Agent scheduling
-- `utils/jobScraper.js` - Job scraping
-
-### Data Management
-- `utils/resumes.js` - Resume CRUD operations
-- `utils/jobs.js` - Job CRUD operations
-- `utils/emails.js` - Email management
-- `utils/coverLetters.js` - Cover letter management
-- `utils/portfolios.js` - Portfolio management
-- `utils/cloudFiles.js` - Cloud file management
-- `utils/analytics.js` - Analytics tracking
-
-### Export & Utilities
-- `utils/resumeExport.js` - Resume export (PDF/DOCX)
-- `utils/fileUpload.js` - File upload handling
-- `utils/emailService.js` - Email sending
-- `utils/dataExport.js` - Data export
-- `utils/staticGenerator.js` - Static site generation
+### Profile Management
+- `utils/profileCompleteness.js` - Profile completeness calculation
+- `utils/sessionManager.js` - Session management
+- `utils/passwordReset.js` - Password reset flow
 
 ### System
 - `utils/logger.js` - Structured logging
 - `utils/errorHandler.js` - Global error handling
 - `utils/auditLogger.js` - Audit logging
 - `utils/healthCheck.js` - Health checks
-- `utils/monitoring.js` - Application monitoring
-- `utils/scheduler.js` - Job scheduler
-- `utils/backgroundJobs.js` - Background jobs
+- `utils/emailService.js` - Email sending (auth emails only)
 
 ### Validation & Security
 - `utils/validation.js` - Input validation
 - `utils/sanitizer.js` - Input sanitization
-- `utils/cache.js` - Caching
-- `utils/cachingStrategy.js` - Caching strategy
-- `utils/pagination.js` - Pagination
-- `utils/search.js` - Search utilities
+- `utils/security.js` - Security utilities
 
 ---
 
@@ -200,10 +132,9 @@ Using Prisma with SQLite (dev) / PostgreSQL (prod)
 **Migrations:** `prisma/migrations/`
 
 ### Models
-- User, RefreshToken, Session
-- Resume, Job, CoverLetter
-- Email, Portfolio, CloudFile
-- AIAgent, Analytics, DiscussionPost
+- User (with all profile fields)
+- RefreshToken, Session, PasswordResetToken
+- AuditLog, AIUsage, Notification
 
 ---
 

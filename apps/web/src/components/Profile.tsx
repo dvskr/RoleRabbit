@@ -30,10 +30,8 @@ import {
   CareerTab,
   PortfolioTab,
   SecurityTab,
-  BillingTab,
   PreferencesTab,
   SupportTab,
-  ResumeImport,
   UserData,
   ProfileTabConfig
 } from './profile/index';
@@ -42,7 +40,20 @@ export default function Profile() {
   const { theme } = useTheme();
   const colors = theme.colors;
   const { userData: contextUserData, isLoading: contextLoading, refreshProfile, updateProfileData } = useProfile();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  // Guard: Only allow authenticated users to access profile
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg mb-4" style={{ color: colors.errorRed }}>
+            You must be signed in to access your profile.
+          </p>
+        </div>
+      </div>
+    );
+  }
   
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
@@ -58,14 +69,13 @@ export default function Profile() {
   const [localProfileData, setLocalProfileData] = useState<UserData | null>(null);
 
   const tabs: ProfileTabConfig[] = [
-    { id: 'profile', label: 'Personal Information', icon: UserCircle },
+    { id: 'profile', label: 'Profile', icon: UserCircle },
     { id: 'professional', label: 'Professional', icon: Briefcase },
     { id: 'skills', label: 'Skills & Expertise', icon: Award },
     { id: 'career', label: 'Career Goals', icon: Target },
     { id: 'portfolio', label: 'Portfolio', icon: FileText },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'security', label: 'Security', icon: Shield },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
   ];
 
@@ -110,15 +120,11 @@ export default function Profile() {
       patents: [],
       organizations: [],
       testScores: [],
-      jobAlerts: true,
     emailNotifications: true,
     smsNotifications: false,
     privacyLevel: 'Professional',
     profileVisibility: 'Public',
     profileViews: 0,
-    applicationsSent: 0,
-    interviewsScheduled: 0,
-    offersReceived: 0,
     successRate: 0,
     profileCompleteness: 0,
     skillMatchRate: 0,
@@ -147,6 +153,78 @@ export default function Profile() {
   const displayData = isEditing 
     ? (localProfileData !== null ? (localProfileData || defaultUserData) : (userData || defaultUserData))
     : (userData || defaultUserData);
+
+  // Calculate profile completeness
+  const calculateCompleteness = (): number => {
+    const data = displayData;
+    let completed = 0;
+    
+    // Helper function to safely parse JSON arrays
+    const safeParseArray = (data: any): any[] => {
+      if (Array.isArray(data)) return data;
+      if (typeof data === 'string' && data) {
+        try {
+          const parsed = JSON.parse(data);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    };
+    
+    // Personal Information (8 points)
+    const personalInfo = {
+      firstName: !!data.firstName,
+      lastName: !!data.lastName,
+      email: !!data.email,
+      phone: !!data.phone,
+      location: !!data.location,
+      bio: !!(data.bio && data.bio.length > 50),
+      profilePicture: !!data.profilePicture,
+      currentRole: !!data.currentRole
+    };
+    const personalCompleted = Object.values(personalInfo).filter(Boolean).length;
+    completed += personalCompleted;
+    
+    // Skills (1 point if at least 3 skills)
+    const skills = safeParseArray(data.skills);
+    if (skills.length >= 3) completed++;
+    
+    // Certifications (1 point if at least 1)
+    const certs = safeParseArray(data.certifications);
+    if (certs.length >= 1) completed++;
+    
+    // Languages (1 point if at least 1)
+    const languages = safeParseArray(data.languages);
+    if (languages.length >= 1) completed++;
+    
+    // Work Experience (1 point if at least 1)
+    const workExp = safeParseArray(data.workExperiences);
+    if (workExp.length >= 1) completed++;
+    
+    // Projects (1 point if at least 1)
+    const projects = safeParseArray(data.projects);
+    if (projects.length >= 1) completed++;
+    
+    // Career Goals (1 point if at least 1)
+    const careerGoals = safeParseArray(data.careerGoals);
+    if (careerGoals.length >= 1) completed++;
+    
+    // Education (1 point if present)
+    const education = safeParseArray(data.education);
+    if (education.length >= 1) completed++;
+    
+    // Social Links (1 point if at least 1)
+    const socialLinks = safeParseArray(data.socialLinks);
+    if (socialLinks.length >= 1) completed++;
+    
+    // Total: 8 (personal) + 8 (other sections) = 16 points max
+    const total = 16;
+    return Math.round((completed / total) * 100);
+  };
+
+  const profileCompleteness = calculateCompleteness();
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -228,6 +306,16 @@ export default function Profile() {
   };
 
   const handleUserDataChange = (data: Partial<UserData>) => {
+    // Guard: Only allow authenticated users to modify profile data
+    if (!isAuthenticated) {
+      setSaveMessage({ 
+        type: 'error', 
+        text: 'You must be signed in to modify your profile.' 
+      });
+      setTimeout(() => setSaveMessage(null), 5000);
+      return;
+    }
+    
     // Update local state immediately for responsive typing
     if (localProfileData) {
       setLocalProfileData({ ...localProfileData, ...data });
@@ -270,248 +358,6 @@ export default function Profile() {
     );
   }
 
-
-  const handleResumeImport = (parsedData: any) => {
-    // Auto-fill profile data from resume with accurate mapping
-    const updates: Partial<UserData> = {};
-
-    // Personal Information
-    if (parsedData.personalInfo) {
-      if (parsedData.personalInfo.firstName) updates.firstName = parsedData.personalInfo.firstName;
-      if (parsedData.personalInfo.lastName) updates.lastName = parsedData.personalInfo.lastName;
-      if (parsedData.personalInfo.email) updates.email = parsedData.personalInfo.email;
-      if (parsedData.personalInfo.phone) updates.phone = parsedData.personalInfo.phone;
-      if (parsedData.personalInfo.location) updates.location = parsedData.personalInfo.location;
-    }
-
-    // Professional Summary / Bio
-    if (parsedData.professionalSummary) {
-      updates.bio = parsedData.professionalSummary;
-      updates.professionalSummary = parsedData.professionalSummary;
-    }
-
-    // Current Role and Company
-    if (parsedData.currentRole) {
-      updates.currentRole = parsedData.currentRole;
-    }
-    if (parsedData.currentCompany) {
-      updates.currentCompany = parsedData.currentCompany;
-    }
-
-    // Extract from experience if available and current role/company not set
-    if (parsedData.experience && Array.isArray(parsedData.experience) && parsedData.experience.length > 0) {
-      const mostRecent = parsedData.experience[0];
-      if (!updates.currentRole && mostRecent.position) {
-        updates.currentRole = mostRecent.position;
-      }
-      if (!updates.currentCompany && mostRecent.company) {
-        updates.currentCompany = mostRecent.company;
-      }
-
-      // Calculate experience duration if periods are available
-      if (mostRecent.period) {
-        const periodMatch = mostRecent.period.match(/(\d{4})/);
-        if (periodMatch) {
-          const startYear = parseInt(periodMatch[1]);
-          const currentYear = new Date().getFullYear();
-          const yearsOfExperience = currentYear - startYear;
-          if (yearsOfExperience > 0) {
-            updates.experience = `${yearsOfExperience}+ years`;
-          }
-        }
-      }
-
-      // Map work experience to career timeline
-      updates.careerTimeline = parsedData.experience.map((exp: any) => ({
-        id: `timeline-${Date.now()}-${Math.random()}`,
-        title: exp.position || '',
-        date: exp.period || '',
-        description: `${exp.company || ''} - ${exp.description || ''}`,
-        type: 'Work'
-      }));
-
-      // Map all work experiences to workExperiences array (including client work)
-      updates.workExperiences = parsedData.experience.map((exp: any, index: number) => {
-        // Parse period to extract dates
-        const period = exp.period || '';
-        const dateMatch = period.match(/(\d{1,2}[\/\-]\d{4}|\d{4})[\s\-–]+(\d{1,2}[\/\-]\d{4}|\d{4}|Present|Current)/i);
-        const singleYearMatch = period.match(/(\d{4})/);
-        
-        let startDate = '';
-        let endDate = '';
-        let isCurrent = false;
-        
-        if (dateMatch) {
-          startDate = dateMatch[1].replace(/\//g, '/');
-          const endStr = dateMatch[2];
-          if (endStr && (endStr.toLowerCase() === 'present' || endStr.toLowerCase() === 'current')) {
-            isCurrent = true;
-            endDate = '';
-          } else {
-            endDate = endStr.replace(/\//g, '/');
-          }
-        } else if (singleYearMatch) {
-          startDate = singleYearMatch[1];
-          // Assume current if it's the first experience entry
-          isCurrent = index === 0;
-        }
-        
-        // Try to detect if this is client work based on keywords in description or company
-        const description = exp.description || '';
-        const company = exp.company || '';
-        const clientKeywords = ['client', 'consulting', 'freelance', 'contract', 'project'];
-        const isClientWork = clientKeywords.some(keyword => 
-          description.toLowerCase().includes(keyword) || 
-          company.toLowerCase().includes(keyword)
-        );
-        
-        // Extract client name if mentioned (e.g., "Client: Company Name" or similar patterns)
-        let client = '';
-        const clientPatterns = [
-          /client[:\s]+([A-Z][A-Za-z\s&]+?)(?:\.|,|\n|$)/i,
-          /for\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|\n|$)/i,
-          /consulting\s+for\s+([A-Z][A-Za-z\s&]+?)(?:\.|,|\n|$)/i
-        ];
-        for (const pattern of clientPatterns) {
-          const match = description.match(pattern);
-          if (match) {
-            client = match[1].trim();
-            break;
-          }
-        }
-        
-        // Determine project type based on keywords
-        let projectType: 'Client Project' | 'Full-time' | 'Part-time' | 'Contract' | 'Freelance' | 'Consulting' = 'Full-time';
-        if (description.toLowerCase().includes('consulting') || company.toLowerCase().includes('consulting')) {
-          projectType = 'Consulting';
-        } else if (description.toLowerCase().includes('freelance')) {
-          projectType = 'Freelance';
-        } else if (description.toLowerCase().includes('contract')) {
-          projectType = 'Contract';
-        } else if (description.toLowerCase().includes('part-time')) {
-          projectType = 'Part-time';
-        } else if (isClientWork || client) {
-          projectType = 'Client Project';
-        }
-        
-        // Extract technologies from description if mentioned
-        const techKeywords = ['react', 'node', 'javascript', 'python', 'java', 'angular', 'vue', 'aws', 'azure', 'docker', 'kubernetes'];
-        const technologies = techKeywords.filter(tech => 
-          description.toLowerCase().includes(tech) || 
-          company.toLowerCase().includes(tech)
-        );
-        
-        return {
-          id: `exp-${Date.now()}-${index}-${Math.random()}`,
-          company: company,
-          role: exp.position || exp.title || '',
-          client: client || undefined,
-          location: exp.location || '',
-          startDate: startDate,
-          endDate: endDate,
-          isCurrent: isCurrent,
-          description: description,
-          achievements: description ? [description] : [],
-          technologies: technologies.length > 0 ? technologies : undefined,
-          projectType: projectType
-        };
-      });
-    }
-
-    // Skills - handle both array of strings and array of objects
-    if (parsedData.skills && Array.isArray(parsedData.skills)) {
-      if (parsedData.skills.length > 0) {
-        if (typeof parsedData.skills[0] === 'string') {
-          updates.skills = parsedData.skills;
-        } else if (typeof parsedData.skills[0] === 'object' && parsedData.skills[0].name) {
-          // Extract skill names from objects
-          updates.skills = parsedData.skills.map((skill: any) => skill.name || skill);
-        } else {
-          updates.skills = parsedData.skills;
-        }
-      }
-    }
-
-    // Education
-    if (parsedData.education && Array.isArray(parsedData.education) && parsedData.education.length > 0) {
-      updates.education = parsedData.education.map((edu: any) => ({
-        school: edu.school || edu.institution || '',
-        degree: edu.degree || '',
-        field: edu.field || '',
-        period: edu.period || `${edu.startDate || ''} - ${edu.endDate || ''}`,
-        description: edu.description || ''
-      }));
-    }
-
-    // Certifications
-    if (parsedData.certifications && Array.isArray(parsedData.certifications) && parsedData.certifications.length > 0) {
-      updates.certifications = parsedData.certifications.map((cert: any) => ({
-        name: cert.name || '',
-        issuer: cert.issuer || '',
-        date: cert.date || '',
-        expiryDate: cert.expiryDate || null
-      }));
-    }
-
-    // Projects
-    if (parsedData.projects && Array.isArray(parsedData.projects) && parsedData.projects.length > 0) {
-      updates.projects = parsedData.projects.map((project: any, index: number) => ({
-        id: `proj-${Date.now()}-${index}-${Math.random()}`,
-        title: project.name || project.title || '',
-        description: project.description || '',
-        technologies: Array.isArray(project.technologies) ? project.technologies : [],
-        link: project.link || project.url || '',
-        github: project.github || '',
-        date: project.date || project.period || ''
-      }));
-    }
-
-    // Social Links
-    if (parsedData.links) {
-      if (parsedData.links.linkedin) {
-        updates.linkedin = parsedData.links.linkedin.startsWith('http') 
-          ? parsedData.links.linkedin 
-          : `https://${parsedData.links.linkedin}`;
-      }
-      if (parsedData.links.github) {
-        updates.github = parsedData.links.github.startsWith('http') 
-          ? parsedData.links.github 
-          : `https://${parsedData.links.github}`;
-      }
-      if (parsedData.links.website) {
-        updates.website = parsedData.links.website.startsWith('http') 
-          ? parsedData.links.website 
-          : `https://${parsedData.links.website}`;
-      }
-    }
-
-    // Apply all updates to local state and context
-    if (Object.keys(updates).length > 0) {
-      // Update local state for immediate UI update
-      const currentData = localProfileData || userData || defaultUserData;
-      setLocalProfileData({ ...currentData, ...updates });
-      
-      // Update context
-      updateProfileData(updates);
-      
-      // Enter edit mode automatically
-      setIsEditing(true);
-      
-      setSaveMessage({ 
-        type: 'success', 
-        text: `Successfully imported ${Object.keys(updates).length} fields from resume! Review and save your changes.` 
-      });
-      setTimeout(() => setSaveMessage(null), 5000);
-      logger.debug('Resume data imported:', updates);
-    } else {
-      setSaveMessage({ 
-        type: 'error', 
-        text: 'No data could be extracted from the resume. Please try a different file.' 
-      });
-      setTimeout(() => setSaveMessage(null), 5000);
-    }
-  };
-
   const renderTabContent = () => {
     const commonProps = {
       userData: displayData,
@@ -532,8 +378,6 @@ export default function Profile() {
         return <PortfolioTab {...commonProps} />;
       case 'security':
         return <SecurityTab />;
-      case 'billing':
-        return <BillingTab />;
       case 'preferences':
         return <PreferencesTab {...commonProps} />;
       case 'support':
@@ -577,6 +421,7 @@ export default function Profile() {
         isEditing={isEditing}
         isSaving={isSaving}
         isSaved={isSaved}
+        profileCompleteness={profileCompleteness}
         onEdit={() => {
           setIsEditing(true);
           setIsSaved(false); // Reset saved state when entering edit mode
@@ -594,7 +439,6 @@ export default function Profile() {
           setLocalProfileData(null);
         }}
         onSave={handleSave}
-        resumeImportButton={<ResumeImport onResumeImport={handleResumeImport} />}
       />
 
       <div className="flex-1 flex min-h-0 overflow-hidden">

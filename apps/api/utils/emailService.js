@@ -179,54 +179,9 @@ async function sendPasswordResetEmail(email, resetToken) {
   });
 }
 
-/**
- * Send job application reminder email
- */
-async function sendJobReminderEmail(email, job) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #10B981; color: white; padding: 20px; text-align: center; }
-        .content { padding: 20px; background: #f9fafb; }
-        .job-card { background: white; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #10B981; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>🔔 Job Application Reminder</h1>
-        </div>
-        <div class="content">
-          <p>Don't forget to follow up on this job application:</p>
-          <div class="job-card">
-            <h3>${job.title}</h3>
-            <p><strong>Company:</strong> ${job.company}</p>
-            <p><strong>Status:</strong> ${job.status}</p>
-            <p><strong>Applied:</strong> ${new Date(job.appliedDate).toLocaleDateString()}</p>
-          </div>
-          <p>Time to send a follow up!</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-  
-  return sendEmail({
-    to: email,
-    subject: `Reminder: Follow up on ${job.title} at ${job.company}`,
-    html,
-    text: `Reminder: Follow up on ${job.title} at ${job.company}`,
-  });
-}
-
 module.exports = {
   sendEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
-  sendJobReminderEmail,
 };
 

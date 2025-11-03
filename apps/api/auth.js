@@ -18,7 +18,8 @@ async function registerUser(email, password, name) {
 
   // Check if user already exists
   const existingUser = await prisma.user.findUnique({
-    where: { email }
+    where: { email },
+    select: { id: true }
   });
   if (existingUser) {
     throw new Error('User already exists');
@@ -46,9 +47,24 @@ async function registerUser(email, password, name) {
  * Authenticate user and return JWT token
  */
 async function authenticateUser(email, password) {
-  // Find user in database
+  // Find user in database (only select fields that exist in users table)
   const user = await prisma.user.findUnique({
-    where: { email }
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      password: true,
+      provider: true,
+      providerId: true,
+      twoFactorEnabled: true,
+      emailNotifications: true,
+      smsNotifications: true,
+      privacyLevel: true,
+      profileVisibility: true,
+      createdAt: true,
+      updatedAt: true
+    }
   });
   if (!user || !user.password) {
     throw new Error('Invalid credentials');
@@ -70,14 +86,27 @@ async function authenticateUser(email, password) {
  */
 async function getUserById(userId) {
   const user = await prisma.user.findUnique({
-    where: { id: userId }
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      provider: true,
+      providerId: true,
+      twoFactorEnabled: true,
+      emailNotifications: true,
+      smsNotifications: true,
+      privacyLevel: true,
+      profileVisibility: true,
+      createdAt: true,
+      updatedAt: true
+    }
   });
   if (!user) {
     return null;
   }
   
-  const { password: _, ...userWithoutPassword } = user;
-  return userWithoutPassword;
+  return user;
 }
 
 /**
@@ -85,7 +114,11 @@ async function getUserById(userId) {
  */
 async function updateUserPassword(userId, oldPassword, newPassword) {
   const user = await prisma.user.findUnique({
-    where: { id: userId }
+    where: { id: userId },
+    select: {
+      id: true,
+      password: true
+    }
   });
   if (!user || !user.password) {
     throw new Error('User not found');
@@ -166,7 +199,6 @@ async function getAllUsers() {
       email: true,
       name: true,
       provider: true,
-      profilePicture: true,
       createdAt: true,
       updatedAt: true
     }

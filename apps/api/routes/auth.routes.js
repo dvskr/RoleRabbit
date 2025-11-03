@@ -108,12 +108,12 @@ async function authRoutes(fastify, options) {
         path: '/'
       });
       
-      // Set session ID in httpOnly cookie
+      // Set session ID in httpOnly cookie (1 year expiration, session persists until logout)
       reply.setCookie('session_id', sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (cookie expiration, session persists longer)
         path: '/'
       });
       
@@ -177,19 +177,17 @@ async function authRoutes(fastify, options) {
       // Create refresh token (long-lived: 7 days)
       const refreshToken = await createRefreshToken(user.id, 7);
       
-      // Create session
+      // Create session (persists until logout - 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 30);
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650); // 10 years
       
       // Prepare user object first - ensure it's serializable
+      // Note: profilePicture, firstName, lastName are now in user_profiles table, not users table
       const safeUser = {
         id: String(user.id),
         email: String(user.email || ''),
         name: user.name ? String(user.name) : null,
-        profilePicture: user.profilePicture ? String(user.profilePicture) : null,
-        firstName: user.firstName ? String(user.firstName) : null,
-        lastName: user.lastName ? String(user.lastName) : null,
         createdAt: user.createdAt ? user.createdAt.toISOString() : null,
         updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
       };
@@ -230,7 +228,7 @@ async function authRoutes(fastify, options) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (cookie expiration, session persists until logout)
         path: '/'
       });
       
@@ -388,9 +386,13 @@ async function authRoutes(fastify, options) {
         });
       }
       
-      // Find user by email
+      // Find user by email (only select fields that exist in users table)
       const user = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
+        select: {
+          id: true,
+          email: true
+        }
       });
       
       if (!user) {
@@ -465,6 +467,66 @@ async function authRoutes(fastify, options) {
       });
     }
   });
+
+  // Change password endpoint (for authenticated users)
+  const changePasswordHandler = async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { currentPassword, newPassword, confirmPassword } = request.body;
+      
+      // Validate required fields
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Current password, new password, and confirmation are required'
+        });
+      }
+      
+      // Validate passwords match
+      if (newPassword !== confirmPassword) {
+        return reply.status(400).send({
+          success: false,
+          error: 'New password and confirmation do not match'
+        });
+      }
+      
+      // Validate password strength
+      if (!validatePassword(newPassword)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Password must be at least 8 characters with uppercase, lowercase, and number'
+        });
+      }
+      
+      // Update password using auth utility
+      const { updateUserPassword } = require('../auth');
+      await updateUserPassword(userId, currentPassword, newPassword);
+      
+      reply.send({
+        success: true,
+        message: 'Password changed successfully'
+      });
+    } catch (error) {
+      logger.error('Error changing password:', error);
+      reply.status(400).send({
+        success: false,
+        error: error.message || 'Failed to change password'
+      });
+    }
+  };
+
+  fastify.put('/api/auth/password', {
+    preHandler: authenticate
+  }, changePasswordHandler);
+
+  // Backwards compatibility for older clients hitting /password/change
+  fastify.put('/api/auth/password/change', {
+    preHandler: authenticate
+  }, changePasswordHandler);
+
+  fastify.post('/api/auth/password/change', {
+    preHandler: authenticate
+  }, changePasswordHandler);
 }
 
 module.exports = authRoutes;

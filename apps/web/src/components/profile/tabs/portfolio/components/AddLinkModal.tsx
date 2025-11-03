@@ -60,10 +60,12 @@ export default function AddLinkModal({
         </div>
         <div className="space-y-4">
           <div>
-            <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+            <label htmlFor="link-platform" className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
               Platform
             </label>
             <input
+              id="link-platform"
+              name="link-platform"
               type="text"
               value={tempLink.platform}
               onChange={(e) => onTempLinkChange({ ...tempLink, platform: e.target.value })}
@@ -72,10 +74,12 @@ export default function AddLinkModal({
             />
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+            <label htmlFor="link-url" className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
               URL
             </label>
             <input
+              id="link-url"
+              name="link-url"
               type="url"
               value={tempLink.url}
               onChange={(e) => onTempLinkChange({ ...tempLink, url: e.target.value })}

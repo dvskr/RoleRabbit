@@ -12,8 +12,9 @@ export interface Folder {
 export interface ResumeFile {
   id: string;
   name: string;
-  type: 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample';
+  type: 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample' | 'document';
   size: string;
+  sizeBytes?: number;
   lastModified: string;
   isPublic: boolean;
   tags: string[];
@@ -29,6 +30,9 @@ export interface ResumeFile {
   folderId?: string;
   thumbnail?: string;
   description?: string;
+  storagePath?: string | null;
+  fileName?: string;
+  contentType?: string;
   // Credential Management (if applicable)
   credentialInfo?: CredentialInfo;
 }
@@ -103,14 +107,16 @@ export interface CloudStorageProps {
   onClose?: () => void;
 }
 
-export type FileType = 'all' | 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample';
+export type FileType = 'all' | 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample' | 'document';
 export type SortBy = 'name' | 'date' | 'size';
 export type ViewMode = 'grid' | 'list' | 'compact';
 
 export interface StorageInfo {
-  used: number;
-  limit: number;
+  used: number; // in GB
+  limit: number; // in GB
   percentage: number;
+  usedBytes?: number;
+  limitBytes?: number;
 }
 
 export interface FileOperation {

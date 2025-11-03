@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
+import type { SetStateAction } from 'react';
 import dynamic from 'next/dynamic';
 
 // Critical components - load immediately
@@ -21,12 +22,12 @@ const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: f
 const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
-const LearningHub = dynamic(() => import('../../components/LearningHub'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents/index'), { ssr: false });
-import { 
-  ResumeData, 
-  CustomSection, 
-  SectionVisibility 
+import {
+  ResumeData,
+  CustomSection,
+  SectionVisibility,
+  CustomField
 } from '../../types/resume';
 import { useResumeData } from '../../hooks/useResumeData';
 import { useModals } from '../../hooks/useModals';
@@ -91,11 +92,48 @@ interface DashboardPageClientProps {
 
 export default function DashboardPageClient({ initialTab }: DashboardPageClientProps) {
   // Use custom hooks for state management
-  const resumeDataHook = useResumeData();
-  const modalsHook = useModals();
+  const {
+    showNewResumeModal,
+    setShowNewResumeModal,
+    showAddSectionModal,
+    setShowAddSectionModal,
+    newSectionName,
+    setNewSectionName,
+    newSectionContent,
+    setNewSectionContent,
+    showExportModal,
+    setShowExportModal,
+    showImportModal,
+    setShowImportModal,
+    importMethod,
+    setImportMethod,
+    importJsonData,
+    setImportJsonData,
+    showAddFieldModal,
+    setShowAddFieldModal,
+    newFieldName,
+    setNewFieldName,
+    newFieldIcon,
+    setNewFieldIcon,
+    customFields,
+    setCustomFields: setCustomFieldsBase,
+    showAIGenerateModal,
+    setShowAIGenerateModal,
+    aiGenerateSection,
+    setAiGenerateSection,
+    aiPrompt,
+    setAiPrompt,
+    writingTone,
+    setWritingTone,
+    contentLength,
+    setContentLength,
+    showMobileMenu,
+    setShowMobileMenu,
+  } = useModals();
   const aiHook = useAI();
   const { theme } = useTheme();
   const colors = theme.colors;
+  const initializingCustomFieldsRef = useRef(false);
   
   // Dashboard-specific state hooks
   const dashboardUI = useDashboardUI(initialTab);
@@ -123,6 +161,18 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     addedTemplates,
     setAddedTemplates,
   } = dashboardTemplates;
+
+  const handleResumeLoaded = useCallback(({ resume, snapshot }: { resume: any; snapshot: { customFields?: CustomField[] } }) => {
+    initializingCustomFieldsRef.current = true;
+    try {
+      setCustomFieldsBase(snapshot.customFields ?? []);
+    } finally {
+      initializingCustomFieldsRef.current = false;
+    }
+    setSelectedTemplateId(resume?.templateId ?? null);
+  }, [setCustomFieldsBase, setSelectedTemplateId]);
+
+  const resumeDataHook = useResumeData({ onResumeLoaded: handleResumeLoaded });
 
   const dashboardCloudStorage = useDashboardCloudStorage();
   const {
@@ -157,6 +207,11 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     currentResumeId, setCurrentResumeId,
     isLoading: resumeLoading,
     hasChanges, setHasChanges,
+    isSaving, setIsSaving,
+    saveError,
+    setSaveError,
+    lastSavedAt, setLastSavedAt,
+    lastServerUpdatedAt, setLastServerUpdatedAt,
     fontFamily, setFontFamily,
     fontSize, setFontSize,
     lineSpacing, setLineSpacing,
@@ -172,26 +227,16 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     historyIndex, setHistoryIndex
   } = resumeDataHook;
 
-  const {
-    showNewResumeModal, setShowNewResumeModal,
-    showAddSectionModal, setShowAddSectionModal,
-    newSectionName, setNewSectionName,
-    newSectionContent, setNewSectionContent,
-    showExportModal, setShowExportModal,
-    showImportModal, setShowImportModal,
-    importMethod, setImportMethod,
-    importJsonData, setImportJsonData,
-    showAddFieldModal, setShowAddFieldModal,
-    newFieldName, setNewFieldName,
-    newFieldIcon, setNewFieldIcon,
-    customFields, setCustomFields,
-    showAIGenerateModal, setShowAIGenerateModal,
-    aiGenerateSection, setAiGenerateSection,
-    aiPrompt, setAiPrompt,
-    writingTone, setWritingTone,
-    contentLength, setContentLength,
-    showMobileMenu, setShowMobileMenu
-  } = modalsHook;
+  const setCustomFieldsTracked = useCallback((value: SetStateAction<CustomField[]>) => {
+    setCustomFieldsBase((prev) => {
+      const next = typeof value === 'function' ? (value as (prev: CustomField[]) => CustomField[])(prev) : value;
+      if (!initializingCustomFieldsRef.current && next !== prev) {
+        setHasChanges(true);
+        setSaveError(null);
+      }
+      return next;
+    });
+  }, [setCustomFieldsBase, setHasChanges, setSaveError]);
 
   const {
     aiMode, setAiMode,
@@ -229,6 +274,18 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setCustomSections,
     resumeFileName,
     setResumeFileName,
+    currentResumeId,
+    setCurrentResumeId,
+    hasChanges,
+    setHasChanges,
+    isSaving,
+    setIsSaving,
+    setSaveError,
+    lastSavedAt,
+    setLastSavedAt,
+    lastServerUpdatedAt,
+    setLastServerUpdatedAt,
+    selectedTemplateId,
     history,
     setHistory,
     historyIndex,
@@ -257,7 +314,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     newFieldIcon,
     setNewFieldIcon,
     customFields,
-    setCustomFields,
+    setCustomFields: setCustomFieldsTracked,
     setShowAddFieldModal,
     aiGenerateSection,
     setAiGenerateSection,
@@ -485,7 +542,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             showAddFieldModal={showAddFieldModal}
             setShowAddFieldModal={setShowAddFieldModal}
             customFields={customFields}
-            setCustomFields={setCustomFields}
+            setCustomFields={setCustomFieldsTracked}
             newFieldName={newFieldName}
             setNewFieldName={setNewFieldName}
             newFieldIcon={newFieldIcon}
@@ -577,8 +634,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         return <CoverLetterGenerator />;
       case 'portfolio':
         return <PortfolioGenerator />;
-      case 'learning':
-        return <LearningHub />;
       case 'agents':
       case 'ai-agents':
         return (
@@ -619,7 +674,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
           {activeTab === 'editor' ? (
             <Header
               isMobile={false}
-              isSaving={false}
+              isSaving={isSaving}
               canUndo={historyIndex > 0}
               canRedo={historyIndex < history.length - 1}
               onExport={() => setShowExportModal(true)}
@@ -756,14 +811,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'email') ? 'block' : 'none' }}
               >
-                  <Email />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'learning') ? 'block' : 'none' }}
-              >
-                  <LearningHub />
-                </div>
+                <Email />
+              </div>
               <div 
                 className="absolute inset-0 h-full w-full"
                 style={{ display: (activeTab === 'agents' || activeTab === 'ai-agents') ? 'block' : 'none' }}
@@ -911,7 +960,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         headingStyle={headingStyle}
         bulletStyle={bulletStyle}
         customFields={customFields}
-        setCustomFields={setCustomFields}
+        setCustomFields={setCustomFieldsTracked}
         cloudResumes={cloudResumes}
         activeTab={activeTab}
         onTabChange={handleTabChange}
@@ -922,40 +971,21 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}
-        onNewResume={async () => {
-          try {
-            // Clear local state first
-            const emptyResume = {
-              name: '',
-              title: '',
-              email: '',
-              phone: '',
-              location: '',
-              summary: '',
-              skills: [],
-              experience: [],
-              education: [],
-              projects: [],
-              certifications: []
-            };
-            setResumeData(emptyResume);
-            
-            // Create new resume via API
-            const response = await apiService.saveResume({
-              name: `New Resume ${new Date().toLocaleDateString()}`,
-              data: JSON.stringify(emptyResume),
-              templateId: selectedTemplateId,
-            });
-            
-            if (response && response.resume) {
-              setCurrentResumeId(response.resume.id);
-              setResumeFileName(response.resume.name);
-            }
-            
-            setShowNewResumeModal(false);
-          } catch (error) {
-            logger.error('Failed to create new resume:', error);
-          }
+        onNewResume={() => {
+          setResumeData({
+            name: '',
+            title: '',
+            email: '',
+            phone: '',
+            location: '',
+            summary: '',
+            skills: [],
+            experience: [],
+            education: [],
+            projects: [],
+            certifications: [],
+          });
+          setShowNewResumeModal(false);
         }}
         onGenerateAIContent={() => aiHelpers.generateAIContent(
           aiGenerateSection,

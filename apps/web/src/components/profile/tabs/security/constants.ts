@@ -7,7 +7,10 @@ export const API_ENDPOINTS = {
   TWO_FA_SETUP: 'http://localhost:3001/api/auth/2fa/setup',
   TWO_FA_DISABLE: 'http://localhost:3001/api/auth/2fa/disable',
   TWO_FA_VERIFY: 'http://localhost:3001/api/auth/2fa/verify',
-  PASSWORD_CHANGE: 'http://localhost:3001/api/auth/password/change',
+  TWO_FA_ENABLE: 'http://localhost:3001/api/auth/2fa/enable',
+  TWO_FA_STATUS: 'http://localhost:3001/api/auth/2fa/status',
+  PASSWORD_CHANGE: 'http://localhost:3001/api/auth/password',
+  SESSIONS: 'http://localhost:3001/api/users/sessions',
 } as const;
 
 // Password requirements

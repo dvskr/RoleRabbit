@@ -122,7 +122,6 @@ export default function ResumeEditor({
         {/* Templates Horizontal Scroller */}
         <div className="mb-6 flex-shrink-0">
           <MultiResumeManager
-            onSwitchResume={() => {}}
             onSelectTemplate={(templateId) => {
               onTemplateApply?.(templateId);
             }}

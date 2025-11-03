@@ -94,7 +94,7 @@ export default function StorageFilters({
   const hasActiveQuickFilters = Object.values(quickFilters).some(v => v !== undefined);
 
   return (
-    <div className="flex flex-col gap-2 mb-2">
+    <div className="flex flex-col gap-2 mb-2" data-testid="storage-filters">
       {/* Unified compact search/filter bar */}
       <div className="flex items-center gap-2 flex-1">
         {/* Search */}
@@ -121,6 +121,7 @@ export default function StorageFilters({
             onBlur={(e) => {
               e.currentTarget.style.borderColor = colors.border;
             }}
+            data-testid="storage-search-input"
           />
         </div>
 
@@ -144,11 +145,13 @@ export default function StorageFilters({
             onBlur={(e) => {
               e.currentTarget.style.borderColor = colors.border;
             }}
+            data-testid="storage-filter-select"
           >
             <option value="all" style={{ background: colors.background, color: colors.secondaryText }}>All Files</option>
             <option value="resume" style={{ background: colors.background, color: colors.secondaryText }}>Resumes</option>
             <option value="template" style={{ background: colors.background, color: colors.secondaryText }}>Templates</option>
             <option value="backup" style={{ background: colors.background, color: colors.secondaryText }}>Backups</option>
+            <option value="document" style={{ background: colors.background, color: colors.secondaryText }}>Documents</option>
           </select>
         </div>
 
@@ -169,6 +172,7 @@ export default function StorageFilters({
           onBlur={(e) => {
             e.currentTarget.style.borderColor = colors.border;
           }}
+          data-testid="storage-sort-select"
         >
           <option value="date" style={{ background: colors.background, color: colors.secondaryText }}>Date</option>
           <option value="name" style={{ background: colors.background, color: colors.secondaryText }}>Name</option>
@@ -201,6 +205,7 @@ export default function StorageFilters({
               }
             }}
             title="List view"
+            data-testid="storage-view-list"
           >
             <List size={14} />
           </button>
@@ -222,6 +227,7 @@ export default function StorageFilters({
               }
             }}
             title="Grid view"
+            data-testid="storage-view-grid"
           >
             <Grid size={14} />
           </button>
@@ -243,6 +249,7 @@ export default function StorageFilters({
               }
             }}
             title="Compact view"
+            data-testid="storage-view-compact"
           >
             <Columns size={14} />
           </button>
@@ -415,6 +422,7 @@ export default function StorageFilters({
               }
             }}
             title={showDeleted ? 'Hide Recycle Bin' : 'Show Recycle Bin'}
+            data-testid="storage-show-deleted-toggle"
           >
             {showDeleted ? <RotateCcw size={14} /> : <Trash2 size={14} />}
             <span>Recycle Bin</span>

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserCircle, Mail, Phone, MapPin, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { UserCircle, Mail, Phone, MapPin, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import FormField from '../components/FormField';
 import ProfilePicture from '../components/ProfilePicture';
 import { UserData } from '../types/profile';
@@ -23,164 +23,8 @@ export default function ProfileTab({
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  // Calculate comprehensive profile completeness across all tabs
-  const calculateCompleteness = (): number => {
-    let completed = 0;
-    const sections: { name: string; checked: boolean }[] = [];
-    
-    // Personal Information (8 points)
-    const personalInfo = {
-      firstName: !!userData.firstName,
-      lastName: !!userData.lastName,
-      email: !!userData.email,
-      phone: !!userData.phone,
-      location: !!userData.location,
-      bio: !!(userData.bio && userData.bio.length > 50),
-      profilePicture: !!userData.profilePicture,
-      currentRole: !!userData.currentRole
-    };
-    
-    const personalCompleted = Object.values(personalInfo).filter(Boolean).length;
-    completed += personalCompleted;
-    sections.push({ name: 'Personal Info', checked: personalCompleted >= 6 });
-    
-    // Helper function to safely parse JSON arrays
-    const safeParseArray = (data: any): any[] => {
-      if (Array.isArray(data)) return data;
-      if (typeof data === 'string' && data) {
-        try {
-          const parsed = JSON.parse(data);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
-    
-    // Skills (1 point if at least 3 skills)
-    const skills = safeParseArray(userData.skills);
-    const hasSkills = skills.length >= 3;
-    if (hasSkills) completed++;
-    sections.push({ name: 'Skills', checked: hasSkills });
-    
-    // Certifications (1 point if at least 1)
-    const certs = safeParseArray(userData.certifications);
-    const hasCerts = certs.length >= 1;
-    if (hasCerts) completed++;
-    sections.push({ name: 'Certifications', checked: hasCerts });
-    
-    // Languages (1 point if at least 1)
-    const languages = safeParseArray(userData.languages);
-    const hasLanguages = languages.length >= 1;
-    if (hasLanguages) completed++;
-    sections.push({ name: 'Languages', checked: hasLanguages });
-    
-    // Work Experience (1 point if at least 1)
-    const workExp = safeParseArray(userData.workExperiences);
-    const hasWorkExp = workExp.length >= 1;
-    if (hasWorkExp) completed++;
-    sections.push({ name: 'Work Experience', checked: hasWorkExp });
-    
-    // Projects (1 point if at least 1)
-    const projects = safeParseArray(userData.projects);
-    const hasProjects = projects.length >= 1;
-    if (hasProjects) completed++;
-    sections.push({ name: 'Projects', checked: hasProjects });
-    
-    // Career Goals (1 point if at least 1)
-    const careerGoals = safeParseArray(userData.careerGoals);
-    const hasCareerGoals = careerGoals.length >= 1;
-    if (hasCareerGoals) completed++;
-    sections.push({ name: 'Career Goals', checked: hasCareerGoals });
-    
-    // Education (1 point if present)
-    const education = safeParseArray(userData.education);
-    const hasEducation = education.length >= 1;
-    if (hasEducation) completed++;
-    sections.push({ name: 'Education', checked: hasEducation });
-    
-    // Social Links (1 point if at least 1)
-    const socialLinks = safeParseArray(userData.socialLinks);
-    const hasSocialLinks = socialLinks.length >= 1;
-    if (hasSocialLinks) completed++;
-    sections.push({ name: 'Social Links', checked: hasSocialLinks });
-    
-    // Total: 8 (personal) + 8 (other sections) = 16 points max
-    const total = 16;
-    const percentage = Math.round((completed / total) * 100);
-    
-    return percentage;
-  };
-
-  const completeness = calculateCompleteness();
-  const completenessColor = completeness >= 75 ? colors.successGreen : 
-                           completeness >= 50 ? colors.badgeWarningText : 
-                           colors.errorRed;
-
   return (
     <div className="max-w-5xl">
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex-1">
-          <h2 
-            className="text-3xl font-bold mb-2"
-            style={{ color: colors.primaryText }}
-          >
-            Personal Information
-          </h2>
-          <p 
-            className="text-sm"
-            style={{ color: colors.secondaryText }}
-          >
-            Update your personal details and profile information
-          </p>
-        </div>
-        
-        {/* Profile Completeness Indicator - Smaller, beside heading */}
-        <div 
-          className="backdrop-blur-sm rounded-xl p-3 shadow-lg ml-4 flex-shrink-0"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-            minWidth: '140px',
-          }}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle size={14} style={{ color: completenessColor }} />
-              <span 
-                className="text-xs font-semibold"
-                style={{ color: colors.primaryText }}
-              >
-                Profile
-              </span>
-            </div>
-            <span 
-              className="text-sm font-bold"
-              style={{ color: completenessColor }}
-            >
-              {completeness}%
-            </span>
-          </div>
-          <div 
-            className="w-full rounded-full h-1.5"
-            style={{ background: colors.inputBackground }}
-          >
-            <div 
-              className="h-1.5 rounded-full transition-all duration-1000"
-              style={{ 
-                width: `${completeness}%`,
-                background: completeness >= 75 
-                  ? `linear-gradient(90deg, ${colors.successGreen}, ${colors.badgeSuccessText})`
-                  : completeness >= 50
-                  ? `linear-gradient(90deg, ${colors.badgeWarningText}, ${colors.badgeWarningBorder})`
-                  : `linear-gradient(90deg, ${colors.errorRed}, ${colors.badgeErrorText})`
-              }}
-            />
-          </div>
-        </div>
-      </div>
-      
       <div className="space-y-4">
         {/* Enhanced Profile Picture */}
         <ProfilePicture
@@ -211,6 +55,8 @@ export default function ProfileTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <FormField
+                id="profile-first-name"
+                name="firstName"
                 label="First Name"
                 value={userData.firstName}
                 onChange={(value) => onUserDataChange({ firstName: value })}
@@ -226,6 +72,8 @@ export default function ProfileTab({
             </div>
             <div>
               <FormField
+                id="profile-last-name"
+                name="lastName"
                 label="Last Name"
                 value={userData.lastName}
                 onChange={(value) => onUserDataChange({ lastName: value })}
@@ -243,17 +91,21 @@ export default function ProfileTab({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Mail size={16} style={{ color: colors.secondaryText }} />
-                <FormField
-                  label="Email Address"
-                  type="email"
-                  value={userData.email}
-                  onChange={(value) => onUserDataChange({ email: value })}
-                  disabled={!isEditing}
-                  placeholder="Enter your email address"
-                />
-              </div>
+              <FormField
+                id="profile-email"
+                name="email"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Mail size={16} style={{ color: colors.secondaryText }} />
+                    Email Address
+                  </span>
+                }
+                type="email"
+                value={userData.email}
+                onChange={(value) => onUserDataChange({ email: value })}
+                disabled={!isEditing}
+                placeholder="Enter your email address"
+              />
               {!userData.email && isEditing && (
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.errorRed }}>
                   <AlertCircle size={12} />
@@ -262,31 +114,39 @@ export default function ProfileTab({
               )}
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Phone size={16} style={{ color: colors.secondaryText }} />
-                <FormField
-                  label="Phone Number"
-                  type="tel"
-                  value={userData.phone}
-                  onChange={(value) => onUserDataChange({ phone: value })}
-                  disabled={!isEditing}
-                  placeholder="Enter your phone number"
-                />
-              </div>
+              <FormField
+                id="profile-phone"
+                name="phone"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Phone size={16} style={{ color: colors.secondaryText }} />
+                    Phone Number
+                  </span>
+                }
+                type="tel"
+                value={userData.phone}
+                onChange={(value) => onUserDataChange({ phone: value })}
+                disabled={!isEditing}
+                placeholder="Enter your phone number"
+              />
             </div>
           </div>
 
           <div className="mt-6">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin size={16} style={{ color: colors.secondaryText }} />
-              <FormField
-                label="Location"
-                value={userData.location}
-                onChange={(value) => onUserDataChange({ location: value })}
-                disabled={!isEditing}
-                placeholder="Enter your location (City, Country)"
-              />
-            </div>
+            <FormField
+              id="profile-location"
+              name="location"
+              label={
+                <span className="flex items-center gap-2">
+                  <MapPin size={16} style={{ color: colors.secondaryText }} />
+                  Location
+                </span>
+              }
+              value={userData.location}
+              onChange={(value) => onUserDataChange({ location: value })}
+              disabled={!isEditing}
+              placeholder="Enter your location (City, Country)"
+            />
           </div>
         </div>
 
@@ -309,13 +169,18 @@ export default function ProfileTab({
           </div>
           <div className="space-y-3">
             <FormField
+              id="profile-bio"
+              name="bio"
               label="Tell us about yourself"
               type="textarea"
               value={userData.bio || ''}
               onChange={(value) => onUserDataChange({ bio: value })}
               disabled={!isEditing}
               rows={5}
-              placeholder="Write a compelling bio that highlights your experience, skills, and career goals. Aim for 50-500 characters for best results..."
+              maxLength={5000}
+              showCounter={true}
+              autoResize={true}
+              placeholder="Write a compelling bio that highlights your experience, skills, and career goals..."
             />
             <div className="space-y-2">
               <div 

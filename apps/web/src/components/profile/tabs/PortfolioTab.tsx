@@ -46,15 +46,6 @@ export default function PortfolioTab({
   return (
     // eslint-disable-next-line react/forbid-dom-props
     <div className={styles.portfolioContainer} style={portfolioStyles}>
-      <div className={styles.portfolioHeader}>
-        <h2 className={styles.portfolioTitle}>
-          Portfolio & Achievements
-        </h2>
-        <p className={styles.portfolioDescription}>
-          Showcase your work, projects, and professional achievements
-        </p>
-      </div>
-      
       <div className="space-y-8">
         {/* Statistics Overview */}
         {(userData.socialLinks && userData.socialLinks.length > 0) || (userData.achievements && userData.achievements.length > 0) || userData.portfolio ? (
@@ -190,6 +181,8 @@ export default function PortfolioTab({
                   {achievementsHook.editingAchievementIndex === index ? (
                     <div className="flex-1 space-y-2">
                       <select
+                        id="achievement-type-select"
+                        name="achievement-type"
                         value={achievementsHook.tempAchievement.type}
                         onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
                         className={`w-full ${styles.portfolioSelect}`}
@@ -206,6 +199,8 @@ export default function PortfolioTab({
                         <option value="Certification" style={{ background: 'var(--portfolio-background)', color: 'var(--portfolio-secondary-text)' }}>Certification</option>
                       </select>
                       <input
+                        id="achievement-title"
+                        name="achievement-title"
                         type="text"
                         value={achievementsHook.tempAchievement.title}
                         onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, title: e.target.value })}
@@ -213,6 +208,8 @@ export default function PortfolioTab({
                         className={`w-full ${styles.portfolioInput}`}
                       />
                       <textarea
+                        id="achievement-description"
+                        name="achievement-description"
                         value={achievementsHook.tempAchievement.description}
                         onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, description: e.target.value })}
                         placeholder="Description"
@@ -220,6 +217,8 @@ export default function PortfolioTab({
                         className={`w-full ${styles.portfolioTextarea}`}
                       />
                       <input
+                        id="achievement-date"
+                        name="achievement-date"
                         type="text"
                         value={achievementsHook.tempAchievement.date}
                         onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, date: e.target.value })}
@@ -227,6 +226,8 @@ export default function PortfolioTab({
                         className={`w-full ${styles.portfolioInput}`}
                       />
                       <input
+                        id="achievement-link"
+                        name="achievement-link"
                         type="url"
                         value={achievementsHook.tempAchievement.link || ''}
                         onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, link: e.target.value })}
@@ -351,6 +352,8 @@ export default function PortfolioTab({
                 Portfolio URL
               </label>
               <input
+                id="portfolio-url"
+                name="portfolio-url"
                 type="url"
                 value={userData.portfolio}
                 onChange={(e) => onUserDataChange({ portfolio: e.target.value })}
@@ -418,6 +421,8 @@ export default function PortfolioTab({
                   Type
                 </label>
                 <select
+                  id="achievement-type-select-edit"
+                  name="achievement-type-edit"
                   value={achievementsHook.tempAchievement.type}
                   onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
                         className={`w-full ${styles.portfolioSelect}`}
@@ -435,6 +440,8 @@ export default function PortfolioTab({
                       </select>
               </div>
               <input
+                id="achievement-title-edit"
+                name="achievement-title-edit"
                 type="text"
                 value={achievementsHook.tempAchievement.title}
                 onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, title: e.target.value })}
@@ -442,6 +449,8 @@ export default function PortfolioTab({
                 className={`w-full ${styles.portfolioInput}`}
               />
               <textarea
+                id="achievement-description-edit"
+                name="achievement-description-edit"
                 value={achievementsHook.tempAchievement.description}
                 onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, description: e.target.value })}
                 placeholder="Description"
@@ -449,6 +458,8 @@ export default function PortfolioTab({
                 className={`w-full ${styles.portfolioTextarea}`}
               />
               <input
+                id="achievement-date-edit"
+                name="achievement-date-edit"
                 type="text"
                 value={achievementsHook.tempAchievement.date}
                 onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, date: e.target.value })}
@@ -456,6 +467,8 @@ export default function PortfolioTab({
                 className={`w-full ${styles.portfolioInput}`}
               />
               <input
+                id="achievement-link-edit"
+                name="achievement-link-edit"
                 type="url"
                 value={achievementsHook.tempAchievement.link || ''}
                 onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, link: e.target.value })}

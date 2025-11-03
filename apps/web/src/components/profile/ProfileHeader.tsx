@@ -1,13 +1,10 @@
 'use client';
 
-import React, { ReactNode } from 'react';
-import { Save, Edit, UserCircle, Check } from 'lucide-react';
+import React from 'react';
+import { Save, Edit, UserCircle, Check, CheckCircle } from 'lucide-react';
 import { ProfileHeaderProps } from './types/profile';
 import { useTheme } from '../../contexts/ThemeContext';
 
-interface ExtendedProfileHeaderProps extends ProfileHeaderProps {
-  resumeImportButton?: ReactNode;
-}
 
 export default function ProfileHeader({
   isEditing,
@@ -16,10 +13,14 @@ export default function ProfileHeader({
   onEdit,
   onCancel,
   onSave,
-  resumeImportButton
-}: ExtendedProfileHeaderProps) {
+  profileCompleteness = 0
+}: ProfileHeaderProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  const completenessColor = profileCompleteness >= 75 ? colors.successGreen : 
+                           profileCompleteness >= 50 ? colors.badgeWarningText : 
+                           colors.errorRed;
 
   return (
     <div 
@@ -45,19 +46,63 @@ export default function ProfileHeader({
               className="text-2xl font-bold"
               style={{ color: colors.primaryText }}
             >
-              Personal Information
+              Profile
             </h1>
             <p 
               className="text-sm"
               style={{ color: colors.secondaryText }}
             >
-              Update your personal details and profile information
+              Manage your profile information
             </p>
           </div>
         </div>
         
-        {/* Right: All Action Buttons in One Bar */}
-        <div className="flex items-center gap-2">
+        {/* Right: Completeness Indicator and Action Buttons */}
+        <div className="flex items-center gap-3">
+          {/* Profile Completeness Indicator */}
+          <div 
+            className="backdrop-blur-sm rounded-xl p-2.5 shadow-sm flex-shrink-0"
+            style={{
+              background: colors.cardBackground,
+              border: `1px solid ${colors.border}`,
+              minWidth: '120px',
+            }}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle size={12} style={{ color: completenessColor }} />
+                <span 
+                  className="text-xs font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Profile
+                </span>
+              </div>
+              <span 
+                className="text-xs font-bold"
+                style={{ color: completenessColor }}
+              >
+                {profileCompleteness}%
+              </span>
+            </div>
+            <div 
+              className="w-full rounded-full h-1"
+              style={{ background: colors.inputBackground }}
+            >
+              <div 
+                className="h-1 rounded-full transition-all duration-1000"
+                style={{ 
+                  width: `${profileCompleteness}%`,
+                  background: profileCompleteness >= 75 
+                    ? `linear-gradient(90deg, ${colors.successGreen}, ${colors.badgeSuccessText})`
+                    : profileCompleteness >= 50
+                    ? `linear-gradient(90deg, ${colors.badgeWarningText}, ${colors.badgeWarningBorder})`
+                    : `linear-gradient(90deg, ${colors.errorRed}, ${colors.badgeErrorText})`
+                }}
+              />
+            </div>
+          </div>
+          
           {/* Unified Button Group */}
           {isEditing ? (
             <>
@@ -121,9 +166,6 @@ export default function ProfileHeader({
             </>
           ) : (
             <>
-              {/* Resume Import Button */}
-              {resumeImportButton}
-              
               {/* Edit Profile Button */}
               <button
                 onClick={onEdit}

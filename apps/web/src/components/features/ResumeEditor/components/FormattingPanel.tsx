@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Type, Palette } from 'lucide-react';
-import { ThemeColors } from '../../../contexts/ThemeContext';
+import { ThemeColors } from '../../../../contexts/ThemeContext';
 import {
   FONT_FAMILY_OPTIONS,
   FONT_SIZE_OPTIONS,

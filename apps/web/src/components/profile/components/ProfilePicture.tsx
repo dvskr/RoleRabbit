@@ -142,6 +142,8 @@ export default function ProfilePicture({
           </p>
           <input
             ref={fileInputRef}
+            id="profile-picture-upload"
+            name="profile-picture-upload"
             type="file"
             accept="image/jpeg,image/png,image/jpg"
             onChange={handleFileChange}

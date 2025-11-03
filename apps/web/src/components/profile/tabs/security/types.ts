@@ -17,9 +17,11 @@ export interface PasswordData {
 export interface LoginSession {
   id: string;
   device: string;
-  location: string;
+  ipAddress?: string;
+  location?: string;
   lastActive: string;
   isCurrent: boolean;
+  userAgent?: string;
 }
 
 // Security section props (base)
@@ -32,12 +34,17 @@ export interface PasswordManagementSectionProps extends SecuritySectionProps {
   onOpenPasswordModal: () => void;
   twoFAEnabled: boolean;
   onToggle2FA: () => void;
+  isTwoFAStatusLoading?: boolean;
+  isTwoFAProcessing?: boolean;
 }
 
 // Login activity section props
 export interface LoginActivitySectionProps extends SecuritySectionProps {
   sessions?: LoginSession[];
+  isLoading?: boolean;
+  errorMessage?: string | null;
   onLogoutSession?: (sessionId: string) => void;
+  onLogoutAllSessions?: () => void;
 }
 
 // Privacy settings section props
@@ -60,6 +67,9 @@ export interface PasswordChangeModalProps {
   onClose: () => void;
   onConfirm: (passwordData: { currentPassword: string; newPassword: string; confirmPassword: string }) => void;
   colors: ThemeColors;
+  isSubmitting?: boolean;
+  errorMessage?: string | null;
+  successMessage?: string | null;
 }
 
 // 2FA modal props
@@ -68,6 +78,11 @@ export interface TwoFASetupModalProps {
   onClose: () => void;
   onVerify: (code: string) => void;
   colors: ThemeColors;
+  qrCode?: string;
+  secret?: string;
+  backupCodes?: string[];
+  isVerifying?: boolean;
+  errorMessage?: string | null;
 }
 
 // Password input props
@@ -79,6 +94,8 @@ export interface PasswordInputProps {
   onToggleShowPassword: () => void;
   placeholder?: string;
   colors: ThemeColors;
+  id?: string;
+  name?: string;
 }
 
 // Security card props (wrapper)

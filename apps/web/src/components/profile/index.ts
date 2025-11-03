@@ -10,14 +10,13 @@ export { default as CareerTab } from './tabs/CareerTab';
 export { default as PortfolioTab } from './tabs/PortfolioTab';
 export { default as AnalyticsTab } from './tabs/AnalyticsTab';
 export { default as SecurityTab } from './tabs/SecurityTab';
-export { default as BillingTab } from './tabs/BillingTab';
 export { default as PreferencesTab } from './tabs/PreferencesTab';
 export { default as SupportTab } from './tabs/SupportTab';
 
 // Sub-components
 export { default as FormField } from './components/FormField';
 export { default as ProfilePicture } from './components/ProfilePicture';
-export { default as ResumeImport } from './components/ResumeImport';
+export { default as BulletListEditor } from './components/BulletListEditor';
 
 // Types
 export type { UserData, ProfileTabConfig, ProfileHeaderProps, ProfileSidebarProps, FormFieldProps } from './types/profile';

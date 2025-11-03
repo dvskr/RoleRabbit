@@ -1,31 +1,78 @@
 import { logger } from './logger';
 import { API_ENDPOINTS } from '../components/profile/tabs/security/constants';
 
-/**
- * Security-related API helper functions
- */
+type ApiResult<T> = { success: true } & T | { success: false; error: string };
+
+const parseError = async (response: Response): Promise<string> => {
+  try {
+    const data: any = await response.json();
+    return data?.error || data?.message || response.statusText;
+  } catch (error) {
+    logger.warn('Failed to parse security API error response', error);
+    return response.statusText;
+  }
+};
 
 /**
  * Enables 2FA by calling the setup endpoint
  */
-export const setup2FA = async (): Promise<{ qrCode?: string; secret?: string; success: boolean }> => {
+export const setup2FA = async (): Promise<ApiResult<{ qrCode: string; secret: string; backupCodes: string[] }>> => {
   try {
-    const response = await fetch(API_ENDPOINTS.TWO_FA_SETUP, {
+    const response: Response = await fetch(API_ENDPOINTS.TWO_FA_SETUP, {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'include'
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      return { ...data, success: true };
-    } else {
-      const errorData = await response.json().catch(() => ({}));
-      logger.error('Failed to setup 2FA:', response.statusText, errorData);
-      return { success: false };
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to setup 2FA:', error);
+      return { success: false, error };
     }
+
+    const data: any = await response.json();
+
+    if (!data?.secret || !data?.qrCode) {
+      return { success: false, error: 'Invalid response from server while starting 2FA setup.' };
+    }
+
+    return {
+      success: true,
+      qrCode: data.qrCode as string,
+      secret: data.secret as string,
+      backupCodes: Array.isArray(data.backupCodes) ? data.backupCodes : []
+    };
   } catch (error) {
     logger.error('2FA setup failed:', error);
-    return { success: false };
+    return { success: false, error: 'Failed to setup 2FA. Please try again.' };
+  }
+};
+
+export const enable2FA = async (
+  secret: string,
+  token: string,
+  backupCodes: string[],
+  method: 'app' | 'email' = 'app'
+): Promise<ApiResult<{ backupCodes: string[] }>> => {
+  try {
+    const response: Response = await fetch(API_ENDPOINTS.TWO_FA_ENABLE, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, secret, backupCodes, method })
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to enable 2FA:', error);
+      return { success: false, error };
+    }
+
+    const data: unknown = await response.json();
+    const newBackupCodes = Array.isArray((data as any)?.backupCodes) ? (data as any).backupCodes : [];
+    return { success: true, backupCodes: newBackupCodes };
+  } catch (error) {
+    logger.error('Failed to enable 2FA:', error);
+    return { success: false, error: 'Unable to enable 2FA. Please try again.' };
   }
 };
 
@@ -35,43 +82,45 @@ export const setup2FA = async (): Promise<{ qrCode?: string; secret?: string; su
 export const disable2FA = async (
   password: string,
   twoFactorToken: string
-): Promise<boolean> => {
+): Promise<ApiResult<{}>> => {
   try {
-    const response = await fetch(API_ENDPOINTS.TWO_FA_DISABLE, {
+    const response: Response = await fetch(API_ENDPOINTS.TWO_FA_DISABLE, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, twoFactorToken }),
+      body: JSON.stringify({ password, twoFactorToken })
     });
 
-    if (response.ok) {
-      return true;
-    } else {
-      logger.error('Failed to disable 2FA:', response.statusText);
-      return false;
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to disable 2FA:', error);
+      return { success: false, error };
     }
+
+    return { success: true };
   } catch (error) {
     logger.error('Failed to disable 2FA:', error);
-    return false;
+    return { success: false, error: 'Unable to disable 2FA. Please try again.' };
   }
 };
 
-/**
- * Verifies 2FA code
- */
-export const verify2FACode = async (code: string): Promise<boolean> => {
+export const get2FAStatus = async (): Promise<ApiResult<{ enabled: boolean; hasBackupCodes: boolean }>> => {
   try {
-    const response = await fetch(API_ENDPOINTS.TWO_FA_VERIFY, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
+    const response: Response = await fetch(API_ENDPOINTS.TWO_FA_STATUS, {
+      method: 'GET',
+      credentials: 'include'
     });
 
-    return response.ok;
+    if (!response.ok) {
+      const error = await parseError(response);
+      return { success: false, error };
+    }
+
+    const data: any = await response.json();
+    return { success: true, enabled: data.enabled, hasBackupCodes: !!data.hasBackupCodes };
   } catch (error) {
-    logger.error('Failed to verify 2FA code:', error);
-    return false;
+    logger.error('Failed to fetch 2FA status:', error);
+    return { success: false, error: 'Unable to load 2FA status.' };
   }
 };
 
@@ -80,42 +129,97 @@ export const verify2FACode = async (code: string): Promise<boolean> => {
  */
 export const changePassword = async (
   currentPassword: string,
-  newPassword: string
-): Promise<boolean> => {
+  newPassword: string,
+  confirmPassword: string
+): Promise<ApiResult<{}>> => {
   try {
-    const response = await fetch(API_ENDPOINTS.PASSWORD_CHANGE, {
-      method: 'POST',
+    const response: Response = await fetch(API_ENDPOINTS.PASSWORD_CHANGE, {
+      method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
     });
 
-    if (response.ok) {
-      logger.debug('Password changed successfully');
-      return true;
-    } else {
-      logger.error('Failed to change password:', response.statusText);
-      return false;
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to change password:', error);
+      return { success: false, error };
     }
+
+    return { success: true };
   } catch (error) {
     logger.error('Failed to change password:', error);
-    return false;
+    return { success: false, error: 'Unable to change password. Please try again.' };
   }
 };
 
-/**
- * Simulates password change (for development/testing)
- */
-export const simulatePasswordChange = async (
-  currentPassword: string,
-  newPassword: string
-): Promise<boolean> => {
-  logger.debug('Changing password...');
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      logger.debug('Password changed successfully');
-      resolve(true);
-    }, 1000);
-  });
+export interface LoginSessionDTO {
+  id: string;
+  device: string;
+  ipAddress?: string;
+  lastActivity: string;
+  isCurrent: boolean;
+  userAgent?: string;
+}
+
+export const getSessions = async (): Promise<ApiResult<{ sessions: LoginSessionDTO[] }>> => {
+  try {
+    const response: Response = await fetch(API_ENDPOINTS.SESSIONS, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      return { success: false, error };
+    }
+
+    const data: any = await response.json();
+    return {
+      success: true,
+      sessions: data.sessions || []
+    };
+  } catch (error) {
+    logger.error('Failed to fetch sessions:', error);
+    return { success: false, error: 'Unable to load sessions.' };
+  }
+};
+
+export const revokeSession = async (sessionId: string): Promise<ApiResult<{}>> => {
+  try {
+    const response: Response = await fetch(`${API_ENDPOINTS.SESSIONS}/${sessionId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to revoke session:', error);
+    return { success: false, error: 'Unable to revoke session.' };
+  }
+};
+
+export const revokeOtherSessions = async (): Promise<ApiResult<{}>> => {
+  try {
+    const response: Response = await fetch(API_ENDPOINTS.SESSIONS, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to revoke sessions:', error);
+    return { success: false, error: 'Unable to revoke sessions.' };
+  }
 };
 

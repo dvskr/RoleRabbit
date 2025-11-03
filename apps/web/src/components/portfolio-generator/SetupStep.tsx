@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from 'react';
 import { Upload, User, Mail, Briefcase, Linkedin, Github, Globe, X, CheckCircle, FileText } from 'lucide-react';
-import { resumeParser } from '../../services/resumeParser';
 
 interface SetupStepProps {
   profileData?: any;
@@ -20,11 +19,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
   const [website, setWebsite] = useState(profileData?.website || profileData?.portfolio || '');
   const [profilePic, setProfilePic] = useState(profileData?.profilePicture || null);
   const [template, setTemplate] = useState('modern');
-  const [isUploadingResume, setIsUploadingResume] = useState(false);
-  const [uploadedResume, setUploadedResume] = useState<string | null>(null);
-  const [resumeContent, setResumeContent] = useState<string>(''); // Store full resume text for LLM
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const resumeInputRef = useRef<HTMLInputElement>(null);
 
   const templates = [
     { 
@@ -60,112 +55,6 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
     }
   };
 
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setIsUploadingResume(true);
-      setUploadedResume(file.name);
-      
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const text = event.target?.result as string;
-        setResumeContent(text); // Store full resume content for LLM
-        
-        // Use AI-powered parsing
-        try {
-          const parsed = await resumeParser.parseResumeText(text);
-          
-          // Auto-fill form fields
-          if (parsed.name && !name) setName(parsed.name);
-          if (parsed.email && !email) setEmail(parsed.email);
-          if (parsed.title && !role) setRole(parsed.title);
-          if (parsed.summary && !bio) setBio(parsed.summary);
-          if (parsed.links.linkedin && !linkedin) setLinkedin(parsed.links.linkedin);
-          if (parsed.links.github && !github) setGithub(parsed.links.github);
-          if (parsed.links.website && !website) setWebsite(parsed.links.website);
-          if (parsed.location && !company) setCompany(parsed.location);
-        } catch (error) {
-          console.error('Error parsing resume with AI:', error);
-          // Fallback to basic parsing
-          parseResumeText(text);
-        }
-        
-        setIsUploadingResume(false);
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const parseResumeText = (text: string) => {
-    // Parse name (first capitalized words at top)
-    const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/m);
-    if (nameMatch && !name) {
-      const fullName = nameMatch[1].trim();
-      setName(fullName);
-    }
-
-    // Parse email
-    const emailMatch = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
-    if (emailMatch && !email) {
-      setEmail(emailMatch[0]);
-    }
-
-    // Parse phone
-    const phoneMatch = text.match(/[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{4,6}/);
-    // Could add phone field if needed
-
-    // Parse current role/job title
-    const rolePatterns = [
-      /(Senior|Junior|Lead|Staff|Principal|Chief)\s+([A-Z][a-z\s]+Engineer|Developer|Designer|Analyst|Manager)/i,
-      /([A-Z][a-z\s]+Engineer|Developer|Designer|Analyst|Manager)/i,
-      /Software\s+Engineer/i,
-      /Developer/i
-    ];
-    
-    for (const pattern of rolePatterns) {
-      const roleMatch = text.match(pattern);
-      if (roleMatch && !role) {
-        setRole(roleMatch[0]);
-        break;
-      }
-    }
-
-    // Parse company
-    const companyPatterns = [
-      /(?:at|works? at|working at)\s+([A-Z][a-zA-Z\s&]+?)(?:\.|,|\n|$)/i,
-      /([A-Z][a-zA-Z\s&]+\s+(?:Inc|LLC|Corp|Co|Technologies|Systems))/i
-    ];
-    
-    for (const pattern of companyPatterns) {
-      const companyMatch = text.match(pattern);
-      if (companyMatch && !company) {
-        setCompany(companyMatch[1].trim());
-        break;
-      }
-    }
-
-    // Parse bio/summary (usually after name)
-    const summaryMatch = text.match(/(?:SUMMARY|PROFILE|OBJECTIVE)[:\s]+\s*([^\n]+(?:\n[^\n]+){0,5})/i);
-    if (summaryMatch && !bio) {
-      setBio(summaryMatch[1].trim());
-    }
-
-    // Parse social links
-    const linkedinMatch = text.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
-    if (linkedinMatch && !linkedin) {
-      setLinkedin(`https://linkedin.com/in/${linkedinMatch[1]}`);
-    }
-
-    const githubMatch = text.match(/github\.com\/([a-zA-Z0-9-]+)/i);
-    if (githubMatch && !github) {
-      setGithub(`https://github.com/${githubMatch[1]}`);
-    }
-
-    const websiteMatch = text.match(/(?:website|portfolio|site):\s*(https?:\/\/[^\s]+)/i);
-    if (websiteMatch && !website) {
-      setWebsite(websiteMatch[1]);
-    }
-  };
 
   const handleContinue = () => {
     const data = {
@@ -178,8 +67,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
       website,
       profilePic,
       template,
-      links: [linkedin, github, website].filter(Boolean),
-      resumeContent // Pass full resume text to LLM in chat step
+      links: [linkedin, github, website].filter(Boolean)
     };
     onComplete(data);
   };
@@ -193,44 +81,6 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
           <h2 className="text-3xl font-bold text-gray-900 mb-6">Setup Your Portfolio</h2>
           <p className="text-gray-600 mb-8">Let's start by gathering your basic information</p>
 
-          {/* Resume Upload Section */}
-          <div className="mb-8 p-6 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border border-purple-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText size={24} className="text-purple-600" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Import Resume</h3>
-                  <p className="text-sm text-gray-600">Upload your resume to auto-fill information</p>
-                </div>
-              </div>
-                <div>
-                  <button
-                    onClick={() => resumeInputRef.current?.click()}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-all"
-                  >
-                    {uploadedResume ? (
-                      <span className="flex items-center gap-2">
-                        <CheckCircle size={16} />
-                        {uploadedResume}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-2">
-                        <Upload size={16} />
-                        {isUploadingResume ? 'Processing...' : 'Upload'}
-                      </span>
-                    )}
-                  </button>
-                  <input
-                    ref={resumeInputRef}
-                    type="file"
-                    accept=".pdf,.doc,.docx,.txt"
-                    onChange={handleResumeUpload}
-                    className="hidden"
-                    aria-label="Upload resume file"
-                  />
-                </div>
-            </div>
-          </div>
 
           {/* Profile Picture Upload */}
           <div className="mb-8">

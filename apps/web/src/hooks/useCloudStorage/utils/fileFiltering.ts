@@ -102,8 +102,11 @@ export const filterAndSortFiles = (
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
-        case 'size':
-          return parseFloat(b.size.replace(/[^\d.]/g, '')) - parseFloat(a.size.replace(/[^\d.]/g, ''));
+        case 'size': {
+          const sizeA = typeof a.sizeBytes === 'number' ? a.sizeBytes : parseFloat(a.size.replace(/[^\d.]/g, ''));
+          const sizeB = typeof b.sizeBytes === 'number' ? b.sizeBytes : parseFloat(b.size.replace(/[^\d.]/g, ''));
+          return sizeB - sizeA;
+        }
         case 'date':
         default:
           return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();

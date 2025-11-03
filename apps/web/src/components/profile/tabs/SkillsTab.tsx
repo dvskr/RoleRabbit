@@ -231,19 +231,6 @@ export default function SkillsTab({
 
   return (
     <div className="max-w-4xl">
-      <div className="mb-8">
-        <h2 
-          className="text-3xl font-bold mb-2"
-          style={{ color: colors.primaryText }}
-        >
-          Skills & Expertise
-        </h2>
-        <p 
-          style={{ color: colors.secondaryText }}
-        >
-          Showcase your technical skills, certifications, and language abilities
-        </p>
-      </div>
       
       <div className="space-y-8">
         {/* Statistics Summary */}
@@ -355,6 +342,8 @@ export default function SkillsTab({
                           </button>
                         </div>
                         <input
+                          id={`skill-name-${index}`}
+                          name={`skill-name-${index}`}
                           type="text"
                           value={skill.name}
                           onChange={(e) => updateSkill(index, { name: e.target.value })}
@@ -371,6 +360,8 @@ export default function SkillsTab({
                             Proficiency Level
                           </label>
                           <select
+                            id={`skill-proficiency-${index}`}
+                            name={`skill-proficiency-${index}`}
                             value={skill.proficiency}
                             onChange={(e) => updateSkill(index, { proficiency: e.target.value as Skill['proficiency'] })}
                             className="w-full px-3 py-2 rounded-lg"
@@ -390,6 +381,8 @@ export default function SkillsTab({
                             Years of Experience (optional)
                           </label>
                           <input
+                            id={`skill-years-${index}`}
+                            name={`skill-years-${index}`}
                             type="number"
                             min="0"
                             max="50"
@@ -408,6 +401,7 @@ export default function SkillsTab({
                           <input
                             type="checkbox"
                             id={`verified-${index}`}
+                            name={`verified-${index}`}
                             checked={skill.verified || false}
                             onChange={(e) => updateSkill(index, { verified: e.target.checked })}
                             className="rounded"
@@ -538,6 +532,8 @@ export default function SkillsTab({
           {isEditing && (
             <div className="flex gap-3">
               <input
+                id="add-skill-input"
+                name="add-skill-input"
                 type="text"
                 placeholder="Add a technical skill (e.g., JavaScript, Python, React)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
@@ -695,6 +691,7 @@ export default function SkillsTab({
                         <input
                           type="checkbox"
                           id={`cert-verified-${index}`}
+                          name={`cert-verified-${index}`}
                           checked={cert.verified || false}
                           onChange={(e) => updateCertification(index, { verified: e.target.checked })}
                           className="rounded"
@@ -902,6 +899,8 @@ export default function SkillsTab({
                         </button>
                       </div>
                       <input
+                        id={`language-name-${index}`}
+                        name={`language-name-${index}`}
                         type="text"
                         value={lang.name}
                         onChange={(e) => updateLanguage(index, { name: e.target.value })}
@@ -1033,6 +1032,8 @@ export default function SkillsTab({
           {isEditing && (
             <div className="flex gap-3 mt-4">
               <input
+                id="add-language-input"
+                name="add-language-input"
                 type="text"
                 placeholder="Add language (e.g., English, Spanish, French)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
