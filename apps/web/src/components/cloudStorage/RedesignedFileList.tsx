@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Filter, Grid, List, Upload, Trash2, Search } from 'lucide-react';
+import { Filter, Upload, Trash2, Search } from 'lucide-react';
 import { ResumeFile, FileType, SortBy, ViewMode } from '../../types/cloudStorage';
 import FileCard from './FileCard';
 import { EmptyFilesState } from './EmptyFilesState';
@@ -17,6 +17,16 @@ interface FilesTabsBarProps {
   colors?: any;
 }
 
+interface FilesTabsBarProps {
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+  filesCount: number;
+  credentialsCount: number;
+  onUpload: () => void;
+  colors?: any;
+  showDeleted?: boolean; // Add showDeleted prop
+}
+
 export const FilesTabsBar: React.FC<FilesTabsBarProps> = ({
   activeTab,
   onTabChange,
@@ -24,6 +34,7 @@ export const FilesTabsBar: React.FC<FilesTabsBarProps> = ({
   credentialsCount,
   onUpload,
   colors,
+  showDeleted = false, // Default to false
 }) => {
   const { theme } = useTheme();
   const palette = colors || theme.colors;
@@ -66,26 +77,28 @@ export const FilesTabsBar: React.FC<FilesTabsBarProps> = ({
         ))}
       </div>
 
-      <button
-        onClick={onUpload}
-        className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-transform"
-        style={{
-          background: palette.primaryBlue,
-          color: '#ffffff',
-          boxShadow: '0 10px 30px rgba(64, 87, 255, 0.25)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.opacity = '0.9';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.opacity = '1';
-        }}
-      >
-        <Upload size={16} />
-        Upload File
-      </button>
+      {!showDeleted && (
+        <button
+          onClick={onUpload}
+          className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-transform"
+          style={{
+            background: palette.primaryBlue,
+            color: '#ffffff',
+            boxShadow: '0 10px 30px rgba(64, 87, 255, 0.25)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          <Upload size={16} />
+          <span>Upload File</span>
+        </button>
+      )}
     </div>
   );
 };
@@ -98,8 +111,6 @@ interface RedesignedFileListProps {
   setFilterType: (type: FileType) => void;
   sortBy: SortBy;
   setSortBy: (sort: SortBy) => void;
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
   selectedFiles: string[];
   onSelectAll: () => void;
   onDeleteSelected: () => void;
@@ -132,8 +143,6 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   setFilterType,
   sortBy,
   setSortBy,
-  viewMode,
-  setViewMode,
   selectedFiles,
   onSelectAll,
   onDeleteSelected,
@@ -161,59 +170,41 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   const palette = colors || theme.colors;
 
   const hasSelection = selectedFiles.length > 0;
+  const effectiveViewMode: ViewMode = 'grid';
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearchChange(event.target.value);
   };
 
   const content = useMemo(() => {
+    console.log('📋 RedesignedFileList rendering:', {
+      filesCount: files.length,
+      searchTerm,
+      filterType,
+      showDeleted
+    });
+    
     if (files.length === 0) {
+      console.log('📋 Showing empty state - no files to display');
       return (
         <EmptyFilesState
           searchTerm={searchTerm}
           filterType={filterType}
-          onUpload={onUpload}
+          onUpload={showDeleted ? undefined : onUpload}
           colors={palette}
+          showDeleted={showDeleted}
         />
       );
     }
 
-    if (viewMode === 'grid') {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {files.map((file) => (
-            <FileCard
-              key={file.id}
-              file={file}
-              isSelected={selectedFiles.includes(file.id)}
-              viewMode={viewMode}
-              showDeleted={showDeleted}
-              onSelect={onFileSelect}
-              onDownload={onDownload}
-              onShare={onShare}
-              onDelete={onDelete}
-              onRestore={onRestore}
-              onPermanentlyDelete={onPermanentlyDelete}
-              onTogglePublic={onTogglePublic}
-              onEdit={onEdit}
-              onStar={onStar}
-              onArchive={onArchive}
-              onAddComment={onAddComment}
-              onShareWithUser={onShareWithUser}
-            />
-          ))}
-        </div>
-      );
-    }
-
     return (
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {files.map((file) => (
           <FileCard
             key={file.id}
             file={file}
             isSelected={selectedFiles.includes(file.id)}
-            viewMode={viewMode}
+            viewMode={effectiveViewMode}
             showDeleted={showDeleted}
             onSelect={onFileSelect}
             onDownload={onDownload}
@@ -247,10 +238,10 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
     onTogglePublic,
     selectedFiles,
     showDeleted,
-    viewMode,
     palette,
     searchTerm,
     onUpload,
+    onArchive,
   ]);
 
   return (
@@ -262,6 +253,7 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
         credentialsCount={credentialsCount}
         onUpload={onUpload}
         colors={palette}
+        showDeleted={showDeleted}
       />
 
       <div
@@ -324,36 +316,6 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
             <option value="size">Size</option>
           </select>
 
-          <div
-            className="flex items-center rounded-lg p-1"
-            style={{
-              background: palette.inputBackground,
-              border: `1px solid ${palette.border}`,
-            }}
-          >
-            <button
-              className="p-1.5 rounded-md"
-              style={{
-                background: viewMode === 'list' ? palette.cardBackground : 'transparent',
-                color: viewMode === 'list' ? palette.primaryText : palette.secondaryText,
-              }}
-              onClick={() => setViewMode('list')}
-              aria-label="List view"
-            >
-              <List size={15} />
-            </button>
-            <button
-              className="p-1.5 rounded-md"
-              style={{
-                background: viewMode === 'grid' ? palette.cardBackground : 'transparent',
-                color: viewMode === 'grid' ? palette.primaryText : palette.secondaryText,
-              }}
-              onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
-            >
-              <Grid size={15} />
-            </button>
-          </div>
         </div>
 
         {hasSelection && (
@@ -364,21 +326,13 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
               color: palette.errorRed,
             }}
           >
-            <span>{selectedFiles.length} selected</span>
-            <button
-              onClick={onSelectAll}
-              className="text-xs underline"
-              style={{ color: palette.secondaryText }}
-            >
-              Clear
-            </button>
             <button
               onClick={onDeleteSelected}
-              className="flex items-center gap-1 text-xs"
+              className="flex items-center gap-2 text-sm font-medium"
               style={{ color: palette.errorRed }}
             >
-              <Trash2 size={14} />
-              Delete
+              <Trash2 size={16} />
+              Delete {selectedFiles.length > 1 ? `${selectedFiles.length} files` : 'file'}
             </button>
           </div>
         )}

@@ -16,8 +16,11 @@ const logger = require('../utils/logger');
 async function storageRoutes(fastify, options) {
   // Log route registration
   logger.info('📁 Storage routes registered: /api/storage/*');
-  logger.info('   → GET  /api/storage/files');
-  logger.info('   → POST /api/storage/files/upload');
+  logger.info('   → GET    /api/storage/files');
+  logger.info('   → POST   /api/storage/files/upload');
+  logger.info('   → DELETE /api/storage/files/:id (soft delete)');
+  logger.info('   → POST   /api/storage/files/:id/restore');
+  logger.info('   → DELETE /api/storage/files/:id/permanent');
   
   // Get all files for authenticated user
   fastify.get('/files', {
@@ -42,7 +45,6 @@ async function storageRoutes(fastify, options) {
       // Build where clause
       const where = {
         userId,
-        ...(folderId ? { folderId } : { folderId: null }), // null means root folder
         ...(includeDeleted ? {} : { deletedAt: null }),
         ...(type ? { type } : {}),
         ...(search ? {
@@ -53,6 +55,14 @@ async function storageRoutes(fastify, options) {
           ]
         } : {})
       };
+
+      // Folder filter: null/undefined means root folder (no folder)
+      if (folderId !== null && folderId !== undefined) {
+        where.folderId = folderId;
+      } else {
+        // Root folder - files with no folder (folderId is null)
+        where.folderId = null;
+      }
 
       // Fetch files from database
       const files = await prisma.storageFile.findMany({
@@ -86,7 +96,7 @@ async function storageRoutes(fastify, options) {
         isPublic: file.isPublic,
         isStarred: file.isStarred,
         isArchived: file.isArchived,
-        folderId: file.folderId,
+        folderId: file.folderId || null, // Ensure null instead of undefined
         folderName: file.folder?.name || null,
         downloadCount: file.downloadCount,
         viewCount: file.viewCount,
@@ -96,7 +106,8 @@ async function storageRoutes(fastify, options) {
         owner: userId,
         sharedWith: [],
         comments: [],
-        version: 1
+        version: 1,
+        deletedAt: file.deletedAt ? file.deletedAt.toISOString() : null // Include deletedAt for filtering
       }));
 
       // Get storage quota
@@ -487,6 +498,220 @@ async function storageRoutes(fastify, options) {
       }
       
       reply.status(500).send(errorResponse);
+    }
+  });
+
+  // Soft delete file (move to recycle bin)
+  fastify.delete('/files/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+
+      // Check if file exists and belongs to user
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to delete it'
+        });
+      }
+
+      // Soft delete - set deletedAt timestamp
+      const updatedFile = await prisma.storageFile.update({
+        where: { id: fileId },
+        data: {
+          deletedAt: new Date()
+        }
+      });
+
+      logger.info(`✅ File soft deleted (moved to recycle bin): ${fileId}`);
+
+      return reply.send({
+        success: true,
+        message: 'File moved to recycle bin',
+        file: {
+          id: updatedFile.id,
+          deletedAt: updatedFile.deletedAt?.toISOString() || null
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error soft deleting file:', error);
+      return reply.status(500).send({
+        error: 'Failed to delete file',
+        message: error.message || 'An error occurred while deleting the file'
+      });
+    }
+  });
+
+  // Restore file from recycle bin
+  fastify.post('/files/:id/restore', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+
+      // Check if file exists and belongs to user
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to restore it'
+        });
+      }
+
+      if (!file.deletedAt) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'File is not in recycle bin'
+        });
+      }
+
+      // Restore - remove deletedAt timestamp
+      const updatedFile = await prisma.storageFile.update({
+        where: { id: fileId },
+        data: {
+          deletedAt: null
+        }
+      });
+
+      logger.info(`✅ File restored from recycle bin: ${fileId}`);
+
+      return reply.send({
+        success: true,
+        message: 'File restored from recycle bin',
+        file: {
+          id: updatedFile.id,
+          deletedAt: null
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error restoring file:', error);
+      return reply.status(500).send({
+        error: 'Failed to restore file',
+        message: error.message || 'An error occurred while restoring the file'
+      });
+    }
+  });
+
+  // Permanently delete file (hard delete)
+  fastify.delete('/files/:id/permanent', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+
+      // Check if file exists and belongs to user
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to delete it'
+        });
+      }
+
+      // Delete file from storage
+      try {
+        await storageHandler.deleteFile(file.storagePath);
+        logger.info(`✅ File deleted from storage: ${file.storagePath}`);
+      } catch (storageError) {
+        logger.warn('⚠️ Failed to delete file from storage (continuing with database delete):', storageError.message);
+        // Continue with database delete even if storage delete fails
+      }
+
+      // Permanently delete from database
+      await prisma.storageFile.delete({
+        where: { id: fileId }
+      });
+
+      logger.info(`✅ File permanently deleted: ${fileId}`);
+
+      // Update storage quota
+      try {
+        const quota = await prisma.storageQuota.findUnique({
+          where: { userId }
+        });
+
+        if (quota) {
+          const currentUsed = Number(quota.usedBytes);
+          const fileSize = Number(file.size);
+          const newUsed = Math.max(0, currentUsed - fileSize);
+
+          await prisma.storageQuota.update({
+            where: { userId },
+            data: {
+              usedBytes: BigInt(newUsed)
+            }
+          });
+
+          logger.info(`✅ Storage quota updated: ${newUsed} bytes used`);
+        }
+      } catch (quotaError) {
+        logger.warn('⚠️ Failed to update storage quota:', quotaError.message);
+      }
+
+      return reply.send({
+        success: true,
+        message: 'File permanently deleted',
+        storage: {
+          usedBytes: 0, // Will be calculated by frontend
+          limitBytes: 0
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error permanently deleting file:', error);
+      return reply.status(500).send({
+        error: 'Failed to permanently delete file',
+        message: error.message || 'An error occurred while deleting the file'
+      });
     }
   });
 }

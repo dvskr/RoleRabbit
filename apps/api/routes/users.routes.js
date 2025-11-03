@@ -99,6 +99,7 @@ async function userRoutes(fastify, options) {
           updatedAt: true,
           profile: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
               phone: true,
@@ -112,7 +113,92 @@ async function userRoutes(fastify, options) {
               github: true,
               website: true,
               createdAt: true,
-              updatedAt: true
+              updatedAt: true,
+              // Include related data
+              workExperiences: {
+                orderBy: { startDate: 'desc' },
+                select: {
+                  id: true,
+                  company: true,
+                  role: true,
+                  location: true,
+                  startDate: true,
+                  endDate: true,
+                  isCurrent: true,
+                  description: true,
+                  projectType: true
+                }
+              },
+              education: {
+                orderBy: { graduationDate: 'desc' },
+                select: {
+                  id: true,
+                  institution: true,
+                  degree: true,
+                  field: true,
+                  graduationDate: true,
+                  description: true
+                }
+              },
+              certifications: {
+                orderBy: { date: 'desc' },
+                select: {
+                  id: true,
+                  name: true,
+                  issuer: true,
+                  date: true,
+                  expiryDate: true,
+                  credentialUrl: true
+                }
+              },
+              userSkills: {
+                include: {
+                  skill: {
+                    select: {
+                      id: true,
+                      name: true,
+                      category: true
+                    }
+                  }
+                },
+                select: {
+                  id: true,
+                  proficiency: true,
+                  yearsOfExperience: true,
+                  verified: true,
+                  skill: true
+                }
+              },
+              socialLinks: {
+                select: {
+                  id: true,
+                  platform: true,
+                  url: true
+                }
+              },
+              projects: {
+                orderBy: { startDate: 'desc' },
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  url: true,
+                  startDate: true,
+                  endDate: true,
+                  technologies: true
+                }
+              },
+              achievements: {
+                orderBy: { date: 'desc' },
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  date: true,
+                  issuer: true,
+                  url: true
+                }
+              }
             }
           }
         }
@@ -129,6 +215,28 @@ async function userRoutes(fastify, options) {
         ...userData,
         ...(profile || {})
       };
+      
+      // Transform skills array from UserSkill[] to Skill[] format expected by frontend
+      if (parsedUser.userSkills && Array.isArray(parsedUser.userSkills)) {
+        parsedUser.skills = parsedUser.userSkills.map(us => ({
+          name: us.skill.name,
+          proficiency: us.proficiency || 'Beginner',
+          yearsOfExperience: us.yearsOfExperience,
+          verified: us.verified || false
+        }));
+        // Remove userSkills from response (frontend expects 'skills')
+        delete parsedUser.userSkills;
+      } else {
+        parsedUser.skills = [];
+      }
+      
+      // Ensure arrays are arrays (not null/undefined)
+      parsedUser.workExperiences = parsedUser.workExperiences || [];
+      parsedUser.education = parsedUser.education || [];
+      parsedUser.certifications = parsedUser.certifications || [];
+      parsedUser.socialLinks = parsedUser.socialLinks || [];
+      parsedUser.projects = parsedUser.projects || [];
+      parsedUser.achievements = parsedUser.achievements || [];
       
       return { user: parsedUser };
     } catch (error) {
@@ -231,10 +339,45 @@ async function userRoutes(fastify, options) {
       }
     }
 
+    // Handle array fields separately (they're in separate tables)
+    const workExperiences = updates.workExperiences;
+    const skills = updates.skills;
+    const education = updates.education;
+    const certifications = updates.certifications;
+    const languages = updates.languages;
+    const socialLinks = updates.socialLinks;
+    const projects = updates.projects;
+    const achievements = updates.achievements;
+    
+    // Remove these from updates so they don't try to save to UserProfile
+    delete updates.workExperiences;
+    delete updates.skills;
+    delete updates.education;
+    delete updates.certifications;
+    delete updates.languages;
+    delete updates.socialLinks;
+    delete updates.projects;
+    delete updates.achievements;
+    
     // Update in database
     const { prisma } = require('../utils/db');
     
     try {
+      // Get or create UserProfile first (needed for workExperiences and skills)
+      let userProfile = await prisma.userProfile.findUnique({
+        where: { userId: userId }
+      });
+      
+      if (!userProfile) {
+        // Create profile if it doesn't exist
+        userProfile = await prisma.userProfile.create({
+          data: {
+            userId: userId,
+            ...profileUpdateData
+          }
+        });
+      }
+      
       // Build update data
       const dataToUpdate = { ...userUpdateData };
       
@@ -266,6 +409,7 @@ async function userRoutes(fastify, options) {
           updatedAt: true,
           profile: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
               phone: true,
@@ -284,20 +428,234 @@ async function userRoutes(fastify, options) {
           }
         }
       });
+      
+      const profileId = updatedUser.profile?.id || userProfile.id;
+      
+      // Handle workExperiences - replace all existing ones
+      if (Array.isArray(workExperiences)) {
+        // Delete all existing work experiences
+        await prisma.workExperience.deleteMany({
+          where: { profileId: profileId }
+        });
+        
+        // Create new work experiences
+        if (workExperiences.length > 0) {
+          await prisma.workExperience.createMany({
+            data: workExperiences.map(exp => ({
+              profileId: profileId,
+              company: exp.company || '',
+              role: exp.role || '',
+              location: exp.location || null,
+              startDate: exp.startDate || '',
+              endDate: exp.endDate || null,
+              isCurrent: exp.isCurrent || false,
+              description: exp.description || null,
+              projectType: exp.projectType || 'Full-time'
+            }))
+          });
+        }
+      }
+      
+      // Handle skills - replace all existing ones
+      if (Array.isArray(skills)) {
+        // Get current user skills to delete
+        const existingUserSkills = await prisma.userSkill.findMany({
+          where: { profileId: profileId },
+          include: { skill: true }
+        });
+        
+        // Delete all existing user skills
+        await prisma.userSkill.deleteMany({
+          where: { profileId: profileId }
+        });
+        
+        // Create new skills and user skills
+        if (skills.length > 0) {
+          for (const skillData of skills) {
+            const skillName = (skillData.name || '').trim();
+            if (!skillName) continue;
+            
+            // Find or create skill
+            let skill = await prisma.skill.findUnique({
+              where: { name: skillName }
+            });
+            
+            if (!skill) {
+              skill = await prisma.skill.create({
+                data: {
+                  name: skillName,
+                  category: 'Technical' // Default category
+                }
+              });
+            }
+            
+            // Create user skill
+            await prisma.userSkill.create({
+              data: {
+                profileId: profileId,
+                skillId: skill.id,
+                proficiency: skillData.proficiency || 'Beginner',
+                yearsOfExperience: skillData.yearsOfExperience || null,
+                verified: skillData.verified || false
+              }
+            });
+          }
+        }
+      }
 
+      // Fetch updated profile with all related data (same as GET endpoint)
+      const fullProfile = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          emailNotifications: true,
+          smsNotifications: true,
+          privacyLevel: true,
+          profileVisibility: true,
+          createdAt: true,
+          updatedAt: true,
+          profile: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              personalEmail: true,
+              location: true,
+              bio: true,
+              profilePicture: true,
+              currentRole: true,
+              currentCompany: true,
+              linkedin: true,
+              github: true,
+              website: true,
+              createdAt: true,
+              updatedAt: true,
+              workExperiences: {
+                orderBy: { startDate: 'desc' },
+                select: {
+                  id: true,
+                  company: true,
+                  role: true,
+                  location: true,
+                  startDate: true,
+                  endDate: true,
+                  isCurrent: true,
+                  description: true,
+                  projectType: true
+                }
+              },
+              education: {
+                orderBy: { graduationDate: 'desc' },
+                select: {
+                  id: true,
+                  institution: true,
+                  degree: true,
+                  field: true,
+                  graduationDate: true,
+                  description: true
+                }
+              },
+              certifications: {
+                orderBy: { date: 'desc' },
+                select: {
+                  id: true,
+                  name: true,
+                  issuer: true,
+                  date: true,
+                  expiryDate: true,
+                  credentialUrl: true
+                }
+              },
+              userSkills: {
+                include: {
+                  skill: {
+                    select: {
+                      id: true,
+                      name: true,
+                      category: true
+                    }
+                  }
+                },
+                select: {
+                  id: true,
+                  proficiency: true,
+                  yearsOfExperience: true,
+                  verified: true,
+                  skill: true
+                }
+              },
+              socialLinks: {
+                select: {
+                  id: true,
+                  platform: true,
+                  url: true
+                }
+              },
+              projects: {
+                orderBy: { startDate: 'desc' },
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  url: true,
+                  startDate: true,
+                  endDate: true,
+                  technologies: true
+                }
+              },
+              achievements: {
+                orderBy: { date: 'desc' },
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  date: true,
+                  issuer: true,
+                  url: true
+                }
+              }
+            }
+          }
+        }
+      });
+      
       // Merge profile data into user object for flat structure (for backward compatibility)
-      const { profile, ...userData } = updatedUser;
+      const { profile, ...userData } = fullProfile;
       const parsedUser = {
         ...userData,
         ...(profile || {})
       };
+      
+      // Transform skills array from UserSkill[] to Skill[] format expected by frontend
+      if (parsedUser.userSkills && Array.isArray(parsedUser.userSkills)) {
+        parsedUser.skills = parsedUser.userSkills.map(us => ({
+          name: us.skill.name,
+          proficiency: us.proficiency || 'Beginner',
+          yearsOfExperience: us.yearsOfExperience,
+          verified: us.verified || false
+        }));
+        delete parsedUser.userSkills;
+      } else {
+        parsedUser.skills = [];
+      }
+      
+      // Ensure arrays are arrays (not null/undefined)
+      parsedUser.workExperiences = parsedUser.workExperiences || [];
+      parsedUser.education = parsedUser.education || [];
+      parsedUser.certifications = parsedUser.certifications || [];
+      parsedUser.socialLinks = parsedUser.socialLinks || [];
+      parsedUser.projects = parsedUser.projects || [];
+      parsedUser.achievements = parsedUser.achievements || [];
 
       // Auto-calculate and update profile completeness
       try {
         const { calculateProfileCompleteness } = require('../utils/profileCompleteness');
         const completeness = calculateProfileCompleteness(parsedUser);
         // Update profileCompleteness in UserProfile if profile exists
-        if (updatedUser.profile) {
+        if (fullProfile.profile) {
           await prisma.userProfile.update({
             where: { userId: userId },
             data: { profileCompleteness: completeness.score }

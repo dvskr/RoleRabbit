@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Award, Globe, Trash2, Edit2, Save, X, TrendingUp, BarChart3, Plus, CheckCircle } from 'lucide-react';
+import { Award, Globe, Trash2, Edit2, Save, X, Plus } from 'lucide-react';
 import { UserData, Skill, Certification } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 import FormField from '../components/FormField';
@@ -22,7 +22,6 @@ export default function SkillsTab({
   
   const [editingSkillId, setEditingSkillId] = useState<number | null>(null);
   const [editingCertId, setEditingCertId] = useState<number | null>(null);
-  const [editingLangId, setEditingLangId] = useState<number | null>(null);
   
   // Normalize skills to always be an array
   const normalizeSkills = (skills: any): Skill[] => {
@@ -53,14 +52,32 @@ export default function SkillsTab({
   
   const skills: Skill[] = normalizeSkills(userData.skills);
   
-  const addSkill = (skillName: string) => {
-    const skill: Skill = {
-      name: skillName,
-      proficiency: 'Beginner',
-      verified: false
-    };
-    if (skillName && !skills.some(s => s.name.toLowerCase() === skillName.toLowerCase())) {
-      onUserDataChange({ skills: [...skills, skill] });
+  const addSkill = (skillNameOrList: string) => {
+    // Support comma-separated skills: "Python, JavaScript, React" or single skill: "Python"
+    const skillNames = skillNameOrList
+      .split(',')
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (skillNames.length === 0) return;
+    
+    // Add all skills that don't already exist (case-insensitive)
+    const newSkills: Skill[] = [];
+    const existingSkillNames = new Set(skills.map(s => s.name.toLowerCase()));
+    
+    skillNames.forEach(skillName => {
+      if (!existingSkillNames.has(skillName.toLowerCase())) {
+        newSkills.push({
+          name: skillName,
+          proficiency: 'Beginner',
+          verified: false
+        });
+        existingSkillNames.add(skillName.toLowerCase()); // Prevent duplicates in the same batch
+      }
+    });
+    
+    if (newSkills.length > 0) {
+      onUserDataChange({ skills: [...skills, ...newSkills] });
     }
   };
 
@@ -90,7 +107,7 @@ export default function SkillsTab({
       return certs.map(cert => ({
         name: cert.name || '',
         issuer: cert.issuer || '',
-        date: cert.date || new Date().toISOString().split('T')[0],
+        date: cert.date || '', // Optional - allow blank
         expiryDate: cert.expiryDate || null,
         credentialUrl: cert.credentialUrl || null,
         verified: cert.verified || false
@@ -113,7 +130,7 @@ export default function SkillsTab({
     const cert: Certification = {
       name: '',
       issuer: '',
-      date: new Date().toISOString().split('T')[0],
+      date: '', // Optional - allow blank
       verified: false
     };
     onUserDataChange({ certifications: [...certifications, cert] });
@@ -154,13 +171,31 @@ export default function SkillsTab({
   
   const languages = normalizeLanguages(userData.languages);
   
-  const addLanguage = (langName: string) => {
-    const lang = {
-      name: langName,
-      proficiency: 'Native'
-    };
-    if (langName && !languages.some(l => l.name.toLowerCase() === langName.toLowerCase())) {
-      onUserDataChange({ languages: [...languages, lang] });
+  const addLanguage = (langNameOrList: string) => {
+    // Support comma-separated languages: "English, Spanish, French" or single language: "English"
+    const langNames = langNameOrList
+      .split(',')
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (langNames.length === 0) return;
+    
+    // Add all languages that don't already exist (case-insensitive)
+    const newLanguages: any[] = [];
+    const existingLangNames = new Set(languages.map(l => l.name.toLowerCase()));
+    
+    langNames.forEach(langName => {
+      if (!existingLangNames.has(langName.toLowerCase())) {
+        newLanguages.push({
+          name: langName,
+          proficiency: 'Native' // Keep for data structure, but won't display
+        });
+        existingLangNames.add(langName.toLowerCase()); // Prevent duplicates in the same batch
+      }
+    });
+    
+    if (newLanguages.length > 0) {
+      onUserDataChange({ languages: [...languages, ...newLanguages] });
     }
   };
 
@@ -173,7 +208,6 @@ export default function SkillsTab({
 
   const removeLanguage = (index: number) => {
     onUserDataChange({ languages: languages.filter((_, i) => i !== index) });
-    setEditingLangId(null);
   };
 
   const getProficiencyBadgeStyle = (proficiency: string) => {
@@ -215,78 +249,11 @@ export default function SkillsTab({
     }
   };
 
-  const getLanguageProficiencyValue = (proficiency: string): number => {
-    switch (proficiency) {
-      case 'Native': return 100;
-      case 'Fluent': return 90;
-      case 'Conversational': return 70;
-      case 'Basic': return 40;
-      default: return 40;
-    }
-  };
-
-  // Statistics
-  const skillStats = {
-    total: skills.length,
-    expert: skills.filter(s => s.proficiency === 'Expert').length,
-    advanced: skills.filter(s => s.proficiency === 'Advanced').length,
-    verified: skills.filter(s => s.verified).length,
-    avgExperience: skills.filter(s => s.yearsOfExperience).reduce((sum, s) => sum + (s.yearsOfExperience || 0), 0) / skills.filter(s => s.yearsOfExperience).length || 0
-  };
-
   const proficiencyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-  const languageLevels = ['Basic', 'Conversational', 'Fluent', 'Native'];
 
   return (
     <div className="max-w-4xl">
-      
       <div className="space-y-8">
-        {/* Statistics Summary */}
-        {skills.length > 0 && (
-          <div 
-            className="backdrop-blur-sm rounded-2xl p-6 shadow-lg"
-            style={{
-              background: colors.cardBackground,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 size={20} style={{ color: colors.primaryBlue }} />
-              <h3 
-                className="text-lg font-semibold"
-                style={{ color: colors.primaryText }}
-              >
-                Skills Overview
-              </h3>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.primaryBlue }}>
-                  {skillStats.total}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Total Skills</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.successGreen }}>
-                  {skillStats.expert + skillStats.advanced}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Advanced+</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.badgeInfoText }}>
-                  {skillStats.verified}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Verified</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.badgeWarningText }}>
-                  {skillStats.avgExperience > 0 ? `${skillStats.avgExperience.toFixed(1)}` : 'N/A'}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Avg Years</div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Technical Skills */}
         <div 
@@ -311,15 +278,18 @@ export default function SkillsTab({
           </div>
           
           {skills.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
               {skills.map((skill, index) => {
                 return (
                   <div 
                     key={index} 
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group flex-shrink-0"
                     style={{
                       background: colors.inputBackground,
                       border: `1px solid ${colors.border}`,
+                      maxWidth: '100%',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = colors.borderFocused;
@@ -329,8 +299,13 @@ export default function SkillsTab({
                     }}
                   >
                     <span 
-                      className="font-medium text-sm whitespace-nowrap"
-                      style={{ color: colors.primaryText }}
+                      className="font-medium text-sm break-words"
+                      style={{ 
+                        color: colors.primaryText,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        hyphens: 'auto',
+                      }}
                     >
                       {skill.name}
                     </span>
@@ -378,7 +353,7 @@ export default function SkillsTab({
                 id="add-skill-input"
                 name="add-skill-input"
                 type="text"
-                placeholder="Add a technical skill (e.g., JavaScript, Python, React)"
+                placeholder="Add skills (comma-separated: Python, JavaScript, React or single: Python)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
                 style={{
                   background: colors.inputBackground,
@@ -396,9 +371,9 @@ export default function SkillsTab({
                     e.preventDefault();
                     e.stopPropagation();
                     const target = e.target as HTMLInputElement;
-                    const skill = target.value.trim();
-                    if (skill) {
-                      addSkill(skill);
+                    const skillInput = target.value.trim();
+                    if (skillInput) {
+                      addSkill(skillInput);
                       target.value = '';
                     }
                   }
@@ -409,7 +384,7 @@ export default function SkillsTab({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const input = document.querySelector('input[placeholder*="Add a technical skill"]') as HTMLInputElement;
+                  const input = document.getElementById('add-skill-input') as HTMLInputElement;
                   if (input && input.value.trim()) {
                     addSkill(input.value.trim());
                     input.value = '';
@@ -502,6 +477,8 @@ export default function SkillsTab({
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <FormField
+                          id={`cert-${index}-name`}
+                          name={`cert-${index}-name`}
                           label="Certification Name"
                           value={cert.name}
                           onChange={(value) => updateCertification(index, { name: value })}
@@ -509,6 +486,8 @@ export default function SkillsTab({
                           placeholder="e.g., AWS Certified Solutions Architect"
                         />
                         <FormField
+                          id={`cert-${index}-issuer`}
+                          name={`cert-${index}-issuer`}
                           label="Issuing Organization"
                           value={cert.issuer}
                           onChange={(value) => updateCertification(index, { issuer: value })}
@@ -516,13 +495,17 @@ export default function SkillsTab({
                           placeholder="e.g., Amazon Web Services"
                         />
                         <FormField
-                          label="Issue Date"
+                          id={`cert-${index}-date`}
+                          name={`cert-${index}-date`}
+                          label="Issue Date (Optional)"
                           type="date"
-                          value={cert.date}
-                          onChange={(value) => updateCertification(index, { date: value })}
+                          value={cert.date || ''}
+                          onChange={(value) => updateCertification(index, { date: value || null })}
                           disabled={false}
                         />
                         <FormField
+                          id={`cert-${index}-expiry-date`}
+                          name={`cert-${index}-expiry-date`}
                           label="Expiry Date (Optional)"
                           type="date"
                           value={cert.expiryDate || ''}
@@ -530,6 +513,8 @@ export default function SkillsTab({
                           disabled={false}
                         />
                         <FormField
+                          id={`cert-${index}-credential-url`}
+                          name={`cert-${index}-credential-url`}
                           label="Credential URL (Optional)"
                           type="url"
                           value={cert.credentialUrl || ''}
@@ -538,20 +523,6 @@ export default function SkillsTab({
                           placeholder="https://credential-url.com"
                           className="md:col-span-2"
                         />
-                      </div>
-                      
-                      <div className="flex items-center gap-2 pt-2">
-                        <input
-                          type="checkbox"
-                          id={`cert-verified-${index}`}
-                          name={`cert-verified-${index}`}
-                          checked={cert.verified || false}
-                          onChange={(e) => updateCertification(index, { verified: e.target.checked })}
-                          className="rounded"
-                        />
-                        <label htmlFor={`cert-verified-${index}`} className="text-xs" style={{ color: colors.secondaryText }}>
-                          This certification is verified
-                        </label>
                       </div>
                       
                       <div className="flex gap-2 pt-2">
@@ -627,19 +598,6 @@ export default function SkillsTab({
                                   style={{ color: colors.tertiaryText }}
                                 >
                                   Expires: {cert.expiryDate}
-                                </span>
-                              )}
-                              {cert.verified && (
-                                <span 
-                                  className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-                                  style={{
-                                    background: colors.badgeSuccessBg,
-                                    color: colors.badgeSuccessText,
-                                    border: `1px solid ${colors.badgeSuccessBorder}`,
-                                  }}
-                                >
-                                  <CheckCircle size={12} />
-                                  Verified
                                 </span>
                               )}
                               {cert.credentialUrl && (
@@ -732,178 +690,97 @@ export default function SkillsTab({
             border: `1px solid ${colors.border}`,
           }}
         >
-          <h3 
-            className="text-xl font-semibold mb-6"
-            style={{ color: colors.primaryText }}
-          >
-            Languages
-          </h3>
-          <div className="space-y-4">
-            {languages.map((lang, index) => {
-              const isEditing = editingLangId === index;
-              
-              return (
-                <div 
-                  key={index} 
-                  className="p-4 rounded-xl transition-all"
-                  style={{
-                    background: colors.badgeSuccessBg,
-                    border: `1px solid ${colors.badgeSuccessBorder}`,
-                  }}
-                >
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold flex items-center gap-2" style={{ color: colors.primaryText }}>
-                          <Globe size={16} />
-                          Edit Language
-                        </h4>
-                        <button
-                          onClick={() => setEditingLangId(null)}
-                          className="p-1 rounded"
-                          style={{ color: colors.secondaryText }}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                      <input
-                        id={`language-name-${index}`}
-                        name={`language-name-${index}`}
-                        type="text"
-                        value={lang.name}
-                        onChange={(e) => updateLanguage(index, { name: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg mb-2"
-                        style={{
-                          background: colors.cardBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        placeholder="Language name"
-                      />
-                      <div>
-                        <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>
-                          Proficiency Level
-                        </label>
-                        <select
-                          value={lang.proficiency}
-                          onChange={(e) => updateLanguage(index, { proficiency: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg"
-                          style={{
-                            background: colors.cardBackground,
-                            border: `1px solid ${colors.border}`,
-                            color: colors.primaryText,
-                          }}
-                        >
-                          {languageLevels.map(level => (
-                            <option key={level} value={level}>{level}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={() => setEditingLangId(null)}
-                        className="w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                        style={{
-                          background: colors.primaryBlue,
-                          color: 'white',
-                        }}
-                      >
-                        <Save size={14} />
-                        Save Changes
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-4">
-                      <div 
-                        className="p-2 rounded-lg flex-shrink-0"
-                        style={{
-                          background: colors.badgeSuccessBg,
-                        }}
-                      >
-                        <Globe size={20} style={{ color: colors.badgeSuccessText }} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <span 
-                            className="font-medium"
-                            style={{ color: colors.primaryText }}
-                          >
-                            {lang.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span 
-                              className="px-2 py-1 rounded text-xs font-medium"
-                              style={{
-                                background: colors.badgeSuccessBg,
-                                color: colors.badgeSuccessText,
-                                border: `1px solid ${colors.badgeSuccessBorder}`,
-                              }}
-                            >
-                              {lang.proficiency}
-                            </span>
-                            {isEditing && (
-                              <>
-                                <button
-                                  onClick={() => setEditingLangId(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.primaryBlue }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeInfoBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Edit ${lang.name}`}
-                                  title={`Edit ${lang.name}`}
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeLanguage(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.errorRed }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeErrorBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Remove ${lang.name}`}
-                                  title={`Remove ${lang.name}`}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {/* Language Proficiency Progress Bar */}
-                        <div 
-                          className="w-full rounded-full h-1.5"
-                          style={{ background: colors.inputBackground }}
-                        >
-                          <div 
-                            className="h-1.5 rounded-full transition-all duration-500"
-                            style={{ 
-                              width: `${getLanguageProficiencyValue(lang.proficiency)}%`,
-                              background: `linear-gradient(90deg, ${colors.badgeSuccessBorder}, ${colors.successGreen})`
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-between mb-6">
+            <h3 
+              className="text-xl font-semibold"
+              style={{ color: colors.primaryText }}
+            >
+              Languages
+            </h3>
+            {isEditing && languages.length === 0 && (
+              <span className="text-sm" style={{ color: colors.secondaryText }}>
+                Add your first language to get started
+              </span>
+            )}
           </div>
           
+          {languages.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
+              {languages.map((lang, index) => {
+                return (
+                  <div 
+                    key={index} 
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group flex-shrink-0"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      maxWidth: '100%',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
+                  >
+                    <span 
+                      className="font-medium text-sm break-words"
+                      style={{ 
+                        color: colors.primaryText,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        hyphens: 'auto',
+                      }}
+                    >
+                      {lang.name}
+                    </span>
+                    {isEditing && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeLanguage(index);
+                        }}
+                        className="opacity-70 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
+                        style={{ 
+                          color: colors.errorRed,
+                          background: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = colors.badgeErrorBg;
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.opacity = '0.7';
+                        }}
+                        aria-label={`Remove ${lang.name}`}
+                        title={`Remove ${lang.name}`}
+                        type="button"
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
+              <Globe size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
+              <p>No languages added yet</p>
+            </div>
+          )}
+          
           {isEditing && (
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3">
               <input
                 id="add-language-input"
                 name="add-language-input"
                 type="text"
-                placeholder="Add language (e.g., English, Spanish, French)"
+                placeholder="Add languages (comma-separated: English, Spanish, French or single: English)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
                 style={{
                   background: colors.inputBackground,
@@ -916,20 +793,25 @@ export default function SkillsTab({
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = colors.border;
                 }}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const target = e.target as HTMLInputElement;
-                    const lang = target.value.trim();
-                    if (lang) {
-                      addLanguage(lang);
+                    const langInput = target.value.trim();
+                    if (langInput) {
+                      addLanguage(langInput);
                       target.value = '';
                     }
                   }
                 }}
               />
               <button 
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Add language"]') as HTMLInputElement;
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const input = document.getElementById('add-language-input') as HTMLInputElement;
                   if (input && input.value.trim()) {
                     addLanguage(input.value.trim());
                     input.value = '';
@@ -937,26 +819,21 @@ export default function SkillsTab({
                 }}
                 className="px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 style={{
-                  background: colors.successGreen,
+                  background: colors.primaryBlue,
                   color: 'white',
                 }}
                 onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlueHover || colors.primaryBlue;
                   e.currentTarget.style.opacity = '0.9';
                 }}
                 onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlue;
                   e.currentTarget.style.opacity = '1';
                 }}
               >
                 <Plus size={18} className="inline mr-1" />
                 Add
               </button>
-            </div>
-          )}
-          
-          {languages.length === 0 && !isEditing && (
-            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
-              <Globe size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
-              <p>No languages added yet</p>
             </div>
           )}
         </div>

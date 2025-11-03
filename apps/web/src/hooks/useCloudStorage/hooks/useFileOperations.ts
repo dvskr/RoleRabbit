@@ -65,6 +65,8 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
           lastModified: file.lastModified || file.createdAt || file.updatedAt || new Date().toISOString(),
           size: typeof file.size === 'number' ? formatBytes(file.size) : (file.size || '0 B'),
           sizeBytes: typeof file.size === 'number' ? file.size : (file.sizeBytes || 0),
+          folderId: file.folderId || null, // Ensure null instead of undefined
+          deletedAt: file.deletedAt || null, // Ensure null instead of undefined
         }));
         setFiles(formattedFiles);
         logger.info(`✅ Loaded ${formattedFiles.length} files from API`);
@@ -267,9 +269,14 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
-  const handleEditFile = useCallback(async (fileId: string, updates: Partial<ResumeFile>) => {
+  const handleEditFile = useCallback(async (fileId: string, updates: Partial<ResumeFile> | { name?: string; tags?: string[] }) => {
     try {
-      await apiService.updateCloudFile(fileId, updates);
+      // Ensure tags is an array if provided
+      const updatePayload: any = { ...updates };
+      if ('tags' in updatePayload && Array.isArray(updatePayload.tags)) {
+        updatePayload.tags = updatePayload.tags;
+      }
+      await apiService.updateCloudFile(fileId, updatePayload);
       setFiles(prev => prev.map(file => 
         file.id === fileId ? { ...file, ...updates } : file
       ));
@@ -335,50 +342,74 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const handleDeleteFile = useCallback(async (fileId: string) => {
     try {
       await apiService.deleteCloudFile(fileId);
+      logger.info(`✅ File moved to recycle bin: ${fileId}`);
+      
       // Update local state to set deletedAt
       setFiles(prev => prev.map(file => 
         file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
       ));
+      
+      // Reload files from API to ensure consistency
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(err => {
+          logger.error('Failed to reload files after delete:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to delete file:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
-      ));
+      throw error; // Re-throw so UI can show error message
     }
-  }, []);
+  }, [loadFilesFromAPI]);
 
   // Restore deleted file from recycle bin
   const handleRestoreFile = useCallback(async (fileId: string) => {
     try {
       await apiService.restoreCloudFile(fileId);
+      logger.info(`✅ File restored from recycle bin: ${fileId}`);
+      
       // Update local state to remove deletedAt
       setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: undefined } : file
+        file.id === fileId ? { ...file, deletedAt: null } : file
       ));
+      
+      // Reload files from API to ensure consistency
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(err => {
+          logger.error('Failed to reload files after restore:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to restore file:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: undefined } : file
-      ));
+      throw error; // Re-throw so UI can show error message
     }
-  }, []);
+  }, [loadFilesFromAPI]);
 
   // Permanently delete file
   const handlePermanentlyDeleteFile = useCallback(async (fileId: string) => {
     try {
       const response = await apiService.permanentlyDeleteCloudFile(fileId);
+      logger.info(`✅ File permanently deleted: ${fileId}`);
+      
+      // Remove from local state
       setFiles(prev => prev.filter(file => file.id !== fileId));
+      
+      // Update storage quota if provided
       if (response?.storage && onStorageUpdate) {
         onStorageUpdate(response.storage);
       }
+      
+      // Reload files from API to ensure consistency (use showDeleted from closure or default to true since we're in recycle bin)
+      setTimeout(() => {
+        loadFilesFromAPI(true).catch(err => {
+          logger.error('Failed to reload files after permanent delete:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to permanently delete file:', error);
       // Fallback to local state update
       setFiles(prev => prev.filter(file => file.id !== fileId));
     }
-  }, [onStorageUpdate]);
+  }, [onStorageUpdate, loadFilesFromAPI]);
 
   return {
     files,

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Briefcase, Plus, Trash2, Edit2, Save, X, Calendar, MapPin, Building2 } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Edit2, Save, X, Calendar, MapPin, Building2, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import FormField from '../components/FormField';
 import { UserData, WorkExperience } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -108,6 +108,74 @@ export default function ProfessionalTab({
 
   return (
     <div className="max-w-4xl">
+      {/* Professional Bio Section */}
+      <div 
+        className="backdrop-blur-sm rounded-2xl p-8 shadow-lg mb-8"
+        style={{
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+        }}
+      >
+        <div className="flex items-center gap-2 mb-6">
+          <FileText size={24} style={{ color: colors.primaryBlue }} />
+          <h3 
+            className="text-xl font-semibold"
+            style={{ color: colors.primaryText }}
+          >
+            Professional Bio
+          </h3>
+        </div>
+        <div className="space-y-3">
+          <FormField
+            id="profile-bio"
+            name="bio"
+            label="Tell us about yourself"
+            type="textarea"
+            value={userData.bio || ''}
+            onChange={(value) => onUserDataChange({ bio: value })}
+            disabled={!isEditing}
+            rows={5}
+            maxLength={5000}
+            showCounter={true}
+            autoResize={true}
+            placeholder="Write a compelling bio that highlights your experience, skills, and career goals..."
+          />
+          <div className="space-y-2">
+            <div 
+              className="flex justify-between items-center text-sm"
+              style={{ color: colors.tertiaryText }}
+            >
+              <span className="flex items-center gap-1">
+                <CheckCircle size={14} style={{ color: colors.secondaryText }} />
+                This will be visible to recruiters and potential employers
+              </span>
+              <span 
+                className={`font-medium ${
+                  (userData.bio || '').length > 500 ? 'text-red-500' : 
+                  (userData.bio || '').length >= 50 ? 'text-green-500' : ''
+                }`}
+              >
+                {(userData.bio || '').length}/500 characters
+              </span>
+            </div>
+            {(userData.bio || '').length > 0 && (userData.bio || '').length < 50 && isEditing && (
+              <div 
+                className="p-3 rounded-lg flex items-start gap-2"
+                style={{
+                  background: colors.badgeWarningBg,
+                  border: `1px solid ${colors.badgeWarningBorder}`,
+                }}
+              >
+                <AlertCircle size={16} style={{ color: colors.badgeWarningText, flexShrink: 0, marginTop: '2px' }} />
+                <p className="text-xs" style={{ color: colors.badgeWarningText }}>
+                  Consider expanding your bio to at least 50 characters to better showcase your expertise. A compelling bio helps recruiters understand your value proposition.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold" style={{ color: colors.primaryText }}>
           Work Experience

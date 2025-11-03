@@ -16,7 +16,7 @@ export interface FileCardProps {
   onRestore?: (fileId: string) => void;
   onPermanentlyDelete?: (fileId: string) => void;
   onTogglePublic: (fileId: string) => void;
-  onEdit: (fileId: string) => void;
+  onEdit: (fileId: string, updates?: { name?: string; tags?: string[] }) => Promise<void> | void;
   onStar: (fileId: string) => void;
   onArchive: (fileId: string) => void;
   onAddComment: (fileId: string, content: string) => void;

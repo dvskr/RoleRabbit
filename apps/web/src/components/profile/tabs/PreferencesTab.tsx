@@ -281,6 +281,8 @@ export default function PreferencesTab({
                 </div>
               </div>
               <select 
+                id="profile-visibility-select"
+                name="profileVisibility"
                 value={userData.profileVisibility || 'Public'}
                 onChange={(e) => onUserDataChange({ profileVisibility: e.target.value })}
                 disabled={!isEditing}
@@ -336,6 +338,8 @@ export default function PreferencesTab({
                 </div>
               </div>
               <select 
+                id="privacy-level-select"
+                name="privacyLevel"
                 value={userData.privacyLevel || 'Professional'}
                 onChange={(e) => onUserDataChange({ privacyLevel: e.target.value })}
                 disabled={!isEditing}
