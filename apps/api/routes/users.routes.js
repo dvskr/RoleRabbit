@@ -19,7 +19,15 @@ async function userRoutes(fastify, options) {
   fastify.get('/api/users/profile', {
     preHandler: authenticate
   }, async (request, reply) => {
+    // SECURITY: Always use the authenticated user's ID from JWT token
+    // This ensures users can ONLY access their own profile
     const userId = request.user.userId;
+    
+    if (!userId) {
+      reply.status(401).send({ error: 'Unauthorized: No user ID found in token' });
+      return;
+    }
+    
     const { prisma } = require('../utils/db');
     
     try {
@@ -107,8 +115,22 @@ async function userRoutes(fastify, options) {
   fastify.put('/api/users/profile', {
     preHandler: authenticate
   }, errorHandler(async (request, reply) => {
+    // SECURITY: Always use the authenticated user's ID from JWT token
+    // This ensures users can ONLY update their own profile
     const userId = request.user.userId;
+    
+    if (!userId) {
+      reply.status(401).send({ error: 'Unauthorized: No user ID found in token' });
+      return;
+    }
+    
     const updates = request.body;
+    
+    // SECURITY: Explicitly reject any attempt to change user ID
+    if (updates.id !== undefined || updates.userId !== undefined) {
+      reply.status(400).send({ error: 'Cannot modify user ID' });
+      return;
+    }
     
     // Get user first to verify they exist
     const user = await getUserById(userId);
@@ -156,10 +178,15 @@ async function userRoutes(fastify, options) {
     }
 
     // Update name field if firstName/lastName are provided but name is not
-    if ((updateData.firstName || updateData.lastName) && !updateData.name) {
-      const firstName = updateData.firstName || user.firstName || '';
-      const lastName = updateData.lastName || user.lastName || '';
-      updateData.name = `${firstName} ${lastName}`.trim() || user.name;
+    // Note: firstName/lastName are now in user_profiles table, not users table
+    // For now, we'll just use the name field if provided
+    if (updateData.firstName || updateData.lastName) {
+      const firstName = updateData.firstName || '';
+      const lastName = updateData.lastName || '';
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (fullName && !updateData.name) {
+        updateData.name = fullName || user.name;
+      }
     }
 
     // Update in database
@@ -591,22 +618,27 @@ async function userRoutes(fastify, options) {
       const { userId } = request.params;
       const { prisma } = require('../utils/db');
       
+      // Note: Most profile fields are now in user_profiles table
+      // For now, we'll query the user and their profile separately
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
           id: true,
           name: true,
-          profilePicture: true,
-          bio: true,
-          currentRole: true,
-          currentCompany: true,
-          industry: true,
-          skills: true,
-          linkedin: true,
-          github: true,
-          website: true,
+          email: true,
           profileVisibility: true,
-          privacyLevel: true
+          privacyLevel: true,
+          profile: {
+            select: {
+              bio: true,
+              currentRole: true,
+              currentCompany: true,
+              linkedin: true,
+              github: true,
+              website: true,
+              profileViews: true
+            }
+          }
         }
       });
       
@@ -619,41 +651,41 @@ async function userRoutes(fastify, options) {
         return reply.status(403).send({ error: 'Profile is not public' });
       }
       
-      // Increment profile views
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          profileViews: {
-            increment: 1
+      // Increment profile views in user_profiles table
+      if (user.profile) {
+        await prisma.userProfile.update({
+          where: { userId: userId },
+          data: {
+            profileViews: {
+              increment: 1
+            }
           }
-        }
-      });
-      
-      // Parse JSON fields
-      const parsedUser = { ...user };
-      if (parsedUser.skills) {
-        try {
-          parsedUser.skills = JSON.parse(parsedUser.skills);
-        } catch (e) {
-          parsedUser.skills = [];
-        }
-      } else {
-        parsedUser.skills = [];
+        });
       }
+      
+      // Merge user and profile data
+      const parsedUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        profileVisibility: user.profileVisibility,
+        privacyLevel: user.privacyLevel,
+        ...(user.profile || {}),
+        skills: [] // Skills are now in user_skills table, would need separate query
+      };
       
       // Remove sensitive fields based on privacy level
       const publicProfile = {
         id: parsedUser.id,
         name: parsedUser.name,
-        profilePicture: parsedUser.profilePicture,
-        bio: parsedUser.bio,
-        currentRole: parsedUser.currentRole,
-        currentCompany: parsedUser.currentCompany,
-        industry: parsedUser.industry,
+        profilePicture: parsedUser.profilePicture || null,
+        bio: parsedUser.bio || null,
+        currentRole: parsedUser.currentRole || null,
+        currentCompany: parsedUser.currentCompany || null,
         skills: parsedUser.privacyLevel === 'Professional' ? parsedUser.skills : [],
-        linkedin: parsedUser.linkedin,
-        github: parsedUser.github,
-        website: parsedUser.website
+        linkedin: parsedUser.linkedin || null,
+        github: parsedUser.github || null,
+        website: parsedUser.website || null
       };
       
       return {

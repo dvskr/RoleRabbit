@@ -183,13 +183,11 @@ async function authRoutes(fastify, options) {
       const sessionId = await createSession(user.id, ipAddress, userAgent, 3650); // 10 years
       
       // Prepare user object first - ensure it's serializable
+      // Note: profilePicture, firstName, lastName are now in user_profiles table, not users table
       const safeUser = {
         id: String(user.id),
         email: String(user.email || ''),
         name: user.name ? String(user.name) : null,
-        profilePicture: user.profilePicture ? String(user.profilePicture) : null,
-        firstName: user.firstName ? String(user.firstName) : null,
-        lastName: user.lastName ? String(user.lastName) : null,
         createdAt: user.createdAt ? user.createdAt.toISOString() : null,
         updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
       };
@@ -388,9 +386,13 @@ async function authRoutes(fastify, options) {
         });
       }
       
-      // Find user by email
+      // Find user by email (only select fields that exist in users table)
       const user = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
+        select: {
+          id: true,
+          email: true
+        }
       });
       
       if (!user) {

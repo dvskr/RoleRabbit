@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Target, Calendar, TrendingUp, Trash2, Edit2, Save, X, Plus, Building2, Briefcase, BarChart3, CheckCircle, MapPin } from 'lucide-react';
+import { Target, Calendar, TrendingUp, Trash2, Edit2, Save, X, Plus, BarChart3, CheckCircle } from 'lucide-react';
 import { UserData, CareerGoal } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 import FormField from '../components/FormField';
@@ -95,8 +95,6 @@ export default function CareerTab({
     return [];
   };
   
-  const targetRoles = normalizeArray(userData.targetRoles);
-  const targetCompanies = normalizeArray(userData.targetCompanies);
   const careerGoals = normalizeCareerGoals(userData.careerGoals);
   const careerTimeline = normalizeCareerTimeline(userData.careerTimeline);
   
@@ -125,28 +123,6 @@ export default function CareerTab({
     setEditingGoalId(null);
   };
 
-  // Target Roles Functions
-  const addTargetRole = (role: string) => {
-    if (role && !targetRoles.some(r => r.toLowerCase() === role.toLowerCase())) {
-      onUserDataChange({ targetRoles: [...targetRoles, role] });
-    }
-  };
-
-  const removeTargetRole = (index: number) => {
-    onUserDataChange({ targetRoles: targetRoles.filter((_, i) => i !== index) });
-  };
-
-  // Target Companies Functions
-  const addTargetCompany = (company: string) => {
-    if (company && !targetCompanies.some(c => c.toLowerCase() === company.toLowerCase())) {
-      onUserDataChange({ targetCompanies: [...targetCompanies, company] });
-    }
-  };
-
-  const removeTargetCompany = (index: number) => {
-    onUserDataChange({ targetCompanies: targetCompanies.filter((_, i) => i !== index) });
-  };
-
   // Statistics
   const stats = {
     totalGoals: careerGoals.length,
@@ -154,8 +130,6 @@ export default function CareerTab({
     avgProgress: careerGoals.length > 0 
       ? Math.round(careerGoals.reduce((sum, g) => sum + (g.progress || 0), 0) / careerGoals.length)
       : 0,
-    targetRolesCount: targetRoles.length,
-    targetCompaniesCount: targetCompanies.length
   };
 
   const goalCategories = ['Role', 'Company', 'Location', 'Skill', 'Education', 'Other'];
@@ -199,12 +173,6 @@ export default function CareerTab({
                   {stats.avgProgress}%
                 </div>
                 <div className="text-xs" style={{ color: colors.secondaryText }}>Avg Progress</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.badgeInfoText }}>
-                  {stats.targetRolesCount + stats.targetCompaniesCount}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Targets</div>
               </div>
             </div>
           </div>
@@ -339,6 +307,9 @@ export default function CareerTab({
                             onChange={(value) => updateCareerGoal(index, { description: value })}
                             disabled={false}
                             rows={3}
+                            maxLength={3000}
+                            showCounter={true}
+                            autoResize={true}
                             placeholder="Describe your career goal and steps to achieve it..."
                           />
                         </div>
@@ -515,325 +486,6 @@ export default function CareerTab({
           </div>
         </div>
 
-        {/* Target Roles */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <Briefcase size={24} style={{ color: colors.successGreen }} />
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Target Roles
-            </h3>
-            {targetRoles.length > 0 && (
-              <span 
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  background: colors.badgeSuccessBg,
-                  color: colors.badgeSuccessText,
-                  border: `1px solid ${colors.badgeSuccessBorder}`,
-                }}
-              >
-                {targetRoles.length}
-              </span>
-            )}
-          </div>
-          
-          {targetRoles.length > 0 ? (
-            <div className="flex flex-wrap gap-3 mb-6">
-              {targetRoles.map((role, index) => (
-                <span 
-                  key={index} 
-                  className="px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
-                  style={{
-                    background: colors.badgeSuccessBg,
-                    color: colors.badgeSuccessText,
-                    border: `1px solid ${colors.badgeSuccessBorder}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (isEditing) {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.badgeSuccessBorder;
-                  }}
-                >
-                  {role}
-                  {isEditing && (
-                    <button
-                      onClick={() => removeTargetRole(index)}
-                      className="ml-1 transition-colors p-0.5 rounded-full"
-                      style={{ color: colors.badgeSuccessText }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = colors.errorRed;
-                        e.currentTarget.style.background = colors.badgeErrorBg;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = colors.badgeSuccessText;
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                      aria-label={`Remove ${role}`}
-                      title={`Remove ${role}`}
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 mb-6" style={{ color: colors.tertiaryText }}>
-              <Briefcase size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
-              <p>No target roles added yet</p>
-            </div>
-          )}
-          
-          {isEditing && (
-            <div className="flex gap-3">
-              <input
-                id="add-target-role-input"
-                name="add-target-role-input"
-                type="text"
-                placeholder="Add target role (e.g., Senior Software Engineer, Product Manager)"
-                className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    const target = e.target as HTMLInputElement;
-                    const role = target.value.trim();
-                    if (role) {
-                      addTargetRole(role);
-                      target.value = '';
-                    }
-                  }
-                }}
-              />
-              <button 
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Add target role"]') as HTMLInputElement;
-                  if (input && input.value.trim()) {
-                    addTargetRole(input.value.trim());
-                    input.value = '';
-                  }
-                }}
-                className="px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                style={{
-                  background: colors.successGreen,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <Plus size={18} className="inline mr-1" />
-                Add
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Target Companies */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <Building2 size={24} style={{ color: colors.badgePurpleText }} />
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Target Companies
-            </h3>
-            {targetCompanies.length > 0 && (
-              <span 
-                className="px-2 py-1 rounded text-xs font-medium"
-                style={{
-                  background: colors.badgePurpleBg,
-                  color: colors.badgePurpleText,
-                  border: `1px solid ${colors.badgePurpleBorder}`,
-                }}
-              >
-                {targetCompanies.length}
-              </span>
-            )}
-          </div>
-          
-          {targetCompanies.length > 0 ? (
-            <div className="flex flex-wrap gap-3 mb-6">
-              {targetCompanies.map((company, index) => (
-                <span 
-                  key={index} 
-                  className="px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
-                  style={{
-                    background: colors.badgePurpleBg,
-                    color: colors.badgePurpleText,
-                    border: `1px solid ${colors.badgePurpleBorder}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (isEditing) {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.badgePurpleBorder;
-                  }}
-                >
-                  {company}
-                  {isEditing && (
-                    <button
-                      onClick={() => removeTargetCompany(index)}
-                      className="ml-1 transition-colors p-0.5 rounded-full"
-                      style={{ color: colors.badgePurpleText }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.color = colors.errorRed;
-                        e.currentTarget.style.background = colors.badgeErrorBg;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.color = colors.badgePurpleText;
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                      aria-label={`Remove ${company}`}
-                      title={`Remove ${company}`}
-                    >
-                      ×
-                    </button>
-                  )}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 mb-6" style={{ color: colors.tertiaryText }}>
-              <Building2 size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
-              <p>No target companies added yet</p>
-            </div>
-          )}
-          
-          {isEditing && (
-            <div className="flex gap-3">
-              <input
-                id="add-target-company-input"
-                name="add-target-company-input"
-                type="text"
-                placeholder="Add target company (e.g., Google, Microsoft, Amazon)"
-                className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    const target = e.target as HTMLInputElement;
-                    const company = target.value.trim();
-                    if (company) {
-                      addTargetCompany(company);
-                      target.value = '';
-                    }
-                  }
-                }}
-              />
-              <button 
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Add target company"]') as HTMLInputElement;
-                  if (input && input.value.trim()) {
-                    addTargetCompany(input.value.trim());
-                    input.value = '';
-                  }
-                }}
-                className="px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                style={{
-                  background: colors.badgePurpleText,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <Plus size={18} className="inline mr-1" />
-                Add
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Relocation Preference */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <h3 
-            className="text-xl font-semibold mb-6 flex items-center gap-2"
-            style={{ color: colors.primaryText }}
-          >
-            <MapPin size={24} style={{ color: colors.badgeInfoText }} />
-            Relocation Preferences
-          </h3>
-          <div>
-            <label 
-              className="block text-sm font-medium mb-3"
-              style={{ color: colors.secondaryText }}
-            >
-              Relocation Willingness
-            </label>
-            <select
-              value={userData.relocationWillingness || 'Not willing to relocate'}
-              onChange={(e) => onUserDataChange({ relocationWillingness: e.target.value })}
-              disabled={!isEditing}
-              className="w-full px-4 py-3 rounded-xl transition-all duration-200"
-              style={{
-                background: colors.inputBackground,
-                border: `1px solid ${colors.border}`,
-                color: colors.primaryText,
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = colors.borderFocused;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = colors.border;
-              }}
-            >
-              <option value="Not willing to relocate" style={{ background: colors.background, color: colors.secondaryText }}>Not willing to relocate</option>
-              <option value="Open to relocation" style={{ background: colors.background, color: colors.secondaryText }}>Open to relocation</option>
-              <option value="Actively seeking relocation" style={{ background: colors.background, color: colors.secondaryText }}>Actively seeking relocation</option>
-            </select>
-          </div>
-        </div>
       </div>
     </div>
   );

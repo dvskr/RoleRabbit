@@ -197,6 +197,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfileData = (data: Partial<UserData>) => {
+    // Guard: Only update if user is authenticated
+    if (!isAuthenticated) {
+      console.warn('Attempted to update profile data without authentication');
+      return;
+    }
+    
     if (userData) {
       setUserData({ ...userData, ...data });
     }

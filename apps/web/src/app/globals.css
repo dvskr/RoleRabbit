@@ -473,25 +473,9 @@ body,
   /* Background is set via inline styles in component - no need for !important override */
 }
 
-.nav-item-accent {
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: none !important;
-}
-
-.nav-item:hover .nav-item-accent,
-.nav-item-active .nav-item-accent {
-  transform: scaleY(1) !important;
-}
-
 .nav-item-content {
   transform: translateX(0);
   transition: none !important;
-}
-
-.nav-item:hover .nav-item-content,
-.nav-item-active .nav-item-content {
-  transform: translateX(8px) !important;
 }
 
 /* Template Scroller - Visible horizontal scrollbar */

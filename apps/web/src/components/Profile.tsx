@@ -40,7 +40,20 @@ export default function Profile() {
   const { theme } = useTheme();
   const colors = theme.colors;
   const { userData: contextUserData, isLoading: contextLoading, refreshProfile, updateProfileData } = useProfile();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  // Guard: Only allow authenticated users to access profile
+  if (!authLoading && !isAuthenticated) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg mb-4" style={{ color: colors.errorRed }}>
+            You must be signed in to access your profile.
+          </p>
+        </div>
+      </div>
+    );
+  }
   
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
@@ -293,6 +306,16 @@ export default function Profile() {
   };
 
   const handleUserDataChange = (data: Partial<UserData>) => {
+    // Guard: Only allow authenticated users to modify profile data
+    if (!isAuthenticated) {
+      setSaveMessage({ 
+        type: 'error', 
+        text: 'You must be signed in to modify your profile.' 
+      });
+      setTimeout(() => setSaveMessage(null), 5000);
+      return;
+    }
+    
     // Update local state immediately for responsive typing
     if (localProfileData) {
       setLocalProfileData({ ...localProfileData, ...data });

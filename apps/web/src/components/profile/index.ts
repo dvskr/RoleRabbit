@@ -16,6 +16,7 @@ export { default as SupportTab } from './tabs/SupportTab';
 // Sub-components
 export { default as FormField } from './components/FormField';
 export { default as ProfilePicture } from './components/ProfilePicture';
+export { default as BulletListEditor } from './components/BulletListEditor';
 
 // Types
 export type { UserData, ProfileTabConfig, ProfileHeaderProps, ProfileSidebarProps, FormFieldProps } from './types/profile';

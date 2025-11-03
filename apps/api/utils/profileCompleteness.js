@@ -39,7 +39,8 @@ function calculateProfileCompleteness(user) {
   if (user.phone) basicScore += 2;
   if (user.location) basicScore += 2;
   if (user.bio) basicScore += 5;
-  if (user.profilePicture) basicScore += 5;
+  // Note: profilePicture is now in user_profiles table, check user.profile?.profilePicture if needed
+  if (user.profilePicture || (user.profile && user.profile.profilePicture)) basicScore += 5;
   breakdown.basicInfo = {
     score: basicScore,
     maxScore: 20,

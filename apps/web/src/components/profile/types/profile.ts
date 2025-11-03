@@ -274,6 +274,10 @@ export interface FormFieldProps {
   disabled?: boolean;
   placeholder?: string;
   rows?: number;
+  maxLength?: number;
+  showCounter?: boolean;
+  autoResize?: boolean;
+  allowBullets?: boolean;
   className?: string;
   id?: string;
   name?: string;

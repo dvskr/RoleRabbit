@@ -55,6 +55,8 @@ export default function ProfileTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <FormField
+                id="profile-first-name"
+                name="firstName"
                 label="First Name"
                 value={userData.firstName}
                 onChange={(value) => onUserDataChange({ firstName: value })}
@@ -70,6 +72,8 @@ export default function ProfileTab({
             </div>
             <div>
               <FormField
+                id="profile-last-name"
+                name="lastName"
                 label="Last Name"
                 value={userData.lastName}
                 onChange={(value) => onUserDataChange({ lastName: value })}
@@ -88,6 +92,8 @@ export default function ProfileTab({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
               <FormField
+                id="profile-email"
+                name="email"
                 label={
                   <span className="flex items-center gap-2">
                     <Mail size={16} style={{ color: colors.secondaryText }} />
@@ -109,6 +115,8 @@ export default function ProfileTab({
             </div>
             <div>
               <FormField
+                id="profile-phone"
+                name="phone"
                 label={
                   <span className="flex items-center gap-2">
                     <Phone size={16} style={{ color: colors.secondaryText }} />
@@ -126,6 +134,8 @@ export default function ProfileTab({
 
           <div className="mt-6">
             <FormField
+              id="profile-location"
+              name="location"
               label={
                 <span className="flex items-center gap-2">
                   <MapPin size={16} style={{ color: colors.secondaryText }} />
@@ -159,13 +169,18 @@ export default function ProfileTab({
           </div>
           <div className="space-y-3">
             <FormField
+              id="profile-bio"
+              name="bio"
               label="Tell us about yourself"
               type="textarea"
               value={userData.bio || ''}
               onChange={(value) => onUserDataChange({ bio: value })}
               disabled={!isEditing}
               rows={5}
-              placeholder="Write a compelling bio that highlights your experience, skills, and career goals. Aim for 50-500 characters for best results..."
+              maxLength={5000}
+              showCounter={true}
+              autoResize={true}
+              placeholder="Write a compelling bio that highlights your experience, skills, and career goals..."
             />
             <div className="space-y-2">
               <div 

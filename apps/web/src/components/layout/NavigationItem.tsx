@@ -70,27 +70,11 @@ export default function NavigationItem({
       }}
       title={isCollapsed ? label : ''}
     >
-      {/* Accent Bar */}
-      <div
-        className="nav-item-accent"
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: '1px',
-          background: sectionColor,
-          borderRadius: '0 2px 2px 0',
-          transform: isActive ? 'scaleY(1)' : 'scaleY(0)',
-          transformOrigin: 'center',
-        }}
-      />
-      
       {/* Content Container */}
       <div
         className="nav-item-content flex items-center gap-3 flex-1"
         style={{
-          transform: isActive ? 'translateX(8px)' : 'translateX(0)',
+          transform: 'translateX(0)',
         }}
       >
         {/* Icon */}

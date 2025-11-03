@@ -99,9 +99,14 @@ export const useCloudStorage = () => {
       const response = await apiService.getStorageQuota();
       if (response && response.storage) {
         setStorageInfoState(normalizeStorageInfo(response.storage));
+      } else {
+        // Set empty storage info if response is invalid
+        setStorageInfoState(EMPTY_STORAGE_INFO);
       }
     } catch (error) {
       logger.error('Failed to fetch storage quota:', error);
+      // Set empty storage info on error
+      setStorageInfoState(EMPTY_STORAGE_INFO);
     }
   }, []);
 
