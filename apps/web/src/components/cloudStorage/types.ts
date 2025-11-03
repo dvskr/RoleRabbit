@@ -10,27 +10,6 @@ export interface FolderToRename {
   name: string;
 }
 
-// Folder sidebar props
-export interface FolderSidebarProps {
-  folders: Folder[];
-  selectedFolderId: string | null;
-  onSelectFolder: (folderId: string | null) => void;
-  onCreateFolder: () => void;
-  onRenameFolder: (folderId: string, newName: string) => void;
-  onDeleteFolder: (folderId: string) => void;
-  colors: ThemeColors;
-}
-
-// Tab navigation props
-export interface TabNavigationProps {
-  activeTab: TabType;
-  onTabChange: (tab: TabType) => void;
-  filesCount: number;
-  credentialsCount: number;
-  expiringCredentialsCount: number;
-  colors: ThemeColors;
-}
-
 // Empty state props
 export interface EmptyFilesStateProps {
   searchTerm: string;
@@ -61,11 +40,5 @@ export interface RenameFolderModalProps extends FolderModalProps {
 export interface LoadingStateProps {
   colors: ThemeColors;
   message?: string;
-}
-
-// Floating upload button props
-export interface FloatingUploadButtonProps {
-  onUpload: () => void;
-  colors: ThemeColors;
 }
 
