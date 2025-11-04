@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { CloudStorageProps, ResumeFile } from '../types/cloudStorage';
 import { useCloudStorage } from '../hooks/useCloudStorage';
 import UploadModal from './cloudStorage/UploadModal';
+import { DuplicateFileModal } from './cloudStorage/fileCard/components/DuplicateFileModal';
 import CredentialManager from './cloudStorage/CredentialManager';
 import { useTheme } from '../contexts/ThemeContext';
 import { TabType } from './cloudStorage/types';
@@ -25,6 +26,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   }
 
   const [activeTab, setActiveTab] = useState<TabType>('files');
+  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
 
   const {
     files,
@@ -33,7 +35,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     searchTerm,
     filterType,
     sortBy,
-    viewMode,
     showUploadModal,
     showDeleted,
     storageInfo,
@@ -46,7 +47,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     setSearchTerm,
     setFilterType,
     setSortBy,
-    setViewMode,
     setShowUploadModal,
     setShowDeleted,
     setSelectedFolderId,
@@ -88,10 +88,16 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   } = useFolderModals();
 
   const handleEditFileWrapper = useCallback(
-    (fileId: string) => {
-      const file = files.find((f) => f.id === fileId);
-      if (!file) return;
-      editFileName(file, handleEditFile);
+    async (fileId: string, updates?: { name?: string; type?: ResumeFile['type']; description?: string }) => {
+      if (updates) {
+        // Direct update with provided fields
+        await handleEditFile(fileId, updates);
+      } else {
+        // Legacy behavior - open edit dialog (for backward compatibility)
+        const file = files.find((f) => f.id === fileId);
+        if (!file) return;
+        editFileName(file, handleEditFile);
+      }
     },
     [files, handleEditFile]
   );
@@ -149,7 +155,13 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     [files]
   );
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading) {
+      setHasLoadedInitial(true);
+    }
+  }, [isLoading]);
+
+  if (!hasLoadedInitial && isLoading) {
     return <LoadingState colors={colors} />;
   }
 
@@ -194,6 +206,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                 credentialsCount={credentials.length}
                 colors={colors}
                 onUpload={() => setShowUploadModal(true)}
+                showDeleted={showDeleted}
               />
               <div className="flex-1 overflow-y-auto p-6">
                 <CredentialManager
@@ -215,8 +228,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               setFilterType={setFilterType}
               sortBy={sortBy}
               setSortBy={setSortBy}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
               selectedFiles={selectedFiles}
               onSelectAll={handleSelectAllWrapper}
               onDeleteSelected={handleDeleteFiles}
@@ -234,7 +245,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               onShareWithUser={handleShareWithUser}
               showDeleted={showDeleted}
               colors={colors}
-              onUpload={() => setShowUploadModal(true)}
+              onUpload={showDeleted ? () => {} : () => setShowUploadModal(true)}
               activeTab={activeTab}
               onTabChange={setActiveTab}
               filesCount={activeFiles.length}

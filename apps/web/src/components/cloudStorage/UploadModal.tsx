@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Upload, X, FileText, Tag } from 'lucide-react';
+import { Upload, X, FileText } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { logger } from '../../utils/logger';
+import { ResumeFile } from '../../types/cloudStorage';
 
 type UploadModalPayload = {
   file: File;
   displayName: string;
-  type: 'resume' | 'template' | 'backup' | 'document';
-  tags: string[];
+  type: ResumeFile['type'];
   isPublic: boolean;
   folderId?: string | null;
 };
@@ -25,17 +25,28 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
   const { theme } = useTheme();
   const colors = theme.colors;
   const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState<'resume' | 'template' | 'backup' | 'document'>('resume');
-  const [tags, setTags] = useState('');
+  const [fileType, setFileType] = useState<ResumeFile['type']>('resume');
   const [isPublic, setIsPublic] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const fileTypeOptions: ResumeFile['type'][] = [
+    'resume',
+    'template',
+    'backup',
+    'cover_letter',
+    'transcript',
+    'certification',
+    'reference',
+    'portfolio',
+    'work_sample',
+    'document',
+  ];
+
   const resetForm = () => {
     setFileName('');
     setFileType('resume');
-    setTags('');
     setIsPublic(false);
     setSelectedFile(null);
     setErrorMessage(null);
@@ -56,16 +67,10 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
     setIsUploading(true);
     setErrorMessage(null);
 
-    const tagsList = tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(Boolean);
-    
     const payload: UploadModalPayload = {
       file: selectedFile,
       displayName: trimmedName,
       type: fileType,
-      tags: tagsList,
       isPublic,
       folderId: activeFolderId ?? null,
     };
@@ -263,7 +268,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
               </label>
               <select
                 value={fileType}
-                onChange={(e) => setFileType(e.target.value as 'resume' | 'template' | 'backup' | 'document')}
+                onChange={(e) => setFileType(e.target.value as ResumeFile['type'])}
                 className="w-full px-2 py-1.5 text-sm rounded-lg focus:outline-none transition-all"
                 aria-label="File type"
                 title="File type"
@@ -279,49 +284,23 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
                   e.currentTarget.style.borderColor = colors.border;
                 }}
               >
-                <option value="resume" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Resume</option>
-                <option value="template" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Template</option>
-                <option value="backup" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Backup</option>
-                <option value="document" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>Document</option>
+                {fileTypeOptions.map((option) => (
+                  <option
+                    key={option}
+                    value={option}
+                    style={{
+                      background: theme.mode === 'dark' ? '#1a1625' : '#ffffff',
+                      color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b',
+                    }}
+                  >
+                    {option
+                      .split('_')
+                      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                      .join(' ')}
+                  </option>
+                ))}
               </select>
             </div>
-
-            <div>
-              <label 
-                className="block text-xs font-medium mb-1"
-                style={{ color: colors.primaryText }}
-              >
-                Tags
-              </label>
-              <div className="relative">
-                <Tag size={14} className="absolute left-2 top-2" style={{ color: colors.tertiaryText }} />
-                <input
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="e.g., software, engineer, react"
-                  className="w-full pl-8 pr-2 py-1.5 text-sm rounded-lg focus:outline-none transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                />
-              </div>
-              <p 
-                className="text-[10px] mt-0.5"
-                style={{ color: colors.tertiaryText }}
-              >
-                Separate tags with commas
-              </p>
-            </div>
-
             <div className="flex items-center space-x-2">
               <input
                 type="checkbox"

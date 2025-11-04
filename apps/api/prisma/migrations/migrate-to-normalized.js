@@ -44,6 +44,7 @@ async function migrateToNormalized() {
             phone: user.phone || null,
             location: user.location || null,
             bio: user.bio || null,
+          professionalBio: user.professionalBio || user.bio || null,
             profilePicture: user.profilePicture || null,
             currentRole: user.currentRole || null,
             currentCompany: user.currentCompany || null,
@@ -107,7 +108,11 @@ async function migrateToNormalized() {
                       institution: edu.institution || '',
                       degree: edu.degree || null,
                       field: edu.field || null,
-                      graduationDate: edu.graduationDate || null,
+                      startDate: edu.startDate || null,
+                      endDate: edu.endDate || edu.graduationDate || null,
+                      gpa: edu.gpa || null,
+                      honors: edu.honors || null,
+                      location: edu.location || null,
                       description: edu.description || null,
                     }
                   });

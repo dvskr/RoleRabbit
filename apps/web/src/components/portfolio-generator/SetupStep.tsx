@@ -13,7 +13,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
   const [email, setEmail] = useState(profileData?.email || '');
   const [role, setRole] = useState(profileData?.currentRole || '');
   const [company, setCompany] = useState(profileData?.currentCompany || '');
-  const [bio, setBio] = useState(profileData?.bio || profileData?.professionalSummary?.overview || '');
+  const [bio, setBio] = useState(profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '');
   const [linkedin, setLinkedin] = useState(profileData?.linkedin || '');
   const [github, setGithub] = useState(profileData?.github || '');
   const [website, setWebsite] = useState(profileData?.website || profileData?.portfolio || '');
@@ -62,6 +62,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
       email,
       role: company ? `${role} at ${company}` : role,
       bio,
+      professionalBio: bio,
       linkedin,
       github,
       website,

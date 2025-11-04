@@ -17,7 +17,6 @@ describe('useFileOperations', () => {
     file: new File(['resume'], 'resume.pdf', { type: 'application/pdf' }),
     displayName: 'Resume',
     type: 'resume',
-    tags: ['react'],
     isPublic: false,
     folderId: 'folder-1'
   };

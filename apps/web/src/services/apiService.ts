@@ -139,9 +139,11 @@ class ApiService {
   /**
    * Upload profile picture
    */
-  async uploadProfilePicture(file: File): Promise<any> {
+  async uploadProfilePicture(file: File | Blob): Promise<any> {
     const formData = new FormData();
-    formData.append('file', file);
+    // Ensure we have a File object (Blob might need conversion)
+    const fileToUpload = file instanceof File ? file : new File([file], 'profile.jpg', { type: 'image/jpeg' });
+    formData.append('file', fileToUpload);
     
     const response = await fetch(`${this.baseUrl}/api/users/profile/picture`, {
       method: 'POST',
@@ -152,6 +154,23 @@ class ApiService {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to upload profile picture');
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Delete profile picture
+   */
+  async deleteProfilePicture(): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/users/profile/picture`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete profile picture');
     }
 
     return await response.json();
@@ -188,6 +207,276 @@ class ApiService {
   async logout(): Promise<any> {
     return this.request('/api/auth/logout', {
       method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  // ===== STORAGE ENDPOINTS =====
+
+  /**
+   * Upload storage file
+   */
+  async uploadStorageFile(formData: FormData): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/storage/files/upload`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to upload file');
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Get cloud storage files
+   */
+  async getCloudFiles(folderId?: string, includeDeleted?: boolean): Promise<any> {
+    const params = new URLSearchParams();
+    if (folderId) params.append('folderId', folderId);
+    if (includeDeleted) params.append('includeDeleted', 'true');
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/api/storage/files?${queryString}` : '/api/storage/files';
+    
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Download cloud file
+   */
+  async downloadCloudFile(fileId: string): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/storage/files/${fileId}/download`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to download file');
+    }
+
+    return await response.blob();
+  }
+
+  /**
+   * Update cloud file
+   */
+  async updateCloudFile(fileId: string, updates: any): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete cloud file (soft delete)
+   */
+  async deleteCloudFile(fileId: string): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Restore cloud file from trash
+   */
+  async restoreCloudFile(fileId: string): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/restore`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Permanently delete cloud file
+   */
+  async permanentlyDeleteCloudFile(fileId: string): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/permanent`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get storage folders
+   */
+  async getFolders(): Promise<any> {
+    return this.request('/api/storage/folders', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create folder
+   */
+  async createFolder(data: { name: string; color?: string; parentId?: string }): Promise<any> {
+    return this.request('/api/storage/folders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update folder
+   */
+  async updateFolder(folderId: string, updates: { name?: string; color?: string }): Promise<any> {
+    return this.request(`/api/storage/folders/${folderId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete folder
+   */
+  async deleteFolder(folderId: string): Promise<any> {
+    return this.request(`/api/storage/folders/${folderId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Share file with user
+   */
+  async shareFile(fileId: string, data: {
+    userId: string;
+    permission: string;
+    expiresAt?: string;
+  }): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/share`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete file share
+   */
+  async deleteFileShare(shareId: string): Promise<any> {
+    return this.request(`/api/storage/shares/${shareId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update file share permission
+   */
+  async updateFileShare(shareId: string, updates: { permission: string }): Promise<any> {
+    return this.request(`/api/storage/shares/${shareId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create share link
+   */
+  async createShareLink(fileId: string, options?: {
+    password?: string;
+    expiresAt?: string;
+    maxDownloads?: number;
+  }): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/share-link`, {
+      method: 'POST',
+      body: JSON.stringify(options || {}),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get credentials
+   */
+  async getCredentials(): Promise<any> {
+    return this.request('/api/storage/credentials', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get expiring credentials
+   */
+  async getExpiringCredentials(days: number): Promise<any> {
+    return this.request(`/api/storage/credentials/expiring?days=${days}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create credential
+   */
+  async createCredential(credential: any): Promise<any> {
+    return this.request('/api/storage/credentials', {
+      method: 'POST',
+      body: JSON.stringify(credential),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update credential
+   */
+  async updateCredential(id: string, updates: any): Promise<any> {
+    return this.request(`/api/storage/credentials/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete credential
+   */
+  async deleteCredential(id: string): Promise<any> {
+    return this.request(`/api/storage/credentials/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Generate credential QR code
+   */
+  async generateCredentialQRCode(id: string): Promise<any> {
+    return this.request(`/api/storage/credentials/${id}/qr-code`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get storage quota
+   */
+  async getStorageQuota(): Promise<any> {
+    return this.request('/api/storage/quota', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get storage statistics
+   */
+  async getStorageStats(): Promise<any> {
+    return this.request('/api/storage/stats', {
+      method: 'GET',
       credentials: 'include',
     });
   }

@@ -2,12 +2,12 @@ import { ReactNode } from 'react';
 
 export interface Skill {
   name: string;
-  proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
   yearsOfExperience?: number;
   verified?: boolean;
 }
 
 export interface Certification {
+  id?: string;
   name: string;
   issuer: string;
   date: string;
@@ -17,13 +17,15 @@ export interface Certification {
 }
 
 export interface Education {
+  id?: string;
   institution: string;
-  degree: string;
-  field: string;
-  startDate: string;
-  endDate: string;
+  degree?: string;
+  field?: string;
+  startDate?: string;
+  endDate?: string;
   gpa?: string;
   honors?: string;
+  location?: string;
   description?: string;
 }
 
@@ -47,7 +49,7 @@ export interface Achievement {
 }
 
 export interface SocialLink {
-  platform: 'LinkedIn' | 'GitHub' | 'Twitter' | 'Behance' | 'Dribbble' | 'Medium' | 'Personal Website';
+  platform: string;
   url: string;
 }
 
@@ -165,10 +167,12 @@ export interface UserData {
   // Basic Info
   firstName: string;
   lastName: string;
-  email: string;
+  email: string;  // Login email (read-only, used for authentication)
+  personalEmail?: string;  // Personal/contact email (editable, separate from login email)
   phone: string;
   location: string;
   bio: string;
+  professionalBio?: string;
   profilePicture: string | null;
   
   // Professional Info
@@ -183,7 +187,7 @@ export interface UserData {
   workPreference: string;
   professionalSummary?: ProfessionalSummary;
   
-  // Skills & Expertise (Enhanced with Proficiency)
+  // Skills & Expertise
   skills: Skill[];
   certifications: Certification[];
   languages: Array<{ name: string; proficiency: string }>;

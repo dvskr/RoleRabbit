@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserCircle, Mail, Phone, MapPin, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserCircle, Mail, Phone, MapPin, AlertCircle, Linkedin, Github, Link2, Globe } from 'lucide-react';
 import FormField from '../components/FormField';
 import ProfilePicture from '../components/ProfilePicture';
 import { UserData } from '../types/profile';
@@ -97,22 +97,42 @@ export default function ProfileTab({
                 label={
                   <span className="flex items-center gap-2">
                     <Mail size={16} style={{ color: colors.secondaryText }} />
-                    Email Address
+                    Login Email (Username)
                   </span>
                 }
                 type="email"
                 value={userData.email}
-                onChange={(value) => onUserDataChange({ email: value })}
-                disabled={!isEditing}
-                placeholder="Enter your email address"
+                onChange={() => {}} // Read-only, cannot be changed
+                disabled={true}
+                placeholder="Login email"
               />
-              {!userData.email && isEditing && (
-                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.errorRed }}>
-                  <AlertCircle size={12} />
-                  Required field
-                </p>
-              )}
+              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.secondaryText }}>
+                <AlertCircle size={12} />
+                This is your login email and cannot be changed
+              </p>
             </div>
+            <div>
+              <FormField
+                id="profile-personal-email"
+                name="personalEmail"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Mail size={16} style={{ color: colors.secondaryText }} />
+                    Personal Email
+                  </span>
+                }
+                type="email"
+                value={userData.personalEmail || ''}
+                onChange={(value) => onUserDataChange({ personalEmail: value })}
+                disabled={!isEditing}
+                placeholder="Enter your personal/contact email"
+              />
+              <p className="text-xs mt-1" style={{ color: colors.secondaryText }}>
+                Optional: Your personal or contact email (different from login email)
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
             <div>
               <FormField
                 id="profile-phone"
@@ -130,93 +150,97 @@ export default function ProfileTab({
                 placeholder="Enter your phone number"
               />
             </div>
+            <div>
+              <FormField
+                id="profile-location"
+                name="location"
+                label={
+                  <span className="flex items-center gap-2">
+                    <MapPin size={16} style={{ color: colors.secondaryText }} />
+                    Location
+                  </span>
+                }
+                value={userData.location}
+                onChange={(value) => onUserDataChange({ location: value })}
+                disabled={!isEditing}
+                placeholder="Enter your location (City, Country)"
+              />
+            </div>
           </div>
-
-          <div className="mt-6">
-            <FormField
-              id="profile-location"
-              name="location"
-              label={
-                <span className="flex items-center gap-2">
-                  <MapPin size={16} style={{ color: colors.secondaryText }} />
-                  Location
-                </span>
-              }
-              value={userData.location}
-              onChange={(value) => onUserDataChange({ location: value })}
-              disabled={!isEditing}
-              placeholder="Enter your location (City, Country)"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <FormField
+                id="profile-linkedin"
+                name="linkedin"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Linkedin size={16} style={{ color: colors.secondaryText }} />
+                    LinkedIn
+                  </span>
+                }
+                type="url"
+                value={userData.linkedin || ''}
+                onChange={(value) => onUserDataChange({ linkedin: value })}
+                disabled={!isEditing}
+                placeholder="https://linkedin.com/in/yourname"
+              />
+            </div>
+            <div>
+              <FormField
+                id="profile-github"
+                name="github"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Github size={16} style={{ color: colors.secondaryText }} />
+                    GitHub
+                  </span>
+                }
+                type="url"
+                value={userData.github || ''}
+                onChange={(value) => onUserDataChange({ github: value })}
+                disabled={!isEditing}
+                placeholder="https://github.com/username"
+              />
+            </div>
           </div>
-        </div>
-
-        {/* Enhanced Bio Section */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <FileText size={24} style={{ color: colors.primaryBlue }} />
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Professional Bio
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <FormField
-              id="profile-bio"
-              name="bio"
-              label="Tell us about yourself"
-              type="textarea"
-              value={userData.bio || ''}
-              onChange={(value) => onUserDataChange({ bio: value })}
-              disabled={!isEditing}
-              rows={5}
-              maxLength={5000}
-              showCounter={true}
-              autoResize={true}
-              placeholder="Write a compelling bio that highlights your experience, skills, and career goals..."
-            />
-            <div className="space-y-2">
-              <div 
-                className="flex justify-between items-center text-sm"
-                style={{ color: colors.tertiaryText }}
-              >
-                <span className="flex items-center gap-1">
-                  <CheckCircle size={14} style={{ color: colors.secondaryText }} />
-                  This will be visible to recruiters and potential employers
-                </span>
-                <span 
-                  className={`font-medium ${
-                    (userData.bio || '').length > 500 ? 'text-red-500' : 
-                    (userData.bio || '').length >= 50 ? 'text-green-500' : ''
-                  }`}
-                >
-                  {(userData.bio || '').length}/500 characters
-                </span>
-              </div>
-              {(userData.bio || '').length > 0 && (userData.bio || '').length < 50 && isEditing && (
-                <div 
-                  className="p-3 rounded-lg flex items-start gap-2"
-                  style={{
-                    background: colors.badgeWarningBg,
-                    border: `1px solid ${colors.badgeWarningBorder}`,
-                  }}
-                >
-                  <AlertCircle size={16} style={{ color: colors.badgeWarningText, flexShrink: 0, marginTop: '2px' }} />
-                  <p className="text-xs" style={{ color: colors.badgeWarningText }}>
-                    Consider expanding your bio to at least 50 characters to better showcase your expertise. A compelling bio helps recruiters understand your value proposition.
-                  </p>
-                </div>
-              )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <FormField
+                id="profile-portfolio"
+                name="portfolio"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Link2 size={16} style={{ color: colors.secondaryText }} />
+                    Portfolio URL
+                  </span>
+                }
+                type="url"
+                value={userData.portfolio || ''}
+                onChange={(value) => onUserDataChange({ portfolio: value })}
+                disabled={!isEditing}
+                placeholder="https://yourportfolio.com"
+              />
+            </div>
+            <div>
+              <FormField
+                id="profile-website"
+                name="website"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Globe size={16} style={{ color: colors.secondaryText }} />
+                    Personal Website
+                  </span>
+                }
+                type="url"
+                value={userData.website || ''}
+                onChange={(value) => onUserDataChange({ website: value })}
+                disabled={!isEditing}
+                placeholder="https://yourwebsite.com"
+              />
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

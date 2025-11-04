@@ -20,30 +20,55 @@ export const filterAndSortFiles = (
   options: FilterOptions
 ): ResumeFile[] => {
   // Early return if no files
-  if (files.length === 0) return [];
+  if (files.length === 0) {
+    console.log('🔍 filterAndSortFiles: No files to filter');
+    return [];
+  }
 
   const { searchTerm, filterType, sortBy, selectedFolderId, quickFilters, showDeleted } = options;
   const searchLower = searchTerm.toLowerCase();
   const hasSearch = searchLower.length > 0;
   
+  console.log('🔍 filterAndSortFiles:', {
+    totalFiles: files.length,
+    searchTerm,
+    filterType,
+    selectedFolderId,
+    showDeleted,
+    hasQuickFilters: !!quickFilters
+  });
+  
   // Filter files
   let filtered = files.filter(file => {
     // Recycle bin filter - show only deleted files when showDeleted is true
     if (showDeleted) {
-      if (!file.deletedAt) return false;
+      if (!file.deletedAt) {
+        console.log('🔍 File filtered out (not deleted):', file.name);
+        return false;
+      }
     } else {
       // Normal view - hide deleted files
-      if (file.deletedAt) return false;
+      if (file.deletedAt) {
+        console.log('🔍 File filtered out (deleted):', file.name);
+        return false;
+      }
     }
 
     // Early exit conditions for performance
     const matchesFilter = filterType === 'all' || file.type === filterType;
-    if (!matchesFilter) return false;
+    if (!matchesFilter) {
+      console.log('🔍 File filtered out (type mismatch):', file.name, 'file.type:', file.type, 'filterType:', filterType);
+      return false;
+    }
 
+    // Folder filter: null/undefined means root folder (no folder)
     const matchesFolder = selectedFolderId === null 
-      ? file.folderId === undefined 
-      : file.folderId === selectedFolderId;
-    if (!matchesFolder) return false;
+      ? (file.folderId === null || file.folderId === undefined || file.folderId === '') // Root folder - files with no folder
+      : file.folderId === selectedFolderId; // Specific folder - files in that folder
+    if (!matchesFolder) {
+      console.log('🔍 File filtered out (folder mismatch):', file.name, 'file.folderId:', file.folderId, 'selectedFolderId:', selectedFolderId);
+      return false;
+    }
 
     // Quick filters
     if (quickFilters) {
@@ -61,11 +86,10 @@ export const filterAndSortFiles = (
     }
 
     if (hasSearch) {
-      // Enhanced search: name, tags, type, owner, description, credential info
+      // Enhanced search: name, type, owner, description, credential info
       const matchesSearch = 
         // Basic search
         file.name.toLowerCase().includes(searchLower) ||
-        file.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
         file.description?.toLowerCase().includes(searchLower) ||
         
         // Type search
@@ -93,6 +117,11 @@ export const filterAndSortFiles = (
     return true;
   });
 
+  console.log('🔍 filterAndSortFiles result:', {
+    filteredCount: filtered.length,
+    totalFiles: files.length
+  });
+  
   // Create a copy before sorting to avoid mutation
   const sorted = [...filtered];
   

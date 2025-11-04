@@ -17,7 +17,6 @@ export interface ResumeFile {
   sizeBytes?: number;
   lastModified: string;
   isPublic: boolean;
-  tags: string[];
   version: number;
   owner: string;
   sharedWith: SharePermission[];
@@ -109,7 +108,7 @@ export interface CloudStorageProps {
 
 export type FileType = 'all' | 'resume' | 'template' | 'backup' | 'cover_letter' | 'transcript' | 'certification' | 'reference' | 'portfolio' | 'work_sample' | 'document';
 export type SortBy = 'name' | 'date' | 'size';
-export type ViewMode = 'grid' | 'list' | 'compact';
+export type ViewMode = 'grid';
 
 export interface StorageInfo {
   used: number; // in GB

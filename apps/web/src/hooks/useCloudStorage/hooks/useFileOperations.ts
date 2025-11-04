@@ -3,11 +3,19 @@ import { ResumeFile } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 
+// Helper to format file size
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+};
+
 type UploadPayload = {
   file: File;
   displayName?: string;
   type?: ResumeFile['type'] | string;
-  tags?: string[];
   description?: string;
   isPublic?: boolean;
   folderId?: string | null;
@@ -29,23 +37,54 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const [files, setFiles] = useState<ResumeFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [storageInfo, setStorageInfo] = useState({ usedGB: 0, limitGB: 0, percentage: 0 });
 
   const loadFilesFromAPI = useCallback(async (includeDeleted: boolean = false) => {
     setIsLoading(true);
     try {
+      logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, ')');
       const response = await apiService.getCloudFiles(undefined, includeDeleted);
+      logger.info('📥 API response:', { 
+        filesCount: response?.files?.length || 0,
+        success: response?.success
+      });
+      
       if (response && response.files) {
-        setFiles(response.files as ResumeFile[]);
+        const formattedFiles = (response.files as ResumeFile[]).map(file => ({
+          ...file,
+          sharedWith: file.sharedWith || [],
+          comments: file.comments || [],
+          downloadCount: file.downloadCount || 0,
+          viewCount: file.viewCount || 0,
+          isStarred: file.isStarred || false,
+          isArchived: file.isArchived || false,
+          version: file.version || 1,
+          owner: file.owner || file.userId || '',
+          lastModified: file.lastModified || file.createdAt || file.updatedAt || new Date().toISOString(),
+          size: typeof file.size === 'number' ? formatBytes(file.size) : (file.size || '0 B'),
+          sizeBytes: typeof file.size === 'number' ? file.size : (file.sizeBytes || 0),
+          folderId: file.folderId || null, // Ensure null instead of undefined
+          deletedAt: file.deletedAt || null, // Ensure null instead of undefined
+        }));
+        setFiles(formattedFiles);
+        logger.info(`✅ Loaded ${formattedFiles.length} files from API`);
       } else {
+        logger.warn('⚠️ No files in API response');
         setFiles([]);
       }
-    } catch (error) {
-      logger.error('Failed to load files from API:', error);
+      
+      if (response?.storage) {
+        setStorageInfo(response.storage);
+        onStorageUpdate?.(response.storage);
+      }
+    } catch (error: any) {
+      logger.error('❌ Failed to load files from API:', error);
+      logger.error('Error details:', error.message);
       setFiles([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [onStorageUpdate]);
 
   const handleFileSelect = useCallback((fileId: string) => {
     setSelectedFiles(prev => 
@@ -151,9 +190,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       if (payload.folderId) {
         formData.append('folderId', payload.folderId);
       }
-      if (payload.tags && payload.tags.length > 0) {
-        formData.append('tags', JSON.stringify(payload.tags));
-      }
       if (payload.description) {
         formData.append('description', payload.description);
       }
@@ -161,16 +197,63 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
         formData.append('isPublic', String(payload.isPublic));
       }
 
+      logger.info('📤 Uploading file to API...');
       const response = await apiService.uploadStorageFile(formData);
+      logger.info('📤 Upload response:', { 
+        success: response?.success,
+        hasFile: !!response?.file,
+        fileId: response?.file?.id 
+      });
+      
       if (response && response.file) {
-        setFiles(prev => [response.file as ResumeFile, ...prev]);
+        // Transform API response to ResumeFile format
+        const uploadedFile: ResumeFile = {
+          ...response.file,
+          // Ensure all required fields have defaults
+          sharedWith: response.file.sharedWith || [],
+          comments: response.file.comments || [],
+          downloadCount: response.file.downloadCount || 0,
+          viewCount: response.file.viewCount || 0,
+          isStarred: response.file.isStarred || false,
+          isArchived: response.file.isArchived || false,
+          version: response.file.version || 1,
+          owner: response.file.owner || response.file.userId || '',
+          lastModified: response.file.createdAt || response.file.updatedAt || new Date().toISOString(),
+          size: typeof response.file.size === 'number' 
+            ? formatBytes(response.file.size) 
+            : (response.file.size || '0 B'),
+          sizeBytes: typeof response.file.size === 'number' ? response.file.size : (response.file.sizeBytes || 0),
+        };
+        logger.info(`✅ File uploaded successfully: ${uploadedFile.id}`);
+        
+        // Add to local state
+        setFiles(prev => {
+          // Check if file already exists (prevent duplicates)
+          const exists = prev.find(f => f.id === uploadedFile.id);
+          if (exists) {
+            logger.warn('File already in list, updating instead of adding');
+            return prev.map(f => f.id === uploadedFile.id ? uploadedFile : f);
+          }
+          return [uploadedFile, ...prev];
+        });
+      } else {
+        logger.warn('⚠️ Upload response missing file data');
       }
 
-      if (response?.storage && onStorageUpdate) {
-        onStorageUpdate(response.storage);
+      if (response?.storage) {
+        setStorageInfo(response.storage);
+        onStorageUpdate?.(response.storage);
       }
 
       onComplete?.();
+      
+      // Reload files from API to ensure we have the latest data from database
+      logger.info('🔄 Reloading files from API after upload...');
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(err => {
+          logger.error('Failed to reload files after upload:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to save file to API:', error);
       if ((error as any)?.storage && onStorageUpdate) {
@@ -178,22 +261,75 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
       throw error;
     }
-  }, [onStorageUpdate]);
+  }, [onStorageUpdate, loadFilesFromAPI]);
 
-  const handleEditFile = useCallback(async (fileId: string, updates: Partial<ResumeFile>) => {
+  const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isPublic' | 'isStarred' | 'isArchived' | 'folderId'>>) => {
     try {
-      await apiService.updateCloudFile(fileId, updates);
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, ...updates } : file
-      ));
+      const updatePayload: Record<string, any> = {};
+
+      if (updates.name !== undefined) {
+        updatePayload.name = updates.name;
+      }
+
+      if (updates.type !== undefined) {
+        updatePayload.type = updates.type;
+      }
+
+      if (updates.description !== undefined) {
+        updatePayload.description = updates.description;
+      }
+
+      if (updates.isPublic !== undefined) {
+        updatePayload.isPublic = updates.isPublic;
+      }
+
+      if (updates.isStarred !== undefined) {
+        updatePayload.isStarred = updates.isStarred;
+      }
+
+      if (updates.isArchived !== undefined) {
+        updatePayload.isArchived = updates.isArchived;
+      }
+
+      if (updates.folderId !== undefined) {
+        updatePayload.folderId = updates.folderId;
+      }
+
+      await apiService.updateCloudFile(fileId, updatePayload);
+
+      // Update local state with new references to trigger re-render
+      setFiles(prev => prev.map(file => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            ...updatePayload,
+          } as ResumeFile;
+        }
+        return file;
+      }));
+      
+      logger.info(`✅ File updated locally: ${fileId}`, updatePayload);
+
+      // Refresh from API to ensure consistency with server
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(error => {
+          logger.warn('Failed to refresh files after edit:', error);
+        });
+      }, 300);
     } catch (error) {
       logger.error('Failed to update file:', error);
       // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, ...updates } : file
-      ));
+      setFiles(prev => prev.map(file => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            ...updates,
+          } as ResumeFile;
+        }
+        return file;
+      }));
     }
-  }, []);
+  }, [loadFilesFromAPI]);
 
   const handleRefresh = useCallback(async () => {
     logger.debug('Refreshing files...');
@@ -248,50 +384,74 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const handleDeleteFile = useCallback(async (fileId: string) => {
     try {
       await apiService.deleteCloudFile(fileId);
+      logger.info(`✅ File moved to recycle bin: ${fileId}`);
+      
       // Update local state to set deletedAt
       setFiles(prev => prev.map(file => 
         file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
       ));
+      
+      // Reload files from API to ensure consistency
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(err => {
+          logger.error('Failed to reload files after delete:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to delete file:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
-      ));
+      throw error; // Re-throw so UI can show error message
     }
-  }, []);
+  }, [loadFilesFromAPI]);
 
   // Restore deleted file from recycle bin
   const handleRestoreFile = useCallback(async (fileId: string) => {
     try {
       await apiService.restoreCloudFile(fileId);
+      logger.info(`✅ File restored from recycle bin: ${fileId}`);
+      
       // Update local state to remove deletedAt
       setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: undefined } : file
+        file.id === fileId ? { ...file, deletedAt: null } : file
       ));
+      
+      // Reload files from API to ensure consistency
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(err => {
+          logger.error('Failed to reload files after restore:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to restore file:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: undefined } : file
-      ));
+      throw error; // Re-throw so UI can show error message
     }
-  }, []);
+  }, [loadFilesFromAPI]);
 
   // Permanently delete file
   const handlePermanentlyDeleteFile = useCallback(async (fileId: string) => {
     try {
       const response = await apiService.permanentlyDeleteCloudFile(fileId);
+      logger.info(`✅ File permanently deleted: ${fileId}`);
+      
+      // Remove from local state
       setFiles(prev => prev.filter(file => file.id !== fileId));
+      
+      // Update storage quota if provided
       if (response?.storage && onStorageUpdate) {
         onStorageUpdate(response.storage);
       }
+      
+      // Reload files from API to ensure consistency (use showDeleted from closure or default to true since we're in recycle bin)
+      setTimeout(() => {
+        loadFilesFromAPI(true).catch(err => {
+          logger.error('Failed to reload files after permanent delete:', err);
+        });
+      }, 500);
     } catch (error) {
       logger.error('Failed to permanently delete file:', error);
       // Fallback to local state update
       setFiles(prev => prev.filter(file => file.id !== fileId));
     }
-  }, [onStorageUpdate]);
+  }, [onStorageUpdate, loadFilesFromAPI]);
 
   return {
     files,

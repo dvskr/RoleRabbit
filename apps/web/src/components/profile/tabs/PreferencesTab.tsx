@@ -266,12 +266,13 @@ export default function PreferencesTab({
                   <EyeOff size={18} style={{ color: colors.secondaryText }} />
                 )}
                 <div className="flex-1">
-                  <p 
-                    className="font-semibold"
+                  <label 
+                    htmlFor="profile-visibility-select"
+                    className="font-semibold block"
                     style={{ color: colors.primaryText }}
                   >
                     Profile Visibility
-                  </p>
+                  </label>
                   <p 
                     className="text-sm mt-1"
                     style={{ color: colors.secondaryText }}
@@ -281,6 +282,8 @@ export default function PreferencesTab({
                 </div>
               </div>
               <select 
+                id="profile-visibility-select"
+                name="profileVisibility"
                 value={userData.profileVisibility || 'Public'}
                 onChange={(e) => onUserDataChange({ profileVisibility: e.target.value })}
                 disabled={!isEditing}
@@ -321,12 +324,13 @@ export default function PreferencesTab({
               <div className="flex items-center gap-3 mb-3">
                 <Shield size={18} style={{ color: colors.badgePurpleText }} />
                 <div className="flex-1">
-                  <p 
-                    className="font-semibold"
+                  <label 
+                    htmlFor="privacy-level-select"
+                    className="font-semibold block"
                     style={{ color: colors.primaryText }}
                   >
                     Privacy Level
-                  </p>
+                  </label>
                   <p 
                     className="text-sm mt-1"
                     style={{ color: colors.secondaryText }}
@@ -336,6 +340,8 @@ export default function PreferencesTab({
                 </div>
               </div>
               <select 
+                id="privacy-level-select"
+                name="privacyLevel"
                 value={userData.privacyLevel || 'Professional'}
                 onChange={(e) => onUserDataChange({ privacyLevel: e.target.value })}
                 disabled={!isEditing}

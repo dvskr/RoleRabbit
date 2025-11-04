@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Award, Globe, Trash2, Edit2, Save, X, TrendingUp, BarChart3, Plus, CheckCircle } from 'lucide-react';
-import { UserData, Skill, Certification } from '../types/profile';
+import React, { useEffect, useState } from 'react';
+import { Award, Globe, Trash2, Edit2, X, Plus, GraduationCap, ArrowLeft } from 'lucide-react';
+import { UserData, Skill, Certification, Education } from '../types/profile';
+import { sanitizeSkills } from '../../Profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 import FormField from '../components/FormField';
 
@@ -22,7 +23,15 @@ export default function SkillsTab({
   
   const [editingSkillId, setEditingSkillId] = useState<number | null>(null);
   const [editingCertId, setEditingCertId] = useState<number | null>(null);
-  const [editingLangId, setEditingLangId] = useState<number | null>(null);
+  const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!isEditing) {
+      setEditingSkillId(null);
+      setEditingCertId(null);
+      setEditingEducationId(null);
+    }
+  }, [isEditing]);
   
   // Normalize skills to always be an array
   const normalizeSkills = (skills: any): Skill[] => {
@@ -30,11 +39,10 @@ export default function SkillsTab({
     if (Array.isArray(skills)) {
       return skills.map(skill => {
         if (typeof skill === 'string') {
-          return { name: skill, proficiency: 'Beginner', verified: false };
+          return { name: skill, verified: false };
         }
         return {
           name: skill.name || '',
-          proficiency: skill.proficiency || 'Beginner',
           yearsOfExperience: skill.yearsOfExperience,
           verified: skill.verified || false
         };
@@ -52,27 +60,53 @@ export default function SkillsTab({
   };
   
   const skills: Skill[] = normalizeSkills(userData.skills);
-  
-  const addSkill = (skillName: string) => {
-    const skill: Skill = {
-      name: skillName,
-      proficiency: 'Beginner',
-      verified: false
-    };
-    if (skillName && !skills.some(s => s.name.toLowerCase() === skillName.toLowerCase())) {
-      onUserDataChange({ skills: [...skills, skill] });
+  const sanitizedSkills = sanitizeSkills(skills, { keepDrafts: true });
+
+  const addSkill = (skillNameOrList: string) => {
+    // Support comma-separated skills: "Python, JavaScript, React" or single skill: "Python"
+    const skillNames = skillNameOrList
+      .split(',')
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (skillNames.length === 0) return;
+    
+    // Add all skills that don't already exist (case-insensitive)
+    const newSkills: Skill[] = [];
+    const existingSkillNames = new Set(sanitizedSkills.map(s => s.name.toLowerCase()));
+    
+    skillNames.forEach(skillName => {
+      if (!existingSkillNames.has(skillName.toLowerCase())) {
+        newSkills.push({
+          name: skillName,
+          verified: false
+        });
+        existingSkillNames.add(skillName.toLowerCase()); // Prevent duplicates in the same batch
+      }
+    });
+    
+    if (newSkills.length > 0) {
+      onUserDataChange({ skills: sanitizeSkills([...sanitizedSkills, ...newSkills], { keepDrafts: true }) });
     }
   };
 
   const updateSkill = (index: number, updates: Partial<Skill>) => {
-    const updated = skills.map((skill, i) => 
+    const updated = sanitizedSkills.map((skill, i) =>
       i === index ? { ...skill, ...updates } : skill
     );
-    onUserDataChange({ skills: updated });
+    onUserDataChange({ skills: sanitizeSkills(updated, { keepDrafts: true }) });
   };
 
   const removeSkill = (index: number) => {
-    onUserDataChange({ skills: skills.filter((_, i) => i !== index) });
+    const updatedSkills = sanitizedSkills.filter((_, i) => i !== index);
+    onUserDataChange({ skills: sanitizeSkills(updatedSkills, { keepDrafts: true }) });
+    // Reset editing state if the removed skill was being edited
+    if (editingSkillId === index) {
+      setEditingSkillId(null);
+    } else if (editingSkillId !== null && editingSkillId > index) {
+      // Adjust editing index if a skill before the edited one was removed
+      setEditingSkillId(editingSkillId - 1);
+    }
   };
 
   // Normalize certifications to always be an array
@@ -80,11 +114,12 @@ export default function SkillsTab({
     if (!certs) return [];
     if (Array.isArray(certs)) {
       return certs.map(cert => ({
+        id: cert.id || cert._id || cert.uuid || cert.tempId || undefined,
         name: cert.name || '',
         issuer: cert.issuer || '',
-        date: cert.date || new Date().toISOString().split('T')[0],
-        expiryDate: cert.expiryDate || null,
-        credentialUrl: cert.credentialUrl || null,
+        date: cert.date || '', // Optional - allow blank
+        expiryDate: cert.expiryDate || '',
+        credentialUrl: cert.credentialUrl || '',
         verified: cert.verified || false
       }));
     }
@@ -103,9 +138,10 @@ export default function SkillsTab({
   
   const addCertification = () => {
     const cert: Certification = {
+      id: `temp-cert-${Date.now()}-${Math.random()}`,
       name: '',
       issuer: '',
-      date: new Date().toISOString().split('T')[0],
+      date: '', // Optional - allow blank
       verified: false
     };
     onUserDataChange({ certifications: [...certifications, cert] });
@@ -146,13 +182,31 @@ export default function SkillsTab({
   
   const languages = normalizeLanguages(userData.languages);
   
-  const addLanguage = (langName: string) => {
-    const lang = {
-      name: langName,
-      proficiency: 'Native'
-    };
-    if (langName && !languages.some(l => l.name.toLowerCase() === langName.toLowerCase())) {
-      onUserDataChange({ languages: [...languages, lang] });
+  const addLanguage = (langNameOrList: string) => {
+    // Support comma-separated languages: "English, Spanish, French" or single language: "English"
+    const langNames = langNameOrList
+      .split(',')
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (langNames.length === 0) return;
+    
+    // Add all languages that don't already exist (case-insensitive)
+    const newLanguages: any[] = [];
+    const existingLangNames = new Set(languages.map(l => l.name.toLowerCase()));
+    
+    langNames.forEach(langName => {
+      if (!existingLangNames.has(langName.toLowerCase())) {
+        newLanguages.push({
+          name: langName,
+          proficiency: 'Native' // Keep for data structure, but won't display
+        });
+        existingLangNames.add(langName.toLowerCase()); // Prevent duplicates in the same batch
+      }
+    });
+    
+    if (newLanguages.length > 0) {
+      onUserDataChange({ languages: [...languages, ...newLanguages] });
     }
   };
 
@@ -165,120 +219,120 @@ export default function SkillsTab({
 
   const removeLanguage = (index: number) => {
     onUserDataChange({ languages: languages.filter((_, i) => i !== index) });
-    setEditingLangId(null);
   };
 
-  const getProficiencyBadgeStyle = (proficiency: string) => {
-    switch (proficiency) {
-      case 'Expert':
+
+  const normalizeEducation = (educationInput: any): Education[] => {
+    const toArray = (input: any): any[] => {
+      if (!input) return [];
+      if (Array.isArray(input)) return input;
+      if (typeof input === 'string') {
+        try {
+          const parsed = JSON.parse(input);
+          return toArray(parsed);
+        } catch {
+          return [];
+        }
+      }
+      if (input instanceof Map || input instanceof Set) {
+        return Array.from((input as Map<any, any> | Set<any>).values());
+      }
+      if (typeof input === 'object') {
+        return Object.values(input);
+      }
+      return [];
+    };
+
+    const toStringValue = (value: any): string => {
+      if (value === null || value === undefined) return '';
+      return typeof value === 'string' ? value : String(value);
+    };
+
+    return toArray(educationInput).map((edu: any, index) => {
+      if (!edu || typeof edu !== 'object') {
+        const institutionValue = typeof edu === 'string' ? edu : '';
         return {
-          background: colors.badgeSuccessBg,
-          color: colors.badgeSuccessText,
-          border: colors.badgeSuccessBorder,
+          id: `edu-${index}`,
+          institution: toStringValue(institutionValue),
+          degree: '',
+          field: '',
+          startDate: '',
+          endDate: '',
+          gpa: '',
+          honors: '',
+          location: '',
+          description: '',
         };
-      case 'Advanced':
-        return {
-          background: colors.badgeInfoBg,
-          color: colors.badgeInfoText,
-          border: colors.badgeInfoBorder,
-        };
-      case 'Intermediate':
-        return {
-          background: colors.badgeWarningBg,
-          color: colors.badgeWarningText,
-          border: colors.badgeWarningBorder,
-        };
-      default:
-        return {
-          background: colors.badgeNeutralBg,
-          color: colors.badgeNeutralText,
-          border: colors.badgeNeutralBorder,
-        };
+      }
+
+      const idSource = edu.id ?? edu._id ?? edu.uuid ?? edu.tempId ?? edu.educationId;
+      const id = typeof idSource === 'string'
+        ? idSource
+        : (idSource !== undefined && idSource !== null ? String(idSource) : `edu-${index}`);
+
+      return {
+        id,
+        institution: toStringValue(edu.institution ?? edu.school ?? edu.university ?? ''),
+        degree: toStringValue(edu.degree ?? edu.program ?? ''),
+        field: toStringValue(edu.field ?? edu.major ?? ''),
+        startDate: toStringValue(edu.startDate ?? edu.start ?? ''),
+        endDate: toStringValue(edu.endDate ?? edu.graduationDate ?? edu.completionDate ?? ''),
+        gpa: toStringValue(edu.gpa ?? ''),
+        honors: toStringValue(edu.honors ?? edu.awards ?? ''),
+        location: toStringValue(edu.location ?? ''),
+        description: toStringValue(edu.description ?? edu.summary ?? ''),
+      } as Education;
+    });
+  };
+
+  const education = normalizeEducation(userData.education);
+
+  useEffect(() => {
+    if (!isEditing && editingEducationId) {
+      setEditingEducationId(null);
+    }
+  }, [isEditing, editingEducationId]);
+
+  useEffect(() => {
+    if (editingEducationId && !education.some((edu) => edu.id === editingEducationId)) {
+      setEditingEducationId(null);
+    }
+  }, [education, editingEducationId]);
+
+  const addEducation = () => {
+    const newId = `temp-edu-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const newEducation: Education = {
+      id: newId,
+      institution: '',
+      degree: '',
+      field: '',
+      startDate: '',
+      endDate: '',
+      gpa: '',
+      honors: '',
+      location: '',
+      description: '',
+    };
+    onUserDataChange({ education: [...education, newEducation] });
+    setEditingEducationId(newId);
+  };
+
+  const updateEducation = (id: string, updates: Partial<Education>) => {
+    const updated = education.map((edu) => (edu.id === id ? { ...edu, ...updates } : edu));
+    onUserDataChange({ education: updated });
+  };
+
+  const removeEducation = (id: string) => {
+    const updated = education.filter((edu) => edu.id !== id);
+    onUserDataChange({ education: updated });
+    if (editingEducationId === id) {
+      setEditingEducationId(null);
     }
   };
-
-  const getProficiencyValue = (proficiency: string): number => {
-    switch (proficiency) {
-      case 'Expert': return 100;
-      case 'Advanced': return 75;
-      case 'Intermediate': return 50;
-      case 'Beginner': return 25;
-      default: return 25;
-    }
-  };
-
-  const getLanguageProficiencyValue = (proficiency: string): number => {
-    switch (proficiency) {
-      case 'Native': return 100;
-      case 'Fluent': return 90;
-      case 'Conversational': return 70;
-      case 'Basic': return 40;
-      default: return 40;
-    }
-  };
-
-  // Statistics
-  const skillStats = {
-    total: skills.length,
-    expert: skills.filter(s => s.proficiency === 'Expert').length,
-    advanced: skills.filter(s => s.proficiency === 'Advanced').length,
-    verified: skills.filter(s => s.verified).length,
-    avgExperience: skills.filter(s => s.yearsOfExperience).reduce((sum, s) => sum + (s.yearsOfExperience || 0), 0) / skills.filter(s => s.yearsOfExperience).length || 0
-  };
-
-  const proficiencyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-  const languageLevels = ['Basic', 'Conversational', 'Fluent', 'Native'];
 
   return (
     <div className="max-w-4xl">
-      
       <div className="space-y-8">
-        {/* Statistics Summary */}
-        {skills.length > 0 && (
-          <div 
-            className="backdrop-blur-sm rounded-2xl p-6 shadow-lg"
-            style={{
-              background: colors.cardBackground,
-              border: `1px solid ${colors.border}`,
-            }}
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 size={20} style={{ color: colors.primaryBlue }} />
-              <h3 
-                className="text-lg font-semibold"
-                style={{ color: colors.primaryText }}
-              >
-                Skills Overview
-              </h3>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.primaryBlue }}>
-                  {skillStats.total}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Total Skills</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.successGreen }}>
-                  {skillStats.expert + skillStats.advanced}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Advanced+</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.badgeInfoText }}>
-                  {skillStats.verified}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Verified</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold mb-1" style={{ color: colors.badgeWarningText }}>
-                  {skillStats.avgExperience > 0 ? `${skillStats.avgExperience.toFixed(1)}` : 'N/A'}
-                </div>
-                <div className="text-xs" style={{ color: colors.secondaryText }}>Avg Years</div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Technical Skills */}
         <div 
@@ -303,220 +357,63 @@ export default function SkillsTab({
           </div>
           
           {skills.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
               {skills.map((skill, index) => {
-                const badgeStyle = getProficiencyBadgeStyle(skill.proficiency);
-                const isEditing = editingSkillId === index;
-                
                 return (
                   <div 
                     key={index} 
-                    className="p-4 rounded-xl transition-all"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group flex-shrink-0"
                     style={{
                       background: colors.inputBackground,
                       border: `1px solid ${colors.border}`,
+                      maxWidth: '100%',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isEditing) {
-                        e.currentTarget.style.background = colors.hoverBackground;
-                        e.currentTarget.style.borderColor = colors.borderFocused;
-                      }
+                      e.currentTarget.style.borderColor = colors.borderFocused;
                     }}
                     onMouseLeave={(e) => {
-                      if (!isEditing) {
-                        e.currentTarget.style.background = colors.inputBackground;
-                        e.currentTarget.style.borderColor = colors.border;
-                      }
+                      e.currentTarget.style.borderColor = colors.border;
                     }}
                   >
-                    {isEditing ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold" style={{ color: colors.primaryText }}>Edit Skill</h4>
-                          <button
-                            onClick={() => setEditingSkillId(null)}
-                            className="p-1 rounded"
-                            style={{ color: colors.secondaryText }}
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                        <input
-                          id={`skill-name-${index}`}
-                          name={`skill-name-${index}`}
-                          type="text"
-                          value={skill.name}
-                          onChange={(e) => updateSkill(index, { name: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg"
-                          style={{
-                            background: colors.cardBackground,
-                            border: `1px solid ${colors.border}`,
-                            color: colors.primaryText,
-                          }}
-                          placeholder="Skill name"
-                        />
-                        <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>
-                            Proficiency Level
-                          </label>
-                          <select
-                            id={`skill-proficiency-${index}`}
-                            name={`skill-proficiency-${index}`}
-                            value={skill.proficiency}
-                            onChange={(e) => updateSkill(index, { proficiency: e.target.value as Skill['proficiency'] })}
-                            className="w-full px-3 py-2 rounded-lg"
-                            style={{
-                              background: colors.cardBackground,
-                              border: `1px solid ${colors.border}`,
-                              color: colors.primaryText,
-                            }}
-                          >
-                            {proficiencyLevels.map(level => (
-                              <option key={level} value={level}>{level}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>
-                            Years of Experience (optional)
-                          </label>
-                          <input
-                            id={`skill-years-${index}`}
-                            name={`skill-years-${index}`}
-                            type="number"
-                            min="0"
-                            max="50"
-                            value={skill.yearsOfExperience || ''}
-                            onChange={(e) => updateSkill(index, { yearsOfExperience: e.target.value ? parseInt(e.target.value) : undefined })}
-                            className="w-full px-3 py-2 rounded-lg"
-                            style={{
-                              background: colors.cardBackground,
-                              border: `1px solid ${colors.border}`,
-                              color: colors.primaryText,
-                            }}
-                            placeholder="e.g., 5"
-                          />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id={`verified-${index}`}
-                            name={`verified-${index}`}
-                            checked={skill.verified || false}
-                            onChange={(e) => updateSkill(index, { verified: e.target.checked })}
-                            className="rounded"
-                          />
-                          <label htmlFor={`verified-${index}`} className="text-xs" style={{ color: colors.secondaryText }}>
-                            Verified skill
-                          </label>
-                        </div>
-                        <button
-                          onClick={() => setEditingSkillId(null)}
-                          className="w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          style={{
-                            background: colors.primaryBlue,
-                            color: 'white',
-                          }}
-                        >
-                          <Save size={14} />
-                          Save Changes
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between mb-3">
-                          <span 
-                            className="font-semibold"
-                            style={{ color: colors.primaryText }}
-                          >
-                            {skill.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {isEditing && (
-                              <>
-                                <button
-                                  onClick={() => setEditingSkillId(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.primaryBlue }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeInfoBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Edit ${skill.name}`}
-                                  title={`Edit ${skill.name}`}
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeSkill(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.errorRed }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeErrorBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Remove ${skill.name}`}
-                                  title={`Remove ${skill.name}`}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Proficiency Progress Bar */}
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <span 
-                              className="px-2 py-0.5 rounded text-xs font-medium"
-                              style={{
-                                background: badgeStyle.background,
-                                color: badgeStyle.color,
-                                border: `1px solid ${badgeStyle.border}`,
-                              }}
-                            >
-                              {skill.proficiency}
-                            </span>
-                            {skill.yearsOfExperience && (
-                              <span 
-                                className="text-xs"
-                                style={{ color: colors.secondaryText }}
-                              >
-                                {skill.yearsOfExperience} {skill.yearsOfExperience === 1 ? 'year' : 'years'}
-                              </span>
-                            )}
-                          </div>
-                          <div 
-                            className="w-full rounded-full h-1.5"
-                            style={{ background: colors.inputBackground }}
-                          >
-                            <div 
-                              className="h-1.5 rounded-full transition-all duration-500"
-                              style={{ 
-                                width: `${getProficiencyValue(skill.proficiency)}%`,
-                                background: `linear-gradient(90deg, ${badgeStyle.border}, ${badgeStyle.color})`
-                              }}
-                            />
-                          </div>
-                        </div>
-                        
-                        {skill.verified && (
-                          <div className="flex items-center gap-1 mt-2">
-                            <CheckCircle size={12} style={{ color: colors.badgeInfoText }} />
-                            <span 
-                              className="text-xs"
-                              style={{ color: colors.badgeInfoText }}
-                            >
-                              Verified
-                            </span>
-                          </div>
-                        )}
-                      </>
+                    <span 
+                      className="font-medium text-sm break-words"
+                      style={{ 
+                        color: colors.primaryText,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        hyphens: 'auto',
+                      }}
+                    >
+                      {skill.name}
+                    </span>
+                    {isEditing && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeSkill(index);
+                        }}
+                        className="opacity-70 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
+                        style={{ 
+                          color: colors.errorRed,
+                          background: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = colors.badgeErrorBg;
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.opacity = '0.7';
+                        }}
+                        aria-label={`Remove ${skill.name}`}
+                        title={`Remove ${skill.name}`}
+                        type="button"
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                      </button>
                     )}
                   </div>
                 );
@@ -535,7 +432,7 @@ export default function SkillsTab({
                 id="add-skill-input"
                 name="add-skill-input"
                 type="text"
-                placeholder="Add a technical skill (e.g., JavaScript, Python, React)"
+                placeholder="Add skills (comma-separated: Python, JavaScript, React or single: Python)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
                 style={{
                   background: colors.inputBackground,
@@ -548,20 +445,25 @@ export default function SkillsTab({
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = colors.border;
                 }}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const target = e.target as HTMLInputElement;
-                    const skill = target.value.trim();
-                    if (skill) {
-                      addSkill(skill);
+                    const skillInput = target.value.trim();
+                    if (skillInput) {
+                      addSkill(skillInput);
                       target.value = '';
                     }
                   }
                 }}
               />
               <button 
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Add a technical skill"]') as HTMLInputElement;
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const input = document.getElementById('add-skill-input') as HTMLInputElement;
                   if (input && input.value.trim()) {
                     addSkill(input.value.trim());
                     input.value = '';
@@ -605,7 +507,12 @@ export default function SkillsTab({
             </h3>
             {isEditing && (
               <button
-                onClick={addCertification}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addCertification();
+                }}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg"
                 style={{
                   background: colors.primaryBlue,
@@ -620,18 +527,22 @@ export default function SkillsTab({
           
           <div className="space-y-4">
             {certifications.map((cert, index) => {
-              const isEditing = editingCertId === index;
+              const isEditingCert = isEditing && editingCertId === index;
+              // Use cert.id if available, otherwise fallback to index (for new certs)
+              // This ensures unique IDs even when certs are reordered
+              const certId = cert.id || `temp-cert-${index}`;
               
               return (
                 <div 
-                  key={index} 
+                  key={certId} 
                   className="p-5 rounded-xl transition-all"
                   style={{
-                    background: colors.badgeWarningBg,
-                    border: `1px solid ${colors.badgeWarningBorder}`,
+                    background: colors.cardBackground,
+                    border: `1px solid ${isEditingCert ? colors.border : colors.border}`,
+                    boxShadow: isEditingCert ? '0 0 0 1px rgba(255,255,255,0.04)' : undefined,
                   }}
                 >
-                  {isEditing ? (
+                  {isEditingCert ? (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -649,6 +560,8 @@ export default function SkillsTab({
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <FormField
+                          id={`cert-${certId}-name`}
+                          name={`cert-${certId}-name`}
                           label="Certification Name"
                           value={cert.name}
                           onChange={(value) => updateCertification(index, { name: value })}
@@ -656,6 +569,8 @@ export default function SkillsTab({
                           placeholder="e.g., AWS Certified Solutions Architect"
                         />
                         <FormField
+                          id={`cert-${certId}-issuer`}
+                          name={`cert-${certId}-issuer`}
                           label="Issuing Organization"
                           value={cert.issuer}
                           onChange={(value) => updateCertification(index, { issuer: value })}
@@ -663,13 +578,17 @@ export default function SkillsTab({
                           placeholder="e.g., Amazon Web Services"
                         />
                         <FormField
-                          label="Issue Date"
+                          id={`cert-${certId}-date`}
+                          name={`cert-${certId}-date`}
+                          label="Issue Date (Optional)"
                           type="date"
-                          value={cert.date}
-                          onChange={(value) => updateCertification(index, { date: value })}
+                          value={cert.date || ''}
+                          onChange={(value) => updateCertification(index, { date: value || null })}
                           disabled={false}
                         />
                         <FormField
+                          id={`cert-${certId}-expiry-date`}
+                          name={`cert-${certId}-expiry-date`}
                           label="Expiry Date (Optional)"
                           type="date"
                           value={cert.expiryDate || ''}
@@ -677,6 +596,8 @@ export default function SkillsTab({
                           disabled={false}
                         />
                         <FormField
+                          id={`cert-${certId}-credential-url`}
+                          name={`cert-${certId}-credential-url`}
                           label="Credential URL (Optional)"
                           type="url"
                           value={cert.credentialUrl || ''}
@@ -687,34 +608,31 @@ export default function SkillsTab({
                         />
                       </div>
                       
-                      <div className="flex items-center gap-2 pt-2">
-                        <input
-                          type="checkbox"
-                          id={`cert-verified-${index}`}
-                          name={`cert-verified-${index}`}
-                          checked={cert.verified || false}
-                          onChange={(e) => updateCertification(index, { verified: e.target.checked })}
-                          className="rounded"
-                        />
-                        <label htmlFor={`cert-verified-${index}`} className="text-xs" style={{ color: colors.secondaryText }}>
-                          This certification is verified
-                        </label>
-                      </div>
-                      
                       <div className="flex gap-2 pt-2">
                         <button
-                          onClick={() => setEditingCertId(null)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditingCertId(null);
+                          }}
                           className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                           style={{
-                            background: colors.primaryBlue,
-                            color: 'white',
+                            background: colors.inputBackground,
+                            color: colors.secondaryText,
+                            border: `1px solid ${colors.border}`,
                           }}
                         >
-                          <Save size={14} />
-                          Save
+                          <ArrowLeft size={14} />
+                          Back
                         </button>
                         <button
-                          onClick={() => removeCertification(index)}
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeCertification(index);
+                          }}
                           className="px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                           style={{
                             background: colors.errorRed,
@@ -725,16 +643,20 @@ export default function SkillsTab({
                           Delete
                         </button>
                       </div>
+                      <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                        Changes will be saved when you click "Save" in the header
+                      </p>
                     </div>
                   ) : (
                     <div className="flex items-start gap-4">
                       <div 
                         className="p-2 rounded-lg flex-shrink-0"
                         style={{
-                          background: colors.badgeWarningBg,
+                          background: colors.inputBackground,
+                          border: `1px solid ${colors.border}`,
                         }}
                       >
-                        <Award size={20} style={{ color: colors.badgeWarningText }} />
+                        <Award size={20} style={{ color: colors.primaryText }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -764,19 +686,6 @@ export default function SkillsTab({
                                   style={{ color: colors.tertiaryText }}
                                 >
                                   Expires: {cert.expiryDate}
-                                </span>
-                              )}
-                              {cert.verified && (
-                                <span 
-                                  className="px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1"
-                                  style={{
-                                    background: colors.badgeSuccessBg,
-                                    color: colors.badgeSuccessText,
-                                    border: `1px solid ${colors.badgeSuccessBorder}`,
-                                  }}
-                                >
-                                  <CheckCircle size={12} />
-                                  Verified
                                 </span>
                               )}
                               {cert.credentialUrl && (
@@ -840,7 +749,12 @@ export default function SkillsTab({
                 <p>No certifications added yet</p>
                 {isEditing && (
                   <button
-                    onClick={addCertification}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      addCertification();
+                    }}
                     className="mt-4 px-6 py-3 rounded-xl"
                     style={{
                       background: colors.primaryBlue,
@@ -864,178 +778,97 @@ export default function SkillsTab({
             border: `1px solid ${colors.border}`,
           }}
         >
-          <h3 
-            className="text-xl font-semibold mb-6"
-            style={{ color: colors.primaryText }}
-          >
-            Languages
-          </h3>
-          <div className="space-y-4">
-            {languages.map((lang, index) => {
-              const isEditing = editingLangId === index;
-              
-              return (
-                <div 
-                  key={index} 
-                  className="p-4 rounded-xl transition-all"
-                  style={{
-                    background: colors.badgeSuccessBg,
-                    border: `1px solid ${colors.badgeSuccessBorder}`,
-                  }}
-                >
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold flex items-center gap-2" style={{ color: colors.primaryText }}>
-                          <Globe size={16} />
-                          Edit Language
-                        </h4>
-                        <button
-                          onClick={() => setEditingLangId(null)}
-                          className="p-1 rounded"
-                          style={{ color: colors.secondaryText }}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                      <input
-                        id={`language-name-${index}`}
-                        name={`language-name-${index}`}
-                        type="text"
-                        value={lang.name}
-                        onChange={(e) => updateLanguage(index, { name: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg mb-2"
-                        style={{
-                          background: colors.cardBackground,
-                          border: `1px solid ${colors.border}`,
-                          color: colors.primaryText,
-                        }}
-                        placeholder="Language name"
-                      />
-                      <div>
-                        <label className="block text-xs font-medium mb-1" style={{ color: colors.secondaryText }}>
-                          Proficiency Level
-                        </label>
-                        <select
-                          value={lang.proficiency}
-                          onChange={(e) => updateLanguage(index, { proficiency: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg"
-                          style={{
-                            background: colors.cardBackground,
-                            border: `1px solid ${colors.border}`,
-                            color: colors.primaryText,
-                          }}
-                        >
-                          {languageLevels.map(level => (
-                            <option key={level} value={level}>{level}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={() => setEditingLangId(null)}
-                        className="w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                        style={{
-                          background: colors.primaryBlue,
-                          color: 'white',
-                        }}
-                      >
-                        <Save size={14} />
-                        Save Changes
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-4">
-                      <div 
-                        className="p-2 rounded-lg flex-shrink-0"
-                        style={{
-                          background: colors.badgeSuccessBg,
-                        }}
-                      >
-                        <Globe size={20} style={{ color: colors.badgeSuccessText }} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <span 
-                            className="font-medium"
-                            style={{ color: colors.primaryText }}
-                          >
-                            {lang.name}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <span 
-                              className="px-2 py-1 rounded text-xs font-medium"
-                              style={{
-                                background: colors.badgeSuccessBg,
-                                color: colors.badgeSuccessText,
-                                border: `1px solid ${colors.badgeSuccessBorder}`,
-                              }}
-                            >
-                              {lang.proficiency}
-                            </span>
-                            {isEditing && (
-                              <>
-                                <button
-                                  onClick={() => setEditingLangId(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.primaryBlue }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeInfoBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Edit ${lang.name}`}
-                                  title={`Edit ${lang.name}`}
-                                >
-                                  <Edit2 size={14} />
-                                </button>
-                                <button
-                                  onClick={() => removeLanguage(index)}
-                                  className="p-1.5 rounded transition-colors"
-                                  style={{ color: colors.errorRed }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = colors.badgeErrorBg;
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'transparent';
-                                  }}
-                                  aria-label={`Remove ${lang.name}`}
-                                  title={`Remove ${lang.name}`}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {/* Language Proficiency Progress Bar */}
-                        <div 
-                          className="w-full rounded-full h-1.5"
-                          style={{ background: colors.inputBackground }}
-                        >
-                          <div 
-                            className="h-1.5 rounded-full transition-all duration-500"
-                            style={{ 
-                              width: `${getLanguageProficiencyValue(lang.proficiency)}%`,
-                              background: `linear-gradient(90deg, ${colors.badgeSuccessBorder}, ${colors.successGreen})`
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="flex items-center justify-between mb-6">
+            <h3 
+              className="text-xl font-semibold"
+              style={{ color: colors.primaryText }}
+            >
+              Languages
+            </h3>
+            {isEditing && languages.length === 0 && (
+              <span className="text-sm" style={{ color: colors.secondaryText }}>
+                Add your first language to get started
+              </span>
+            )}
           </div>
           
+          {languages.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
+              {languages.map((lang, index) => {
+                return (
+                  <div 
+                    key={index} 
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group flex-shrink-0"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      maxWidth: '100%',
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
+                  >
+                    <span 
+                      className="font-medium text-sm break-words"
+                      style={{ 
+                        color: colors.primaryText,
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        hyphens: 'auto',
+                      }}
+                    >
+                      {lang.name}
+                    </span>
+                    {isEditing && (
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeLanguage(index);
+                        }}
+                        className="opacity-70 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
+                        style={{ 
+                          color: colors.errorRed,
+                          background: 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = colors.badgeErrorBg;
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.opacity = '0.7';
+                        }}
+                        aria-label={`Remove ${lang.name}`}
+                        title={`Remove ${lang.name}`}
+                        type="button"
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
+              <Globe size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
+              <p>No languages added yet</p>
+            </div>
+          )}
+          
           {isEditing && (
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-3">
               <input
                 id="add-language-input"
                 name="add-language-input"
                 type="text"
-                placeholder="Add language (e.g., English, Spanish, French)"
+                placeholder="Add languages (comma-separated: English, Spanish, French or single: English)"
                 className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
                 style={{
                   background: colors.inputBackground,
@@ -1048,20 +881,25 @@ export default function SkillsTab({
                 onBlur={(e) => {
                   e.currentTarget.style.borderColor = colors.border;
                 }}
-                onKeyPress={(e) => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const target = e.target as HTMLInputElement;
-                    const lang = target.value.trim();
-                    if (lang) {
-                      addLanguage(lang);
+                    const langInput = target.value.trim();
+                    if (langInput) {
+                      addLanguage(langInput);
                       target.value = '';
                     }
                   }
                 }}
               />
               <button 
-                onClick={() => {
-                  const input = document.querySelector('input[placeholder*="Add language"]') as HTMLInputElement;
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const input = document.getElementById('add-language-input') as HTMLInputElement;
                   if (input && input.value.trim()) {
                     addLanguage(input.value.trim());
                     input.value = '';
@@ -1069,7 +907,51 @@ export default function SkillsTab({
                 }}
                 className="px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 style={{
-                  background: colors.successGreen,
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlueHover || colors.primaryBlue;
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlue;
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <Plus size={18} className="inline mr-1" />
+                Add
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Education */}
+        <div 
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 
+              className="text-xl font-semibold"
+              style={{ color: colors.primaryText }}
+            >
+              Education
+            </h3>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addEducation();
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg"
+                style={{
+                  background: colors.primaryBlue,
                   color: 'white',
                 }}
                 onMouseEnter={(e) => {
@@ -1079,16 +961,254 @@ export default function SkillsTab({
                   e.currentTarget.style.opacity = '1';
                 }}
               >
-                <Plus size={18} className="inline mr-1" />
-                Add
+                <Plus size={16} />
+                Add Education
               </button>
-            </div>
-          )}
-          
-          {languages.length === 0 && !isEditing && (
+            )}
+          </div>
+
+          {education.length === 0 ? (
             <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
-              <Globe size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
-              <p>No languages added yet</p>
+              <GraduationCap size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
+              <p>No education entries added yet</p>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addEducation();
+                  }}
+                  className="mt-4 px-6 py-3 rounded-xl"
+                  style={{
+                    background: colors.primaryBlue,
+                    color: 'white',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <Plus size={16} className="inline mr-2" />
+                  Add Your First Education
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {education.map((edu, index) => {
+                const entryId = edu.id || `edu-${index}`;
+                const isEditingEducation = isEditing && editingEducationId === entryId;
+                const degreeField = [edu.degree, edu.field].filter((value) => value && value.length > 0).join(' • ');
+                const dateRange = [edu.startDate, edu.endDate]
+                  .filter((value) => value && value.length > 0)
+                  .join(' - ');
+
+                return (
+                  <div
+                    key={entryId}
+                    className="p-6 rounded-xl transition-all"
+                    style={{
+                      background: colors.cardBackground,
+                      border: `1px solid ${isEditingEducation ? colors.primaryBlue : colors.border}`,
+                    }}
+                  >
+                    {isEditingEducation ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-institution`}
+                            name={`education-${entryId}-institution`}
+                            label="Institution"
+                            value={edu.institution || ''}
+                            onChange={(value) => updateEducation(entryId, { institution: value })}
+                            disabled={false}
+                            placeholder="e.g., Stanford University"
+                          />
+                          <FormField
+                            id={`education-${entryId}-location`}
+                            name={`education-${entryId}-location`}
+                            label="Location (Optional)"
+                            value={edu.location || ''}
+                            onChange={(value) => updateEducation(entryId, { location: value })}
+                            disabled={false}
+                            placeholder="e.g., Stanford, CA"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-degree`}
+                            name={`education-${entryId}-degree`}
+                            label="Degree"
+                            value={edu.degree || ''}
+                            onChange={(value) => updateEducation(entryId, { degree: value })}
+                            disabled={false}
+                            placeholder="e.g., Bachelor of Science"
+                          />
+                          <FormField
+                            id={`education-${entryId}-field`}
+                            name={`education-${entryId}-field`}
+                            label="Field of Study"
+                            value={edu.field || ''}
+                            onChange={(value) => updateEducation(entryId, { field: value })}
+                            disabled={false}
+                            placeholder="e.g., Computer Science"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-start`}
+                            name={`education-${entryId}-start`}
+                            label="Start Date"
+                            value={edu.startDate || ''}
+                            onChange={(value) => updateEducation(entryId, { startDate: value })}
+                            disabled={false}
+                            placeholder="e.g., 2015-09 or Sep 2015"
+                          />
+                          <FormField
+                            id={`education-${entryId}-end`}
+                            name={`education-${entryId}-end`}
+                            label="End Date"
+                            value={edu.endDate || ''}
+                            onChange={(value) => updateEducation(entryId, { endDate: value })}
+                            disabled={false}
+                            placeholder="e.g., 2019-05 or Present"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-gpa`}
+                            name={`education-${entryId}-gpa`}
+                            label="GPA (Optional)"
+                            value={edu.gpa || ''}
+                            onChange={(value) => updateEducation(entryId, { gpa: value })}
+                            disabled={false}
+                            placeholder="e.g., 3.8"
+                          />
+                          <FormField
+                            id={`education-${entryId}-honors`}
+                            name={`education-${entryId}-honors`}
+                            label="Honors & Awards (Optional)"
+                            value={edu.honors || ''}
+                            onChange={(value) => updateEducation(entryId, { honors: value })}
+                            disabled={false}
+                            placeholder="e.g., Summa Cum Laude"
+                          />
+                        </div>
+
+                        <FormField
+                          id={`education-${entryId}-description`}
+                          name={`education-${entryId}-description`}
+                          label="Description (Optional)"
+                          type="textarea"
+                          value={edu.description || ''}
+                          onChange={(value) => updateEducation(entryId, { description: value })}
+                          disabled={false}
+                          placeholder="Key courses, achievements, activities..."
+                          rows={4}
+                          autoResize={true}
+                          allowBullets={true}
+                        />
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeEducation(entryId);
+                            }}
+                            className="px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                            style={{
+                              background: colors.errorRed,
+                              color: 'white',
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
+                        <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                          Changes will be saved when you click "Save" in the header
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0 space-y-3">
+                          <div>
+                            <h4 className="font-semibold" style={{ color: colors.primaryText }}>
+                              {edu.institution || 'Institution not specified'}
+                            </h4>
+                            <p className="text-sm" style={{ color: colors.secondaryText }}>
+                              {degreeField || 'Degree information not provided'}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-xs" style={{ color: colors.tertiaryText }}>
+                            <span>
+                              {dateRange || 'Dates not specified'}
+                            </span>
+                            {edu.location && (
+                              <span>Location: {edu.location}</span>
+                            )}
+                            {edu.gpa && (
+                              <span>GPA: {edu.gpa}</span>
+                            )}
+                            {edu.honors && (
+                              <span>Honors: {edu.honors}</span>
+                            )}
+                          </div>
+                          {edu.description && (
+                            <p className="text-sm" style={{ color: colors.secondaryText }}>
+                              {edu.description}
+                            </p>
+                          )}
+                        </div>
+                        {isEditing && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingEducationId(entryId)}
+                              className="p-2 rounded-lg transition-colors"
+                              style={{ color: colors.primaryBlue }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeInfoBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              aria-label="Edit education"
+                              title="Edit education"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeEducation(entryId)}
+                              className="p-2 rounded-lg transition-colors"
+                              style={{ color: colors.errorRed }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeErrorBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              aria-label="Remove education"
+                              title="Remove education"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

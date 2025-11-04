@@ -20,7 +20,16 @@ export default function ProfileTab({
   onSave 
 }: ProfileTabProps) {
   const handleInputChange = (field: keyof UserProfile, value: string) => {
-    setProfileForm(prev => ({ ...prev, [field]: value }));
+    setProfileForm(prev => {
+      if (field === 'bio' || field === 'professionalBio') {
+        return {
+          ...prev,
+          bio: value,
+          professionalBio: value,
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleSkillAdd = (skill: string) => {
@@ -112,17 +121,34 @@ export default function ProfileTab({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Login Email (Username)</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
               <input
                 type="email"
                 value={profileForm.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                disabled={!isEditing}
+                onChange={() => {}} // Read-only, cannot be changed
+                disabled={true}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               />
             </div>
+            <p className="text-xs text-gray-500 mt-1">This is your login email and cannot be changed</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Personal Email</label>
+            <div className="relative">
+              <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="email"
+                value={(profileForm as any).personalEmail || ''}
+                onChange={(e) => handleInputChange('personalEmail' as any, e.target.value)}
+                disabled={!isEditing}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                placeholder="Enter your personal/contact email"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Optional: Your personal or contact email (different from login email)</p>
           </div>
 
           <div>
@@ -225,8 +251,8 @@ export default function ProfileTab({
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Bio</h3>
         <textarea
-          value={profileForm.bio || ''}
-          onChange={(e) => handleInputChange('bio', e.target.value)}
+          value={profileForm.professionalBio ?? profileForm.bio ?? ''}
+          onChange={(e) => handleInputChange('professionalBio', e.target.value)}
           disabled={!isEditing}
           rows={4}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 resize-none"

@@ -12,10 +12,11 @@ export interface FolderToRename {
 
 // Empty state props
 export interface EmptyFilesStateProps {
-  searchTerm: string;
-  filterType: FileType;
-  onUpload: () => void;
+  searchTerm?: string;
+  filterType?: FileType;
+  onUpload?: () => void;
   colors: ThemeColors;
+  showDeleted?: boolean;
 }
 
 // Folder modal props (base)

@@ -27,10 +27,11 @@ export const FileActionsMenu: React.FC<FileActionsMenuProps> = ({
   return (
     <div 
       ref={moreMenuRef} 
-      className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-20"
+      className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg z-50"
       style={{
         background: colors.cardBackground,
         border: `1px solid ${colors.border}`,
+        boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`,
       }}
     >
       <button

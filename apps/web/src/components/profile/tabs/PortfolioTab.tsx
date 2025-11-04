@@ -1,9 +1,9 @@
 /* eslint-disable react/forbid-dom-props */
 'use client';
 
-import React from 'react';
-import { Trophy, Link2, Plus, Edit, Trash2, X, Check, BarChart3, ExternalLink, Globe } from 'lucide-react';
-import { UserData } from '../types/profile';
+import React, { useMemo, useCallback } from 'react';
+import { Trophy, Link2, Plus, Edit, Trash2, X, Check, BarChart3 } from 'lucide-react';
+import { UserData, SocialLink } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { usePortfolioLinks } from './portfolio/hooks/usePortfolioLinks';
 // Projects are now managed in ProfessionalTab - removed usePortfolioProjects to avoid duplication
@@ -13,6 +13,165 @@ import LinkCard from './portfolio/components/LinkCard';
 import AddLinkModal from './portfolio/components/AddLinkModal';
 import { usePortfolioStyles } from './portfolio/usePortfolioStyles';
 import styles from './portfolio/portfolio.module.css';
+
+const normalizePlatformName = (platform: string): string => {
+  if (!platform) {
+    return '';
+  }
+  const normalized = platform.trim().toLowerCase();
+
+  if (normalized === 'linkedin' || normalized === 'linked-in' || normalized === 'linked in') {
+    return 'LinkedIn';
+  }
+  if (normalized === 'github' || normalized === 'git-hub' || normalized === 'git hub') {
+    return 'GitHub';
+  }
+  if (normalized === 'portfolio' || normalized === 'portfolio site' || normalized === 'portfolio website') {
+    return 'Portfolio';
+  }
+  if (
+    normalized === 'personal website' ||
+    normalized === 'personal site' ||
+    normalized === 'website' ||
+    normalized === 'site'
+  ) {
+    return 'Personal Website';
+  }
+
+  return platform.trim();
+};
+
+const dedupeLinks = (links: SocialLink[]): SocialLink[] => {
+  const seen = new Set<string>();
+  const result: SocialLink[] = [];
+
+  links.forEach((link) => {
+    if (!link) {
+      return;
+    }
+
+    const url = typeof link.url === 'string' ? link.url.trim() : '';
+    if (!url) {
+      return;
+    }
+
+    const normalizedPlatform = normalizePlatformName(link.platform || '');
+    if (!normalizedPlatform) {
+      return;
+    }
+
+    const key = `${normalizedPlatform.toLowerCase()}|${url.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push({
+        platform: normalizedPlatform,
+        url,
+      });
+    }
+  });
+
+  return result;
+};
+
+const mergeProfileLinks = (userData: UserData): SocialLink[] => {
+  const baseLinks = dedupeLinks(Array.isArray(userData.socialLinks) ? userData.socialLinks : []);
+
+  const ensureLink = (platform: string, url?: string | null) => {
+    const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+    if (!trimmedUrl) {
+      return;
+    }
+
+    const normalizedPlatform = normalizePlatformName(platform);
+    const existingIndex = baseLinks.findIndex(
+      (link) => normalizePlatformName(link.platform) === normalizedPlatform
+    );
+
+    if (existingIndex >= 0) {
+      baseLinks[existingIndex] = { platform: normalizedPlatform, url: trimmedUrl };
+    } else {
+      baseLinks.push({ platform: normalizedPlatform, url: trimmedUrl });
+    }
+  };
+
+  ensureLink('LinkedIn', userData.linkedin);
+  ensureLink('GitHub', userData.github);
+  ensureLink('Personal Website', userData.website);
+  ensureLink('Portfolio', userData.portfolio);
+
+  return dedupeLinks(baseLinks);
+};
+
+const buildLinkUpdates = (links: SocialLink[]): Partial<UserData> => {
+  const deduped = dedupeLinks(links);
+
+  let portfolioUrl = '';
+  let linkedinUrl = '';
+  let githubUrl = '';
+  let websiteUrl = '';
+
+  deduped.forEach((link) => {
+    const normalizedPlatform = normalizePlatformName(link.platform);
+    switch (normalizedPlatform) {
+      case 'Portfolio':
+        if (!portfolioUrl) {
+          portfolioUrl = link.url;
+        }
+        break;
+      case 'LinkedIn':
+        if (!linkedinUrl) {
+          linkedinUrl = link.url;
+        }
+        break;
+      case 'GitHub':
+        if (!githubUrl) {
+          githubUrl = link.url;
+        }
+        break;
+      case 'Personal Website':
+        if (!websiteUrl) {
+          websiteUrl = link.url;
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+  return {
+    socialLinks: deduped,
+    portfolio: portfolioUrl,
+    linkedin: linkedinUrl,
+    github: githubUrl,
+    website: websiteUrl,
+  };
+};
+
+const upsertLinkByPlatform = (links: SocialLink[], platform: string, url: string): SocialLink[] => {
+  const normalizedPlatform = normalizePlatformName(platform);
+  const base = dedupeLinks(links);
+  const trimmedUrl = typeof url === 'string' ? url.trim() : '';
+  const filtered = base.filter(
+    (link) => normalizePlatformName(link.platform) !== normalizedPlatform
+  );
+
+  if (!trimmedUrl) {
+    return filtered;
+  }
+
+  const existingIndex = base.findIndex(
+    (link) => normalizePlatformName(link.platform) === normalizedPlatform
+  );
+
+  const insertionIndex = existingIndex >= 0 ? Math.min(existingIndex, filtered.length) : filtered.length;
+
+  filtered.splice(insertionIndex, 0, {
+    platform: normalizedPlatform,
+    url: trimmedUrl,
+  });
+
+  return dedupeLinks(filtered);
+};
 
 interface PortfolioTabProps {
   userData: UserData;
@@ -30,9 +189,19 @@ export default function PortfolioTab({
   const portfolioStyles = usePortfolioStyles(colors);
 
   // Use custom hooks for state management
+  const mergedLinks = useMemo(
+    () => mergeProfileLinks(userData),
+    [userData.socialLinks, userData.linkedin, userData.github, userData.website, userData.portfolio]
+  );
+
+  const handleLinksChange = useCallback((links: SocialLink[]) => {
+    const updates = buildLinkUpdates(links);
+    onUserDataChange(updates);
+  }, [onUserDataChange]);
+
   const linksHook = usePortfolioLinks({
-    links: userData.socialLinks || [],
-    onLinksChange: (links) => onUserDataChange({ socialLinks: links })
+    links: mergedLinks,
+    onLinksChange: handleLinksChange,
   });
 
   // Note: Projects are now managed in ProfessionalTab to avoid duplication
@@ -48,7 +217,7 @@ export default function PortfolioTab({
     <div className={styles.portfolioContainer} style={portfolioStyles}>
       <div className="space-y-8">
         {/* Statistics Overview */}
-        {(userData.socialLinks && userData.socialLinks.length > 0) || (userData.achievements && userData.achievements.length > 0) || userData.portfolio ? (
+        {(mergedLinks.length > 0) || (userData.achievements && userData.achievements.length > 0) || userData.portfolio ? (
           <div 
             className="backdrop-blur-sm rounded-2xl p-6 shadow-lg"
             style={{
@@ -68,7 +237,7 @@ export default function PortfolioTab({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold mb-1" style={{ color: colors.primaryBlue }}>
-                  {userData.socialLinks?.length || 0}
+                  {mergedLinks.length}
                 </div>
                 <div className="text-xs" style={{ color: colors.secondaryText }}>Social Links</div>
               </div>
@@ -105,9 +274,9 @@ export default function PortfolioTab({
               </button>
             )}
           </div>
-          {userData.socialLinks && userData.socialLinks.length > 0 ? (
+          {mergedLinks.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {userData.socialLinks.map((link, index) => (
+              {mergedLinks.map((link, index) => (
                 <LinkCard
                   key={index}
                   link={link}
@@ -180,9 +349,12 @@ export default function PortfolioTab({
                   </div>
                   {achievementsHook.editingAchievementIndex === index ? (
                     <div className="flex-1 space-y-2">
+                      <label htmlFor={`achievement-type-select-${achievementsHook.editingAchievementIndex}`} className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                        Type
+                      </label>
                       <select
-                        id="achievement-type-select"
-                        name="achievement-type"
+                        id={`achievement-type-select-${achievementsHook.editingAchievementIndex}`}
+                        name={`achievement-type-${achievementsHook.editingAchievementIndex}`}
                         value={achievementsHook.tempAchievement.type}
                         onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
                         className={`w-full ${styles.portfolioSelect}`}
@@ -341,32 +513,6 @@ export default function PortfolioTab({
           )}
         </div>
 
-        {/* Portfolio Website (separate from social links) */}
-        <div className={styles.portfolioCard}>
-          <h3 className={`text-xl font-semibold mb-6 ${styles.portfolioTextPrimary}`}>
-            Portfolio Website
-          </h3>
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
-                Portfolio URL
-              </label>
-              <input
-                id="portfolio-url"
-                name="portfolio-url"
-                type="url"
-                value={userData.portfolio}
-                onChange={(e) => onUserDataChange({ portfolio: e.target.value })}
-                disabled={!isEditing}
-                className={`w-full px-4 py-3 rounded-xl ${styles.portfolioInput}`}
-                placeholder="https://yourportfolio.com"
-              />
-              <p className={`text-xs mt-2 ${styles.portfolioTextSecondary}`}>
-                Note: LinkedIn, GitHub, and other social links can be added in the "Professional Links" section above.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Add Link Modal */}
@@ -417,12 +563,12 @@ export default function PortfolioTab({
             </div>
             <div className="space-y-4">
               <div>
-                <label className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
+                <label htmlFor="achievement-type-select-modal-add" className={`block text-sm font-medium mb-2 ${styles.portfolioTextPrimary}`}>
                   Type
                 </label>
                 <select
-                  id="achievement-type-select-edit"
-                  name="achievement-type-edit"
+                  id="achievement-type-select-modal-add"
+                  name="achievement-type-modal-add"
                   value={achievementsHook.tempAchievement.type}
                   onChange={(e) => achievementsHook.setTempAchievement({ ...achievementsHook.tempAchievement, type: e.target.value })}
                         className={`w-full ${styles.portfolioSelect}`}

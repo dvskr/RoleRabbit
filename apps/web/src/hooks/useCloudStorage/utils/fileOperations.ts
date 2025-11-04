@@ -13,7 +13,6 @@ export const createDefaultFile = (fileData: Partial<ResumeFile>): ResumeFile => 
     size: fileData.size || DEFAULT_FILE_SIZE,
     lastModified: new Date().toISOString().split('T')[0],
     isPublic: fileData.isPublic || false,
-    tags: fileData.tags || [],
     version: 1,
     owner: DEFAULT_USER_ID,
     sharedWith: [],

@@ -1,16 +1,18 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Camera, CheckCircle, Loader2 } from 'lucide-react';
+import { Camera, CheckCircle, Loader2, Edit2, Trash2 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import apiService from '@/services/apiService';
 import { logger } from '@/utils/logger';
+import ProfilePictureEditor from './ProfilePictureEditor';
+import { compressImage } from '@/utils/imageUtils';
 
 interface ProfilePictureProps {
   firstName?: string;
   lastName?: string;
   profilePicture?: string | null;
-  onChangePhoto: (newPictureUrl: string) => void;
+  onChangePhoto: (newPictureUrl: string | null) => void;
 }
 
 export default function ProfilePicture({
@@ -25,6 +27,8 @@ export default function ProfilePicture({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -37,29 +41,46 @@ export default function ProfilePicture({
       return;
     }
 
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (10MB max before compression)
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      setUploadError('File too large. Please select an image smaller than 5MB.');
+      setUploadError('File too large. Please select an image smaller than 10MB.');
       return;
     }
 
-    // Show preview
+    // Show image in editor for cropping
     const reader = new FileReader();
     reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
+      setSelectedImage(reader.result as string);
+      setShowEditor(true);
+      setPreviewUrl(null);
     };
     reader.readAsDataURL(file);
 
-    // Upload to server
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveCropped = async (croppedBlob: Blob) => {
     setIsUploading(true);
     setUploadError(null);
     
     try {
-      const response = await apiService.uploadProfilePicture(file);
+      // Compress the cropped image
+      const compressedBlob = await compressImage(
+        new File([croppedBlob], 'profile.jpg', { type: 'image/jpeg' }),
+        800, // max width
+        0.9 // quality
+      );
+
+      // Upload to server
+      const response = await apiService.uploadProfilePicture(compressedBlob);
       if (response.success && response.profilePicture) {
         onChangePhoto(response.profilePicture);
-        setPreviewUrl(null); // Clear preview since we have the actual URL now
+        setShowEditor(false);
+        setSelectedImage(null);
         logger.debug('Profile picture uploaded successfully');
       } else {
         throw new Error('Upload failed');
@@ -67,13 +88,8 @@ export default function ProfilePicture({
     } catch (error: any) {
       logger.error('Failed to upload profile picture:', error);
       setUploadError(error.message || 'Failed to upload profile picture. Please try again.');
-      setPreviewUrl(null); // Clear preview on error
     } finally {
       setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -81,123 +97,203 @@ export default function ProfilePicture({
     fileInputRef.current?.click();
   };
 
+  const handleEditExisting = () => {
+    if (profilePicture) {
+      setSelectedImage(profilePicture);
+      setShowEditor(true);
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    if (!profilePicture) return;
+    
+    // Confirm deletion
+    const confirmed = window.confirm('Are you sure you want to remove your profile picture?');
+    if (!confirmed) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+    
+    try {
+      await apiService.deleteProfilePicture();
+      onChangePhoto(null);
+      setPreviewUrl(null);
+      logger.debug('Profile picture removed successfully');
+    } catch (error: any) {
+      logger.error('Failed to remove profile picture:', error);
+      setUploadError(error.message || 'Failed to remove profile picture. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <div 
-      className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-      style={{
-        background: colors.cardBackground,
-        border: `1px solid ${colors.border}`,
-      }}
-    >
-      <div className="flex items-center gap-8">
-        <div className="relative">
-          {previewUrl || profilePicture ? (
-            <div className="w-32 h-32 rounded-2xl overflow-hidden shadow-xl relative">
-              <img 
-                src={previewUrl || profilePicture || ''} 
-                alt={`${firstName || 'User'} ${lastName || ''}`} 
-                className="w-full h-full object-cover" 
+    <>
+      {showEditor && selectedImage && (
+        <ProfilePictureEditor
+          imageSrc={selectedImage}
+          onSave={handleSaveCropped}
+          onCancel={() => {
+            setShowEditor(false);
+            setSelectedImage(null);
+          }}
+          onRemove={async () => {
+            await handleRemovePicture();
+            setShowEditor(false);
+            setSelectedImage(null);
+          }}
+          isExistingPicture={!!profilePicture}
+        />
+      )}
+      
+      <div 
+        className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+        style={{
+          background: colors.cardBackground,
+          border: `1px solid ${colors.border}`,
+        }}
+      >
+        <div className="flex items-center gap-8">
+          <div className="relative group">
+            {previewUrl || profilePicture ? (
+              <div className="w-32 h-32 rounded-full overflow-hidden shadow-xl relative">
+                <img 
+                  src={previewUrl || profilePicture || ''} 
+                  alt={`${firstName || 'User'} ${lastName || ''}`} 
+                  className="w-full h-full object-cover" 
+                />
+                {isUploading && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                    <Loader2 className="animate-spin text-white" size={24} />
+                  </div>
+                )}
+                {!isUploading && (
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
+                    <button
+                      onClick={handleEditExisting}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full"
+                      style={{
+                        background: colors.primaryBlue,
+                        color: 'white',
+                      }}
+                      title="Edit photo"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div 
+                className="w-32 h-32 rounded-full flex items-center justify-center text-4xl font-bold shadow-xl"
+                style={{
+                  background: `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
+                  color: 'white',
+                }}
+              >
+                {(firstName || 'U')[0]}{(lastName || 'S')[0]}
+              </div>
+            )}
+            {!isUploading && (previewUrl || profilePicture) && (
+              <div 
+                className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center z-10"
+                style={{
+                  background: colors.successGreen,
+                  border: `4px solid ${colors.cardBackground}`,
+                }}
+              >
+                <CheckCircle size={16} className="text-white" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <h3 
+              className="text-xl font-semibold mb-2"
+              style={{ color: colors.primaryText }}
+            >
+              Profile Picture
+            </h3>
+            <p 
+              className="mb-4"
+              style={{ color: colors.secondaryText }}
+            >
+              Upload a professional headshot to make your profile stand out. Crop and edit your photo for the perfect look.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                id="profile-picture-upload"
+                name="profile-picture-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/jpg,image/webp"
+                onChange={handleFileChange}
+                className="hidden"
+                aria-label="Upload profile picture"
+                title="Upload profile picture"
               />
-              {isUploading && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                  <Loader2 className="animate-spin text-white" size={24} />
-                </div>
+              <button 
+                onClick={handleButtonClick}
+                disabled={isUploading}
+                className="px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                style={{
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isUploading) {
+                    e.currentTarget.style.background = colors.primaryBlueHover;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = colors.primaryBlue;
+                }}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Camera size={18} />
+                    {profilePicture ? 'Change Photo' : 'Upload Photo'}
+                  </>
+                )}
+              </button>
+              {profilePicture && !isUploading && (
+                <button
+                  onClick={handleEditExisting}
+                  className="px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 border-2 hover:shadow-lg"
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.primaryText,
+                    background: colors.cardBackground,
+                  }}
+                >
+                  <Edit2 size={18} />
+                  Edit
+                </button>
               )}
             </div>
-          ) : (
-            <div 
-              className="w-32 h-32 rounded-2xl flex items-center justify-center text-4xl font-bold shadow-xl"
-              style={{
-                background: `linear-gradient(135deg, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-                color: 'white',
-              }}
-            >
-              {(firstName || 'U')[0]}{(lastName || 'S')[0]}
-            </div>
-          )}
-          {!isUploading && (previewUrl || profilePicture) && (
-            <div 
-              className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center"
-              style={{
-                background: colors.successGreen,
-                border: `4px solid ${colors.cardBackground}`,
-              }}
-            >
-              <CheckCircle size={16} className="text-white" />
-            </div>
-          )}
-        </div>
-        <div className="flex-1">
-          <h3 
-            className="text-xl font-semibold mb-2"
-            style={{ color: colors.primaryText }}
-          >
-            Profile Picture
-          </h3>
-          <p 
-            className="mb-4"
-            style={{ color: colors.secondaryText }}
-          >
-            Upload a professional photo to make your profile stand out
-          </p>
-          <input
-            ref={fileInputRef}
-            id="profile-picture-upload"
-            name="profile-picture-upload"
-            type="file"
-            accept="image/jpeg,image/png,image/jpg"
-            onChange={handleFileChange}
-            className="hidden"
-            aria-label="Upload profile picture"
-            title="Upload profile picture"
-          />
-          <button 
-            onClick={handleButtonClick}
-            disabled={isUploading}
-            className="px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            style={{
-              background: colors.primaryBlue,
-              color: 'white',
-            }}
-            onMouseEnter={(e) => {
-              if (!isUploading) {
-                e.currentTarget.style.background = colors.primaryBlueHover;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = colors.primaryBlue;
-            }}
-          >
-            {isUploading ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Camera size={18} />
-                Change Photo
-              </>
+            {uploadError && (
+              <p 
+                className="text-sm mt-2"
+                style={{ color: '#ef4444' }}
+              >
+                {uploadError}
+              </p>
             )}
-          </button>
-          {uploadError && (
-            <p 
-              className="text-sm mt-2"
-              style={{ color: '#ef4444' }}
-            >
-              {uploadError}
-            </p>
-          )}
-          {!uploadError && (
-            <p 
-              className="text-sm mt-2"
-              style={{ color: colors.tertiaryText }}
-            >
-              JPG, PNG, GIF, WebP up to 5MB • Recommended: 400x400px
-            </p>
-          )}
+            {!uploadError && (
+              <p 
+                className="text-sm mt-2"
+                style={{ color: colors.tertiaryText }}
+              >
+                JPG, PNG, WebP up to 10MB • Recommended: 800x800px headshot
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

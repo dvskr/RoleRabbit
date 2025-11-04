@@ -1,0 +1,70 @@
+{
+  "job1": {
+    "title": "Senior Full-Stack Software Engineer",
+    "company": "Tech Innovations Inc.",
+    "location": "San Francisco, CA / Remote",
+    "type": "Full-time",
+    "description": "We are looking for a Senior Full-Stack Software Engineer to join our growing team. You will be responsible for building scalable web applications using modern technologies.\n\n**Requirements:**\n- 5+ years of experience in software development\n- Strong proficiency in JavaScript, TypeScript, React, and Node.js\n- Experience with cloud platforms (AWS, Azure, or GCP)\n- Knowledge of database design and optimization (PostgreSQL, MongoDB)\n- Experience with microservices architecture\n- Strong problem-solving skills and attention to detail\n\n**Nice to have:**\n- Experience with Docker and Kubernetes\n- Knowledge of CI/CD pipelines\n- Previous startup experience\n- Contributions to open-source projects",
+    "requiredSkills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "AWS",
+      "PostgreSQL",
+      "Microservices"
+    ],
+    "preferredSkills": [
+      "Docker",
+      "Kubernetes",
+      "CI/CD",
+      "Open Source"
+    ],
+    "salary": "$140,000 - $180,000",
+    "postedDate": "2024-01-15"
+  },
+  "job2": {
+    "title": "Machine Learning Engineer",
+    "company": "AI Solutions Corp",
+    "location": "Remote",
+    "type": "Full-time",
+    "description": "Join our AI team to build cutting-edge machine learning models and deploy them to production. You'll work on exciting projects involving NLP, computer vision, and recommendation systems.\n\n**Requirements:**\n- Master's degree in Computer Science, Statistics, or related field\n- 3+ years of experience in ML engineering\n- Proficiency in Python, TensorFlow, and PyTorch\n- Experience with MLOps and model deployment\n- Strong understanding of deep learning architectures\n\n**Nice to have:**\n- Published research papers\n- Experience with distributed training\n- Knowledge of AWS SageMaker or Google Cloud ML",
+    "requiredSkills": [
+      "Python",
+      "TensorFlow",
+      "PyTorch",
+      "Machine Learning",
+      "Deep Learning",
+      "MLOps"
+    ],
+    "preferredSkills": [
+      "Research",
+      "AWS SageMaker",
+      "Distributed Training"
+    ],
+    "salary": "$150,000 - $200,000",
+    "postedDate": "2024-01-20"
+  },
+  "job3": {
+    "title": "Frontend Developer (React)",
+    "company": "Creative Agency",
+    "location": "New York, NY",
+    "type": "Full-time",
+    "description": "We're seeking a talented Frontend Developer to create beautiful, responsive web experiences. You'll work closely with designers and backend engineers to bring designs to life.\n\n**Requirements:**\n- 3+ years of React development experience\n- Strong CSS and design skills\n- Experience with modern frontend tooling (Webpack, Vite)\n- Knowledge of responsive design principles\n- Portfolio demonstrating clean, efficient code\n\n**Nice to have:**\n- Experience with Next.js or Remix\n- Animation skills (Framer Motion, GSAP)\n- Design background",
+    "requiredSkills": [
+      "React",
+      "JavaScript",
+      "CSS",
+      "HTML",
+      "Responsive Design"
+    ],
+    "preferredSkills": [
+      "Next.js",
+      "Animation",
+      "Design"
+    ],
+    "salary": "$100,000 - $130,000",
+    "postedDate": "2024-01-18"
+  }
+}
+

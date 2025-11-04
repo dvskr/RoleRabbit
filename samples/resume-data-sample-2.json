@@ -1,0 +1,89 @@
+{
+  "personalInfo": {
+    "firstName": "Michael",
+    "lastName": "Chen",
+    "email": "michael.chen@email.com",
+    "phone": "(555) 987-6543",
+    "location": "New York, NY",
+    "linkedIn": "linkedin.com/in/michaelchen",
+    "summary": "Data scientist and machine learning engineer with expertise in building predictive models and data pipelines. Strong background in Python, TensorFlow, and cloud ML platforms."
+  },
+  "experience": [
+    {
+      "company": "DataCorp Analytics",
+      "position": "Machine Learning Engineer",
+      "location": "New York, NY",
+      "startDate": "2020-01",
+      "endDate": "present",
+      "description": [
+        "Developed ML models improving customer churn prediction accuracy by 25%",
+        "Built automated data pipelines processing 100GB+ daily using Apache Spark",
+        "Deployed models to production using AWS SageMaker and MLOps best practices",
+        "Published research paper on deep learning optimization techniques"
+      ]
+    },
+    {
+      "company": "AI Research Lab",
+      "position": "Research Assistant",
+      "location": "Cambridge, MA",
+      "startDate": "2018-06",
+      "endDate": "2019-12",
+      "description": [
+        "Researched and implemented novel neural network architectures",
+        "Contributed to open-source ML library with 10K+ GitHub stars",
+        "Presented findings at NeurIPS 2019 conference"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "MIT",
+      "degree": "Master of Science",
+      "field": "Computer Science - Machine Learning",
+      "location": "Cambridge, MA",
+      "startDate": "2018-09",
+      "endDate": "2020-05",
+      "gpa": "3.9"
+    },
+    {
+      "institution": "UC Berkeley",
+      "degree": "Bachelor of Science",
+      "field": "Statistics",
+      "location": "Berkeley, CA",
+      "startDate": "2014-09",
+      "endDate": "2018-05",
+      "gpa": "3.7"
+    }
+  ],
+  "skills": [
+    {
+      "category": "Programming Languages",
+      "items": ["Python", "R", "SQL", "Scala", "Java"]
+    },
+    {
+      "category": "ML/AI Frameworks",
+      "items": ["TensorFlow", "PyTorch", "Scikit-learn", "Keras", "XGBoost"]
+    },
+    {
+      "category": "Tools & Platforms",
+      "items": ["AWS SageMaker", "Google Cloud ML", "Apache Spark", "Docker", "Kubernetes"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Recommendation System",
+      "description": "Deep learning-based recommendation engine with 95% accuracy",
+      "technologies": ["Python", "TensorFlow", "Apache Spark"],
+      "url": "github.com/michaelchen/recommender"
+    }
+  ],
+  "publications": [
+    {
+      "title": "Optimizing Deep Neural Networks for Edge Devices",
+      "venue": "NeurIPS 2019",
+      "authors": ["M. Chen", "et al."],
+      "url": "arxiv.org/abs/2019.12345"
+    }
+  ]
+}
+

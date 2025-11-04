@@ -21,11 +21,13 @@ interface ChatInterfaceProps {
 export default function ChatInterface({ onComplete, profileData, initialData, onSyncToProfile }: ChatInterfaceProps) {
   // Pre-populate from profile data and initial setup data
   const getInitialData = () => {
+    const professionalBio = profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '';
     const fromProfile = profileData ? {
       name: `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim(),
       role: profileData.currentRole || profileData.currentCompany ? 
         `${profileData.currentRole || ''} at ${profileData.currentCompany || ''}`.trim() : '',
-      bio: profileData.bio || profileData.professionalSummary?.overview || '',
+      bio: professionalBio,
+      professionalBio,
       email: profileData.email || '',
       links: [
         ...(profileData.github ? [profileData.github] : []),
@@ -37,7 +39,13 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
       skills: profileData.skills?.map((s: any) => s.name) || []
     } : {};
 
-    return { ...fromProfile, ...initialData };
+    const data = { ...fromProfile, ...initialData };
+    if (data.professionalBio === undefined && data.bio !== undefined) {
+      data.professionalBio = data.bio;
+    } else if (data.bio === undefined && data.professionalBio !== undefined) {
+      data.bio = data.professionalBio;
+    }
+    return data;
   };
 
   // Store resume data for LLM context
@@ -77,6 +85,14 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
   const [showPrompts, setShowPrompts] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const assignBio = (target: any, value: string) => {
+    if (value === undefined) {
+      return;
+    }
+    target.bio = value;
+    target.professionalBio = value;
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -225,13 +241,13 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
       // Check if user is answering questions
       if (!updated.name && userMessage.length < 50) {
         updated.name = userMessage;
-      } else if (!updated.role && !updated.bio && userMessage.length > 20 && userMessage.length < 200) {
+      } else if (!updated.role && !(updated.professionalBio || updated.bio) && userMessage.length > 20 && userMessage.length < 200) {
         if (userMessage.includes('http') || userMessage.includes('@')) {
           // Contains contact info, might be sharing links
         } else if (userMessage.toLowerCase().includes('engineer') || userMessage.toLowerCase().includes('developer')) {
           updated.role = userMessage;
-        } else if (!updated.bio) {
-          updated.bio = userMessage;
+        } else if (!(updated.professionalBio || updated.bio)) {
+          assignBio(updated, userMessage);
         }
       }
       
@@ -246,23 +262,28 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
     const missingInfo: string[] = [];
     if (!updated.name) missingInfo.push('name');
     if (!updated.role) missingInfo.push('role/profession');
-    if (!updated.bio) missingInfo.push('bio/description');
+    if (!(updated.professionalBio || updated.bio)) missingInfo.push('bio/description');
     if (!updated.email) missingInfo.push('email');
     if (!updated.links || updated.links.length === 0) missingInfo.push('social links');
 
     let assistantResponse = '';
 
-    if (isCompleting && (updated.name || updated.role || updated.bio)) {
+    if (isCompleting && (updated.name || updated.role || updated.professionalBio || updated.bio)) {
       // User wants to complete with what they have
+      const bioText = updated.professionalBio || updated.bio || 'A showcase of my work';
       const completeData = {
         ...updated,
         skills: updated.skills || ['JavaScript', 'React', 'Node.js', 'TypeScript'],
         projects: updated.projects || [
-          { title: 'Portfolio Project', description: updated.bio || 'A showcase of my work', technologies: ['React', 'Node.js'] }
+          { title: 'Portfolio Project', description: bioText, technologies: ['React', 'Node.js'] }
         ],
         github: updated.links?.find((link: string) => link.includes('github')),
         linkedin: updated.links?.find((link: string) => link.includes('linkedin'))
       };
+      completeData.professionalBio = updated.professionalBio || updated.bio || '';
+      if (!completeData.bio && completeData.professionalBio) {
+        completeData.bio = completeData.professionalBio;
+      }
       
       simulateTyping('', () => {
         addMessage('assistant', 'Perfect! I have gathered your information. Generating your amazing portfolio website...', 'text');
@@ -281,7 +302,7 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
     // Advanced natural conversation responses based on collected data
     const hasName = !!updated.name;
     const hasRole = !!updated.role;
-    const hasBio = !!updated.bio;
+    const hasBio = !!(updated.professionalBio || updated.bio);
     const hasProjects = !!updated.projects && updated.projects.length > 0;
     const hasSkills = !!updated.skills && updated.skills.length > 0;
     const hasExperience = !!updated.experience && updated.experience.length > 0;

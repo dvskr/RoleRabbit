@@ -1,0 +1,83 @@
+{
+  "personalInfo": {
+    "firstName": "Sarah",
+    "lastName": "Johnson",
+    "email": "sarah.johnson@email.com",
+    "phone": "(555) 123-4567",
+    "location": "San Francisco, CA",
+    "linkedIn": "linkedin.com/in/sarahjohnson",
+    "website": "sarahjohnson.dev",
+    "summary": "Experienced full-stack developer with 5+ years building scalable web applications. Specialized in React, Node.js, and cloud architectures. Passionate about creating user-friendly interfaces and optimizing performance."
+  },
+  "experience": [
+    {
+      "company": "Tech Innovations Inc.",
+      "position": "Senior Software Engineer",
+      "location": "San Francisco, CA",
+      "startDate": "2021-03",
+      "endDate": "present",
+      "description": [
+        "Led development of microservices architecture serving 1M+ daily active users",
+        "Reduced API response time by 40% through database optimization and caching strategies",
+        "Mentored team of 5 junior developers and conducted code reviews",
+        "Implemented CI/CD pipelines reducing deployment time from 2 hours to 15 minutes"
+      ]
+    },
+    {
+      "company": "Startup Labs",
+      "position": "Full-Stack Developer",
+      "location": "Remote",
+      "startDate": "2019-06",
+      "endDate": "2021-02",
+      "description": [
+        "Built responsive web application using React and Node.js from ground up",
+        "Integrated third-party APIs including Stripe, SendGrid, and AWS S3",
+        "Collaborated with product team to design and implement new features",
+        "Maintained 95%+ test coverage across codebase"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Stanford University",
+      "degree": "Bachelor of Science",
+      "field": "Computer Science",
+      "location": "Stanford, CA",
+      "startDate": "2015-09",
+      "endDate": "2019-05",
+      "gpa": "3.8",
+      "honors": "Summa Cum Laude"
+    }
+  ],
+  "skills": [
+    {
+      "category": "Programming Languages",
+      "items": ["JavaScript", "TypeScript", "Python", "Java", "SQL"]
+    },
+    {
+      "category": "Frameworks & Libraries",
+      "items": ["React", "Next.js", "Node.js", "Express", "FastAPI"]
+    },
+    {
+      "category": "Tools & Technologies",
+      "items": ["AWS", "Docker", "Kubernetes", "Git", "PostgreSQL", "MongoDB"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "E-Commerce Platform",
+      "description": "Scalable e-commerce platform with payment integration",
+      "technologies": ["React", "Node.js", "PostgreSQL", "Stripe"],
+      "url": "github.com/sarahjohnson/ecommerce"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "AWS Certified Solutions Architect",
+      "issuer": "Amazon Web Services",
+      "date": "2022-08",
+      "expiryDate": "2025-08"
+    }
+  ]
+}
+

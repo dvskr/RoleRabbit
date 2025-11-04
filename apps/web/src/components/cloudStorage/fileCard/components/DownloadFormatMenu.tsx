@@ -18,10 +18,11 @@ export const DownloadFormatMenu: React.FC<DownloadFormatMenuProps> = ({
 }) => {
   return (
     <div 
-      className="absolute right-0 mt-2 w-32 rounded-lg shadow-lg z-10"
+      className="absolute right-0 mt-2 w-32 rounded-lg shadow-lg z-50"
       style={{
         background: colors.cardBackground,
         border: `1px solid ${colors.border}`,
+        boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`,
       }}
     >
       <button

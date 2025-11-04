@@ -22,6 +22,7 @@ export const PLATFORM_OPTIONS = [
   'LinkedIn',
   'GitHub',
   'Twitter',
+  'Portfolio',
   'Medium',
   'Personal Website'
 ] as const;

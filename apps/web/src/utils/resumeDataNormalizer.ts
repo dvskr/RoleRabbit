@@ -173,6 +173,8 @@ export class ResumeDataNormalizer {
    * Prepare parsed data for UI fields
    */
   static prepareForUI(parsedData: any): any {
+    const normalizedBio = this.normalizeText(parsedData.personal?.summary || parsedData.bio, 5000);
+
     return {
       personal: {
         firstName: this.normalizeText(parsedData.personal?.firstName, 100),
@@ -181,7 +183,8 @@ export class ResumeDataNormalizer {
         phone: this.normalizePhone(parsedData.personal?.phone),
         location: this.normalizeText(parsedData.personal?.location, 200)
       },
-      bio: this.normalizeText(parsedData.personal?.summary || parsedData.bio, 5000),
+      bio: normalizedBio,
+      professionalBio: normalizedBio,
       workExperiences: (parsedData.workExperience || []).map((exp: any) => ({
         ...exp,
         company: this.normalizeText(exp.company, 200),
@@ -194,9 +197,14 @@ export class ResumeDataNormalizer {
       education: (parsedData.education || []).map((edu: any) => ({
         ...edu,
         institution: this.normalizeText(edu.institution, 300),
-        degree: this.normalizeText(edu.degree, 200),
-        field: this.normalizeText(edu.field, 200),
-        graduationDate: this.normalizeDate(edu.graduationDate)
+        degree: this.normalizeText(edu.degree ?? edu.program, 200),
+        field: this.normalizeText(edu.field ?? edu.major, 200),
+        startDate: this.normalizeDate(edu.startDate ?? edu.start),
+        endDate: this.normalizeDate(edu.endDate ?? edu.graduationDate ?? edu.completionDate),
+        gpa: this.normalizeText(edu.gpa, 20),
+        honors: this.normalizeText(edu.honors ?? edu.awards, 200),
+        location: this.normalizeText(edu.location, 200),
+        description: this.normalizeText(edu.description, 2000)
       })),
       skills: this.normalizeSkills(parsedData.skills),
       certifications: (parsedData.certifications || []).map((cert: any) => ({

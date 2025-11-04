@@ -16,7 +16,6 @@ const buildFile = (overrides: Partial<any> = {}) => ({
   sizeBytes: 1024,
   lastModified: '2025-01-01',
   isPublic: false,
-  tags: [],
   version: 1,
   owner: 'user@example.com',
   sharedWith: [],

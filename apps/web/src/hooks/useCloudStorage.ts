@@ -82,7 +82,6 @@ export const useCloudStorage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FileType>('all');
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [quickFilters, setQuickFilters] = useState<{
     starred?: boolean;
@@ -176,7 +175,8 @@ export const useCloudStorage = () => {
 
   // Computed values
   const filteredFiles = useMemo(() => {
-    return filterAndSortFiles(files, {
+    console.log('🔍 useCloudStorage - filtering files:', {
+      totalFiles: files.length,
       searchTerm,
       filterType,
       sortBy,
@@ -184,6 +184,35 @@ export const useCloudStorage = () => {
       showDeleted,
       quickFilters
     });
+    
+    // Log file details for debugging
+    if (files.length > 0) {
+      console.log('📁 Files in array:', files.map(f => ({
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        folderId: f.folderId,
+        deletedAt: f.deletedAt,
+        isStarred: f.isStarred,
+        isArchived: f.isArchived
+      })));
+    }
+    
+    const result = filterAndSortFiles(files, {
+      searchTerm,
+      filterType,
+      sortBy,
+      selectedFolderId,
+      showDeleted,
+      quickFilters
+    });
+    
+    console.log('🔍 useCloudStorage - filtered result:', {
+      filteredCount: result.length,
+      totalFiles: files.length
+    });
+    
+    return result;
   }, [files, searchTerm, filterType, sortBy, selectedFolderId, showDeleted, quickFilters]);
 
   useEffect(() => {
@@ -212,7 +241,6 @@ export const useCloudStorage = () => {
     searchTerm,
     filterType,
     sortBy,
-    viewMode,
     showUploadModal,
     showDeleted,
     storageInfo,
@@ -233,7 +261,6 @@ export const useCloudStorage = () => {
     setSearchTerm,
     setFilterType,
     setSortBy,
-    setViewMode,
     setShowUploadModal,
     setShowDeleted,
     setSelectedFolderId,

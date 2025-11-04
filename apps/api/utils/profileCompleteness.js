@@ -28,7 +28,6 @@ function calculateProfileCompleteness(user) {
   const skills = parseJsonField(user.skills);
   const education = parseJsonField(user.education);
   const workExperiences = parseJsonField(user.workExperiences);
-  const careerGoals = parseJsonField(user.careerGoals);
   const targetRoles = parseJsonField(user.targetRoles);
   const targetCompanies = parseJsonField(user.targetCompanies);
   
@@ -38,7 +37,12 @@ function calculateProfileCompleteness(user) {
   if (user.email) basicScore += 3;
   if (user.phone) basicScore += 2;
   if (user.location) basicScore += 2;
-  if (user.bio) basicScore += 5;
+  const hasProfessionalBio = Boolean(
+    (user.profile && (user.profile.professionalBio || user.profile.bio)) ||
+    user.professionalBio ||
+    user.bio
+  );
+  if (hasProfessionalBio) basicScore += 5;
   // Note: profilePicture is now in user_profiles table, check user.profile?.profilePicture if needed
   if (user.profilePicture || (user.profile && user.profile.profilePicture)) basicScore += 5;
   breakdown.basicInfo = {
@@ -103,16 +107,14 @@ function calculateProfileCompleteness(user) {
   };
   score += experienceScore;
   
-  // Career Goals (10%)
+  // Career Preferences (10%)
   let careerScore = 0;
-  if (careerGoals.length > 0) careerScore += 5;
-  if (targetRoles.length > 0) careerScore += 3;
-  if (targetCompanies.length > 0) careerScore += 2;
-  breakdown.careerGoals = {
+  if (targetRoles.length > 0) careerScore += 5;
+  if (targetCompanies.length > 0) careerScore += 5;
+  breakdown.careerPreferences = {
     score: careerScore,
     maxScore: 10,
     percentage: Math.round((careerScore / 10) * 100),
-    careerGoals: careerGoals.length,
     targetRoles: targetRoles.length,
     targetCompanies: targetCompanies.length
   };

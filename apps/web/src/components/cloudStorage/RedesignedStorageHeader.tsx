@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, Cloud } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { StorageInfo } from '../../types/cloudStorage';
 
@@ -29,9 +29,19 @@ export const RedesignedStorageHeader: React.FC<RedesignedStorageHeaderProps> = (
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: palette.primaryText }}>
-            Storage
-          </h1>
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{
+                background: palette.badgeInfoBg ?? palette.inputBackground,
+              }}
+            >
+              <Cloud size={18} style={{ color: palette.primaryBlue }} />
+            </div>
+            <h1 className="text-2xl font-bold" style={{ color: palette.primaryText }}>
+              My Files
+            </h1>
+          </div>
           <p className="text-sm" style={{ color: palette.secondaryText }}>
             Manage your files and documents
           </p>

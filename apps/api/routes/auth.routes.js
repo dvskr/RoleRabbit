@@ -76,35 +76,35 @@ async function authRoutes(fastify, options) {
         // Don't fail registration if email fails
       }
       
-      // Generate JWT access token (short-lived: 15 minutes)
+      // Generate JWT access token (persists until logout: 1 year)
       const accessToken = fastify.jwt.sign({ 
         userId: user.id, 
         email: user.email 
-      }, { expiresIn: '15m' });
+      }, { expiresIn: '365d' });
       
-      // Create refresh token (long-lived: 7 days)
-      const refreshToken = await createRefreshToken(user.id, 7);
+      // Create refresh token (persists until logout: 10 years)
+      const refreshToken = await createRefreshToken(user.id, 3650);
       
-      // Create session
+      // Create session (persists until logout: 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 30);
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650);
       
-      // Set access token in httpOnly cookie
+      // Set access token in httpOnly cookie (1 year - browser cookie limit)
       reply.setCookie('auth_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (browser cookie limit)
         path: '/'
       });
       
-      // Set refresh token in httpOnly cookie
+      // Set refresh token in httpOnly cookie (1 year - browser cookie limit)
       reply.setCookie('refresh_token', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (browser cookie limit)
         path: '/'
       });
       
@@ -168,14 +168,14 @@ async function authRoutes(fastify, options) {
         });
       }
       
-      // Generate JWT access token (short-lived: 15 minutes)
+      // Generate JWT access token (persists until logout: 1 year)
       const accessToken = fastify.jwt.sign({ 
         userId: user.id, 
         email: user.email 
-      }, { expiresIn: '15m' });
+      }, { expiresIn: '365d' });
       
-      // Create refresh token (long-lived: 7 days)
-      const refreshToken = await createRefreshToken(user.id, 7);
+      // Create refresh token (persists until logout: 10 years)
+      const refreshToken = await createRefreshToken(user.id, 3650);
       
       // Create session (persists until logout - 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
@@ -207,12 +207,12 @@ async function authRoutes(fastify, options) {
         token: String(accessToken)
       };
       
-      // Set cookies before sending response
+      // Set cookies before sending response (persists until logout: 1 year cookie expiration)
       reply.setCookie('auth_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (browser cookie limit)
         path: '/'
       });
       
@@ -220,7 +220,7 @@ async function authRoutes(fastify, options) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (browser cookie limit)
         path: '/'
       });
       
@@ -271,18 +271,18 @@ async function authRoutes(fastify, options) {
         });
       }
       
-      // Generate new access token
+      // Generate new access token (persists until logout: 1 year)
       const accessToken = fastify.jwt.sign({ 
         userId: result.user.id, 
         email: result.user.email 
-      }, { expiresIn: '15m' });
+      }, { expiresIn: '365d' });
       
-      // Set new access token in httpOnly cookie
+      // Set new access token in httpOnly cookie (persists until logout: 1 year)
       reply.setCookie('auth_token', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year (browser cookie limit)
         path: '/',
         // Don't set domain - let browser handle it (works for localhost)
       });
