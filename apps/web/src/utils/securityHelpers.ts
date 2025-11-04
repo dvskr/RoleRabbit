@@ -223,3 +223,111 @@ export const revokeOtherSessions = async (): Promise<ApiResult<{}>> => {
   }
 };
 
+/**
+ * Send OTP to current email
+ */
+export const sendOTP = async (purpose: 'email_update' | 'password_reset'): Promise<ApiResult<{}>> => {
+  try {
+    const response: Response = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purpose })
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to send OTP:', error);
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to send OTP:', error);
+    return { success: false, error: 'Unable to send OTP. Please try again.' };
+  }
+};
+
+/**
+ * Send OTP to new email address
+ */
+export const sendOTPToNewEmail = async (newEmail: string): Promise<ApiResult<{}>> => {
+  try {
+    const response: Response = await fetch('/api/auth/send-otp-to-new-email', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newEmail })
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to send OTP to new email:', error);
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to send OTP to new email:', error);
+    return { success: false, error: 'Unable to send verification code. Please try again.' };
+  }
+};
+
+/**
+ * Verify OTP and update email (supports two-step verification)
+ */
+export const verifyOTPAndUpdateEmail = async (
+  otp: string, 
+  newEmail: string, 
+  step?: 'verify_current' | 'verify_new'
+): Promise<ApiResult<{}>> => {
+  try {
+    const response: Response = await fetch('/api/auth/verify-otp-update-email', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otp, newEmail, step: step || 'verify_current' })
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to update email:', error);
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to update email:', error);
+    return { success: false, error: 'Unable to update email. Please try again.' };
+  }
+};
+
+/**
+ * Verify OTP and reset password
+ */
+export const verifyOTPAndResetPassword = async (
+  otp: string,
+  newPassword: string,
+  confirmPassword: string
+): Promise<ApiResult<{}>> => {
+  try {
+    const response: Response = await fetch('/api/auth/verify-otp-reset-password', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otp, newPassword, confirmPassword })
+    });
+
+    if (!response.ok) {
+      const error = await parseError(response);
+      logger.error('Failed to reset password:', error);
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to reset password:', error);
+    return { success: false, error: 'Unable to reset password. Please try again.' };
+  }
+};
+

@@ -130,13 +130,13 @@ export default function ProfileHeader({
               <button
                 onClick={onSave}
                 disabled={isSaving || isSaved}
-                className="px-5 py-2 rounded-lg transition-all duration-300 ease-in-out flex items-center gap-2 text-sm font-medium"
+                className="px-5 py-2 rounded-lg transition-all duration-200 ease-in-out flex items-center gap-2 text-sm font-medium"
                 style={{
                   background: isSaved ? '#10b981' : colors.primaryBlue,
                   color: 'white',
                   opacity: 1,
                   cursor: (isSaving || isSaved) ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 0.3s ease-in-out, transform 0.2s ease-in-out',
+                  transition: 'background-color 0.2s ease-in-out',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSaving && !isSaved) {

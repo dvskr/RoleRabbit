@@ -187,7 +187,7 @@ export interface UserData {
   workPreference: string;
   professionalSummary?: ProfessionalSummary;
   
-  // Skills & Expertise
+  // Skills and Education
   skills: Skill[];
   certifications: Certification[];
   languages: Array<{ name: string; proficiency: string }>;
@@ -275,6 +275,7 @@ export interface FormFieldProps {
   type?: 'text' | 'email' | 'tel' | 'url' | 'textarea';
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   disabled?: boolean;
   placeholder?: string;
   rows?: number;

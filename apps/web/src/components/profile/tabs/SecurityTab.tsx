@@ -10,36 +10,18 @@ import {
   disable2FA,
   changePassword,
   get2FAStatus,
-  getSessions,
-  revokeSession,
-  revokeOtherSessions,
-  LoginSessionDTO,
 } from '../../../utils/securityHelpers';
 import {
   PasswordManagementSection,
-  LoginActivitySection,
-  PrivacySettingsSection,
   PasswordChangeModal,
   TwoFASetupModal,
 } from './security/components';
-import { usePrivacySettings } from './security/hooks';
-import { ProfileVisibility, LoginSession } from './security/types';
 
 type TwoFASetupState = {
   secret: string;
   qrCode: string;
   backupCodes: string[];
 };
-
-const mapSessions = (sessions: LoginSessionDTO[]): LoginSession[] =>
-  sessions.map((session) => ({
-    id: session.id,
-    device: session.device,
-    ipAddress: session.ipAddress,
-    lastActive: session.lastActivity,
-    isCurrent: session.isCurrent,
-    userAgent: session.userAgent,
-  }));
 
 export default function SecurityTab() {
   const { theme } = useTheme();
@@ -59,17 +41,6 @@ export default function SecurityTab() {
 
   const [show2FAModal, setShow2FAModal] = useState(false);
 
-  const [sessions, setSessions] = useState<LoginSession[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(true);
-  const [sessionsError, setSessionsError] = useState<string | null>(null);
-
-  const {
-    profileVisibility,
-    showContactInfo,
-    setProfileVisibility,
-    setShowContactInfo,
-  } = usePrivacySettings();
-
   const refresh2FAStatus = useCallback(async () => {
     setIsTwoFAStatusLoading(true);
     const status = await get2FAStatus();
@@ -81,22 +52,9 @@ export default function SecurityTab() {
     setIsTwoFAStatusLoading(false);
   }, []);
 
-  const refreshSessions = useCallback(async () => {
-    setSessionsLoading(true);
-    setSessionsError(null);
-    const result = await getSessions();
-    if (result.success) {
-      setSessions(mapSessions(result.sessions));
-    } else {
-      setSessionsError(result.error);
-    }
-    setSessionsLoading(false);
-  }, []);
-
   useEffect(() => {
     refresh2FAStatus();
-    refreshSessions();
-  }, [refresh2FAStatus, refreshSessions]);
+  }, [refresh2FAStatus]);
 
   useEffect(() => {
     if (!showPasswordModal) {
@@ -221,24 +179,6 @@ export default function SecurityTab() {
     alert('Two-factor authentication enabled successfully. Don’t forget to store your backup codes safely.');
   };
 
-  const handleLogoutSession = async (sessionId: string) => {
-    const result = await revokeSession(sessionId);
-    if (!result.success) {
-      alert(result.error);
-      return;
-    }
-    refreshSessions();
-  };
-
-  const handleLogoutAllSessions = async () => {
-    const result = await revokeOtherSessions();
-    if (!result.success) {
-      alert(result.error);
-      return;
-    }
-    refreshSessions();
-  };
-
   return (
     <div className="max-w-4xl">
       <div className="space-y-8">
@@ -249,23 +189,6 @@ export default function SecurityTab() {
           onToggle2FA={handleToggleTwoFA}
           isTwoFAStatusLoading={isTwoFAStatusLoading}
           isTwoFAProcessing={isTwoFAProcessing}
-        />
-
-        <LoginActivitySection
-          colors={colors}
-          sessions={sessions}
-          isLoading={sessionsLoading}
-          errorMessage={sessionsError}
-          onLogoutSession={handleLogoutSession}
-          onLogoutAllSessions={handleLogoutAllSessions}
-        />
-
-        <PrivacySettingsSection
-          colors={colors}
-          profileVisibility={profileVisibility}
-          onProfileVisibilityChange={(visibility: ProfileVisibility) => setProfileVisibility(visibility)}
-          showContactInfo={showContactInfo}
-          onContactInfoChange={setShowContactInfo}
         />
       </div>
 

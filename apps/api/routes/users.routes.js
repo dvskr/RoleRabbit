@@ -75,8 +75,57 @@ const VALID_WORK_EXPERIENCE_TYPES = [
 ];
 
 /**
+ * Get or create a skill in the dictionary (skills table)
+ * Uses dictionary pattern: skills table is the master/dictionary,
+ * user_skills links users to dictionary skills
+ * 
+ * @param {string} skillName - The skill name to find or create
+ * @param {string} category - Optional category (defaults to 'Technical')
+ * @returns {Promise<Object>} The skill object from dictionary
+ */
+async function getOrCreateSkillInDictionary(skillName, category = 'Technical') {
+  const { prisma } = require('../utils/db');
+  
+  if (!skillName || !skillName.trim()) {
+    throw new Error('Skill name is required');
+  }
+  
+  const normalizedName = skillName.trim();
+  
+  // Try case-insensitive lookup first
+  let skill = await prisma.skill.findFirst({
+    where: { 
+      name: {
+        equals: normalizedName,
+        mode: 'insensitive'
+      }
+    }
+  });
+  
+  // Fallback to exact match
+  if (!skill) {
+    skill = await prisma.skill.findUnique({
+      where: { name: normalizedName }
+    });
+  }
+  
+  // Create in dictionary if it doesn't exist
+  if (!skill) {
+    skill = await prisma.skill.create({
+      data: {
+        name: normalizedName,
+        category: category
+      }
+    });
+  }
+  
+  return skill;
+}
+
+/**
  * Normalize incoming skills into a consistent structure
  * Supports legacy formats: string arrays, JSON strings, mixed objects
+ * Note: Actual skill storage uses dictionary pattern via getOrCreateSkillInDictionary()
  */
 function normalizeSkillInput(skillsInput) {
   if (!skillsInput) return [];
@@ -115,7 +164,6 @@ function normalizeSkillInput(skillsInput) {
         }
         return {
           name,
-          proficiency: 'Beginner',
           yearsOfExperience: null,
           verified: false
         };
@@ -171,7 +219,18 @@ function normalizeWorkExperienceInput(experiencesInput) {
       }
     }
     if (value && typeof value === 'object') {
-      return Object.values(value);
+      // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+      // or regular objects - convert to array
+      const values = Object.values(value);
+      // If it's an object with numeric keys, sort by key to maintain order
+      const keys = Object.keys(value);
+      const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+      if (hasNumericKeys && keys.length > 0) {
+        // Sort by numeric key to maintain order
+        const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+        return sortedKeys.map(key => value[key]);
+      }
+      return values;
     }
     return [];
   };
@@ -369,13 +428,11 @@ async function userRoutes(fastify, options) {
               phone: true,
               personalEmail: true,
               location: true,
-              bio: true,
               professionalBio: true,
               profilePicture: true,
-              currentRole: true,
-              currentCompany: true,
               linkedin: true,
               github: true,
+              portfolio: true,
               website: true,
               createdAt: true,
               updatedAt: true,
@@ -420,10 +477,16 @@ async function userRoutes(fastify, options) {
                   credentialUrl: true
                 }
               },
+              languages: {
+                select: {
+                  id: true,
+                  name: true,
+                  proficiency: true
+                }
+              },
               userSkills: {
                 select: {
                   id: true,
-                  proficiency: true,
                   yearsOfExperience: true,
                   verified: true,
                   skill: {
@@ -433,13 +496,6 @@ async function userRoutes(fastify, options) {
                       category: true
                     }
                   }
-                }
-              },
-              socialLinks: {
-                select: {
-                  id: true,
-                  platform: true,
-                  url: true
                 }
               },
               projects: {
@@ -452,17 +508,6 @@ async function userRoutes(fastify, options) {
                   github: true,
                   date: true,
                   technologies: true
-                }
-              },
-              achievements: {
-                orderBy: { date: 'desc' },
-                select: {
-                  id: true,
-                  type: true,
-                  title: true,
-                  description: true,
-                  date: true,
-                  link: true
                 }
               }
             }
@@ -482,12 +527,13 @@ async function userRoutes(fastify, options) {
         ...(profile || {})
       };
       
-      // Transform skills array from UserSkill[] to Skill[] format expected by frontend
+      // Transform skills: user_skills (join table) -> skills (dictionary names)
+      // Uses dictionary pattern: user_skills links to skills table (dictionary)
       if (parsedUser.userSkills && Array.isArray(parsedUser.userSkills)) {
         parsedUser.skills = parsedUser.userSkills.map(us => ({
-          name: us.skill.name,
-          yearsOfExperience: us.yearsOfExperience,
-          verified: us.verified || false
+          name: us.skill.name, // Get skill name from dictionary (skills table)
+          yearsOfExperience: us.yearsOfExperience, // User-specific data from user_skills
+          verified: us.verified || false // User-specific data from user_skills
         }));
         // Remove userSkills from response (frontend expects 'skills')
         delete parsedUser.userSkills;
@@ -513,15 +559,22 @@ async function userRoutes(fastify, options) {
         };
       }).filter(Boolean) : [];
       parsedUser.certifications = parsedUser.certifications || [];
-      parsedUser.socialLinks = parsedUser.socialLinks || [];
+      parsedUser.languages = parsedUser.languages || [];
       parsedUser.projects = parsedUser.projects || [];
-      parsedUser.achievements = parsedUser.achievements || [];
       
-      // Maintain backward compatibility between bio and professionalBio fields
-      if (!parsedUser.professionalBio && parsedUser.bio) {
-        parsedUser.professionalBio = parsedUser.bio;
-      } else if (parsedUser.professionalBio && !parsedUser.bio) {
-        parsedUser.bio = parsedUser.professionalBio;
+      // Convert social link fields to array format for frontend compatibility
+      parsedUser.socialLinks = [];
+      if (parsedUser.linkedin) {
+        parsedUser.socialLinks.push({ platform: 'LinkedIn', url: parsedUser.linkedin });
+      }
+      if (parsedUser.github) {
+        parsedUser.socialLinks.push({ platform: 'GitHub', url: parsedUser.github });
+      }
+      if (parsedUser.portfolio) {
+        parsedUser.socialLinks.push({ platform: 'Portfolio', url: parsedUser.portfolio });
+      }
+      if (parsedUser.website) {
+        parsedUser.socialLinks.push({ platform: 'Website', url: parsedUser.website });
       }
 
       // Debug logging for GET endpoint
@@ -609,9 +662,8 @@ async function userRoutes(fastify, options) {
     
     // UserProfile model fields
     const profileFields = [
-      'firstName', 'lastName', 'phone', 'personalEmail', 'location', 'bio', 'professionalBio', 'profilePicture',
-      'currentRole', 'currentCompany',
-      'linkedin', 'github', 'website'
+      'firstName', 'lastName', 'phone', 'personalEmail', 'location', 'professionalBio', 'profilePicture',
+      'linkedin', 'github', 'portfolio', 'website'
     ];
     
     const userUpdateData = {};
@@ -661,16 +713,42 @@ async function userRoutes(fastify, options) {
     const education = updates.education;
     const certifications = updates.certifications;
     const languages = updates.languages;
-    const socialLinks = updates.socialLinks;
+    const socialLinks = updates.socialLinks; // Will be converted to individual fields
     const projects = updates.projects;
-    const achievements = updates.achievements;
     
     // Debug logging
     console.log('=== PROFILE UPDATE DEBUG ===');
     console.log('Received workExperiences:', JSON.stringify(workExperiences, null, 2));
-    console.log('workExperiences type:', typeof workExperiences, Array.isArray(workExperiences));
-    console.log('workExperiences length:', workExperiences?.length);
+    console.log('workExperiences - typeof:', typeof workExperiences, '| isArray:', Array.isArray(workExperiences), '| isObject:', typeof workExperiences === 'object' && !Array.isArray(workExperiences));
+    console.log('workExperiences length:', workExperiences?.length, '| Object.keys().length:', workExperiences ? Object.keys(workExperiences).length : 0);
+    console.log('Received projects:', JSON.stringify(projects, null, 2));
+    console.log('projects - typeof:', typeof projects, '| isArray:', Array.isArray(projects), '| isObject:', typeof projects === 'object' && !Array.isArray(projects));
+    console.log('projects length:', projects?.length, '| Object.keys().length:', projects ? Object.keys(projects).length : 0);
+    console.log('Received education:', JSON.stringify(education, null, 2));
+    console.log('education - typeof:', typeof education, '| isArray:', Array.isArray(education), '| isObject:', typeof education === 'object' && !Array.isArray(education));
+    console.log('education length:', education?.length, '| Object.keys().length:', education ? Object.keys(education).length : 0);
+    console.log('Received languages:', JSON.stringify(languages, null, 2));
+    console.log('languages - typeof:', typeof languages, '| isArray:', Array.isArray(languages), '| isObject:', typeof languages === 'object' && !Array.isArray(languages));
+    console.log('languages length:', languages?.length, '| Object.keys().length:', languages ? Object.keys(languages).length : 0);
     console.log('All updates keys:', Object.keys(updates));
+    
+    // Handle socialLinks - convert to individual fields
+    if (socialLinks && Array.isArray(socialLinks)) {
+      socialLinks.forEach(link => {
+        if (link.platform && link.url) {
+          const platform = link.platform.toLowerCase();
+          if (platform === 'linkedin') {
+            profileUpdateData.linkedin = link.url;
+          } else if (platform === 'github') {
+            profileUpdateData.github = link.url;
+          } else if (platform === 'portfolio') {
+            profileUpdateData.portfolio = link.url;
+          } else if (platform === 'website') {
+            profileUpdateData.website = link.url;
+          }
+        }
+      });
+    }
     
     // Remove these from updates so they don't try to save to UserProfile
     delete updates.workExperiences;
@@ -680,7 +758,6 @@ async function userRoutes(fastify, options) {
     delete updates.languages;
     delete updates.socialLinks;
     delete updates.projects;
-    delete updates.achievements;
     
     // Update in database
     const { prisma } = require('../utils/db');
@@ -738,13 +815,11 @@ async function userRoutes(fastify, options) {
               phone: true,
               personalEmail: true,
               location: true,
-              bio: true,
               professionalBio: true,
               profilePicture: true,
-              currentRole: true,
-              currentCompany: true,
               linkedin: true,
               github: true,
+              portfolio: true,
               website: true,
               createdAt: true,
               updatedAt: true
@@ -813,31 +888,71 @@ async function userRoutes(fastify, options) {
       }
 
       // Handle education - replace all existing ones
-      if (Array.isArray(education)) {
-        console.log('Processing education:', { count: education.length, profileId });
+      // Normalize education from object format (e.g., {"0": {...}, "1": {...}}) to array
+      let normalizedEducation = [];
+      if (education !== undefined) {
+        if (Array.isArray(education)) {
+          normalizedEducation = education;
+        } else if (education && typeof education === 'object') {
+          // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+          const keys = Object.keys(education);
+          const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+          if (hasNumericKeys && keys.length > 0) {
+            // Sort by numeric key to maintain order
+            const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+            normalizedEducation = sortedKeys.map(key => education[key]);
+          } else {
+            normalizedEducation = Object.values(education);
+          }
+        }
+        console.log('Normalized education:', JSON.stringify(normalizedEducation, null, 2));
+        console.log('Normalized education count:', normalizedEducation.length);
+      }
+      
+      // Always process education if it's defined (even if empty array - need to clear existing)
+      if (education !== undefined) {
+        console.log('Processing education:', { count: normalizedEducation.length, profileId, educationDefined: true });
         try {
           await prisma.education.deleteMany({ where: { profileId: profileId } });
-          if (education.length > 0) {
-            await prisma.education.createMany({
-              data: education.map(edu => ({
+          if (normalizedEducation.length > 0) {
+            const result = await prisma.education.createMany({
+              data: normalizedEducation.map(edu => ({
                 profileId: profileId,
-                institution: edu.institution || '',
-                degree: edu.degree || null,
-                field: edu.field || null,
-                startDate: edu.startDate || null,
-                endDate: edu.endDate || null,
-                gpa: edu.gpa || null,
-                honors: edu.honors || null,
-                location: edu.location || null,
-                description: edu.description || null
+                institution: (edu.institution || '').trim(),
+                degree: edu.degree ? (edu.degree.trim() || null) : null,
+                field: edu.field ? (edu.field.trim() || null) : null,
+                startDate: edu.startDate ? (edu.startDate.trim() || null) : null,
+                endDate: edu.endDate ? (edu.endDate.trim() || null) : null,
+                gpa: edu.gpa ? (edu.gpa.trim() || null) : null,
+                honors: edu.honors ? (edu.honors.trim() || null) : null,
+                location: edu.location ? (edu.location.trim() || null) : null,
+                description: edu.description ? (edu.description.trim() || null) : null
               }))
             });
-            console.log('Successfully created education records');
+            console.log('Successfully created education records:', result);
+            console.log('Created count:', result.count);
+            
+            // Verify education was saved
+            const verifyEducation = await prisma.education.findMany({
+              where: { profileId: profileId }
+            });
+            console.log('Verification: Education in DB after save:', verifyEducation.length);
+            console.log('Verification: Education institutions:', verifyEducation.map(e => e.institution));
+          } else {
+            console.log('No education to save (empty array)');
           }
         } catch (eduError) {
           console.error('Error saving education:', eduError);
+          console.error('Education error details:', {
+            message: eduError.message,
+            stack: eduError.stack,
+            normalizedEducation: normalizedEducation,
+            profileId: profileId
+          });
           throw new Error(`Failed to save education: ${eduError.message}`);
         }
+      } else {
+        console.log('Education not provided in update (undefined)');
       }
 
       // Handle certifications - replace all existing ones
@@ -867,76 +982,168 @@ async function userRoutes(fastify, options) {
         }
       }
 
-      // Handle socialLinks - replace all existing ones
-      if (Array.isArray(socialLinks)) {
-        console.log('Processing socialLinks:', { count: socialLinks.length, profileId });
-        try {
-          await prisma.socialLink.deleteMany({ where: { profileId: profileId } });
-          if (socialLinks.length > 0) {
-            await prisma.socialLink.createMany({
-              data: socialLinks.map(link => ({
-                profileId: profileId,
-                platform: link.platform || '',
-                url: link.url || ''
-              }))
-            });
-            console.log('Successfully created social link records');
-          }
-        } catch (linkError) {
-          console.error('Error saving social links:', linkError);
-          throw new Error(`Failed to save social links: ${linkError.message}`);
-        }
-      }
-
       // Handle projects - replace all existing ones
-      if (Array.isArray(projects)) {
-        console.log('Processing projects:', { count: projects.length, profileId });
+      // Normalize projects from object format (e.g., {"0": {...}, "1": {...}}) to array
+      let normalizedProjects = [];
+      if (projects !== undefined) {
+        if (Array.isArray(projects)) {
+          normalizedProjects = projects;
+        } else if (projects && typeof projects === 'object') {
+          // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+          const keys = Object.keys(projects);
+          const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+          if (hasNumericKeys && keys.length > 0) {
+            // Sort by numeric key to maintain order
+            const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+            normalizedProjects = sortedKeys.map(key => projects[key]);
+          } else {
+            normalizedProjects = Object.values(projects);
+          }
+        }
+        console.log('Normalized projects:', JSON.stringify(normalizedProjects, null, 2));
+        console.log('Normalized projects count:', normalizedProjects.length);
+      }
+      
+      // Always process projects if they're defined (even if empty array - need to clear existing)
+      if (projects !== undefined) {
+        console.log('Processing projects:', { count: normalizedProjects.length, profileId, projectsDefined: true });
         try {
           await prisma.project.deleteMany({ where: { profileId: profileId } });
-          if (projects.length > 0) {
-            await prisma.project.createMany({
-              data: projects.map(proj => ({
-                profileId: profileId,
-                title: proj.title || '',
-                description: proj.description || null,
-                technologies: proj.technologies || null,
-                date: proj.date || null,
-                link: proj.link || null,
-                github: proj.github || null
-              }))
+          if (normalizedProjects.length > 0) {
+            console.log('Creating projects:', JSON.stringify(normalizedProjects, null, 2));
+            const result = await prisma.project.createMany({
+              data: normalizedProjects.map(proj => {
+                // Serialize technologies array to JSON string for database storage
+                let technologiesJson = null;
+                if (proj.technologies) {
+                  if (Array.isArray(proj.technologies)) {
+                    // It's already an array
+                    technologiesJson = proj.technologies.length > 0 ? JSON.stringify(proj.technologies) : null;
+                  } else if (typeof proj.technologies === 'string') {
+                    // Already a string, check if it's JSON or comma-separated
+                    try {
+                      JSON.parse(proj.technologies); // Validate it's valid JSON
+                      technologiesJson = proj.technologies;
+                    } catch {
+                      // Not JSON, treat as comma-separated and convert to JSON array
+                      const techArray = proj.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                      technologiesJson = techArray.length > 0 ? JSON.stringify(techArray) : null;
+                    }
+                  } else if (typeof proj.technologies === 'object' && proj.technologies !== null) {
+                    // Handle object (should be converted to array)
+                    // If it's an object with numeric keys, convert to array
+                    const keys = Object.keys(proj.technologies);
+                    const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+                    if (hasNumericKeys && keys.length > 0) {
+                      const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+                      const techArray = sortedKeys.map(key => proj.technologies[key]).filter(t => t && t.trim().length > 0);
+                      technologiesJson = techArray.length > 0 ? JSON.stringify(techArray) : null;
+                    } else {
+                      // Regular object, convert values to array
+                      const techArray = Object.values(proj.technologies).filter(t => t && (typeof t === 'string' ? t.trim().length > 0 : true));
+                      technologiesJson = techArray.length > 0 ? JSON.stringify(techArray) : null;
+                    }
+                  }
+                }
+                
+                return {
+                  profileId: profileId,
+                  title: (proj.title || '').trim(),
+                  description: proj.description ? (proj.description.trim() || null) : null,
+                  technologies: technologiesJson,
+                  date: proj.date ? (proj.date.trim() || null) : null,
+                  link: proj.link ? (proj.link.trim() || null) : null,
+                  github: proj.github ? (proj.github.trim() || null) : null
+                };
+              })
             });
-            console.log('Successfully created project records');
+            console.log('Successfully created project records:', result);
+            console.log('Created count:', result.count);
+            
+            // Verify projects were saved
+            const verifyProjects = await prisma.project.findMany({
+              where: { profileId: profileId }
+            });
+            console.log('Verification: Projects in DB after save:', verifyProjects.length);
+            console.log('Verification: Project titles:', verifyProjects.map(p => p.title));
+          } else {
+            console.log('No projects to save (empty array)');
           }
         } catch (projError) {
           console.error('Error saving projects:', projError);
+          console.error('Project error details:', {
+            message: projError.message,
+            stack: projError.stack,
+            normalizedProjects: normalizedProjects,
+            profileId: profileId
+          });
           throw new Error(`Failed to save projects: ${projError.message}`);
         }
+      } else {
+        console.log('Projects not provided in update (undefined)');
       }
 
-      // Handle achievements - replace all existing ones
-      if (Array.isArray(achievements)) {
-        console.log('Processing achievements:', { count: achievements.length, profileId });
-        try {
-          await prisma.achievement.deleteMany({ where: { profileId: profileId } });
-          if (achievements.length > 0) {
-            await prisma.achievement.createMany({
-              data: achievements.map(ach => ({
-                profileId: profileId,
-                type: ach.type || '',
-                title: ach.title || '',
-                description: ach.description || null,
-                date: ach.date || null,
-                link: ach.link || null
-              }))
-            });
-            console.log('Successfully created achievement records');
+      // Handle languages - replace all existing ones
+      // Normalize languages from object format (e.g., {"0": {...}, "1": {...}}) to array
+      let normalizedLanguages = [];
+      if (languages !== undefined) {
+        if (Array.isArray(languages)) {
+          normalizedLanguages = languages;
+        } else if (languages && typeof languages === 'object') {
+          // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+          const keys = Object.keys(languages);
+          const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+          if (hasNumericKeys && keys.length > 0) {
+            // Sort by numeric key to maintain order
+            const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+            normalizedLanguages = sortedKeys.map(key => languages[key]);
+          } else {
+            normalizedLanguages = Object.values(languages);
           }
-        } catch (achError) {
-          console.error('Error saving achievements:', achError);
-          throw new Error(`Failed to save achievements: ${achError.message}`);
         }
+        console.log('Normalized languages:', JSON.stringify(normalizedLanguages, null, 2));
+        console.log('Normalized languages count:', normalizedLanguages.length);
       }
       
+      // Always process languages if they're defined (even if empty array - need to clear existing)
+      if (languages !== undefined) {
+        console.log('Processing languages:', { count: normalizedLanguages.length, profileId, languagesDefined: true });
+        try {
+          await prisma.language.deleteMany({ where: { profileId: profileId } });
+          if (normalizedLanguages.length > 0) {
+            const result = await prisma.language.createMany({
+              data: normalizedLanguages.map(lang => ({
+                profileId: profileId,
+                name: (lang.name || '').trim(),
+                proficiency: lang.proficiency ? (lang.proficiency.trim() || 'Native') : 'Native'
+              }))
+            });
+            console.log('Successfully created language records:', result);
+            console.log('Created count:', result.count);
+            
+            // Verify languages were saved
+            const verifyLanguages = await prisma.language.findMany({
+              where: { profileId: profileId }
+            });
+            console.log('Verification: Languages in DB after save:', verifyLanguages.length);
+            console.log('Verification: Language names:', verifyLanguages.map(l => l.name));
+          } else {
+            console.log('No languages to save (empty array)');
+          }
+        } catch (langError) {
+          console.error('Error saving languages:', langError);
+          console.error('Language error details:', {
+            message: langError.message,
+            stack: langError.stack,
+            normalizedLanguages: normalizedLanguages,
+            profileId: profileId
+          });
+          throw new Error(`Failed to save languages: ${langError.message}`);
+        }
+      } else {
+        console.log('Languages not provided in update (undefined)');
+      }
+
       // Handle skills - replace all existing ones
       if (skills !== undefined) {
         const normalizedSkills = normalizeSkillInput(skills);
@@ -946,51 +1153,44 @@ async function userRoutes(fastify, options) {
           where: { profileId: profileId }
         });
         
-        // Insert the normalized skills
+        // Insert the normalized skills using dictionary pattern
         for (const skillData of normalizedSkills) {
           const skillName = skillData.name;
           if (!skillName) {
             continue;
           }
-            
-          // Find or create global skill record
-            let skill = await prisma.skill.findUnique({
-              where: { name: skillName }
-            });
-            
-            if (!skill) {
-              skill = await prisma.skill.create({
-                data: {
-                  name: skillName,
-                category: 'Technical'
-                }
-              });
-            }
-            
-            await prisma.userSkill.create({
-              data: {
-                profileId: profileId,
-                skillId: skill.id,
-                proficiency: null,
-                yearsOfExperience: skillData.yearsOfExperience || null,
+          
+          // Use dictionary pattern: get or create skill in skills table (dictionary)
+          const skill = await getOrCreateSkillInDictionary(skillName, 'Technical');
+          
+          // Create user_skills relation linking user profile to dictionary skill
+          // This is the join table that connects users to skills in the dictionary
+          await prisma.userSkill.create({
+            data: {
+              profileId: profileId,
+              skillId: skill.id, // Reference to skill in dictionary (skills table)
+              yearsOfExperience: skillData.yearsOfExperience || null,
               verified: Boolean(skillData.verified)
-              }
-            });
+            }
+          });
         }
 
+        // Cleanup: Remove skills from dictionary that are no longer used by any user
+        // This maintains the dictionary pattern - only keep skills that are actively referenced
         try {
           const cleanupResult = await prisma.skill.deleteMany({
             where: {
               userSkills: {
-                none: {}
+                none: {} // No user_skills relations exist for this skill
               }
             }
           });
           if (cleanupResult.count > 0) {
-            console.log('Removed unused skills from dictionary:', cleanupResult.count);
+            console.log('Cleaned up unused skills from dictionary:', cleanupResult.count);
           }
         } catch (cleanupError) {
-          console.error('Failed to clean up unused skills:', cleanupError);
+          console.error('Failed to clean up unused skills from dictionary:', cleanupError);
+          // Don't fail the update if cleanup fails
         }
       }
 
@@ -1015,13 +1215,11 @@ async function userRoutes(fastify, options) {
               phone: true,
               personalEmail: true,
               location: true,
-              bio: true,
               professionalBio: true,
               profilePicture: true,
-              currentRole: true,
-              currentCompany: true,
               linkedin: true,
               github: true,
+              portfolio: true,
               website: true,
               createdAt: true,
               updatedAt: true,
@@ -1065,10 +1263,16 @@ async function userRoutes(fastify, options) {
                   credentialUrl: true
                 }
               },
+              languages: {
+                select: {
+                  id: true,
+                  name: true,
+                  proficiency: true
+                }
+              },
               userSkills: {
                 select: {
                   id: true,
-                  proficiency: true,
                   yearsOfExperience: true,
                   verified: true,
                   skill: {
@@ -1078,13 +1282,6 @@ async function userRoutes(fastify, options) {
                       category: true
                     }
                   }
-                }
-              },
-              socialLinks: {
-                select: {
-                  id: true,
-                  platform: true,
-                  url: true
                 }
               },
               projects: {
@@ -1097,17 +1294,6 @@ async function userRoutes(fastify, options) {
                   github: true,
                   date: true,
                   technologies: true
-                }
-              },
-              achievements: {
-                orderBy: { date: 'desc' },
-                select: {
-                  id: true,
-                  type: true,
-                  title: true,
-                  description: true,
-                  date: true,
-                  link: true
                 }
               }
             }
@@ -1122,12 +1308,13 @@ async function userRoutes(fastify, options) {
         ...(profile || {})
       };
       
-      // Transform skills array from UserSkill[] to Skill[] format expected by frontend
+      // Transform skills: user_skills (join table) -> skills (dictionary names)
+      // Uses dictionary pattern: user_skills links to skills table (dictionary)
       if (parsedUser.userSkills && Array.isArray(parsedUser.userSkills)) {
         parsedUser.skills = parsedUser.userSkills.map(us => ({
-          name: us.skill.name,
-          yearsOfExperience: us.yearsOfExperience,
-          verified: us.verified || false
+          name: us.skill.name, // Get skill name from dictionary (skills table)
+          yearsOfExperience: us.yearsOfExperience, // User-specific data from user_skills
+          verified: us.verified || false // User-specific data from user_skills
         }));
         delete parsedUser.userSkills;
       } else {
@@ -1152,14 +1339,53 @@ async function userRoutes(fastify, options) {
         };
       }).filter(Boolean) : [];
       parsedUser.certifications = parsedUser.certifications || [];
-      parsedUser.socialLinks = parsedUser.socialLinks || [];
-      parsedUser.projects = parsedUser.projects || [];
-      parsedUser.achievements = parsedUser.achievements || [];
-
-      if (!parsedUser.professionalBio && parsedUser.bio) {
-        parsedUser.professionalBio = parsedUser.bio;
-      } else if (parsedUser.professionalBio && !parsedUser.bio) {
-        parsedUser.bio = parsedUser.professionalBio;
+      parsedUser.languages = parsedUser.languages || [];
+      
+      // Transform projects - ensure technologies is parsed from JSON if needed
+      parsedUser.projects = Array.isArray(parsedUser.projects) ? parsedUser.projects.map((proj) => {
+        if (!proj || typeof proj !== 'object') {
+          return null;
+        }
+        
+        // Parse technologies if it's a string (JSON) or ensure it's an array
+        let technologies = [];
+        if (proj.technologies) {
+          if (typeof proj.technologies === 'string') {
+            try {
+              technologies = JSON.parse(proj.technologies);
+            } catch {
+              // If not JSON, try splitting by comma
+              technologies = proj.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            }
+          } else if (Array.isArray(proj.technologies)) {
+            technologies = proj.technologies;
+          }
+        }
+        
+        return {
+          ...proj,
+          technologies: technologies,
+          title: proj.title || '',
+          description: proj.description || '',
+          date: proj.date || '',
+          link: proj.link || '',
+          github: proj.github || ''
+        };
+      }).filter(Boolean) : [];
+      
+      // Convert social link fields to array format for frontend compatibility
+      parsedUser.socialLinks = [];
+      if (parsedUser.linkedin) {
+        parsedUser.socialLinks.push({ platform: 'LinkedIn', url: parsedUser.linkedin });
+      }
+      if (parsedUser.github) {
+        parsedUser.socialLinks.push({ platform: 'GitHub', url: parsedUser.github });
+      }
+      if (parsedUser.portfolio) {
+        parsedUser.socialLinks.push({ platform: 'Portfolio', url: parsedUser.portfolio });
+      }
+      if (parsedUser.website) {
+        parsedUser.socialLinks.push({ platform: 'Website', url: parsedUser.website });
       }
 
       // Auto-calculate and update profile completeness
@@ -1402,10 +1628,8 @@ async function userRoutes(fastify, options) {
             select: {
               phone: true,
               location: true,
-              bio: true,
-              profilePicture: true,
-              currentRole: true,
-              currentCompany: true
+              professionalBio: true,
+              profilePicture: true
             }
           }
         }
@@ -1768,12 +1992,10 @@ async function userRoutes(fastify, options) {
           privacyLevel: true,
           profile: {
             select: {
-              bio: true,
               professionalBio: true,
-              currentRole: true,
-              currentCompany: true,
               linkedin: true,
               github: true,
+              portfolio: true,
               website: true,
               profileViews: true
             }
@@ -1818,13 +2040,11 @@ async function userRoutes(fastify, options) {
         id: parsedUser.id,
         name: parsedUser.name,
         profilePicture: parsedUser.profilePicture || null,
-        bio: parsedUser.bio || null,
-        professionalBio: parsedUser.professionalBio || parsedUser.bio || null,
-        currentRole: parsedUser.currentRole || null,
-        currentCompany: parsedUser.currentCompany || null,
+        professionalBio: parsedUser.professionalBio || null,
         skills: parsedUser.privacyLevel === 'Professional' ? parsedUser.skills : [],
         linkedin: parsedUser.linkedin || null,
         github: parsedUser.github || null,
+        portfolio: parsedUser.portfolio || null,
         website: parsedUser.website || null
       };
       

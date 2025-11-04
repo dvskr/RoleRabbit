@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 interface User {
   id: string;
@@ -22,6 +22,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Inactivity timeout: 30 minutes (30 * 60 * 1000 ms)
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+  const LAST_ACTIVITY_KEY = 'lastActivityTime';
+
+  // Update last activity time
+  const updateLastActivity = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    }
+  };
+
+  // Check if user has been inactive for 30+ minutes (only used for page close check)
+  const checkInactivityOnClose = useCallback(() => {
+    if (!user) return false;
+    
+    if (typeof window !== 'undefined') {
+      const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+      if (lastActivity) {
+        const timeSinceActivity = Date.now() - parseInt(lastActivity, 10);
+        return timeSinceActivity >= INACTIVITY_TIMEOUT;
+      }
+    }
+    return false;
+  }, [user]);
 
   useEffect(() => {
     // Check for existing session on mount
@@ -33,9 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (response.ok) {
           const data = await response.json();
-          if (data.user) {
-            setUser(data.user);
-          }
+        if (data.user) {
+          setUser(data.user);
+          // Set initial activity time when user is authenticated
+          updateLastActivity();
+        }
         }
       } catch (error) {
         // Silent fail - user likely not logged in
@@ -46,6 +73,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     checkAuth();
   }, []);
+
+  // Set up inactivity monitoring when user is logged in
+  useEffect(() => {
+    if (!user) return;
+
+    // Update activity on user interactions
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    const handleActivity = () => {
+      updateLastActivity();
+    };
+
+    // Add event listeners to track activity
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    // Handle page visibility change - update activity when page becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page is visible, update activity
+        updateLastActivity();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Handle page unload (close/refresh) - logout ONLY if inactive for 30+ minutes
+    const handleBeforeUnload = () => {
+      // Check if user has been inactive for 30+ minutes
+      if (checkInactivityOnClose()) {
+        // User has been inactive for 30+ minutes AND page is closing, logout
+        // Use sendBeacon for reliable logout on page close
+        navigator.sendBeacon('http://localhost:3001/api/auth/logout', '');
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [user, checkInactivityOnClose]);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
@@ -99,6 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Only store user data in memory
       if (data.user) {
         setUser(data.user);
+        // Set activity time on successful login
+        updateLastActivity();
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -147,6 +221,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Only store user data in memory
       if (data.user) {
         setUser(data.user);
+        // Set activity time on successful signup
+        updateLastActivity();
       }
     } catch (error) {
       console.error('Signup error:', error);
@@ -160,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       // Call logout endpoint to clear httpOnly cookie
       await fetch('http://localhost:3001/api/auth/logout', {
@@ -170,8 +246,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     }
+    // Clear activity tracking
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(LAST_ACTIVITY_KEY);
+    }
     setUser(null);
-  };
+  }, []);
 
   const value = {
     user,

@@ -6,6 +6,7 @@ export { DashboardHeader } from './components/DashboardHeader';
 export { DashboardGrid } from './components/DashboardGrid';
 export { ActivityFeed } from './components/ActivityFeed';
 export { SmartTodoSystem } from './components/SmartTodoSystem';
+export { Todos } from './components/Todos';
 export { ProgressMetrics } from './components/ProgressMetrics';
 export { IntelligentAlerts } from './components/IntelligentAlerts';
 export { QuickActionsPanel } from './components/QuickActionsPanel';

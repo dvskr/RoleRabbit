@@ -13,7 +13,8 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   placeholder,
   colors,
   id,
-  name
+  name,
+  autoComplete
 }) => {
   const reactId = useId();
   const fieldId = id || `password-${reactId.replace(/:/g, '-')}`;
@@ -35,6 +36,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
           type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete || 'off'}
           className="w-full px-3 py-2 pr-10 rounded-lg transition-all"
           style={{
             background: colors.inputBackground,

@@ -17,10 +17,15 @@ const { registerUser, authenticateUser, getUserById, resetUserPassword } = requi
 const { createRefreshToken, verifyRefreshToken, deleteAllUserRefreshTokens } = require('../utils/refreshToken');
 const { createSession, getUserSessions, deactivateSession } = require('../utils/sessionManager');
 const { createPasswordResetToken } = require('../utils/passwordReset');
-const { sendWelcomeEmail, sendPasswordResetEmail } = require('../utils/emailService');
+const { sendWelcomeEmail, sendPasswordResetEmail, sendOTPEmail, sendEmailChangeNotification, sendEmailChangeConfirmation } = require('../utils/emailService');
+const { sendOTPToEmail, verifyOTP, createOTP } = require('../utils/otpService');
 const { validateEmail, validatePassword, validateRequired, validateLength } = require('../utils/validation');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
+
+// In-memory store for pending email changes (userId -> { newEmail, verifiedCurrent })
+// In production, consider using Redis or database
+const pendingEmailChanges = new Map();
 
 /**
  * Register all authentication routes with Fastify instance
@@ -182,14 +187,53 @@ async function authRoutes(fastify, options) {
       const userAgent = request.headers['user-agent'];
       const sessionId = await createSession(user.id, ipAddress, userAgent, 3650); // 10 years
       
+      // Fetch user profile data
+      const userProfile = await prisma.userProfile.findUnique({
+        where: { userId: user.id },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          phone: true,
+          personalEmail: true,
+          location: true,
+          profilePicture: true,
+          professionalBio: true,
+          linkedin: true,
+          github: true,
+          portfolio: true,
+          website: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+      
       // Prepare user object first - ensure it's serializable
-      // Note: profilePicture, firstName, lastName are now in user_profiles table, not users table
+      // Merge user and profile data
       const safeUser = {
         id: String(user.id),
         email: String(user.email || ''),
         name: user.name ? String(user.name) : null,
+        emailNotifications: user.emailNotifications ?? true,
+        smsNotifications: user.smsNotifications ?? false,
+        privacyLevel: user.privacyLevel || null,
+        profileVisibility: user.profileVisibility || null,
         createdAt: user.createdAt ? user.createdAt.toISOString() : null,
-        updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null
+        updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
+        // Merge profile data if it exists
+        ...(userProfile ? {
+          firstName: userProfile.firstName || null,
+          lastName: userProfile.lastName || null,
+          phone: userProfile.phone || null,
+          personalEmail: userProfile.personalEmail || null,
+          location: userProfile.location || null,
+          profilePicture: userProfile.profilePicture || null,
+          professionalBio: userProfile.professionalBio || null,
+          linkedin: userProfile.linkedin || null,
+          github: userProfile.github || null,
+          portfolio: userProfile.portfolio || null,
+          website: userProfile.website || null
+        } : {})
       };
       
       // Remove null/undefined values to prevent serialization issues
@@ -355,9 +399,63 @@ async function authRoutes(fastify, options) {
     const userId = request.user.userId;
     const user = await getUserById(userId);
     
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        error: 'User not found'
+      });
+    }
+    
+    // Fetch user profile data
+    const userProfile = await prisma.userProfile.findUnique({
+      where: { userId: user.id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        personalEmail: true,
+        location: true,
+        profilePicture: true,
+        professionalBio: true,
+        linkedin: true,
+        github: true,
+        portfolio: true,
+        website: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    
+    // Merge user and profile data
+    const userWithProfile = {
+      ...user,
+      ...(userProfile ? {
+        firstName: userProfile.firstName || null,
+        lastName: userProfile.lastName || null,
+        phone: userProfile.phone || null,
+        personalEmail: userProfile.personalEmail || null,
+        location: userProfile.location || null,
+        profilePicture: userProfile.profilePicture || null,
+        professionalBio: userProfile.professionalBio || null,
+        linkedin: userProfile.linkedin || null,
+        github: userProfile.github || null,
+        portfolio: userProfile.portfolio || null,
+        website: userProfile.website || null
+      } : {})
+    };
+    
+    // Convert dates to ISO strings for serialization
+    if (userWithProfile.createdAt instanceof Date) {
+      userWithProfile.createdAt = userWithProfile.createdAt.toISOString();
+    }
+    if (userWithProfile.updatedAt instanceof Date) {
+      userWithProfile.updatedAt = userWithProfile.updatedAt.toISOString();
+    }
+    
     reply.send({
       success: true,
-      user
+      user: userWithProfile
     });
   });
 
@@ -527,6 +625,330 @@ async function authRoutes(fastify, options) {
   fastify.post('/api/auth/password/change', {
     preHandler: authenticate
   }, changePasswordHandler);
+
+  // Send OTP to current email for verification
+  fastify.post('/api/auth/send-otp', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { purpose } = request.body; // 'email_update' or 'password_reset'
+
+      if (!purpose || !['email_update', 'password_reset'].includes(purpose)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid purpose. Must be "email_update" or "password_reset"'
+        });
+      }
+
+      // Get user's current email
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true }
+      });
+
+      if (!user) {
+        return reply.status(404).send({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      // Create and send OTP
+      const result = await sendOTPToEmail(user.email, purpose);
+      
+      if (!result.success) {
+        return reply.status(500).send({
+          success: false,
+          error: result.error || 'Failed to send OTP'
+        });
+      }
+
+      // Send OTP email
+      try {
+        await sendOTPEmail(user.email, result.otp, purpose);
+      } catch (emailError) {
+        logger.error('Failed to send OTP email:', emailError);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to send OTP email'
+        });
+      }
+
+      reply.send({
+        success: true,
+        message: 'OTP has been sent to your email'
+      });
+    } catch (error) {
+      logger.error('Error sending OTP:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'An error occurred while sending OTP'
+      });
+    }
+  });
+
+  // Send OTP to new email address
+  fastify.post('/api/auth/send-otp-to-new-email', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { newEmail } = request.body;
+
+      if (!newEmail) {
+        return reply.status(400).send({
+          success: false,
+          error: 'New email is required'
+        });
+      }
+
+      if (!validateEmail(newEmail)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid email format'
+        });
+      }
+
+      // Check if pending email change exists (current email must be verified first)
+      const pendingChange = pendingEmailChanges.get(userId);
+      if (!pendingChange || !pendingChange.verifiedCurrent) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Please verify your current email first'
+        });
+      }
+
+      // Check if email is already in use
+      const existingUser = await prisma.user.findUnique({
+        where: { email: newEmail.toLowerCase() }
+      });
+
+      if (existingUser && existingUser.id !== userId) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Email is already in use'
+        });
+      }
+
+      // Create OTP for new email (use special purpose 'email_update_new')
+      const otp = await createOTP(userId, newEmail, 'email_update');
+      
+      // Send OTP email to new address
+      try {
+        await sendOTPEmail(newEmail, otp, 'email_update');
+      } catch (emailError) {
+        logger.error('Failed to send OTP to new email:', emailError);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to send verification code to new email'
+        });
+      }
+
+      reply.send({
+        success: true,
+        message: 'Verification code has been sent to your new email address'
+      });
+    } catch (error) {
+      logger.error('Error sending OTP to new email:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'An error occurred while sending verification code'
+      });
+    }
+  });
+
+  // Verify OTP and update email (two-step verification)
+  fastify.post('/api/auth/verify-otp-update-email', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { otp, newEmail, step } = request.body;
+
+      if (!otp || !newEmail) {
+        return reply.status(400).send({
+          success: false,
+          error: 'OTP and new email are required'
+        });
+      }
+
+      if (!validateEmail(newEmail)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid email format'
+        });
+      }
+
+      const verificationStep = step || 'verify_current';
+
+      if (verificationStep === 'verify_current') {
+        // Step 1: Verify current email OTP
+        const isValid = await verifyOTP(userId, otp, 'email_update');
+        if (!isValid) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid or expired OTP'
+          });
+        }
+
+        // Store pending email change
+        pendingEmailChanges.set(userId, {
+          newEmail: newEmail.toLowerCase(),
+          verifiedCurrent: true,
+          timestamp: Date.now()
+        });
+
+        // Send notification to current email
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true }
+        });
+
+        if (user) {
+          try {
+            await sendEmailChangeNotification(user.email, newEmail);
+          } catch (emailError) {
+            logger.error('Failed to send email change notification:', emailError);
+            // Don't fail the request if notification fails
+          }
+        }
+
+        reply.send({
+          success: true,
+          message: 'Current email verified. Please verify your new email address.'
+        });
+      } else if (verificationStep === 'verify_new') {
+        // Step 2: Verify new email OTP and complete the change
+        const pendingChange = pendingEmailChanges.get(userId);
+        if (!pendingChange || !pendingChange.verifiedCurrent) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Please verify your current email first'
+          });
+        }
+
+        if (pendingChange.newEmail !== newEmail.toLowerCase()) {
+          return reply.status(400).send({
+            success: false,
+            error: 'New email does not match the pending change'
+          });
+        }
+
+        // Verify OTP for new email
+        const isValid = await verifyOTP(userId, otp, 'email_update');
+        if (!isValid) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid or expired OTP'
+          });
+        }
+
+        // Get current email before updating
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true }
+        });
+
+        const oldEmail = user?.email;
+
+        // Update email
+        await prisma.user.update({
+          where: { id: userId },
+          data: { email: newEmail.toLowerCase() }
+        });
+
+        // Clear pending change
+        pendingEmailChanges.delete(userId);
+
+        // Send confirmation emails to both addresses
+        try {
+          if (oldEmail) {
+            await sendEmailChangeConfirmation(oldEmail, newEmail, 'old');
+          }
+          await sendEmailChangeConfirmation(newEmail, newEmail, 'new');
+        } catch (emailError) {
+          logger.error('Failed to send email change confirmation:', emailError);
+          // Don't fail the request if emails fail
+        }
+
+        logger.info(`Email updated for user ${userId} from ${oldEmail} to ${newEmail}`);
+
+        reply.send({
+          success: true,
+          message: 'Email updated successfully'
+        });
+      } else {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid verification step'
+        });
+      }
+    } catch (error) {
+      logger.error('Error updating email:', error);
+      reply.status(500).send({
+        success: false,
+        error: 'Failed to update email'
+      });
+    }
+  });
+
+  // Verify OTP and reset password (for forgot password flow)
+  fastify.post('/api/auth/verify-otp-reset-password', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { otp, newPassword, confirmPassword } = request.body;
+
+      if (!otp || !newPassword || !confirmPassword) {
+        return reply.status(400).send({
+          success: false,
+          error: 'OTP, new password, and confirmation are required'
+        });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Passwords do not match'
+        });
+      }
+
+      if (!validatePassword(newPassword)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Password must be at least 8 characters with uppercase, lowercase, and number'
+        });
+      }
+
+      // Verify OTP
+      const isValid = await verifyOTP(userId, otp, 'password_reset');
+      if (!isValid) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid or expired OTP'
+        });
+      }
+
+      // Update password
+      const { updateUserPassword } = require('../auth');
+      await updateUserPassword(userId, null, newPassword); // Pass null for current password since we verified via OTP
+
+      logger.info(`Password reset via OTP for user ${userId}`);
+
+      reply.send({
+        success: true,
+        message: 'Password reset successfully'
+      });
+    } catch (error) {
+      logger.error('Error resetting password:', error);
+      reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to reset password'
+      });
+    }
+  });
 }
 
 module.exports = authRoutes;

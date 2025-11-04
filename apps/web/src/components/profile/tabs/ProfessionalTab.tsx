@@ -117,6 +117,7 @@ export default function ProfessionalTab({
   const [editingExpId, setEditingExpId] = useState<string | null>(null);
   const [editingExp, setEditingExp] = useState<WorkExperience | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectTechnologiesRaw, setProjectTechnologiesRaw] = useState<Record<string, string>>({});
 
   const startEditing = (exp: WorkExperience) => {
     setEditingExpId(exp.id || null);
@@ -163,18 +164,36 @@ export default function ProfessionalTab({
   };
 
   // Normalize projects array
+  // Note: We don't trim values here to preserve spaces during editing
+  // Trimming should only happen when saving/validating, not during user input
   const normalizeProjects = (projects: any): Project[] => {
     if (!projects) return [];
     if (Array.isArray(projects)) {
       return projects.map((proj: any) => ({
         id: proj?.id || proj?._id || proj?.uuid || proj?.tempId || `proj-${Date.now()}-${Math.random()}`,
-        title: typeof proj?.title === 'string' ? proj.title.trim() : '',
-        description: typeof proj?.description === 'string' ? proj.description.trim() : '',
-        technologies: Array.isArray(proj?.technologies) ? proj.technologies : 
-                     (typeof proj?.technologies === 'string' ? proj.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : []),
-        date: typeof proj?.date === 'string' ? proj.date.trim() : '',
-        link: typeof proj?.link === 'string' ? proj.link.trim() : '',
-        github: typeof proj?.github === 'string' ? proj.github.trim() : '',
+        title: typeof proj?.title === 'string' ? proj.title : '',
+        description: typeof proj?.description === 'string' ? proj.description : '',
+        technologies: (() => {
+          if (!proj?.technologies) return [];
+          if (Array.isArray(proj.technologies)) return proj.technologies;
+          if (typeof proj.technologies === 'string') {
+            // Try to parse as JSON first (handles JSON array strings like '["React", "TypeScript"]')
+            try {
+              const parsed = JSON.parse(proj.technologies);
+              if (Array.isArray(parsed)) {
+                return parsed.filter((t: any) => t && String(t).trim().length > 0);
+              }
+            } catch {
+              // Not JSON, treat as comma-separated string
+            }
+            // Split by comma for comma-separated strings
+            return proj.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+          }
+          return [];
+        })(),
+        date: typeof proj?.date === 'string' ? proj.date : '',
+        link: typeof proj?.link === 'string' ? proj.link : '',
+        github: typeof proj?.github === 'string' ? proj.github : '',
         media: Array.isArray(proj?.media) ? proj.media : []
       }));
     }
@@ -189,6 +208,10 @@ export default function ProfessionalTab({
     onUserDataChange({ projects: [...projects, newProject] });
     // Immediately open the new project in edit mode
     setEditingProjectId(newProject.id || null);
+    // Initialize raw technologies string for the new project
+    if (newProject.id) {
+      setProjectTechnologiesRaw(prev => ({ ...prev, [newProject.id]: '' }));
+    }
   };
 
   const updateProject = (projectId: string, updates: Partial<Project>) => {
@@ -204,8 +227,23 @@ export default function ProfessionalTab({
   };
 
   const updateProjectTechnologies = (projectId: string, techString: string) => {
-    const technologies = techString.split(',').map(t => t.trim()).filter(t => t.length > 0);
-    updateProject(projectId, { technologies });
+    // Store raw string while typing to allow comma and space
+    setProjectTechnologiesRaw(prev => ({ ...prev, [projectId]: techString }));
+  };
+
+  const handleTechnologiesBlur = (projectId: string) => {
+    // Only split and process when user finishes typing (on blur)
+    const rawString = projectTechnologiesRaw[projectId];
+    if (rawString !== undefined) {
+      const technologies = rawString.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      updateProject(projectId, { technologies });
+      // Clear raw string after processing
+      setProjectTechnologiesRaw(prev => {
+        const updated = { ...prev };
+        delete updated[projectId];
+        return updated;
+      });
+    }
   };
 
   const autoCreateExperienceRef = useRef(false);
@@ -556,8 +594,8 @@ export default function ProfessionalTab({
                                 <span>{exp.location}</span>
                               </div>
                             )}
-                            {exp.projectType && exp.projectType !== 'Full-time' && (
-                              <span className="px-2 py-0.5 rounded text-xs" style={{ background: colors.badgeInfoBg, color: colors.primaryBlue }}>
+                            {exp.projectType && (
+                              <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ background: colors.badgeInfoBg, color: colors.primaryBlue }}>
                                 {exp.projectType}
                               </span>
                             )}
@@ -695,7 +733,17 @@ export default function ProfessionalTab({
                         </h4>
                         <button
                           type="button"
-                          onClick={() => setEditingProjectId(null)}
+                          onClick={() => {
+                            // Clear raw technologies string when closing project editor
+                            if (editingProjectId) {
+                              setProjectTechnologiesRaw(prev => {
+                                const updated = { ...prev };
+                                delete updated[editingProjectId];
+                                return updated;
+                              });
+                            }
+                            setEditingProjectId(null);
+                          }}
                           className="p-1 rounded"
                           style={{ color: colors.secondaryText }}
                         >
@@ -740,8 +788,11 @@ export default function ProfessionalTab({
                           id={`project-${projId}-technologies`}
                           name={`project-${projId}-technologies`}
                           label="Technologies (comma-separated)"
-                          value={(project.technologies || []).join(', ')}
+                          value={projectTechnologiesRaw[projId] !== undefined 
+                            ? projectTechnologiesRaw[projId] 
+                            : (project.technologies || []).join(', ')}
                           onChange={(value) => updateProjectTechnologies(projId, value)}
+                          onBlur={() => handleTechnologiesBlur(projId)}
                           disabled={false}
                           placeholder="React, Node.js, PostgreSQL"
                         />
@@ -771,7 +822,17 @@ export default function ProfessionalTab({
                       <div className="flex gap-3 pt-2">
                         <button
                           type="button"
-                          onClick={() => setEditingProjectId(null)}
+                          onClick={() => {
+                            // Clear raw technologies string when closing project editor
+                            if (editingProjectId) {
+                              setProjectTechnologiesRaw(prev => {
+                                const updated = { ...prev };
+                                delete updated[editingProjectId];
+                                return updated;
+                              });
+                            }
+                            setEditingProjectId(null);
+                          }}
                           className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium"
                           style={{
                             background: colors.inputBackground,
@@ -821,18 +882,25 @@ export default function ProfessionalTab({
                             )}
                             {project.technologies && project.technologies.length > 0 && (
                               <div className="flex flex-wrap gap-1">
-                                {project.technologies.map((tech, techIndex) => (
-                                  <span
-                                    key={techIndex}
-                                    className="px-2 py-0.5 rounded text-xs"
-                                    style={{
-                                      background: colors.badgeInfoBg,
-                                      color: colors.primaryBlue,
-                                    }}
-                                  >
-                                    {tech}
-                                  </span>
-                                ))}
+                                {project.technologies.map((tech, techIndex) => {
+                                  // Ensure tech is a string and clean it (remove any array brackets that might be in the string)
+                                  const techString = String(tech || '').trim();
+                                  // Remove array brackets if they exist in the string itself
+                                  const cleanTech = techString.replace(/^\[|\]$/g, '').replace(/^"|"$/g, '').trim();
+                                  if (!cleanTech) return null;
+                                  return (
+                                    <span
+                                      key={techIndex}
+                                      className="px-2 py-0.5 rounded text-xs"
+                                      style={{
+                                        background: colors.badgeInfoBg,
+                                        color: colors.primaryBlue,
+                                      }}
+                                    >
+                                      {cleanTech}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -879,7 +947,16 @@ export default function ProfessionalTab({
                           <div className="flex gap-2 flex-shrink-0">
                             <button
                               type="button"
-                              onClick={() => setEditingProjectId(projId)}
+                              onClick={() => {
+                                setEditingProjectId(projId);
+                                // Initialize raw technologies string when opening for editing
+                                if (!projectTechnologiesRaw[projId]) {
+                                  setProjectTechnologiesRaw(prev => ({ 
+                                    ...prev, 
+                                    [projId]: (project.technologies || []).join(', ') 
+                                  }));
+                                }
+                              }}
                               className="p-2 rounded-lg transition-all"
                               style={{ color: colors.primaryBlue }}
                               onMouseEnter={(e) => {

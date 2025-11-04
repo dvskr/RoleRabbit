@@ -3,22 +3,17 @@
 import React from 'react';
 import { DashboardData, DashboardConfig } from '../types/dashboard';
 import { ActivityFeed } from './ActivityFeed';
-import { SmartTodoSystem } from './SmartTodoSystem';
 import { ProgressMetrics } from './ProgressMetrics';
 import { IntelligentAlerts } from './IntelligentAlerts';
 import { QuickActionsPanel } from './QuickActionsPanel';
 import { SponsoredAdPlaceholder } from './SponsoredAdPlaceholder';
-import { ProfileAnalytics } from './ProfileAnalytics';
+import { Todos } from './Todos';
 
 interface DashboardGridProps {
   dashboardData: DashboardData;
   isLoading: boolean;
   activityFilter: string;
   setActivityFilter: (filter: string) => void;
-  todoFilter: string;
-  setTodoFilter: (filter: string) => void;
-  showCompletedTodos: boolean;
-  setShowCompletedTodos: (show: boolean) => void;
   config: DashboardConfig;
   widgets?: Array<{ id: string; type: string; isVisible: boolean; order: number; size: string }>;
   onCompleteTodo: (todoId: string) => void;
@@ -32,10 +27,6 @@ export function DashboardGrid({
   isLoading,
   activityFilter,
   setActivityFilter,
-  todoFilter,
-  setTodoFilter,
-  showCompletedTodos,
-  setShowCompletedTodos,
   config,
   widgets = [],
   onCompleteTodo,
@@ -48,8 +39,8 @@ export function DashboardGrid({
       <div className="h-full max-w-7xl mx-auto">
         {/* Complete Dashboard Layout with All Components */}
         <div className="h-full flex flex-col gap-3">
-          {/* Top Row - Activity Feed, Smart Todos, and Intelligent Alerts */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-3 min-h-[400px]">
+          {/* Top Row - Activity Feed and Intelligent Alerts */}
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3 min-h-[400px]">
             {/* Activity Feed - Takes 2 columns */}
             {config.showActivityFeed && widgets.find(w => w.id === 'activity-feed')?.isVisible !== false && (
               <div className="lg:col-span-2 min-h-0" data-tour="activity-feed">
@@ -60,23 +51,6 @@ export function DashboardGrid({
                     onFilterChange={setActivityFilter}
                     isLoading={isLoading}
                     onNavigateToTab={onNavigateToTab}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Smart Todo System - Takes 1 column */}
-            {config.showSmartTodos && widgets.find(w => w.id === 'smart-todos')?.isVisible !== false && (
-              <div className="lg:col-span-1 min-h-0" data-tour="smart-todos">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 h-full overflow-hidden">
-                  <SmartTodoSystem
-                    todos={dashboardData.todos}
-                    filter={todoFilter}
-                    onFilterChange={setTodoFilter}
-                    showCompleted={showCompletedTodos}
-                    onShowCompletedChange={setShowCompletedTodos}
-                    onCompleteTodo={onCompleteTodo}
-                    isLoading={isLoading}
                   />
                 </div>
               </div>
@@ -96,7 +70,7 @@ export function DashboardGrid({
             )}
           </div>
 
-          {/* Middle Row - Progress Metrics, Profile Analytics, and Quick Actions */}
+          {/* Middle Row - Progress Metrics, Todos, and Quick Actions */}
           <div className="flex-shrink-0 grid grid-cols-1 lg:grid-cols-3 gap-3">
             {/* Progress Metrics */}
             {widgets.find(w => w.id === 'progress-metrics')?.isVisible !== false && (
@@ -110,10 +84,14 @@ export function DashboardGrid({
               </div>
             )}
 
-            {/* Profile Analytics */}
-            <div className="lg:col-span-1" data-tour="profile-analytics">
+            {/* Todos */}
+            <div className="lg:col-span-1" data-tour="todos">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 h-[350px] overflow-hidden">
-                <ProfileAnalytics isLoading={isLoading} />
+                <Todos
+                  todos={dashboardData.todos}
+                  onCompleteTodo={onCompleteTodo}
+                  isLoading={isLoading}
+                />
               </div>
             </div>
 

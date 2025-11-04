@@ -27,10 +27,9 @@ import { PremiumFeaturesWidget } from './DashboardFigma/components/PremiumFeatur
 import { ActivityFeedWidget } from './DashboardFigma/components/ActivityFeedWidget';
 import { UpcomingEventsWidget } from './DashboardFigma/components/UpcomingEventsWidget';
 import { QuickActionsWidget } from './DashboardFigma/components/QuickActionsWidget';
-import { TodosWidget } from './DashboardFigma/components/TodosWidget';
 import { IntelligentAlertsWidget } from './DashboardFigma/components/IntelligentAlertsWidget';
 import { ProgressMetricsWidget } from './DashboardFigma/components/ProgressMetricsWidget';
-import { ProfileAnalyticsWidget } from './DashboardFigma/components/ProfileAnalyticsWidget';
+import { TodosWidget } from './DashboardFigma/components/TodosWidget';
 
 export default function DashboardFigma({ 
   onNavigateToTab,
@@ -65,18 +64,36 @@ export default function DashboardFigma({
       }}
     >
       <div className="w-full max-w-full mx-auto space-y-3 sm:space-y-4 md:space-y-6">
-        {/* Filter Tags */}
-        <FilterTags filterTags={filterTags} />
+        {/* Filter Tags - Hidden when empty */}
+        {filterTags.length > 0 && <FilterTags filterTags={filterTags} />}
 
         {/* Metrics Grid */}
         <MetricsGrid metrics={METRICS} colors={colors} />
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
-          {/* Left Side - Profile Analytics + Premium Features + Activity Feed + Events */}
+          {/* Left Side - Todos + Premium Features + Activity Feed + Events */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3 sm:gap-4">
-            {/* Profile Analytics Widget */}
-            <ProfileAnalyticsWidget />
+            {/* Todos Widget */}
+            <TodosWidget
+              todos={todos.filtered}
+              todoFilter={filters.todoFilter}
+              showCompleted={filters.showCompleted}
+              todoProgress={todos.progress}
+              showAddTodo={addTodoForm.showAddTodo}
+              newTodoTitle={addTodoForm.newTodoTitle}
+              newTodoSubtitle={addTodoForm.newTodoSubtitle}
+              newTodoPriority={addTodoForm.newTodoPriority}
+              onShowAddTodo={() => addTodoForm.setShowAddTodo(true)}
+              onTitleChange={addTodoForm.setNewTodoTitle}
+              onSubtitleChange={addTodoForm.setNewTodoSubtitle}
+              onPriorityChange={addTodoForm.setNewTodoPriority}
+              onAddTodo={addTodoForm.submitForm}
+              onCancelAddTodo={addTodoForm.resetForm}
+              onToggleTodo={todos.toggleTodoComplete}
+              onDeleteTodo={todos.deleteTodo}
+              colors={colors}
+            />
 
             {/* Premium Features Widget */}
             <PremiumFeaturesWidget colors={colors} />
@@ -97,27 +114,6 @@ export default function DashboardFigma({
           <div className="lg:col-span-5 xl:col-span-4 grid grid-cols-1 gap-3 sm:gap-4">
             {/* Quick Actions */}
             <QuickActionsWidget quickActions={quickActions} colors={colors} />
-
-            {/* Smart To-Dos */}
-            <TodosWidget
-              todos={todos.filtered}
-              todoFilter={filters.todoFilter}
-              showCompleted={filters.showCompleted}
-              todoProgress={todos.progress}
-              showAddTodo={addTodoForm.showAddTodo}
-              newTodoTitle={addTodoForm.newTodoTitle}
-              newTodoSubtitle={addTodoForm.newTodoSubtitle}
-              newTodoPriority={addTodoForm.newTodoPriority}
-              onShowAddTodo={() => addTodoForm.setShowAddTodo(true)}
-              onTitleChange={addTodoForm.setNewTodoTitle}
-              onSubtitleChange={addTodoForm.setNewTodoSubtitle}
-              onPriorityChange={addTodoForm.setNewTodoPriority}
-              onAddTodo={addTodoForm.submitForm}
-              onCancelAddTodo={addTodoForm.resetForm}
-              onToggleTodo={todos.toggleTodoComplete}
-              onDeleteTodo={todos.deleteTodo}
-              colors={colors}
-            />
 
             {/* Intelligent Alerts */}
             <IntelligentAlertsWidget

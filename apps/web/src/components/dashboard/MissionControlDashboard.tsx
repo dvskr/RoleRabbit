@@ -36,10 +36,6 @@ export default function MissionControlDashboard({
     executeQuickAction,
     activityFilter,
     setActivityFilter,
-    todoFilter,
-    setTodoFilter,
-    showCompletedTodos,
-    setShowCompletedTodos,
     config: dashboardConfig,
     updateConfig
   } = useDashboard(config);
@@ -70,10 +66,9 @@ export default function MissionControlDashboard({
   // Widget state management
   const [widgets, setWidgets] = useState<DashboardWidget[]>([
     { id: 'activity-feed', type: 'activity', title: 'Activity Feed', description: 'Track job search activities', isVisible: true, order: 0, size: 'large' },
-    { id: 'smart-todos', type: 'todos', title: 'Smart To-Dos', description: 'AI-powered daily tasks', isVisible: true, order: 1, size: 'medium' },
     { id: 'intelligent-alerts', type: 'alerts', title: 'Intelligent Alerts', description: 'Proactive reminders', isVisible: true, order: 2, size: 'medium' },
     { id: 'progress-metrics', type: 'metrics', title: 'Progress Metrics', description: 'Track your progress', isVisible: true, order: 3, size: 'large' },
-    { id: 'profile-analytics', type: 'analytics', title: 'Profile Analytics', description: 'Profile performance metrics', isVisible: true, order: 4, size: 'medium' },
+    { id: 'todos', type: 'todos', title: 'Todos', description: 'Your tasks and todos', isVisible: true, order: 4, size: 'medium' },
     { id: 'quick-actions', type: 'actions', title: 'Quick Actions', description: 'One-click actions', isVisible: true, order: 5, size: 'medium' },
     { id: 'premium-features', type: 'premium', title: 'Premium Features', description: 'RoleReady premium tools', isVisible: true, order: 6, size: 'large' }
   ]);
@@ -299,10 +294,6 @@ export default function MissionControlDashboard({
             isLoading={isLoading}
             activityFilter={activityFilter}
             setActivityFilter={setActivityFilter}
-            todoFilter={todoFilter}
-            setTodoFilter={setTodoFilter}
-            showCompletedTodos={showCompletedTodos}
-            setShowCompletedTodos={setShowCompletedTodos}
             config={dashboardConfig}
             widgets={widgets}
             onCompleteTodo={completeTodo}

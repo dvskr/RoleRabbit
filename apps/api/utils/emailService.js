@@ -30,12 +30,17 @@ const transporter = nodemailer.createTransport({
 /**
  * Send email using Resend, tempGrid, or fallback SMTP
  */
-async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.com' }) {
+async function sendEmail({ to, subject, html, text, from = null }) {
+  // Use EMAIL_FROM from env, or Resend test domain, or default
+  const defaultFrom = process.env.EMAIL_FROM || 
+                     (resend ? 'onboarding@resend.dev' : 'noreply@roleready.com');
+  const fromAddress = from || defaultFrom;
+  
   try {
     // Try Resend first (Primary - You chose this)
     if (resend) {
       const { data, error } = await resend.emails.send({
-        from: from,
+        from: fromAddress,
         to: to,
         subject: subject,
         html: html,
@@ -54,7 +59,7 @@ async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.co
     if (sendgridApiKey) {
       const msg = {
         to,
-        from: { name: 'RoleReady', email: from },
+        from: { name: 'RoleReady', email: fromAddress },
         subject,
         text,
         html,
@@ -67,7 +72,7 @@ async function sendEmail({ to, subject, html, text, from = 'noreply@roleready.co
     
     // Fallback to SMTP
     const info = await transporter.sendMail({
-      from: `"RoleReady" <${from}>`,
+      from: `"RoleReady" <${fromAddress}>`,
       to,
       subject,
       text,
@@ -179,9 +184,156 @@ async function sendPasswordResetEmail(email, resetToken) {
   });
 }
 
+/**
+ * Send OTP email for email/password updates
+ */
+async function sendOTPEmail(email, otp, purpose) {
+  const purposeText = purpose === 'email_update' 
+    ? 'update your login email' 
+    : 'reset your password';
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9fafb; }
+        .otp-box { background: #4F46E5; color: white; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 8px; border-radius: 8px; margin: 20px 0; }
+        .warning { color: #DC2626; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Verification Code</h1>
+        </div>
+        <div class="content">
+          <p>We received a request to ${purposeText} for your RoleReady account.</p>
+          <p>Use the verification code below to complete your request:</p>
+          <div class="otp-box">${otp}</div>
+          <p class="warning">This code will expire in 10 minutes.</p>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return sendEmail({
+    to: email,
+    subject: `Verification Code - RoleReady`,
+    html,
+    text: `Your verification code is: ${otp}. This code expires in 10 minutes.`,
+  });
+}
+
+/**
+ * Send email change notification to old email
+ */
+async function sendEmailChangeNotification(oldEmail, newEmail) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9fafb; }
+        .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Email Change Request</h1>
+        </div>
+        <div class="content">
+          <p>Hello,</p>
+          <p>We received a request to change your RoleReady account email address.</p>
+          <div class="warning">
+            <strong>Current email:</strong> ${oldEmail}<br>
+            <strong>New email:</strong> ${newEmail}
+          </div>
+          <p>If you made this request, please proceed with verifying your new email address.</p>
+          <p>If you did not request this change, please contact our support team immediately to secure your account.</p>
+          <p>Best regards,<br>The RoleReady Team</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return sendEmail({
+    to: oldEmail,
+    subject: 'Email Change Request - RoleReady',
+    html,
+    text: `Email change requested for your RoleReady account. Current: ${oldEmail}, New: ${newEmail}. If you didn't request this, contact support immediately.`,
+  });
+}
+
+/**
+ * Send email change confirmation
+ */
+async function sendEmailChangeConfirmation(email, newEmail, type) {
+  const isOldEmail = type === 'old';
+  const title = isOldEmail ? 'Email Changed Successfully' : 'Welcome to Your New Email';
+  const content = isOldEmail
+    ? `<p>Your RoleReady account email has been successfully changed.</p>
+       <p><strong>Previous email:</strong> ${email}<br>
+       <strong>New email:</strong> ${newEmail}</p>
+       <p>You will need to use your new email address (${newEmail}) to log in to your account.</p>
+       <p>If you did not make this change, please contact our support team immediately.</p>`
+    : `<p>Your RoleReady account email has been successfully changed to this address.</p>
+       <p>You can now use this email address (${newEmail}) to log in to your account.</p>
+       <p>Welcome! Your account is now associated with this email address.</p>`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #10B981; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9fafb; }
+        .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>${title}</h1>
+        </div>
+        <div class="content">
+          <p>Hello,</p>
+          ${content}
+          <p>Best regards,<br>The RoleReady Team</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return sendEmail({
+    to: email,
+    subject: `${title} - RoleReady`,
+    html,
+    text: isOldEmail
+      ? `Your RoleReady account email has been changed from ${email} to ${newEmail}. Use ${newEmail} to log in.`
+      : `Your RoleReady account email has been changed to ${newEmail}. You can now use this email to log in.`,
+  });
+}
+
 module.exports = {
   sendEmail,
   sendWelcomeEmail,
   sendPasswordResetEmail,
+  sendOTPEmail,
+  sendEmailChangeNotification,
+  sendEmailChangeConfirmation,
 };
 

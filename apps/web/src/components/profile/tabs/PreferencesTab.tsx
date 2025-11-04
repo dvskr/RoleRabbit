@@ -1,9 +1,25 @@
 'use client';
 
-import React from 'react';
-import { Bell, Shield, CheckCircle, Mail, MessageSquare, Eye, EyeOff, Settings } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bell, CheckCircle, Mail, MessageSquare } from 'lucide-react';
+import { logger } from '../../../utils/logger';
 import { UserData } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { validatePasswordChange } from '../../../utils/passwordValidation';
+import {
+  changePassword,
+  sendOTP,
+  sendOTPToNewEmail,
+  verifyOTPAndUpdateEmail,
+  verifyOTPAndResetPassword,
+} from '../../../utils/securityHelpers';
+import {
+  AccountUpdateSection,
+  PasswordChangeModal,
+  EmailUpdateModal,
+  ForgotFlowModal,
+} from './security/components';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface PreferencesTabProps {
   userData: UserData;
@@ -18,54 +34,197 @@ export default function PreferencesTab({
 }: PreferencesTabProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const { user } = useAuth();
+  const currentEmail = user?.email || userData.email || '';
 
-  // Calculate notification preferences summary
-  const enabledNotifications = [
-    userData.emailNotifications && 'Email',
-    userData.smsNotifications && 'SMS'
-  ].filter(Boolean).length;
+  // Password modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  // Email update modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [isSendingOTP, setIsSendingOTP] = useState(false);
+
+  // Forgot flow modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showPasswordModal) {
+      setPasswordError(null);
+      setPasswordSuccess(null);
+    }
+  }, [showPasswordModal]);
+
+  useEffect(() => {
+    if (!showEmailModal) {
+      setEmailError(null);
+      setEmailSuccess(null);
+      setIsSendingOTP(false);
+    }
+  }, [showEmailModal]);
+
+  useEffect(() => {
+    if (!showForgotModal) {
+      setForgotError(null);
+      setForgotSuccess(null);
+    }
+  }, [showForgotModal]);
+
+  const handlePasswordChange = async (passwordData: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    const validation = validatePasswordChange(
+      passwordData.currentPassword,
+      passwordData.newPassword,
+      passwordData.confirmPassword
+    );
+
+    if (!validation.isValid) {
+      const firstError = validation.errors[0];
+      setPasswordError(firstError || 'Password validation failed');
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    const result = await changePassword(
+      passwordData.currentPassword,
+      passwordData.newPassword,
+      passwordData.confirmPassword
+    );
+    setPasswordSubmitting(false);
+
+    if (!result.success) {
+      setPasswordError(result.error);
+      return;
+    }
+
+    setPasswordSuccess('Password updated successfully.');
+    setTimeout(() => {
+      setShowPasswordModal(false);
+      setPasswordSuccess(null);
+    }, 1500);
+  };
+
+  const handleSendOTPToCurrent = async () => {
+    setIsSendingOTP(true);
+    setEmailError(null);
+    try {
+      const result = await sendOTP('email_update');
+      if (!result.success) {
+        setEmailError(result.error);
+        setIsSendingOTP(false);
+        return;
+      }
+    } catch (error) {
+      logger.error('Failed to send OTP:', error);
+      setEmailError('Failed to send verification code. Please try again.');
+      setIsSendingOTP(false);
+    }
+  };
+
+  const handleVerifyCurrentOTP = async (otp: string, newEmail: string) => {
+    setEmailError(null);
+    try {
+      // Verify current email OTP and save new email as pending
+      const result = await verifyOTPAndUpdateEmail(otp, newEmail, 'verify_current');
+      if (!result.success) {
+        setEmailError(result.error);
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      logger.error('Failed to verify current OTP:', error);
+      throw error;
+    }
+  };
+
+  const handleSendOTPToNew = async (newEmail: string) => {
+    setIsSendingOTP(true);
+    setEmailError(null);
+    try {
+      const result = await sendOTPToNewEmail(newEmail);
+      if (!result.success) {
+        setEmailError(result.error);
+        setIsSendingOTP(false);
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      logger.error('Failed to send OTP to new email:', error);
+      setIsSendingOTP(false);
+      throw error;
+    }
+  };
+
+  const handleVerifyNewOTP = async (otp: string, newEmail: string) => {
+    setEmailError(null);
+    setEmailSuccess(null);
+    
+    const result = await verifyOTPAndUpdateEmail(otp, newEmail, 'verify_new');
+    
+    if (!result.success) {
+      setEmailError(result.error);
+      throw new Error(result.error);
+    }
+
+    setEmailSuccess('Email updated successfully.');
+    setTimeout(() => {
+      setShowEmailModal(false);
+      setEmailSuccess(null);
+      // Refresh user data
+      window.location.reload();
+    }, 2000);
+  };
+
+  const handleSendOTPForForgot = async () => {
+    setForgotError(null);
+    const result = await sendOTP('password_reset');
+    if (!result.success) {
+      setForgotError(result.error);
+    }
+  };
+
+  const handleResetPassword = async (otp: string, newPassword: string, confirmPassword: string) => {
+    setForgotError(null);
+    setForgotSuccess(null);
+    
+    const result = await verifyOTPAndResetPassword(otp, newPassword, confirmPassword);
+    
+    if (!result.success) {
+      setForgotError(result.error);
+      return;
+    }
+
+    setForgotSuccess('Password reset successfully.');
+    setTimeout(() => {
+      setShowForgotModal(false);
+      setForgotSuccess(null);
+    }, 2000);
+  };
+
 
   return (
     <div className="max-w-4xl">
       <div className="space-y-8">
-        {/* Preferences Summary */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-6 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <Settings size={20} style={{ color: colors.primaryBlue }} />
-            <h3 
-              className="text-lg font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Current Settings
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-xl font-bold mb-1" style={{ color: enabledNotifications > 0 ? colors.successGreen : colors.tertiaryText }}>
-                {enabledNotifications}/2
-              </div>
-              <div className="text-xs" style={{ color: colors.secondaryText }}>Notifications</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold mb-1" style={{ color: colors.badgeInfoText }}>
-                {userData.profileVisibility || 'Public'}
-              </div>
-              <div className="text-xs" style={{ color: colors.secondaryText }}>Visibility</div>
-            </div>
-            <div className="text-center">
-              <div className="text-xl font-bold mb-1" style={{ color: colors.badgePurpleText }}>
-                {userData.privacyLevel || 'Professional'}
-              </div>
-              <div className="text-xs" style={{ color: colors.secondaryText }}>Privacy Level</div>
-            </div>
-          </div>
-        </div>
+        {/* Account & Security Section */}
+        <AccountUpdateSection
+          colors={colors}
+          currentEmail={currentEmail}
+          onOpenPasswordModal={() => setShowPasswordModal(true)}
+          onOpenEmailModal={() => setShowEmailModal(true)}
+          onOpenForgotFlow={() => setShowForgotModal(true)}
+        />
+
+        {/* Notification Preferences Section */}
         <div 
           className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
           style={{
@@ -226,146 +385,43 @@ export default function PreferencesTab({
             </div>
           </div>
         </div>
-
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <Shield size={24} style={{ color: colors.badgeInfoText }} />
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Privacy Settings
-            </h3>
-          </div>
-          <div className="space-y-4">
-            <div 
-              className="p-5 rounded-xl transition-all"
-              style={{
-                background: colors.inputBackground,
-                border: `1px solid ${colors.border}`,
-              }}
-              onMouseEnter={(e) => {
-                if (isEditing) {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = colors.border;
-              }}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                {userData.profileVisibility === 'Public' ? (
-                  <Eye size={18} style={{ color: colors.badgeInfoText }} />
-                ) : (
-                  <EyeOff size={18} style={{ color: colors.secondaryText }} />
-                )}
-                <div className="flex-1">
-                  <label 
-                    htmlFor="profile-visibility-select"
-                    className="font-semibold block"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Profile Visibility
-                  </label>
-                  <p 
-                    className="text-sm mt-1"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    Control who can see your profile and information
-                  </p>
-                </div>
-              </div>
-              <select 
-                id="profile-visibility-select"
-                name="profileVisibility"
-                value={userData.profileVisibility || 'Public'}
-                onChange={(e) => onUserDataChange({ profileVisibility: e.target.value })}
-                disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-lg transition-all"
-                style={{
-                  background: colors.cardBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-              >
-                <option value="Public" style={{ background: colors.background, color: colors.secondaryText }}>Public - Visible to everyone</option>
-                <option value="Recruiters Only" style={{ background: colors.background, color: colors.secondaryText }}>Recruiters Only - Visible to verified recruiters</option>
-                <option value="Private" style={{ background: colors.background, color: colors.secondaryText }}>Private - Only you can see</option>
-              </select>
-            </div>
-            
-            <div 
-              className="p-5 rounded-xl transition-all"
-              style={{
-                background: colors.inputBackground,
-                border: `1px solid ${colors.border}`,
-              }}
-              onMouseEnter={(e) => {
-                if (isEditing) {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = colors.border;
-              }}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Shield size={18} style={{ color: colors.badgePurpleText }} />
-                <div className="flex-1">
-                  <label 
-                    htmlFor="privacy-level-select"
-                    className="font-semibold block"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Privacy Level
-                  </label>
-                  <p 
-                    className="text-sm mt-1"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    Control how much profile information is shared with recruiters
-                  </p>
-                </div>
-              </div>
-              <select 
-                id="privacy-level-select"
-                name="privacyLevel"
-                value={userData.privacyLevel || 'Professional'}
-                onChange={(e) => onUserDataChange({ privacyLevel: e.target.value })}
-                disabled={!isEditing}
-                className="w-full px-4 py-3 rounded-lg transition-all"
-                style={{
-                  background: colors.cardBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-              >
-                <option value="Professional" style={{ background: colors.background, color: colors.secondaryText }}>Professional - Share full profile</option>
-                <option value="Limited" style={{ background: colors.background, color: colors.secondaryText }}>Limited - Share basic info only</option>
-                <option value="Minimal" style={{ background: colors.background, color: colors.secondaryText }}>Minimal - Share contact info only</option>
-              </select>
-            </div>
-          </div>
-        </div>
       </div>
+
+      {/* Modals */}
+      <PasswordChangeModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onConfirm={handlePasswordChange}
+        colors={colors}
+        isSubmitting={passwordSubmitting}
+        errorMessage={passwordError}
+        successMessage={passwordSuccess}
+      />
+
+      <EmailUpdateModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        onSendOTPToCurrent={handleSendOTPToCurrent}
+        onVerifyCurrentOTP={handleVerifyCurrentOTP}
+        onSendOTPToNew={handleSendOTPToNew}
+        onVerifyNewOTP={handleVerifyNewOTP}
+        colors={colors}
+        currentEmail={currentEmail}
+        isLoading={isSendingOTP}
+        errorMessage={emailError}
+        successMessage={emailSuccess}
+      />
+
+      <ForgotFlowModal
+        isOpen={showForgotModal}
+        onClose={() => setShowForgotModal(false)}
+        onSendOTP={handleSendOTPForForgot}
+        onResetPassword={handleResetPassword}
+        colors={colors}
+        currentEmail={currentEmail}
+        errorMessage={forgotError}
+        successMessage={forgotSuccess}
+      />
     </div>
   );
 }

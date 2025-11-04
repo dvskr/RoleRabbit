@@ -263,10 +263,6 @@ export const createFilterTags = (
   onNavigateToTab?: (tab: string) => void,
   onQuickAction?: (actionId: string) => void
 ): FilterTag[] => [
-  { label: 'Goals', color: 'bg-blue-600', action: () => onNavigateToTab?.('tracker') },
-  { label: 'Export', color: 'bg-emerald-600', action: () => onQuickAction?.('export') },
-  { label: 'Analytics', color: 'bg-purple-600', action: () => onNavigateToTab?.('tracker') },
-  { label: 'Customize', color: 'bg-orange-600', action: () => onQuickAction?.('customize') },
-  { label: 'Themes', color: 'bg-pink-600', action: () => onQuickAction?.('themes') }
+  // Action buttons removed - returning empty array
 ];
 

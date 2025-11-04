@@ -96,6 +96,7 @@ export interface PasswordInputProps {
   colors: ThemeColors;
   id?: string;
   name?: string;
+  autoComplete?: string;
 }
 
 // Security card props (wrapper)
