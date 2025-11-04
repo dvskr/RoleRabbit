@@ -1,0 +1,38 @@
+DNS Records for roleready.com - Quick Reference
+================================================
+
+Copy these exact values from your Resend dashboard and add to your domain provider:
+
+1. DKIM Record (Domain Verification)
+   Type: TXT
+   Name: resend._domainkey
+   Content: [Copy full value from Resend - starts with p=MIGfMA0GCSqGSIb3...]
+   TTL: Auto
+
+2. MX Record (Enable Sending)
+   Type: MX
+   Name: send
+   Content: feedback-smtp.us-east-1.amazonaws.com
+   Priority: 10
+   TTL: Auto
+
+3. SPF Record (Enable Sending)
+   Type: TXT
+   Name: send
+   Content: v=spf1 include:amazonses.com ~all
+   TTL: Auto
+
+4. DMARC Record (Optional - Recommended)
+   Type: TXT
+   Name: _dmarc
+   Content: v=DMARC1; p=none;
+   TTL: Auto
+
+After adding:
+- Wait 5-10 minutes
+- Click "I've added the records" in Resend
+- Wait for verification ✅
+
+Then update .env:
+EMAIL_FROM=noreply@roleready.com
+
