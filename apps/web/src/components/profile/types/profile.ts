@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 
 export interface Skill {
   name: string;
-  proficiency: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
   yearsOfExperience?: number;
   verified?: boolean;
 }
@@ -188,7 +187,7 @@ export interface UserData {
   workPreference: string;
   professionalSummary?: ProfessionalSummary;
   
-  // Skills & Expertise (Enhanced with Proficiency)
+  // Skills & Expertise
   skills: Skill[];
   certifications: Certification[];
   languages: Array<{ name: string; proficiency: string }>;

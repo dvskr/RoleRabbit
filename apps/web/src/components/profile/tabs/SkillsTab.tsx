@@ -39,11 +39,10 @@ export default function SkillsTab({
     if (Array.isArray(skills)) {
       return skills.map(skill => {
         if (typeof skill === 'string') {
-          return { name: skill, proficiency: 'Beginner', verified: false };
+          return { name: skill, verified: false };
         }
         return {
           name: skill.name || '',
-          proficiency: skill.proficiency || 'Beginner',
           yearsOfExperience: skill.yearsOfExperience,
           verified: skill.verified || false
         };
@@ -80,7 +79,6 @@ export default function SkillsTab({
       if (!existingSkillNames.has(skillName.toLowerCase())) {
         newSkills.push({
           name: skillName,
-          proficiency: 'Beginner',
           verified: false
         });
         existingSkillNames.add(skillName.toLowerCase()); // Prevent duplicates in the same batch
@@ -223,46 +221,6 @@ export default function SkillsTab({
     onUserDataChange({ languages: languages.filter((_, i) => i !== index) });
   };
 
-  const getProficiencyBadgeStyle = (proficiency: string) => {
-    switch (proficiency) {
-      case 'Expert':
-        return {
-          background: colors.badgeSuccessBg,
-          color: colors.badgeSuccessText,
-          border: colors.badgeSuccessBorder,
-        };
-      case 'Advanced':
-        return {
-          background: colors.badgeInfoBg,
-          color: colors.badgeInfoText,
-          border: colors.badgeInfoBorder,
-        };
-      case 'Intermediate':
-        return {
-          background: colors.badgeWarningBg,
-          color: colors.badgeWarningText,
-          border: colors.badgeWarningBorder,
-        };
-      default:
-        return {
-          background: colors.badgeNeutralBg,
-          color: colors.badgeNeutralText,
-          border: colors.badgeNeutralBorder,
-        };
-    }
-  };
-
-  const getProficiencyValue = (proficiency: string): number => {
-    switch (proficiency) {
-      case 'Expert': return 100;
-      case 'Advanced': return 75;
-      case 'Intermediate': return 50;
-      case 'Beginner': return 25;
-      default: return 25;
-    }
-  };
-
-  const proficiencyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 
   const normalizeEducation = (educationInput: any): Education[] => {
     const toArray = (input: any): any[] => {

@@ -189,7 +189,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
       if (keepDrafts) {
         sanitized.push({
           name: '',
-          proficiency: 'Beginner',
           yearsOfExperience: undefined,
           verified: false,
         });
@@ -205,7 +204,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
         if (keepDrafts) {
           sanitized.push({
             name: raw,
-            proficiency: 'Beginner',
             yearsOfExperience: undefined,
             verified: false,
           });
@@ -220,7 +218,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
 
       sanitized.push({
         name: keepDrafts ? raw : raw.trim(),
-        proficiency: 'Beginner',
         yearsOfExperience: undefined,
         verified: false,
       });
@@ -238,7 +235,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
       if (keepDrafts) {
         sanitized.push({
           name: rawName,
-          proficiency: toStringSafe(skill.proficiency ?? 'Beginner'),
           yearsOfExperience: undefined,
           verified: Boolean(skill?.verified),
         });
@@ -252,12 +248,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
     }
     seen.add(key);
 
-    const allowedProficiencies: Skill['proficiency'][] = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-    const rawProficiency = toStringSafe(skill.proficiency ?? 'Beginner');
-    const normalizedProficiency = allowedProficiencies.includes(rawProficiency.trim() as Skill['proficiency'])
-      ? (rawProficiency.trim() as Skill['proficiency'])
-      : 'Beginner';
-
     let yearsOfExperience: number | undefined;
     if (skill?.yearsOfExperience !== undefined && skill?.yearsOfExperience !== null && skill?.yearsOfExperience !== '') {
       const parsedYears = Number(skill.yearsOfExperience);
@@ -268,7 +258,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
 
     sanitized.push({
       name: keepDrafts ? rawName : trimmedName,
-      proficiency: keepDrafts ? rawProficiency : normalizedProficiency,
       yearsOfExperience,
       verified: Boolean(skill?.verified),
     });
@@ -277,7 +266,6 @@ export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }):
   if (!keepDrafts) {
     return sanitized.map((skill) => ({
       name: skill.name.trim(),
-      proficiency: (skill.proficiency || 'Beginner').trim() as Skill['proficiency'],
       yearsOfExperience: skill.yearsOfExperience,
       verified: Boolean(skill.verified),
     }));

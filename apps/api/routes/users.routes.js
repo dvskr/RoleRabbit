@@ -127,11 +127,6 @@ function normalizeSkillInput(skillsInput) {
           return null;
         }
 
-        const allowedProficiencies = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-        const proficiency = allowedProficiencies.includes(skill.proficiency)
-          ? skill.proficiency
-          : 'Beginner';
-
         let yearsOfExperience = null;
         if (skill.yearsOfExperience !== undefined && skill.yearsOfExperience !== null && skill.yearsOfExperience !== '') {
           const parsedYears = Number(skill.yearsOfExperience);
@@ -142,7 +137,6 @@ function normalizeSkillInput(skillsInput) {
 
         return {
           name,
-          proficiency,
           yearsOfExperience,
           verified: Boolean(skill.verified)
         };
@@ -492,7 +486,6 @@ async function userRoutes(fastify, options) {
       if (parsedUser.userSkills && Array.isArray(parsedUser.userSkills)) {
         parsedUser.skills = parsedUser.userSkills.map(us => ({
           name: us.skill.name,
-          proficiency: us.proficiency || 'Beginner',
           yearsOfExperience: us.yearsOfExperience,
           verified: us.verified || false
         }));
@@ -512,7 +505,7 @@ async function userRoutes(fastify, options) {
         return {
           ...edu,
           startDate: edu.startDate || null,
-          endDate: edu.endDate || edu.graduationDate || null,
+          endDate: edu.endDate || null,
           gpa: edu.gpa || null,
           honors: edu.honors || null,
           location: edu.location || null,
@@ -832,7 +825,7 @@ async function userRoutes(fastify, options) {
                 degree: edu.degree || null,
                 field: edu.field || null,
                 startDate: edu.startDate || null,
-                endDate: edu.endDate || edu.graduationDate || null,
+                endDate: edu.endDate || null,
                 gpa: edu.gpa || null,
                 honors: edu.honors || null,
                 location: edu.location || null,
@@ -978,7 +971,7 @@ async function userRoutes(fastify, options) {
               data: {
                 profileId: profileId,
                 skillId: skill.id,
-                proficiency: skillData.proficiency || 'Beginner',
+                proficiency: null,
                 yearsOfExperience: skillData.yearsOfExperience || null,
               verified: Boolean(skillData.verified)
               }
@@ -1133,7 +1126,6 @@ async function userRoutes(fastify, options) {
       if (parsedUser.userSkills && Array.isArray(parsedUser.userSkills)) {
         parsedUser.skills = parsedUser.userSkills.map(us => ({
           name: us.skill.name,
-          proficiency: us.proficiency || 'Beginner',
           yearsOfExperience: us.yearsOfExperience,
           verified: us.verified || false
         }));
@@ -1152,7 +1144,7 @@ async function userRoutes(fastify, options) {
         return {
           ...edu,
           startDate: edu.startDate || null,
-          endDate: edu.endDate || edu.graduationDate || null,
+          endDate: edu.endDate || null,
           gpa: edu.gpa || null,
           honors: edu.honors || null,
           location: edu.location || null,
@@ -1621,7 +1613,99 @@ async function userRoutes(fastify, options) {
       const { prisma } = require('../utils/db');
       
       const user = await prisma.user.findUnique({
-        where: { id: userId }
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+          profile: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              personalEmail: true,
+              location: true,
+              profilePicture: true,
+              professionalBio: true,
+              linkedin: true,
+              github: true,
+              portfolio: true,
+              website: true,
+              workExperiences: {
+                select: {
+                  id: true,
+                  company: true,
+                  role: true,
+                  location: true,
+                  startDate: true,
+                  endDate: true,
+                  isCurrent: true,
+                  description: true,
+                  projectType: true
+                }
+              },
+              education: {
+                select: {
+                  id: true,
+                  institution: true,
+                  degree: true,
+                  field: true,
+                  startDate: true,
+                  endDate: true,
+                  gpa: true,
+                  honors: true,
+                  location: true,
+                  description: true
+                }
+              },
+              projects: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  technologies: true,
+                  date: true,
+                  link: true,
+                  github: true,
+                  media: true
+                }
+              },
+              certifications: {
+                select: {
+                  id: true,
+                  name: true,
+                  issuer: true,
+                  date: true,
+                  expiryDate: true,
+                  credentialUrl: true
+                }
+              },
+              languages: {
+                select: {
+                  id: true,
+                  name: true,
+                  proficiency: true
+                }
+              },
+              userSkills: {
+                select: {
+                  id: true,
+                  yearsOfExperience: true,
+                  verified: true,
+                  skill: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       });
       
       if (!user) {
@@ -1630,7 +1714,7 @@ async function userRoutes(fastify, options) {
       
       // Parse JSON fields
       const parsedUser = { ...user };
-      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'targetRoles', 'targetCompanies', 'socialLinks', 'projects', 'achievements', 'careerTimeline', 'workExperiences', 'volunteerExperiences', 'recommendations', 'publications', 'patents', 'organizations', 'testScores'];
+      const jsonFields = ['skills', 'certifications', 'languages', 'education', 'workExperiences', 'projects'];
       jsonFields.forEach(field => {
         if (parsedUser[field]) {
           try {

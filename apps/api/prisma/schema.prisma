@@ -7,43 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Achievement {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  type        String   // Award, Recognition, Competition, etc.
-  title       String
-  description String?
-  date        String?
-  link        String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@index([type])
-  @@map("achievements")
-}
-
-model CareerTimeline {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  title       String
-  description String?
-  date        String?
-  type        String?  @default("Work") // Work, Education, Achievement, etc.
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("career_timeline")
-}
 
 model Certification {
   id          String   @id @default(cuid())
@@ -137,6 +100,22 @@ model Education {
   @@map("education")
 }
 
+model Language {
+  id          String   @id @default(cuid())
+  profileId   String
+  
+  name        String
+  proficiency String?  // Native, Fluent, Conversational, Basic, etc.
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("languages")
+}
+
 model FileAccessLog {
   id          String      @id @default(cuid())
   fileId      String
@@ -200,25 +179,6 @@ model FileShare {
   @@map("file_shares")
 }
 
-model Organization {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  name        String
-  role        String?
-  startDate   String?
-  endDate     String?
-  description String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("organizations")
-}
-
 model PasswordResetToken {
   id        String   @id @default(cuid())
   userId    String
@@ -234,34 +194,17 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-model Patent {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  title       String
-  patentNumber String?
-  date        String?
-  link        String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("patents")
-}
-
 model Project {
-  id          String   @id @default(cuid())
-  profileId   String
+  id            String   @id @default(cuid())
+  profileId     String
   
-  title       String
-  description String?
-  technologies String? // JSON array or comma-separated
-  date        String?
-  link        String?
-  github      String?
+  title         String
+  description   String?
+  technologies  String? // JSON array or comma-separated
+  date          String?
+  link          String?
+  github        String?
+  media         String? // JSON array of media URLs
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,44 +213,6 @@ model Project {
 
   @@index([profileId])
   @@map("projects")
-}
-
-model Publication {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  title       String
-  authors     String?
-  publication String?
-  date        String?
-  link        String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("publications")
-}
-
-model Recommendation {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  recommenderName String
-  recommenderRole String?
-  recommenderCompany String?
-  content      String
-  date        String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("recommendations")
 }
 
 model RefreshToken {
@@ -378,22 +283,6 @@ model Skill {
   @@map("skills")
 }
 
-model SocialLink {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  platform    String   // LinkedIn, GitHub, Twitter, Portfolio, etc.
-  url         String
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([profileId, platform])
-  @@index([profileId])
-  @@map("social_links")
-}
 
 model StorageFile {
   id           String   @id @default(cuid())
@@ -483,46 +372,26 @@ model StorageQuota {
   @@map("storage_quotas")
 }
 
-model TestScore {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  testName    String
-  score       String?
-  date        String?
-  description String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("test_scores")
-}
-
 model UserProfile {
   id        String @id @default(cuid())
   userId    String @unique
   
-  // Basic Information
+  // Profile Tab - Basic Information
   firstName      String?
   lastName       String?
   phone          String?
   personalEmail  String?  // Personal/contact email (separate from login email)
   location       String?
-  bio            String?
-  professionalBio String?
   profilePicture String?
   
-  // Professional Summary
-  currentRole    String?
-  currentCompany String?
-  
-  // Social Links
+  // Profile Tab - Social Links
   linkedin       String?
   github         String?
+  portfolio      String?  // Portfolio URL
   website        String?
+  
+  // Professional Tab
+  professionalBio String?
   
   // Profile Analytics & Metrics
   profileViews         Int @default(0)
@@ -531,22 +400,14 @@ model UserProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
+  // Relations - Only keep what's needed for the tabs
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workExperiences   WorkExperience[]
-  education         Education[]
-  certifications    Certification[]
-  projects          Project[]
-  achievements      Achievement[]
-  volunteerExperiences VolunteerExperience[]
-  recommendations   Recommendation[]
-  publications      Publication[]
-  patents           Patent[]
-  organizations     Organization[]
-  testScores        TestScore[]
-  careerTimeline    CareerTimeline[]
-  socialLinks       SocialLink[]
-  userSkills        UserSkill[]
+  workExperiences   WorkExperience[]   // Professional Tab
+  projects          Project[]          // Professional Tab - Separate section
+  education         Education[]         // Skills & Expertise Tab
+  certifications    Certification[]     // Skills & Expertise Tab
+  languages         Language[]          // Skills & Expertise Tab
+  userSkills        UserSkill[]         // Skills & Expertise Tab
 
   @@index([userId])
   @@map("user_profiles")
@@ -557,7 +418,6 @@ model UserSkill {
   profileId         String
   skillId           String
   
-  proficiency       String?  @default("Beginner") // Beginner, Intermediate, Advanced, Expert
   yearsOfExperience Int?
   verified          Boolean  @default(false)
   
@@ -613,25 +473,6 @@ model User {
   @@index([email])
   @@index([provider, providerId])
   @@map("users")
-}
-
-model VolunteerExperience {
-  id          String   @id @default(cuid())
-  profileId   String
-  
-  organization String
-  role         String
-  startDate    String
-  endDate      String?
-  description  String?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("volunteer_experiences")
 }
 
 model WorkExperience {

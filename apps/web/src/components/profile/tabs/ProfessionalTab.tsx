@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Briefcase, Plus, Trash2, Edit2, X, Calendar, MapPin, Building2, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Edit2, X, Calendar, MapPin, Building2, FileText, CheckCircle, AlertCircle, FolderKanban, ExternalLink, Github } from 'lucide-react';
 import FormField from '../components/FormField';
-import { UserData, WorkExperience } from '../types/profile';
+import { UserData, WorkExperience, Project } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 interface ProfessionalTabProps {
@@ -94,6 +94,17 @@ export default function ProfessionalTab({
     description: '',
     projectType: 'Full-time'
   });
+
+  const createEmptyProject = (): Project => ({
+    id: `proj-${Date.now()}-${Math.random()}`,
+    title: '',
+    description: '',
+    technologies: [],
+    date: '',
+    link: '',
+    github: '',
+    media: []
+  });
   
   // Debug logging
   // eslint-disable-next-line no-console
@@ -105,6 +116,7 @@ export default function ProfessionalTab({
   });
   const [editingExpId, setEditingExpId] = useState<string | null>(null);
   const [editingExp, setEditingExp] = useState<WorkExperience | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
 
   const startEditing = (exp: WorkExperience) => {
     setEditingExpId(exp.id || null);
@@ -150,11 +162,58 @@ export default function ProfessionalTab({
     }
   };
 
+  // Normalize projects array
+  const normalizeProjects = (projects: any): Project[] => {
+    if (!projects) return [];
+    if (Array.isArray(projects)) {
+      return projects.map((proj: any) => ({
+        id: proj?.id || proj?._id || proj?.uuid || proj?.tempId || `proj-${Date.now()}-${Math.random()}`,
+        title: typeof proj?.title === 'string' ? proj.title.trim() : '',
+        description: typeof proj?.description === 'string' ? proj.description.trim() : '',
+        technologies: Array.isArray(proj?.technologies) ? proj.technologies : 
+                     (typeof proj?.technologies === 'string' ? proj.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0) : []),
+        date: typeof proj?.date === 'string' ? proj.date.trim() : '',
+        link: typeof proj?.link === 'string' ? proj.link.trim() : '',
+        github: typeof proj?.github === 'string' ? proj.github.trim() : '',
+        media: Array.isArray(proj?.media) ? proj.media : []
+      }));
+    }
+    return [];
+  };
+
+  const projects = normalizeProjects(userData.projects || []);
+
+  // Project management functions
+  const addProject = () => {
+    const newProject = createEmptyProject();
+    onUserDataChange({ projects: [...projects, newProject] });
+    // Immediately open the new project in edit mode
+    setEditingProjectId(newProject.id || null);
+  };
+
+  const updateProject = (projectId: string, updates: Partial<Project>) => {
+    const updated = projects.map(proj =>
+      proj.id === projectId ? { ...proj, ...updates } : proj
+    );
+    onUserDataChange({ projects: updated });
+  };
+
+  const deleteProject = (projectId: string) => {
+    const updated = projects.filter(proj => proj.id !== projectId);
+    onUserDataChange({ projects: updated });
+  };
+
+  const updateProjectTechnologies = (projectId: string, techString: string) => {
+    const technologies = techString.split(',').map(t => t.trim()).filter(t => t.length > 0);
+    updateProject(projectId, { technologies });
+  };
+
   const autoCreateExperienceRef = useRef(false);
 
   useEffect(() => {
     if (!isEditing) {
       autoCreateExperienceRef.current = false;
+      setEditingProjectId(null);
       return;
     }
 
@@ -173,14 +232,8 @@ export default function ProfessionalTab({
   return (
     <div className="max-w-4xl">
       {/* Professional Bio Section */}
-      <div 
-        className="backdrop-blur-sm rounded-2xl p-8 shadow-lg mb-8"
-        style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
-        }}
-      >
-        <div className="flex items-center gap-2 mb-6">
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-3">
           <FileText size={24} style={{ color: colors.primaryBlue }} />
           <h3 
             className="text-xl font-semibold"
@@ -193,35 +246,18 @@ export default function ProfessionalTab({
           <FormField
             id="profile-bio"
             name="bio"
-            label="Tell us about yourself"
+            label=""
             type="textarea"
             value={userData.professionalBio ?? userData.bio ?? ''}
             onChange={(value) => onUserDataChange({ professionalBio: value, bio: value })}
             disabled={!isEditing}
             rows={5}
             maxLength={5000}
-            showCounter={true}
+            showCounter={false}
             autoResize={true}
             placeholder="Write a compelling bio that highlights your experience, skills, and career goals..."
           />
           <div className="space-y-2">
-            <div 
-              className="flex justify-between items-center text-sm"
-              style={{ color: colors.tertiaryText }}
-            >
-              <span className="flex items-center gap-1">
-                <CheckCircle size={14} style={{ color: colors.secondaryText }} />
-                This will be visible to recruiters and potential employers
-              </span>
-              <span 
-                className={`font-medium ${
-                  ((userData.professionalBio ?? userData.bio) || '').length > 500 ? 'text-red-500' : 
-                  ((userData.professionalBio ?? userData.bio) || '').length >= 50 ? 'text-green-500' : ''
-                }`}
-              >
-                {((userData.professionalBio ?? userData.bio) || '').length}/500 characters
-              </span>
-            </div>
             {(((userData.professionalBio ?? userData.bio) || '').length > 0) && (((userData.professionalBio ?? userData.bio) || '').length < 50) && isEditing && (
               <div 
                 className="p-3 rounded-lg flex items-start gap-2"
@@ -582,6 +618,306 @@ export default function ProfessionalTab({
           })}
         </div>
       )}
+
+      {/* Projects Section - Separate section under Work Experience */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold" style={{ color: colors.primaryText }}>
+            Projects
+          </h2>
+          {isEditing && (
+            <button
+              onClick={addProject}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+              style={{
+                background: colors.primaryBlue,
+                color: 'white',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              <Plus size={18} />
+              Add Project
+            </button>
+          )}
+        </div>
+
+        {projects.length === 0 && !editingProjectId ? (
+          <div 
+            className="text-center py-16 rounded-xl"
+            style={{
+              background: colors.cardBackground,
+              border: `2px dashed ${colors.border}`,
+            }}
+          >
+            <FolderKanban size={48} className="mx-auto mb-4" style={{ color: colors.secondaryText, opacity: 0.5 }} />
+            <p className="mb-2" style={{ color: colors.secondaryText }}>No projects added yet</p>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={addProject}
+                className="mt-4 px-6 py-3 rounded-lg inline-flex items-center gap-2 transition-all"
+                style={{
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+              >
+                <Plus size={18} />
+                Add Your First Project
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {projects.map((project, index) => {
+              const projId = project.id || `proj-${index}`;
+              const isEditingProject = editingProjectId === projId && isEditing;
+              
+              return (
+                <div
+                  key={projId}
+                  className="rounded-lg transition-all"
+                  style={{
+                    background: colors.cardBackground,
+                    border: `1px solid ${isEditingProject ? colors.primaryBlue : colors.border}`,
+                  }}
+                >
+                  {isEditingProject ? (
+                    <div className="p-6 space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold flex items-center gap-2" style={{ color: colors.primaryText }}>
+                          <FolderKanban size={20} style={{ color: colors.primaryBlue }} />
+                          Edit Project
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setEditingProjectId(null)}
+                          className="p-1 rounded"
+                          style={{ color: colors.secondaryText }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          id={`project-${projId}-title`}
+                          name={`project-${projId}-title`}
+                          label="Project Title"
+                          value={project.title || ''}
+                          onChange={(value) => updateProject(projId, { title: value })}
+                          disabled={false}
+                          placeholder="e.g., E-commerce Platform"
+                        />
+                        <FormField
+                          id={`project-${projId}-date`}
+                          name={`project-${projId}-date`}
+                          label="Date"
+                          type="text"
+                          value={project.date || ''}
+                          onChange={(value) => updateProject(projId, { date: value })}
+                          disabled={false}
+                          placeholder="MM/YYYY"
+                        />
+                      </div>
+                      <FormField
+                        id={`project-${projId}-description`}
+                        name={`project-${projId}-description`}
+                        label="Description"
+                        type="textarea"
+                        value={project.description || ''}
+                        onChange={(value) => updateProject(projId, { description: value })}
+                        disabled={false}
+                        rows={3}
+                        placeholder="Describe the project..."
+                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <FormField
+                          id={`project-${projId}-technologies`}
+                          name={`project-${projId}-technologies`}
+                          label="Technologies (comma-separated)"
+                          value={(project.technologies || []).join(', ')}
+                          onChange={(value) => updateProjectTechnologies(projId, value)}
+                          disabled={false}
+                          placeholder="React, Node.js, PostgreSQL"
+                        />
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            id={`project-${projId}-link`}
+                            name={`project-${projId}-link`}
+                            label="Project URL"
+                            type="url"
+                            value={project.link || ''}
+                            onChange={(value) => updateProject(projId, { link: value })}
+                            disabled={false}
+                            placeholder="https://..."
+                          />
+                          <FormField
+                            id={`project-${projId}-github`}
+                            name={`project-${projId}-github`}
+                            label="GitHub URL"
+                            type="url"
+                            value={project.github || ''}
+                            onChange={(value) => updateProject(projId, { github: value })}
+                            disabled={false}
+                            placeholder="https://github.com/..."
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingProjectId(null)}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium"
+                          style={{
+                            background: colors.inputBackground,
+                            color: colors.secondaryText,
+                            border: `1px solid ${colors.border}`,
+                          }}
+                        >
+                          <X size={16} />
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteProject(projId)}
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium ml-auto"
+                          style={{
+                            background: 'transparent',
+                            color: colors.errorRed,
+                            border: `1px solid ${colors.errorRed}`,
+                          }}
+                        >
+                          <Trash2 size={16} />
+                          Delete
+                        </button>
+                      </div>
+                      <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                        Changes will be saved when you click "Save" in the header
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg mb-1" style={{ color: colors.primaryText }}>
+                            {project.title || 'Untitled Project'}
+                          </h3>
+                          {project.description && (
+                            <p className="text-sm mb-3 leading-relaxed" style={{ color: colors.secondaryText }}>
+                              {project.description}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-3 text-sm mb-3">
+                            {project.date && (
+                              <div className="flex items-center gap-1.5" style={{ color: colors.secondaryText }}>
+                                <Calendar size={14} />
+                                <span>{project.date}</span>
+                              </div>
+                            )}
+                            {project.technologies && project.technologies.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {project.technologies.map((tech, techIndex) => (
+                                  <span
+                                    key={techIndex}
+                                    className="px-2 py-0.5 rounded text-xs"
+                                    style={{
+                                      background: colors.badgeInfoBg,
+                                      color: colors.primaryBlue,
+                                    }}
+                                  >
+                                    {tech}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {project.link && (
+                              <a
+                                href={project.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm transition-colors"
+                                style={{ color: colors.primaryBlue }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = colors.primaryBlueHover || colors.primaryBlue;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = colors.primaryBlue;
+                                }}
+                              >
+                                <ExternalLink size={14} />
+                                View Project
+                              </a>
+                            )}
+                            {project.github && (
+                              <a
+                                href={project.github}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm transition-colors"
+                                style={{ color: colors.primaryBlue }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.color = colors.primaryBlueHover || colors.primaryBlue;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.color = colors.primaryBlue;
+                                }}
+                              >
+                                <Github size={14} />
+                                GitHub
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        {isEditing && (
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingProjectId(projId)}
+                              className="p-2 rounded-lg transition-all"
+                              style={{ color: colors.primaryBlue }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeInfoBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              title="Edit"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteProject(projId)}
+                              className="p-2 rounded-lg transition-all"
+                              style={{ color: colors.errorRed }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeErrorBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              title="Delete"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
