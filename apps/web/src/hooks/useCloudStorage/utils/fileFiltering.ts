@@ -86,11 +86,10 @@ export const filterAndSortFiles = (
     }
 
     if (hasSearch) {
-      // Enhanced search: name, tags, type, owner, description, credential info
+      // Enhanced search: name, type, owner, description, credential info
       const matchesSearch = 
         // Basic search
         file.name.toLowerCase().includes(searchLower) ||
-        file.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
         file.description?.toLowerCase().includes(searchLower) ||
         
         // Type search

@@ -5,7 +5,7 @@
  */
 
 import React from 'react';
-import { FileText, ExternalLink, Github, Award, Trophy, Link2 } from 'lucide-react';
+import { FileText, ExternalLink, Github, Award, Trophy, Link2, Globe } from 'lucide-react';
 
 /**
  * Returns the appropriate icon component for a given platform
@@ -21,6 +21,9 @@ export const getPlatformIcon = (platform: string): React.ReactNode => {
       return <FileText className={iconClass} />;
     case 'Medium':
       return <FileText className={iconClass} />;
+    case 'Portfolio':
+    case 'Personal Website':
+      return <Globe className={iconClass} />;
     default:
       return <ExternalLink className={iconClass} />;
   }

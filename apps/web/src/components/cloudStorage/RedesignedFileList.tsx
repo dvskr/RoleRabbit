@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Filter, Upload, Trash2, Search } from 'lucide-react';
-import { ResumeFile, FileType, SortBy, ViewMode } from '../../types/cloudStorage';
+import { ResumeFile, FileType, SortBy } from '../../types/cloudStorage';
 import FileCard from './FileCard';
 import { EmptyFilesState } from './EmptyFilesState';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -170,7 +170,7 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   const palette = colors || theme.colors;
 
   const hasSelection = selectedFiles.length > 0;
-  const effectiveViewMode: ViewMode = 'grid';
+  // Removed viewMode - only grid view is used
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearchChange(event.target.value);
@@ -204,7 +204,6 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
             key={file.id}
             file={file}
             isSelected={selectedFiles.includes(file.id)}
-            viewMode={effectiveViewMode}
             showDeleted={showDeleted}
             onSelect={onFileSelect}
             onDownload={onDownload}

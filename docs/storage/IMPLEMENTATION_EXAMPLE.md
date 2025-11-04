@@ -73,7 +73,6 @@ async function storageRoutes(fastify, options) {
       // Get additional metadata from form
       const displayName = request.body.displayName || data.filename;
       const type = request.body.type || 'document';
-      const tags = request.body.tags ? request.body.tags.split(',') : [];
       const description = request.body.description || null;
       const isPublic = request.body.isPublic === 'true';
       const folderId = request.body.folderId || null;
@@ -88,7 +87,6 @@ async function storageRoutes(fastify, options) {
           contentType: data.mimetype,
           size: BigInt(newFileSize),
           storagePath: storageResult.path,
-          tags,
           description,
           isPublic,
           folderId,

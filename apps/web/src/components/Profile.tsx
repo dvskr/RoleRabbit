@@ -9,7 +9,6 @@ import {
   HelpCircle, 
   Briefcase,
   Award,
-  FileText,
   BarChart3,
   LogOut
 } from 'lucide-react';
@@ -26,13 +25,559 @@ import {
   ProfileTab,
   ProfessionalTab,
   SkillsTab,
-  PortfolioTab,
   SecurityTab,
   PreferencesTab,
   SupportTab,
   UserData,
   ProfileTabConfig
 } from './profile/index';
+import type { Skill, Education } from './profile/types/profile';
+type Language = { name: string; proficiency: string };
+
+const ARRAY_FIELD_KEYS: Array<keyof UserData | string> = [
+  'skills',
+  'certifications',
+  'languages',
+  'education',
+  'careerGoals',
+  'targetRoles',
+  'targetCompanies',
+  'socialLinks',
+  'projects',
+  'achievements',
+  'careerTimeline',
+  'workExperiences',
+  'volunteerExperiences',
+  'recommendations',
+  'publications',
+  'patents',
+  'organizations',
+  'testScores'
+];
+
+const VALID_WORK_EXPERIENCE_TYPES = [
+  'Client Project',
+  'Full-time',
+  'Part-time',
+  'Contract',
+  'Freelance',
+  'Consulting',
+  'Internship'
+];
+
+const normalizeToArray = <T = any>(value: any): T[] => {
+  if (Array.isArray(value)) {
+    return value as T[];
+  }
+  if (value === null || value === undefined) {
+    return [];
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return normalizeToArray<T>(parsed);
+    } catch {
+      return [];
+    }
+  }
+  if (value instanceof Set) {
+    return Array.from(value.values()) as T[];
+  }
+  if (value instanceof Map) {
+    return Array.from(value.values()) as T[];
+  }
+  if (typeof value === 'object') {
+    return Object.values(value).filter((item) => item !== undefined && item !== null) as T[];
+  }
+  return [];
+};
+
+const sanitizeWorkExperiences = (experiences: any, options?: { keepDrafts?: boolean }): any[] => {
+  const keepDrafts = options?.keepDrafts ?? true;
+  const normalizedArray = normalizeToArray(experiences);
+
+  return (normalizedArray as any[])
+    .map((exp) => {
+      if (!exp || typeof exp !== 'object') {
+        return null;
+      }
+
+      const idSource = exp.id ?? exp._id ?? exp.uuid ?? exp.tempId;
+      const id = typeof idSource === 'string' ? idSource : typeof idSource === 'number' ? String(idSource) : undefined;
+
+      const company = typeof exp?.company === 'string' ? exp.company.trim() : '';
+      const role = typeof exp?.role === 'string' ? exp.role.trim() : (typeof exp?.title === 'string' ? exp.title.trim() : '');
+      const location = typeof exp?.location === 'string' ? exp.location.trim() : '';
+      const startDate = typeof exp?.startDate === 'string' ? exp.startDate.trim() : (typeof exp?.start === 'string' ? exp.start.trim() : '');
+      const rawEndDate = exp?.endDate ?? exp?.end ?? '';
+      const endDate = typeof rawEndDate === 'string' ? rawEndDate.trim() : '';
+
+      let isCurrent = Boolean(exp?.isCurrent || exp?.current || exp?.present);
+      if (!isCurrent && endDate) {
+        const normalizedEnd = endDate.toLowerCase();
+        if (['present', 'current', 'ongoing'].includes(normalizedEnd)) {
+          isCurrent = true;
+        }
+      }
+
+      const normalizedProjectType = (() => {
+        if (typeof exp?.projectType === 'string') {
+          const match = VALID_WORK_EXPERIENCE_TYPES.find(
+            (type) => type.toLowerCase() === exp.projectType.toLowerCase()
+          );
+          if (match) {
+            return match;
+          }
+        }
+        if (typeof exp?.type === 'string') {
+          const match = VALID_WORK_EXPERIENCE_TYPES.find(
+            (type) => type.toLowerCase() === exp.type.toLowerCase()
+          );
+          if (match) {
+            return match;
+          }
+        }
+        return 'Full-time';
+      })();
+
+      const description = typeof exp?.description === 'string' ? exp.description : '';
+
+      const sanitized = {
+        ...(id ? { id } : {}),
+        company,
+        role,
+        location,
+        startDate,
+        endDate: isCurrent ? '' : endDate,
+        isCurrent,
+        description,
+        projectType: normalizedProjectType,
+      };
+
+      const hasContent =
+        !!sanitized.isCurrent ||
+        [sanitized.company, sanitized.role, sanitized.location, sanitized.startDate, sanitized.endDate, description].some(
+          (field) => typeof field === 'string' && field.trim().length > 0
+        );
+
+      if (!hasContent) {
+        if (keepDrafts && (id || exp?.__keepDraft)) {
+          return sanitized;
+        }
+        return null;
+      }
+
+      return sanitized;
+    })
+    .filter(Boolean);
+};
+
+export const sanitizeSkills = (skills: any, options?: { keepDrafts?: boolean }): Skill[] => {
+  const keepDrafts = options?.keepDrafts ?? true;
+  const normalizedArray = normalizeToArray(skills);
+  const seen = new Set<string>();
+
+  const toStringSafe = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return typeof value === 'string' ? value : String(value);
+  };
+
+  const sanitized: Skill[] = [];
+
+  (normalizedArray as any[]).forEach((skill, index) => {
+    if (!skill) {
+      if (keepDrafts) {
+        sanitized.push({
+          name: '',
+          proficiency: 'Beginner',
+          yearsOfExperience: undefined,
+          verified: false,
+        });
+      }
+      return;
+    }
+
+    if (typeof skill === 'string') {
+      const raw = toStringSafe(skill);
+      const trimmedKey = raw.trim().toLowerCase();
+
+      if (!trimmedKey) {
+        if (keepDrafts) {
+          sanitized.push({
+            name: raw,
+            proficiency: 'Beginner',
+            yearsOfExperience: undefined,
+            verified: false,
+          });
+        }
+        return;
+      }
+
+      if (seen.has(trimmedKey)) {
+        return;
+      }
+      seen.add(trimmedKey);
+
+      sanitized.push({
+        name: keepDrafts ? raw : raw.trim(),
+        proficiency: 'Beginner',
+        yearsOfExperience: undefined,
+        verified: false,
+      });
+      return;
+    }
+
+    if (typeof skill !== 'object') {
+      return;
+    }
+
+    const rawName = toStringSafe(skill.name ?? '');
+    const trimmedName = rawName.trim();
+
+    if (!trimmedName) {
+      if (keepDrafts) {
+        sanitized.push({
+          name: rawName,
+          proficiency: toStringSafe(skill.proficiency ?? 'Beginner'),
+          yearsOfExperience: undefined,
+          verified: Boolean(skill?.verified),
+        });
+      }
+      return;
+    }
+
+    const key = trimmedName.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+
+    const allowedProficiencies: Skill['proficiency'][] = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+    const rawProficiency = toStringSafe(skill.proficiency ?? 'Beginner');
+    const normalizedProficiency = allowedProficiencies.includes(rawProficiency.trim() as Skill['proficiency'])
+      ? (rawProficiency.trim() as Skill['proficiency'])
+      : 'Beginner';
+
+    let yearsOfExperience: number | undefined;
+    if (skill?.yearsOfExperience !== undefined && skill?.yearsOfExperience !== null && skill?.yearsOfExperience !== '') {
+      const parsedYears = Number(skill.yearsOfExperience);
+      if (Number.isFinite(parsedYears)) {
+        yearsOfExperience = parsedYears;
+      }
+    }
+
+    sanitized.push({
+      name: keepDrafts ? rawName : trimmedName,
+      proficiency: keepDrafts ? rawProficiency : normalizedProficiency,
+      yearsOfExperience,
+      verified: Boolean(skill?.verified),
+    });
+  });
+
+  if (!keepDrafts) {
+    return sanitized.map((skill) => ({
+      name: skill.name.trim(),
+      proficiency: (skill.proficiency || 'Beginner').trim() as Skill['proficiency'],
+      yearsOfExperience: skill.yearsOfExperience,
+      verified: Boolean(skill.verified),
+    }));
+  }
+
+  return sanitized;
+};
+
+const sanitizeLanguages = (languages: any, options?: { keepDrafts?: boolean }): Language[] => {
+  const keepDrafts = options?.keepDrafts ?? true;
+  const normalizedArray = normalizeToArray(languages);
+  const seen = new Set<string>();
+
+  const toStringSafe = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return typeof value === 'string' ? value : String(value);
+  };
+
+  return (normalizedArray as any[])
+    .map((lang, index) => {
+      if (!lang) {
+        if (keepDrafts) {
+          return { name: '', proficiency: 'Native' } as Language;
+        }
+        return null;
+      }
+
+      if (typeof lang === 'string') {
+        const raw = toStringSafe(lang);
+        const key = raw.trim().toLowerCase();
+
+        if (!key) {
+          if (keepDrafts) {
+            return { name: raw, proficiency: 'Native' } as Language;
+          }
+          return null;
+        }
+
+        if (seen.has(key)) {
+          return null;
+        }
+        seen.add(key);
+
+        return {
+          name: keepDrafts ? raw : raw.trim(),
+          proficiency: 'Native',
+        } as Language;
+      }
+
+      if (typeof lang !== 'object') {
+        return null;
+      }
+
+      const rawName = toStringSafe(lang.name ?? '');
+      const trimmedName = rawName.trim();
+
+      if (!trimmedName) {
+        if (keepDrafts) {
+          return {
+            name: rawName,
+            proficiency: toStringSafe(lang.proficiency ?? 'Native'),
+          } as Language;
+        }
+        return null;
+      }
+
+      const key = trimmedName.toLowerCase();
+      if (seen.has(key)) {
+        return null;
+      }
+      seen.add(key);
+
+      const rawProficiency = toStringSafe(lang.proficiency ?? 'Native');
+
+      return {
+        name: keepDrafts ? rawName : trimmedName,
+        proficiency: keepDrafts ? rawProficiency : (rawProficiency.trim() || 'Native'),
+      } as Language;
+    })
+    .filter(Boolean) as Language[];
+};
+
+const sanitizeEducation = (educationInput: any, options?: { keepDrafts?: boolean }): Education[] => {
+  const keepDrafts = options?.keepDrafts ?? true;
+  const normalizedArray = normalizeToArray<Education | any>(educationInput);
+
+  const formatString = (value: any, shouldTrim: boolean): string => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (typeof value === 'string') {
+      return shouldTrim ? value.trim() : value;
+    }
+
+    return String(value);
+  };
+
+  const hasMeaningfulContent = (value: any): boolean => {
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    if (typeof value === 'string') {
+      return value.trim().length > 0;
+    }
+
+    return true;
+  };
+
+  return (normalizedArray as any[])
+    .map((edu, index) => {
+      if (!edu || typeof edu !== 'object') {
+        if (keepDrafts) {
+          return {
+            id: `temp-edu-${index}`,
+            institution: '',
+            degree: '',
+            field: '',
+            startDate: '',
+            endDate: '',
+            gpa: '',
+            honors: '',
+            location: '',
+            description: '',
+          } as Education;
+        }
+
+        return null;
+      }
+
+      const idSource = edu.id ?? edu._id ?? edu.uuid ?? edu.tempId ?? edu.educationId;
+      const id = typeof idSource === 'string'
+        ? idSource
+        : (idSource !== undefined && idSource !== null ? String(idSource) : undefined);
+
+      const hasContent = [
+        edu.institution,
+        edu.degree,
+        edu.field,
+        edu.startDate ?? edu.start,
+        edu.endDate ?? edu.graduationDate ?? edu.completionDate,
+        edu.gpa,
+        edu.honors ?? edu.awards,
+        edu.location,
+        edu.description ?? edu.summary,
+      ].some(hasMeaningfulContent);
+
+      const sanitized: Education = {
+        ...(id ? { id } : {}),
+        institution: formatString(edu.institution ?? edu.school ?? edu.university ?? '', !keepDrafts),
+        degree: formatString(edu.degree ?? edu.program ?? '', !keepDrafts),
+        field: formatString(edu.field ?? edu.major ?? '', !keepDrafts),
+        startDate: formatString(edu.startDate ?? edu.start ?? '', !keepDrafts),
+        endDate: formatString(edu.endDate ?? edu.graduationDate ?? edu.completionDate ?? '', !keepDrafts),
+        gpa: formatString(edu.gpa ?? '', !keepDrafts),
+        honors: formatString(edu.honors ?? edu.awards ?? '', !keepDrafts),
+        location: formatString(edu.location ?? '', !keepDrafts),
+        description: formatString(edu.description ?? edu.summary ?? '', !keepDrafts),
+      };
+
+      if (!hasContent) {
+        if (keepDrafts && (id || edu.__keepDraft)) {
+          return {
+            ...sanitized,
+            id: id ?? `temp-edu-${index}`,
+            __keepDraft: true,
+          } as Education & { __keepDraft?: boolean };
+        }
+
+        return null;
+      }
+
+      if (!keepDrafts) {
+        sanitized.institution = sanitized.institution.trim();
+        sanitized.degree = sanitized.degree.trim();
+        sanitized.field = sanitized.field.trim();
+        sanitized.startDate = sanitized.startDate.trim();
+        sanitized.endDate = sanitized.endDate.trim();
+        sanitized.gpa = sanitized.gpa.trim();
+        sanitized.honors = sanitized.honors.trim();
+        sanitized.location = sanitized.location.trim();
+        sanitized.description = sanitized.description.trim();
+      }
+
+      return sanitized;
+    })
+    .filter(Boolean) as Education[];
+};
+
+const sanitizeCertifications = (certifications: any, options?: { keepDrafts?: boolean }): any[] => {
+  const keepDrafts = options?.keepDrafts ?? true;
+  const normalizedArray = normalizeToArray(certifications);
+
+  const toStringSafe = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return typeof value === 'string' ? value : String(value);
+  };
+
+  const allowedFields = {
+    issuer: true,
+    date: true,
+    expiryDate: true,
+    credentialUrl: true,
+  } as const;
+
+  return (normalizedArray as any[])
+    .map((cert, index) => {
+      if (!cert) {
+        if (keepDrafts) {
+          return {
+            id: `temp-cert-${index}`,
+            name: '',
+            issuer: '',
+            date: '',
+            expiryDate: '',
+            credentialUrl: '',
+            verified: false,
+          };
+        }
+        return null;
+      }
+
+      if (typeof cert === 'string') {
+        const raw = toStringSafe(cert);
+        const trimmedName = raw.trim();
+
+        if (!trimmedName) {
+          if (keepDrafts) {
+            return {
+              name: raw,
+              issuer: '',
+              date: '',
+              expiryDate: '',
+              credentialUrl: '',
+              verified: false,
+            };
+          }
+          return null;
+        }
+
+        return {
+          name: keepDrafts ? raw : trimmedName,
+          issuer: '',
+          date: '',
+          expiryDate: '',
+          credentialUrl: '',
+          verified: false,
+        };
+      }
+
+      if (typeof cert !== 'object') {
+        return null;
+      }
+
+      const idSource = cert.id ?? cert._id ?? cert.uuid ?? cert.tempId;
+      const id = typeof idSource === 'string' ? idSource : (idSource !== undefined ? String(idSource) : undefined);
+
+      const rawName = toStringSafe(cert.name ?? cert.title ?? '');
+      const trimmedName = rawName.trim();
+
+      if (!trimmedName) {
+        if (keepDrafts) {
+          const draft: any = {
+            ...(id ? { id } : {}),
+            name: rawName,
+            issuer: toStringSafe(cert.issuer ?? ''),
+            date: toStringSafe(cert.date ?? ''),
+            expiryDate: toStringSafe(cert.expiryDate ?? ''),
+            credentialUrl: toStringSafe(cert.credentialUrl ?? cert.url ?? ''),
+            verified: Boolean(cert?.verified),
+            __keepDraft: true,
+          };
+          return draft;
+        }
+        return null;
+      }
+
+      const sanitized: any = {
+        ...(id ? { id } : {}),
+        name: keepDrafts ? rawName : trimmedName,
+        issuer: keepDrafts ? toStringSafe(cert.issuer ?? '') : toStringSafe(cert.issuer ?? '').trim(),
+        date: keepDrafts ? toStringSafe(cert.date ?? '') : toStringSafe(cert.date ?? '').trim(),
+        expiryDate: keepDrafts ? toStringSafe(cert.expiryDate ?? '') : toStringSafe(cert.expiryDate ?? '').trim(),
+        credentialUrl: keepDrafts ? toStringSafe(cert.credentialUrl ?? cert.url ?? '') : toStringSafe(cert.credentialUrl ?? cert.url ?? '').trim(),
+        verified: Boolean(cert?.verified),
+      };
+
+      if (!keepDrafts) {
+        sanitized.name = sanitized.name.trim();
+        sanitized.issuer = sanitized.issuer.trim();
+        sanitized.date = sanitized.date.trim();
+        sanitized.expiryDate = sanitized.expiryDate.trim();
+        sanitized.credentialUrl = sanitized.credentialUrl.trim();
+      }
+
+      return sanitized;
+    })
+    .filter(Boolean);
+};
 
 export default function Profile() {
   const { theme } = useTheme();
@@ -85,7 +630,6 @@ export default function Profile() {
     { id: 'profile', label: 'Profile', icon: UserCircle },
     { id: 'professional', label: 'Professional', icon: Briefcase },
     { id: 'skills', label: 'Skills & Expertise', icon: Award },
-    { id: 'portfolio', label: 'Portfolio', icon: FileText },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
@@ -99,6 +643,7 @@ export default function Profile() {
     phone: '',
     location: '',
     bio: '',
+  professionalBio: '',
     profilePicture: null,
     currentRole: '',
     currentCompany: '',
@@ -146,26 +691,157 @@ export default function Profile() {
   // Use local state if editing, otherwise use context data or defaults
   // Initialize local state when userData loads or when entering edit mode
   useEffect(() => {
-    // Don't update localProfileData during save operation to prevent flashing
+    // CRITICAL: Don't update localProfileData during save operation or after save
+    // This prevents data from vanishing when updateProfileData is called
     if (isSaving || isSaved) {
+      logger.debug('useEffect skipped - isSaving or isSaved flag is set');
       return;
     }
     
     // Always sync with context data when available
     if (userData) {
-      // Initialize if missing, or sync when not editing
-      if (!localProfileData || !isEditing) {
+      // Only sync when NOT editing to preserve user's unsaved changes
+      // Initialize if missing, but don't overwrite if user is actively editing
+      if (!localProfileData) {
+        // First time load - initialize
+        logger.debug('Initializing localProfileData from userData');
         setLocalProfileData(userData);
+      } else if (!isEditing) {
+        // Only sync when not editing to get latest data from server
+        // But ONLY if localProfileData doesn't have more work experiences
+        // This prevents clearing data that was just saved
+        const localWorkExpCount = localProfileData.workExperiences?.length || 0;
+        const contextWorkExpCount = userData.workExperiences?.length || 0;
+        
+        logger.debug('useEffect sync check:', {
+          isEditing,
+          localWorkExpCount,
+          contextWorkExpCount,
+          willSkip: localWorkExpCount > contextWorkExpCount
+        });
+        
+        // CRITICAL: Never overwrite if local has more items (user just saved)
+        // Also check if arrays actually differ to avoid unnecessary updates
+        if (localWorkExpCount > contextWorkExpCount) {
+          // Local has more data - don't overwrite (user just saved)
+          logger.debug('Skipping sync - local has more work experiences');
+          return;
+        }
+        
+        // Only update if context has more or equal data, and data is actually different
+        const hasChanges = JSON.stringify(localProfileData.workExperiences) !== JSON.stringify(userData.workExperiences) ||
+                          JSON.stringify(localProfileData.education) !== JSON.stringify(userData.education) ||
+                          JSON.stringify(localProfileData.certifications) !== JSON.stringify(userData.certifications);
+        
+        if (hasChanges && localWorkExpCount <= contextWorkExpCount) {
+          logger.debug('Syncing localProfileData with userData');
+          setLocalProfileData(userData);
+        }
       }
+      // When editing, preserve localProfileData to keep user's unsaved changes
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userData, isEditing, isSaving, isSaved]);
 
   // Use localProfileData if available during editing to prevent flashing
-  // Only fall back to userData if localProfileData is explicitly null (not just undefined)
-  const displayData = isEditing 
-    ? (localProfileData !== null ? (localProfileData || defaultUserData) : (userData || defaultUserData))
-    : (userData || defaultUserData);
+  // CRITICAL: Ensure arrays are always defined (never undefined/null)
+  const getDisplayData = (): UserData => {
+    if (isEditing) {
+      if (localProfileData !== null && localProfileData !== undefined) {
+        // Ensure arrays exist - if they're missing, use defaults or empty arrays
+        return {
+          ...defaultUserData,
+          ...localProfileData,
+          workExperiences: sanitizeWorkExperiences(localProfileData.workExperiences),
+          education: sanitizeEducation(localProfileData.education),
+          certifications: sanitizeCertifications(localProfileData.certifications),
+          skills: sanitizeSkills(localProfileData.skills),
+          languages: sanitizeLanguages(localProfileData.languages),
+          projects: normalizeToArray(localProfileData.projects),
+          achievements: normalizeToArray(localProfileData.achievements),
+          socialLinks: normalizeToArray(localProfileData.socialLinks),
+          careerGoals: normalizeToArray(localProfileData.careerGoals),
+          targetRoles: normalizeToArray(localProfileData.targetRoles),
+          targetCompanies: normalizeToArray(localProfileData.targetCompanies),
+          careerTimeline: normalizeToArray(localProfileData.careerTimeline),
+          volunteerExperiences: normalizeToArray(localProfileData.volunteerExperiences),
+          recommendations: normalizeToArray(localProfileData.recommendations),
+          publications: normalizeToArray(localProfileData.publications),
+          patents: normalizeToArray(localProfileData.patents),
+          organizations: normalizeToArray(localProfileData.organizations),
+          testScores: normalizeToArray(localProfileData.testScores),
+        };
+      }
+      // Fallback to userData if localProfileData is null
+      if (userData) {
+        return {
+          ...defaultUserData,
+          ...userData,
+          workExperiences: sanitizeWorkExperiences(userData.workExperiences),
+          education: sanitizeEducation(userData.education),
+          certifications: sanitizeCertifications(userData.certifications),
+          skills: sanitizeSkills(userData.skills),
+          languages: sanitizeLanguages(userData.languages),
+          projects: normalizeToArray(userData.projects),
+          achievements: normalizeToArray(userData.achievements),
+          socialLinks: normalizeToArray(userData.socialLinks),
+          careerGoals: normalizeToArray(userData.careerGoals),
+          targetRoles: normalizeToArray(userData.targetRoles),
+          targetCompanies: normalizeToArray(userData.targetCompanies),
+          careerTimeline: normalizeToArray(userData.careerTimeline),
+          volunteerExperiences: normalizeToArray(userData.volunteerExperiences),
+          recommendations: normalizeToArray(userData.recommendations),
+          publications: normalizeToArray(userData.publications),
+          patents: normalizeToArray(userData.patents),
+          organizations: normalizeToArray(userData.organizations),
+          testScores: normalizeToArray(userData.testScores),
+        };
+      }
+      return defaultUserData;
+    }
+    // Not editing - use userData from context
+    if (userData) {
+      return {
+        ...defaultUserData,
+        ...userData,
+        workExperiences: sanitizeWorkExperiences(userData.workExperiences),
+        education: sanitizeEducation(userData.education),
+        certifications: sanitizeCertifications(userData.certifications),
+        skills: sanitizeSkills(userData.skills),
+        languages: sanitizeLanguages(userData.languages),
+        projects: normalizeToArray(userData.projects),
+        achievements: normalizeToArray(userData.achievements),
+        socialLinks: normalizeToArray(userData.socialLinks),
+        careerGoals: normalizeToArray(userData.careerGoals),
+        targetRoles: normalizeToArray(userData.targetRoles),
+        targetCompanies: normalizeToArray(userData.targetCompanies),
+        careerTimeline: normalizeToArray(userData.careerTimeline),
+        volunteerExperiences: normalizeToArray(userData.volunteerExperiences),
+        recommendations: normalizeToArray(userData.recommendations),
+        publications: normalizeToArray(userData.publications),
+        patents: normalizeToArray(userData.patents),
+        organizations: normalizeToArray(userData.organizations),
+        testScores: normalizeToArray(userData.testScores),
+      };
+    }
+    return defaultUserData;
+  };
+  
+  const displayData = getDisplayData();
+  
+  // Debug logging for displayData
+  logger.debug('Profile - displayData workExperiences:', {
+    isEditing,
+    hasLocalProfileData: !!localProfileData,
+    localWorkExpCount: localProfileData?.workExperiences?.length || 0,
+    userDataWorkExpCount: userData?.workExperiences?.length || 0,
+    displayWorkExpCount: displayData.workExperiences?.length || 0,
+    displayWorkExperiences: displayData.workExperiences,
+    localWorkExperiences: localProfileData?.workExperiences,
+    userDataWorkExperiences: userData?.workExperiences,
+    displayDataKeys: Object.keys(displayData),
+    displayDataHasWorkExp: 'workExperiences' in displayData
+  });
 
   // Calculate profile completeness
   const calculateCompleteness = (): number => {
@@ -173,18 +849,7 @@ export default function Profile() {
     let completed = 0;
     
     // Helper function to safely parse JSON arrays
-    const safeParseArray = (data: any): any[] => {
-      if (Array.isArray(data)) return data;
-      if (typeof data === 'string' && data) {
-        try {
-          const parsed = JSON.parse(data);
-          return Array.isArray(parsed) ? parsed : [];
-        } catch {
-          return [];
-        }
-      }
-      return [];
-    };
+    const safeParseArray = (data: any): any[] => normalizeToArray(data);
     
     // Personal Information (8 points)
     const personalInfo = {
@@ -193,7 +858,7 @@ export default function Profile() {
       email: !!data.email,
       phone: !!data.phone,
       location: !!data.location,
-      bio: !!(data.bio && data.bio.length > 50),
+      bio: !!(((data.professionalBio ?? data.bio) || '').length > 50),
       profilePicture: !!data.profilePicture,
       currentRole: !!data.currentRole
     };
@@ -241,11 +906,19 @@ export default function Profile() {
     setSaveMessage(null);
     try {
       // Save user profile via API using displayData (which has latest local edits)
-      const dataToSave = localProfileData || displayData;
+      // CRITICAL: Use displayData as it reflects the current UI state
+      const dataToSave = displayData;
+      
+      logger.debug('=== SAVE OPERATION START ===');
+      logger.debug('displayData workExperiences:', displayData.workExperiences);
+      logger.debug('displayData workExperiences count:', displayData.workExperiences?.length || 0);
+      logger.debug('localProfileData workExperiences:', localProfileData?.workExperiences);
+      logger.debug('localProfileData workExperiences count:', localProfileData?.workExperiences?.length || 0);
       
       // Clean up data before sending - remove null/undefined values and ensure arrays are arrays
       // Also exclude large base64 profile pictures (those should be uploaded separately)
       // Exclude email field - login email cannot be changed
+      // Exclude id and userId fields - these cannot be modified
       const cleanedData: Partial<UserData> = {};
       Object.keys(dataToSave).forEach(key => {
         const value = (dataToSave as any)[key];
@@ -253,17 +926,39 @@ export default function Profile() {
         if (key === 'email') {
           return;
         }
+        // Skip id and userId fields - these cannot be modified
+        if (key === 'id' || key === 'userId') {
+          return;
+        }
         // Skip profile picture if it's a large base64 string (upload separately)
         if (key === 'profilePicture' && typeof value === 'string' && value.startsWith('data:') && value.length > 10000) {
           // Profile picture will be uploaded separately, skip from general update
           return;
         }
-        if (value !== null && value !== undefined) {
-          // Ensure arrays are arrays, not null/undefined
-          if (Array.isArray(value)) {
-            cleanedData[key as keyof UserData] = value as any;
-          } else if (typeof value === 'object' && !Array.isArray(value)) {
-            // Handle objects
+        // CRITICAL: Always include arrays, even if empty (they need to be sent to API to replace existing data)
+        if (ARRAY_FIELD_KEYS.includes(key)) {
+          if (key === 'workExperiences') {
+            const sanitizedExperiences = sanitizeWorkExperiences(value, { keepDrafts: false });
+            cleanedData[key as keyof UserData] = sanitizedExperiences as any;
+          } else if (key === 'education') {
+            const sanitizedEducation = sanitizeEducation(value, { keepDrafts: false });
+            cleanedData[key as keyof UserData] = sanitizedEducation as any;
+          } else if (key === 'skills') {
+            const sanitizedSkills = sanitizeSkills(value, { keepDrafts: false });
+            cleanedData[key as keyof UserData] = sanitizedSkills as any;
+          } else if (key === 'languages') {
+            const sanitizedLanguages = sanitizeLanguages(value, { keepDrafts: false });
+            cleanedData[key as keyof UserData] = sanitizedLanguages as any;
+          } else if (key === 'certifications') {
+            const sanitizedCerts = sanitizeCertifications(value, { keepDrafts: false });
+            cleanedData[key as keyof UserData] = sanitizedCerts as any;
+          } else {
+            const normalizedArray = normalizeToArray(value);
+            cleanedData[key as keyof UserData] = normalizedArray as any;
+          }
+        } else if (value !== null && value !== undefined) {
+          // Handle objects and primitives
+          if (typeof value === 'object' && !Array.isArray(value)) {
             cleanedData[key as keyof UserData] = value as any;
           } else {
             cleanedData[key as keyof UserData] = value as any;
@@ -271,30 +966,122 @@ export default function Profile() {
         }
       });
       
-      logger.debug('Saving profile data:', cleanedData);
+      logger.debug('=== CLEANED DATA TO SEND ===');
+      logger.debug('workExperiences in cleanedData:', cleanedData.workExperiences);
+      logger.debug('workExperiences count:', cleanedData.workExperiences?.length || 0);
+      logger.debug('All cleanedData keys:', Object.keys(cleanedData));
       
-      await apiService.updateUserProfile(cleanedData);
+      const response = await apiService.updateUserProfile(cleanedData);
+      logger.debug('=== API RESPONSE RECEIVED ===');
       logger.debug('Profile saved successfully via API');
+      logger.debug('API Response:', response);
+      logger.debug('Response workExperiences:', response?.user?.workExperiences);
+      logger.debug('Response workExperiences count:', response?.user?.workExperiences?.length || 0);
       
-      // Batch all state updates together to prevent flashing
-      // Update localProfileData with saved data immediately to keep UI stable
-      const updatedLocalData = localProfileData ? { ...localProfileData, ...cleanedData } : localProfileData;
+      // Update local state with the response data (which includes nested arrays from DB)
+      if (response && response.user) {
+        const savedUserData = response.user as any;
+        logger.debug('Saved user data from API:', {
+          workExperiences: savedUserData.workExperiences,
+          workExperiencesCount: savedUserData.workExperiences?.length || 0,
+          profile: savedUserData.profile,
+          profileWorkExperiences: savedUserData.profile?.workExperiences
+        });
+        
+        // Extract data from API response structure
+        // API returns: { user: { profile: { workExperiences: [...] }, workExperiences: [...], ... } }
+        // The API response has workExperiences at both top level (user) and nested (user.profile)
+        // We need to extract from the correct location based on API structure
+        const profileData = savedUserData.profile || {};
+        
+        // Extract arrays - check both locations (top level and nested in profile)
+        const apiWorkExperiences = savedUserData.workExperiences || profileData.workExperiences || [];
+        const apiEducation = savedUserData.education || profileData.education || [];
+        const apiCertifications = savedUserData.certifications || profileData.certifications || [];
+        const apiSocialLinks = savedUserData.socialLinks || profileData.socialLinks || [];
+        const apiProjects = savedUserData.projects || profileData.projects || [];
+        const apiAchievements = savedUserData.achievements || profileData.achievements || [];
+        const apiSkills = savedUserData.skills || profileData.skills || [];
+        
+        logger.debug('Extracted API data:', {
+          workExperiences: apiWorkExperiences,
+          workExperiencesCount: apiWorkExperiences.length,
+          savedUserDataKeys: Object.keys(savedUserData),
+          profileDataKeys: Object.keys(profileData),
+          savedUserDataWorkExp: savedUserData.workExperiences,
+          profileDataWorkExp: profileData.workExperiences
+        });
+        
+        // Use the saved data from API response - it has the latest from DB
+        // Merge with localProfileData to preserve any fields not in response
+        // IMPORTANT: Spread savedUserData first, then override with arrays from correct location
+        const updatedLocalData = localProfileData ? {
+          ...localProfileData,
+          ...savedUserData,
+          ...profileData, // Spread profile data for fields like firstName, lastName, etc.
+          // CRITICAL: Use arrays from API response (they come from DB)
+          // Explicitly set arrays to ensure they're not lost in the spread
+          workExperiences: apiWorkExperiences,
+          education: apiEducation,
+          certifications: apiCertifications,
+          socialLinks: apiSocialLinks,
+          projects: apiProjects,
+          achievements: apiAchievements,
+          skills: apiSkills,
+        } : {
+          ...savedUserData,
+          ...profileData,
+          workExperiences: apiWorkExperiences,
+          education: apiEducation,
+          certifications: apiCertifications,
+          socialLinks: apiSocialLinks,
+          projects: apiProjects,
+          achievements: apiAchievements,
+          skills: apiSkills,
+        };
+        
+        logger.debug('Updated local data:', {
+          workExperiences: updatedLocalData.workExperiences,
+          workExperiencesCount: updatedLocalData.workExperiences?.length || 0
+        });
+        
+        // CRITICAL: Set local state FIRST to prevent flashing
+        setLocalProfileData(updatedLocalData);
+        
+        // Update context with COMPLETE saved data from API response
+        // CRITICAL: Pass the entire updatedLocalData, not just arrays, to ensure context has full data
+        // This prevents the useEffect from overwriting with stale context data
+        updateProfileData(updatedLocalData);
+        
+        logger.debug('Context updated with saved data:', {
+          workExperiences: updatedLocalData.workExperiences?.length || 0,
+          education: updatedLocalData.education?.length || 0,
+          certifications: updatedLocalData.certifications?.length || 0
+        });
+      } else {
+        // Fallback: update with cleanedData if no response
+        const updatedLocalData = localProfileData ? { ...localProfileData, ...cleanedData } : localProfileData;
+        if (updatedLocalData) {
+          setLocalProfileData(updatedLocalData);
+          updateProfileData(cleanedData);
+        }
+      }
+      
+      // DON'T call refreshProfile() here - it causes flashing and overwrites local state
+      // The API response already contains the saved data from DB
       
       // Update all states in one batch using React's automatic batching
       setIsSaving(false);
       setIsSaved(true);
-      if (updatedLocalData) {
-        setLocalProfileData(updatedLocalData);
-      }
       
-      // Don't refresh profile - it causes flashing. Data is already updated locally.
-      // Profile will be refreshed when user manually exits edit mode or on next page load.
-      
-      // Reset saved status after 3 seconds but stay in edit mode to prevent flashing
+      // Reset saved status after 15 seconds but stay in edit mode to prevent flashing
       // User can manually exit edit mode when ready
+      // Keep isSaved flag longer to prevent useEffect from overwriting data
+      // Extended to 15s to ensure context update happens first and prevents race conditions
       setTimeout(() => {
         setIsSaved(false);
-      }, 3000);
+        logger.debug('isSaved flag cleared');
+      }, 15000); // Increased to 15s to give time for context update and state stabilization
     } catch (error: any) {
       logger.error('Failed to save profile:', error);
       setIsSaving(false);
@@ -331,16 +1118,166 @@ export default function Profile() {
       return;
     }
     
+    logger.debug('=== handleUserDataChange called ===');
+    logger.debug('Received data:', data);
+    logger.debug('workExperiences in data:', data.workExperiences);
+    logger.debug('workExperiences count:', data.workExperiences?.length || 0);
+    
+    const normalizedChange: Partial<UserData> = {};
+    Object.keys(data).forEach((key) => {
+      const value = (data as any)[key];
+      if (key === 'workExperiences') {
+        const sanitizedExperiences = sanitizeWorkExperiences(value);
+        (normalizedChange as any)[key] = sanitizedExperiences;
+        logger.debug(`Sanitized work experiences field ${key}:`, sanitizedExperiences);
+      } else if (key === 'education') {
+        const sanitizedEdu = sanitizeEducation(value);
+        (normalizedChange as any)[key] = sanitizedEdu;
+        logger.debug(`Sanitized education field ${key}:`, sanitizedEdu);
+      } else if (key === 'skills') {
+        const sanitizedSkills = sanitizeSkills(value);
+        (normalizedChange as any)[key] = sanitizedSkills;
+        logger.debug(`Sanitized skills field ${key}:`, sanitizedSkills);
+      } else if (key === 'languages') {
+        const sanitizedLanguages = sanitizeLanguages(value);
+        (normalizedChange as any)[key] = sanitizedLanguages;
+        logger.debug(`Sanitized languages field ${key}:`, sanitizedLanguages);
+      } else if (key === 'certifications') {
+        const sanitizedCerts = sanitizeCertifications(value);
+        (normalizedChange as any)[key] = sanitizedCerts;
+        logger.debug(`Sanitized certifications field ${key}:`, sanitizedCerts);
+      } else if (ARRAY_FIELD_KEYS.includes(key)) {
+        const normalizedArray = normalizeToArray(value);
+        (normalizedChange as any)[key] = normalizedArray;
+        logger.debug(`Normalized array field ${key}:`, normalizedArray);
+      } else {
+        (normalizedChange as any)[key] = value;
+      }
+    });
+
     // Update local state immediately for responsive typing
     if (localProfileData) {
-      setLocalProfileData({ ...localProfileData, ...data });
+      const updatedData = { ...localProfileData };
+      Object.keys(normalizedChange).forEach((key) => {
+        (updatedData as any)[key] = (normalizedChange as any)[key];
+      });
+
+      // CRITICAL: Ensure arrays are always defined (never undefined/null)
+      // This prevents workExperiences from being lost
+      const safeUpdatedData = {
+        ...updatedData,
+        workExperiences: sanitizeWorkExperiences(updatedData.workExperiences),
+        education: sanitizeEducation(updatedData.education),
+        certifications: sanitizeCertifications(updatedData.certifications),
+        skills: sanitizeSkills(updatedData.skills),
+        languages: sanitizeLanguages(updatedData.languages),
+        projects: normalizeToArray(updatedData.projects),
+        achievements: normalizeToArray(updatedData.achievements),
+        socialLinks: normalizeToArray(updatedData.socialLinks),
+        careerGoals: normalizeToArray(updatedData.careerGoals),
+        targetRoles: normalizeToArray(updatedData.targetRoles),
+        targetCompanies: normalizeToArray(updatedData.targetCompanies),
+        careerTimeline: normalizeToArray(updatedData.careerTimeline),
+        volunteerExperiences: normalizeToArray(updatedData.volunteerExperiences),
+        recommendations: normalizeToArray(updatedData.recommendations),
+        publications: normalizeToArray(updatedData.publications),
+        patents: normalizeToArray(updatedData.patents),
+        organizations: normalizeToArray(updatedData.organizations),
+        testScores: normalizeToArray(updatedData.testScores),
+      };
+
+      logger.debug('Updated localProfileData workExperiences:', safeUpdatedData.workExperiences);
+      logger.debug('Updated localProfileData workExperiences count:', safeUpdatedData.workExperiences?.length || 0);
+      logger.debug('Safe updated data keys:', Object.keys(safeUpdatedData));
+
+      setLocalProfileData(safeUpdatedData);
     } else {
       // Initialize local state if it doesn't exist
       const currentData = userData || defaultUserData;
-      setLocalProfileData({ ...currentData, ...data });
+      const resolveArrayField = (field: keyof UserData) => {
+        if ((normalizedChange as any)[field] !== undefined) {
+          if (field === 'workExperiences') {
+            return sanitizeWorkExperiences((normalizedChange as any)[field]);
+          }
+          if (field === 'education') {
+            return sanitizeEducation((normalizedChange as any)[field]);
+          }
+          if (field === 'skills') {
+            return sanitizeSkills((normalizedChange as any)[field]);
+          }
+          if (field === 'languages') {
+            return sanitizeLanguages((normalizedChange as any)[field]);
+          }
+          if (field === 'certifications') {
+            return sanitizeCertifications((normalizedChange as any)[field]);
+          }
+          return normalizeToArray((normalizedChange as any)[field]);
+        }
+        if (field === 'workExperiences') {
+          return sanitizeWorkExperiences((currentData as any)[field]);
+        }
+        if (field === 'education') {
+          return sanitizeEducation((currentData as any)[field]);
+        }
+        if (field === 'skills') {
+          return sanitizeSkills((currentData as any)[field]);
+        }
+        if (field === 'languages') {
+          return sanitizeLanguages((currentData as any)[field]);
+        }
+        if (field === 'certifications') {
+          return sanitizeCertifications((currentData as any)[field]);
+        }
+        return normalizeToArray((currentData as any)[field]);
+      };
+
+      const newData = {
+        ...currentData,
+        ...normalizedChange,
+        workExperiences: resolveArrayField('workExperiences'),
+        education: resolveArrayField('education'),
+        certifications: resolveArrayField('certifications'),
+        skills: resolveArrayField('skills'),
+        languages: resolveArrayField('languages'),
+        projects: resolveArrayField('projects'),
+        achievements: resolveArrayField('achievements'),
+        socialLinks: resolveArrayField('socialLinks'),
+        careerGoals: resolveArrayField('careerGoals'),
+        targetRoles: resolveArrayField('targetRoles'),
+        targetCompanies: resolveArrayField('targetCompanies'),
+        careerTimeline: resolveArrayField('careerTimeline'),
+        volunteerExperiences: resolveArrayField('volunteerExperiences'),
+        recommendations: resolveArrayField('recommendations'),
+        publications: resolveArrayField('publications'),
+        patents: resolveArrayField('patents'),
+        organizations: resolveArrayField('organizations'),
+        testScores: resolveArrayField('testScores'),
+      };
+      logger.debug('Initializing localProfileData with workExperiences:', newData.workExperiences);
+      logger.debug('Initializing localProfileData workExperiences count:', newData.workExperiences?.length || 0);
+      setLocalProfileData(newData);
     }
-    // Also update context for consistency
-    updateProfileData(data);
+
+    // Also update context for consistency (but don't rely on it for local edits)
+    const contextUpdate: Partial<UserData> = {};
+    Object.keys(normalizedChange).forEach((key) => {
+      if (key === 'workExperiences') {
+        (contextUpdate as any)[key] = sanitizeWorkExperiences((normalizedChange as any)[key]);
+      } else if (key === 'education') {
+        (contextUpdate as any)[key] = sanitizeEducation((normalizedChange as any)[key]);
+      } else if (key === 'skills') {
+        (contextUpdate as any)[key] = sanitizeSkills((normalizedChange as any)[key]);
+      } else if (key === 'languages') {
+        (contextUpdate as any)[key] = sanitizeLanguages((normalizedChange as any)[key]);
+      } else if (key === 'certifications') {
+        (contextUpdate as any)[key] = sanitizeCertifications((normalizedChange as any)[key]);
+      } else {
+        (contextUpdate as any)[key] = (normalizedChange as any)[key];
+      }
+    });
+    if (Object.keys(contextUpdate).length > 0) {
+      updateProfileData(contextUpdate);
+    }
   };
 
   const handleChangePhoto = async (newPictureUrl: string | null) => {
@@ -388,8 +1325,6 @@ export default function Profile() {
         return <ProfessionalTab {...commonProps} />;
       case 'skills':
         return <SkillsTab {...commonProps} />;
-      case 'portfolio':
-        return <PortfolioTab {...commonProps} />;
       case 'security':
         return <SecurityTab />;
       case 'preferences':

@@ -49,7 +49,7 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
             </p>
             
             <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-12">
-              {portfolioData.bio || 'Creative professional passionate about building amazing experiences'}
+              {portfolioData.professionalBio || portfolioData.bio || 'Creative professional passionate about building amazing experiences'}
             </p>
 
             <div className="text-gray-500 mb-8 text-sm">
@@ -88,7 +88,7 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6 text-gray-300">
               <p className="text-lg leading-relaxed">
-                {portfolioData.bio || 'I am a passionate developer with years of experience building innovative solutions.'}
+                {portfolioData.professionalBio || portfolioData.bio || 'I am a passionate developer with years of experience building innovative solutions.'}
               </p>
               
               {/* Stats */}

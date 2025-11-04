@@ -20,7 +20,16 @@ export default function ProfileTab({
   onSave 
 }: ProfileTabProps) {
   const handleInputChange = (field: keyof UserProfile, value: string) => {
-    setProfileForm(prev => ({ ...prev, [field]: value }));
+    setProfileForm(prev => {
+      if (field === 'bio' || field === 'professionalBio') {
+        return {
+          ...prev,
+          bio: value,
+          professionalBio: value,
+        };
+      }
+      return { ...prev, [field]: value };
+    });
   };
 
   const handleSkillAdd = (skill: string) => {
@@ -242,8 +251,8 @@ export default function ProfileTab({
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Bio</h3>
         <textarea
-          value={profileForm.bio || ''}
-          onChange={(e) => handleInputChange('bio', e.target.value)}
+          value={profileForm.professionalBio ?? profileForm.bio ?? ''}
+          onChange={(e) => handleInputChange('professionalBio', e.target.value)}
           disabled={!isEditing}
           rows={4}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 resize-none"

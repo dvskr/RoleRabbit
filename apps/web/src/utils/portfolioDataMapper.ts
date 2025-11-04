@@ -16,7 +16,7 @@ export function generateSectionsFromProfile(userData: UserData): Section[] {
     enabled: true,
     config: {
       headline: `I'm ${userData.firstName} ${userData.lastName}`,
-      subheading: userData.bio || userData.currentRole || 'Building amazing things',
+      subheading: userData.professionalBio || userData.bio || userData.currentRole || 'Building amazing things',
       ctaText: 'Contact Me',
       secondaryCta: 'View Resume'
     }
@@ -31,7 +31,7 @@ export function generateSectionsFromProfile(userData: UserData): Section[] {
     enabled: true,
     config: {
       title: 'About Me',
-      description: userData.bio || userData.professionalSummary?.overview || 'Passionate professional.'
+      description: userData.professionalBio || userData.bio || userData.professionalSummary?.overview || 'Passionate professional.'
     }
   });
 

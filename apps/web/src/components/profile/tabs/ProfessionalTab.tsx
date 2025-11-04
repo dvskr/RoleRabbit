@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Briefcase, Plus, Trash2, Edit2, Save, X, Calendar, MapPin, Building2, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Briefcase, Plus, Trash2, Edit2, X, Calendar, MapPin, Building2, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 import FormField from '../components/FormField';
 import { UserData, WorkExperience } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -20,34 +20,89 @@ export default function ProfessionalTab({
   const { theme } = useTheme();
   const colors = theme.colors;
   
+  const VALID_PROJECT_TYPES: WorkExperience['projectType'][] = ['Client Project', 'Full-time', 'Part-time', 'Contract', 'Freelance', 'Consulting', 'Internship'];
+
   // Normalize work experiences array
   const normalizeWorkExperiences = (experiences: any): WorkExperience[] => {
     if (!experiences) return [];
-    if (Array.isArray(experiences)) {
-      return experiences.map(exp => ({
-        id: exp.id || `exp-${Date.now()}-${Math.random()}`,
-        company: exp.company || '',
-        role: exp.role || exp.title || '',
-        location: exp.location || '',
-        startDate: exp.startDate || exp.start || '',
-        endDate: exp.endDate || exp.end || '',
-        isCurrent: exp.isCurrent || (exp.endDate === null || exp.endDate === ''),
-        description: exp.description || '',
-        projectType: exp.projectType || exp.type || 'Full-time'
-      }));
-    }
-    if (typeof experiences === 'string') {
-      try {
-        const parsed = JSON.parse(experiences);
-        return normalizeWorkExperiences(parsed);
-      } catch {
-        return [];
+
+    const toArray = (input: any): any[] => {
+      if (!input) return [];
+      if (Array.isArray(input)) return input;
+      if (typeof input === 'string') {
+        try {
+          const parsed = JSON.parse(input);
+          return toArray(parsed);
+        } catch {
+          return [];
+        }
       }
-    }
-    return [];
+      if (input instanceof Map) {
+        return Array.from(input.values());
+      }
+      if (typeof input === 'object') {
+        return Object.values(input);
+      }
+      return [];
+    };
+
+    const items = toArray(experiences);
+
+    return items.map((exp: any) => {
+      const id = exp?.id || exp?._id || exp?.uuid || exp?.tempId || `exp-${Date.now()}-${Math.random()}`;
+      const rawEndDate = exp?.endDate ?? exp?.end ?? '';
+      const normalizedEndDateValue = typeof rawEndDate === 'string' ? rawEndDate.trim() : rawEndDate;
+      const startDate = exp?.startDate ?? exp?.start ?? '';
+      const isCurrent = Boolean(exp?.isCurrent) || normalizedEndDateValue === '' || normalizedEndDateValue === null || normalizedEndDateValue === 'Present';
+      const normalizeProjectType = (value: any): WorkExperience['projectType'] => {
+        if (typeof value === 'string') {
+          const match = VALID_PROJECT_TYPES.find(
+            (type) => type.toLowerCase() === value.toLowerCase()
+          );
+          if (match) {
+            return match;
+          }
+        }
+        return 'Full-time';
+      };
+      const projectType = normalizeProjectType(exp?.projectType ?? exp?.type);
+
+      return {
+        id,
+        company: exp?.company || '',
+        role: exp?.role || exp?.title || '',
+        location: exp?.location || '',
+        startDate,
+        endDate: isCurrent ? '' : (normalizedEndDateValue || ''),
+        isCurrent,
+        description: exp?.description || '',
+        projectType
+      } as WorkExperience;
+    });
   };
   
   const workExperiences = normalizeWorkExperiences(userData.workExperiences);
+
+  const createEmptyExperience = (): WorkExperience => ({
+    id: `exp-${Date.now()}-${Math.random()}`,
+    company: '',
+    role: '',
+    location: '',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+    description: '',
+    projectType: 'Full-time'
+  });
+  
+  // Debug logging
+  // eslint-disable-next-line no-console
+  console.log('ProfessionalTab - workExperiences:', {
+    raw: userData.workExperiences,
+    normalized: workExperiences,
+    count: workExperiences.length,
+    userDataKeys: Object.keys(userData)
+  });
   const [editingExpId, setEditingExpId] = useState<string | null>(null);
   const [editingExp, setEditingExp] = useState<WorkExperience | null>(null);
 
@@ -82,17 +137,7 @@ export default function ProfessionalTab({
   };
 
   const addWorkExperience = () => {
-    const newExp: WorkExperience = {
-      id: `exp-${Date.now()}-${Math.random()}`,
-      company: '',
-      role: '',
-      location: '',
-      startDate: '',
-      endDate: '',
-      isCurrent: false,
-      description: '',
-      projectType: 'Full-time'
-    };
+    const newExp = createEmptyExperience();
     onUserDataChange({ workExperiences: [...workExperiences, newExp] });
     startEditing(newExp);
   };
@@ -104,6 +149,25 @@ export default function ProfessionalTab({
       cancelEditing();
     }
   };
+
+  const autoCreateExperienceRef = useRef(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      autoCreateExperienceRef.current = false;
+      return;
+    }
+
+    if (workExperiences.length === 0 && !autoCreateExperienceRef.current) {
+      autoCreateExperienceRef.current = true;
+      const newExp = createEmptyExperience();
+      onUserDataChange({ workExperiences: [newExp] });
+      startEditing(newExp);
+    } else if (workExperiences.length > 0) {
+      autoCreateExperienceRef.current = false;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, workExperiences.length]);
 
 
   return (
@@ -131,8 +195,8 @@ export default function ProfessionalTab({
             name="bio"
             label="Tell us about yourself"
             type="textarea"
-            value={userData.bio || ''}
-            onChange={(value) => onUserDataChange({ bio: value })}
+            value={userData.professionalBio ?? userData.bio ?? ''}
+            onChange={(value) => onUserDataChange({ professionalBio: value, bio: value })}
             disabled={!isEditing}
             rows={5}
             maxLength={5000}
@@ -151,14 +215,14 @@ export default function ProfessionalTab({
               </span>
               <span 
                 className={`font-medium ${
-                  (userData.bio || '').length > 500 ? 'text-red-500' : 
-                  (userData.bio || '').length >= 50 ? 'text-green-500' : ''
+                  ((userData.professionalBio ?? userData.bio) || '').length > 500 ? 'text-red-500' : 
+                  ((userData.professionalBio ?? userData.bio) || '').length >= 50 ? 'text-green-500' : ''
                 }`}
               >
-                {(userData.bio || '').length}/500 characters
+                {((userData.professionalBio ?? userData.bio) || '').length}/500 characters
               </span>
             </div>
-            {(userData.bio || '').length > 0 && (userData.bio || '').length < 50 && isEditing && (
+            {(((userData.professionalBio ?? userData.bio) || '').length > 0) && (((userData.professionalBio ?? userData.bio) || '').length < 50) && isEditing && (
               <div 
                 className="p-3 rounded-lg flex items-start gap-2"
                 style={{
@@ -230,10 +294,14 @@ export default function ProfessionalTab({
           {workExperiences.map((exp, index) => {
             const isEditingThis = editingExpId === exp.id && isEditing;
             const displayExp = isEditingThis && editingExp ? editingExp : exp;
+            // Ensure we have a stable, unique ID for form fields
+            // exp.id is guaranteed unique: `exp-${Date.now()}-${Math.random()}` from addWorkExperience
+            // Always use exp.id (from the array item) to ensure consistency across renders
+            const stableId = exp.id || `temp-exp-${index}-${Math.random().toString(36).substr(2, 9)}`;
             
             return (
               <div
-                key={exp.id}
+                key={exp.id || `work-exp-${index}`}
                 className="rounded-lg transition-all"
                 style={{
                   background: colors.cardBackground,
@@ -245,20 +313,20 @@ export default function ProfessionalTab({
                   {/* Job Title & Company */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      id={`work-exp-${displayExp.id}-role`}
-                      name={`workExp-${displayExp.id}-role`}
+                      id={`work-exp-${stableId}-role`}
+                      name={`workExp-${stableId}-role`}
                       label="Job Title"
                       value={displayExp.role}
-                      onChange={(value) => updateWorkExperience(displayExp.id || '', { role: value })}
+                      onChange={(value) => updateWorkExperience(displayExp.id || stableId, { role: value })}
                       disabled={false}
                       placeholder="e.g., Software Engineer"
                     />
                     <FormField
-                      id={`work-exp-${displayExp.id}-company`}
-                      name={`workExp-${displayExp.id}-company`}
+                      id={`work-exp-${stableId}-company`}
+                      name={`workExp-${stableId}-company`}
                       label="Company"
                       value={displayExp.company}
-                      onChange={(value) => updateWorkExperience(displayExp.id || '', { company: value })}
+                      onChange={(value) => updateWorkExperience(displayExp.id || stableId, { company: value })}
                       disabled={false}
                       placeholder="e.g., Google"
                     />
@@ -267,22 +335,26 @@ export default function ProfessionalTab({
                   {/* Location & Employment Type */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      id={`work-exp-${displayExp.id}-location`}
-                      name={`workExp-${displayExp.id}-location`}
+                      id={`work-exp-${stableId}-location`}
+                      name={`workExp-${stableId}-location`}
                       label="Location"
                       value={displayExp.location || ''}
-                      onChange={(value) => updateWorkExperience(displayExp.id || '', { location: value })}
+                      onChange={(value) => updateWorkExperience(displayExp.id || stableId, { location: value })}
                       disabled={false}
                       placeholder="e.g., San Francisco, CA"
                     />
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold" style={{ color: colors.primaryText }}>
+                      <label 
+                        htmlFor={`employment-type-${stableId}`}
+                        className="block text-sm font-semibold" 
+                        style={{ color: colors.primaryText }}
+                      >
                         Employment Type
                       </label>
                       <select
-                        id={`employment-type-${displayExp.id}`}
+                        id={`employment-type-${stableId}`}
                         value={displayExp.projectType || 'Full-time'}
-                        onChange={(e) => updateWorkExperience(displayExp.id || '', { projectType: e.target.value as any })}
+                        onChange={(e) => updateWorkExperience(displayExp.id || stableId, { projectType: e.target.value as any })}
                         className="w-full px-4 py-3 rounded-lg transition-all"
                         style={{
                           background: colors.inputBackground,
@@ -309,24 +381,24 @@ export default function ProfessionalTab({
                   {/* Dates */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
-                      id={`work-exp-${displayExp.id}-start-date`}
-                      name={`workExp-${displayExp.id}-startDate`}
+                      id={`work-exp-${stableId}-start-date`}
+                      name={`workExp-${stableId}-startDate`}
                       label="Start Date"
                       type="text"
                       value={displayExp.startDate}
-                      onChange={(value) => updateWorkExperience(displayExp.id || '', { startDate: value })}
+                      onChange={(value) => updateWorkExperience(displayExp.id || stableId, { startDate: value })}
                       disabled={false}
                       placeholder="MM/YYYY"
                     />
                     <FormField
-                      id={`work-exp-${displayExp.id}-end-date`}
-                      name={`workExp-${displayExp.id}-endDate`}
+                      id={`work-exp-${stableId}-end-date`}
+                      name={`workExp-${stableId}-endDate`}
                       label="End Date"
                       type="text"
                       value={displayExp.isCurrent ? 'Present' : (displayExp.endDate || '')}
                       onChange={(value) => {
                         if (value !== 'Present') {
-                          updateWorkExperience(displayExp.id || '', { endDate: value, isCurrent: false });
+                          updateWorkExperience(displayExp.id || stableId, { endDate: value, isCurrent: false });
                         }
                       }}
                       disabled={displayExp.isCurrent}
@@ -337,12 +409,12 @@ export default function ProfessionalTab({
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
-                        id={`current-${displayExp.id}`}
+                        id={`current-${stableId}`}
                         checked={displayExp.isCurrent || false}
                         onChange={(e) => {
                           e.stopPropagation();
                           const isCurrent = e.target.checked;
-                          updateWorkExperience(displayExp.id || '', { 
+                          updateWorkExperience(displayExp.id || stableId, { 
                             isCurrent: isCurrent,
                             endDate: isCurrent ? '' : (displayExp.endDate || '')
                           });
@@ -358,12 +430,12 @@ export default function ProfessionalTab({
 
                   {/* Description */}
                   <FormField
-                    id={`work-exp-${displayExp.id}-description`}
-                    name={`workExp-${displayExp.id}-description`}
+                    id={`work-exp-${stableId}-description`}
+                    name={`workExp-${stableId}-description`}
                     label="Description"
                     type="textarea"
                     value={displayExp.description || ''}
-                    onChange={(value) => updateWorkExperience(displayExp.id || '', { description: value })}
+                    onChange={(value) => updateWorkExperience(displayExp.id || stableId, { description: value })}
                     disabled={false}
                     rows={6}
                     maxLength={10000}
@@ -376,23 +448,7 @@ export default function ProfessionalTab({
                   {/* Actions */}
                   <div className="flex gap-3 pt-2">
                     <button
-                      onClick={cancelEditing}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium"
-                      style={{
-                        background: colors.primaryBlue,
-                        color: 'white',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.opacity = '0.9';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                      }}
-                    >
-                      <Save size={16} />
-                      Save
-                    </button>
-                    <button
+                      type="button"
                       onClick={cancelEditing}
                       className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium"
                       style={{
@@ -411,6 +467,7 @@ export default function ProfessionalTab({
                       Cancel
                     </button>
                     <button
+                      type="button"
                       onClick={() => deleteWorkExperience(displayExp.id || '')}
                       className="flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium ml-auto"
                       style={{
@@ -429,6 +486,9 @@ export default function ProfessionalTab({
                       Delete
                     </button>
                   </div>
+                  <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                    Changes will be saved when you click "Save" in the header
+                  </p>
                 </div>
               ) : (
                 <div className="p-5">

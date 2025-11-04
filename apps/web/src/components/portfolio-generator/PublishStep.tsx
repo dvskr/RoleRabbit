@@ -62,7 +62,7 @@ export default function PublishStep({ portfolioData, onExport }: PublishStepProp
                 ${data.profilePic ? `<img src="${data.profilePic}" alt="${data.name}" class="profile-pic">` : ''}
                 <h1 class="title">${data.name || 'Your Name'}</h1>
                 <p class="subtitle">${data.role || 'Your Title'}</p>
-                <p class="bio">${data.bio || 'Your bio'}</p>
+                <p class="bio">${data.professionalBio || data.bio || 'Your bio'}</p>
                 
                 <div class="social-links">
                     ${data.email ? `<a href="mailto:${data.email}">Email</a>` : ''}

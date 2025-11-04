@@ -90,18 +90,6 @@ export default function ResumeImportFromCloudModal({
                     <Download size={18} className="text-purple-600" />
                   </button>
                 </div>
-                {file.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {file.tags.map(tag => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             ))
           )}

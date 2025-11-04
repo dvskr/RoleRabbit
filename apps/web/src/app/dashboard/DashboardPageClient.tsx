@@ -14,7 +14,10 @@ import PageHeader from '../../components/layout/PageHeader';
 const DashboardFigma = dynamic(() => import('../../components/DashboardFigma'), { ssr: false });
 const Profile = dynamic(() => import('../../components/Profile'), { ssr: false });
 const CloudStorage = dynamic(() => import('../../components/CloudStorage'), { ssr: false });
-const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor'), { ssr: false });
+const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor').then(mod => ({ default: mod.default })), { 
+  ssr: false,
+  loading: () => <div>Loading Resume Editor...</div>
+});
 const AIPanel = dynamic(() => import('../../components/features/AIPanel'), { ssr: false });
 const Templates = dynamic(() => import('../../components/Templates'), { ssr: false });
 const JobTracker = dynamic(() => import('../../components/JobTracker'), { ssr: false });

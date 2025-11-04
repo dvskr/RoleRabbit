@@ -104,7 +104,7 @@ interface DashboardModalsProps {
   onAddField: () => void;
   onNewResume: () => void;
   onGenerateAIContent: () => void;
-  onConfirmSaveToCloud: (fileName: string, description: string, tags: string[]) => void;
+  onConfirmSaveToCloud: (fileName: string, description: string) => void;
   onLoadFromCloud: (file: ResumeFile) => void;
   DEFAULT_TEMPLATE_ID: string;
 }

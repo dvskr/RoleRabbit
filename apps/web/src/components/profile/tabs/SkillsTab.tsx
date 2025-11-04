@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Award, Globe, Trash2, Edit2, Save, X, Plus } from 'lucide-react';
-import { UserData, Skill, Certification } from '../types/profile';
+import React, { useEffect, useState } from 'react';
+import { Award, Globe, Trash2, Edit2, X, Plus, GraduationCap, ArrowLeft } from 'lucide-react';
+import { UserData, Skill, Certification, Education } from '../types/profile';
+import { sanitizeSkills } from '../../Profile';
 import { useTheme } from '../../../contexts/ThemeContext';
 import FormField from '../components/FormField';
 
@@ -22,6 +23,15 @@ export default function SkillsTab({
   
   const [editingSkillId, setEditingSkillId] = useState<number | null>(null);
   const [editingCertId, setEditingCertId] = useState<number | null>(null);
+  const [editingEducationId, setEditingEducationId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!isEditing) {
+      setEditingSkillId(null);
+      setEditingCertId(null);
+      setEditingEducationId(null);
+    }
+  }, [isEditing]);
   
   // Normalize skills to always be an array
   const normalizeSkills = (skills: any): Skill[] => {
@@ -51,7 +61,8 @@ export default function SkillsTab({
   };
   
   const skills: Skill[] = normalizeSkills(userData.skills);
-  
+  const sanitizedSkills = sanitizeSkills(skills, { keepDrafts: true });
+
   const addSkill = (skillNameOrList: string) => {
     // Support comma-separated skills: "Python, JavaScript, React" or single skill: "Python"
     const skillNames = skillNameOrList
@@ -63,7 +74,7 @@ export default function SkillsTab({
     
     // Add all skills that don't already exist (case-insensitive)
     const newSkills: Skill[] = [];
-    const existingSkillNames = new Set(skills.map(s => s.name.toLowerCase()));
+    const existingSkillNames = new Set(sanitizedSkills.map(s => s.name.toLowerCase()));
     
     skillNames.forEach(skillName => {
       if (!existingSkillNames.has(skillName.toLowerCase())) {
@@ -77,20 +88,20 @@ export default function SkillsTab({
     });
     
     if (newSkills.length > 0) {
-      onUserDataChange({ skills: [...skills, ...newSkills] });
+      onUserDataChange({ skills: sanitizeSkills([...sanitizedSkills, ...newSkills], { keepDrafts: true }) });
     }
   };
 
   const updateSkill = (index: number, updates: Partial<Skill>) => {
-    const updated = skills.map((skill, i) => 
+    const updated = sanitizedSkills.map((skill, i) =>
       i === index ? { ...skill, ...updates } : skill
     );
-    onUserDataChange({ skills: updated });
+    onUserDataChange({ skills: sanitizeSkills(updated, { keepDrafts: true }) });
   };
 
   const removeSkill = (index: number) => {
-    const updatedSkills = skills.filter((_, i) => i !== index);
-    onUserDataChange({ skills: updatedSkills });
+    const updatedSkills = sanitizedSkills.filter((_, i) => i !== index);
+    onUserDataChange({ skills: sanitizeSkills(updatedSkills, { keepDrafts: true }) });
     // Reset editing state if the removed skill was being edited
     if (editingSkillId === index) {
       setEditingSkillId(null);
@@ -105,11 +116,12 @@ export default function SkillsTab({
     if (!certs) return [];
     if (Array.isArray(certs)) {
       return certs.map(cert => ({
+        id: cert.id || cert._id || cert.uuid || cert.tempId || undefined,
         name: cert.name || '',
         issuer: cert.issuer || '',
         date: cert.date || '', // Optional - allow blank
-        expiryDate: cert.expiryDate || null,
-        credentialUrl: cert.credentialUrl || null,
+        expiryDate: cert.expiryDate || '',
+        credentialUrl: cert.credentialUrl || '',
         verified: cert.verified || false
       }));
     }
@@ -128,6 +140,7 @@ export default function SkillsTab({
   
   const addCertification = () => {
     const cert: Certification = {
+      id: `temp-cert-${Date.now()}-${Math.random()}`,
       name: '',
       issuer: '',
       date: '', // Optional - allow blank
@@ -250,6 +263,114 @@ export default function SkillsTab({
   };
 
   const proficiencyLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
+
+  const normalizeEducation = (educationInput: any): Education[] => {
+    const toArray = (input: any): any[] => {
+      if (!input) return [];
+      if (Array.isArray(input)) return input;
+      if (typeof input === 'string') {
+        try {
+          const parsed = JSON.parse(input);
+          return toArray(parsed);
+        } catch {
+          return [];
+        }
+      }
+      if (input instanceof Map || input instanceof Set) {
+        return Array.from((input as Map<any, any> | Set<any>).values());
+      }
+      if (typeof input === 'object') {
+        return Object.values(input);
+      }
+      return [];
+    };
+
+    const toStringValue = (value: any): string => {
+      if (value === null || value === undefined) return '';
+      return typeof value === 'string' ? value : String(value);
+    };
+
+    return toArray(educationInput).map((edu: any, index) => {
+      if (!edu || typeof edu !== 'object') {
+        const institutionValue = typeof edu === 'string' ? edu : '';
+        return {
+          id: `edu-${index}`,
+          institution: toStringValue(institutionValue),
+          degree: '',
+          field: '',
+          startDate: '',
+          endDate: '',
+          gpa: '',
+          honors: '',
+          location: '',
+          description: '',
+        };
+      }
+
+      const idSource = edu.id ?? edu._id ?? edu.uuid ?? edu.tempId ?? edu.educationId;
+      const id = typeof idSource === 'string'
+        ? idSource
+        : (idSource !== undefined && idSource !== null ? String(idSource) : `edu-${index}`);
+
+      return {
+        id,
+        institution: toStringValue(edu.institution ?? edu.school ?? edu.university ?? ''),
+        degree: toStringValue(edu.degree ?? edu.program ?? ''),
+        field: toStringValue(edu.field ?? edu.major ?? ''),
+        startDate: toStringValue(edu.startDate ?? edu.start ?? ''),
+        endDate: toStringValue(edu.endDate ?? edu.graduationDate ?? edu.completionDate ?? ''),
+        gpa: toStringValue(edu.gpa ?? ''),
+        honors: toStringValue(edu.honors ?? edu.awards ?? ''),
+        location: toStringValue(edu.location ?? ''),
+        description: toStringValue(edu.description ?? edu.summary ?? ''),
+      } as Education;
+    });
+  };
+
+  const education = normalizeEducation(userData.education);
+
+  useEffect(() => {
+    if (!isEditing && editingEducationId) {
+      setEditingEducationId(null);
+    }
+  }, [isEditing, editingEducationId]);
+
+  useEffect(() => {
+    if (editingEducationId && !education.some((edu) => edu.id === editingEducationId)) {
+      setEditingEducationId(null);
+    }
+  }, [education, editingEducationId]);
+
+  const addEducation = () => {
+    const newId = `temp-edu-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const newEducation: Education = {
+      id: newId,
+      institution: '',
+      degree: '',
+      field: '',
+      startDate: '',
+      endDate: '',
+      gpa: '',
+      honors: '',
+      location: '',
+      description: '',
+    };
+    onUserDataChange({ education: [...education, newEducation] });
+    setEditingEducationId(newId);
+  };
+
+  const updateEducation = (id: string, updates: Partial<Education>) => {
+    const updated = education.map((edu) => (edu.id === id ? { ...edu, ...updates } : edu));
+    onUserDataChange({ education: updated });
+  };
+
+  const removeEducation = (id: string) => {
+    const updated = education.filter((edu) => edu.id !== id);
+    onUserDataChange({ education: updated });
+    if (editingEducationId === id) {
+      setEditingEducationId(null);
+    }
+  };
 
   return (
     <div className="max-w-4xl">
@@ -448,18 +569,22 @@ export default function SkillsTab({
           
           <div className="space-y-4">
             {certifications.map((cert, index) => {
-              const isEditing = editingCertId === index;
+              const isEditingCert = isEditing && editingCertId === index;
+              // Use cert.id if available, otherwise fallback to index (for new certs)
+              // This ensures unique IDs even when certs are reordered
+              const certId = cert.id || `temp-cert-${index}`;
               
               return (
                 <div 
-                  key={index} 
+                  key={certId} 
                   className="p-5 rounded-xl transition-all"
                   style={{
-                    background: colors.badgeWarningBg,
-                    border: `1px solid ${colors.badgeWarningBorder}`,
+                    background: colors.cardBackground,
+                    border: `1px solid ${isEditingCert ? colors.border : colors.border}`,
+                    boxShadow: isEditingCert ? '0 0 0 1px rgba(255,255,255,0.04)' : undefined,
                   }}
                 >
-                  {isEditing ? (
+                  {isEditingCert ? (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -477,8 +602,8 @@ export default function SkillsTab({
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <FormField
-                          id={`cert-${index}-name`}
-                          name={`cert-${index}-name`}
+                          id={`cert-${certId}-name`}
+                          name={`cert-${certId}-name`}
                           label="Certification Name"
                           value={cert.name}
                           onChange={(value) => updateCertification(index, { name: value })}
@@ -486,8 +611,8 @@ export default function SkillsTab({
                           placeholder="e.g., AWS Certified Solutions Architect"
                         />
                         <FormField
-                          id={`cert-${index}-issuer`}
-                          name={`cert-${index}-issuer`}
+                          id={`cert-${certId}-issuer`}
+                          name={`cert-${certId}-issuer`}
                           label="Issuing Organization"
                           value={cert.issuer}
                           onChange={(value) => updateCertification(index, { issuer: value })}
@@ -495,8 +620,8 @@ export default function SkillsTab({
                           placeholder="e.g., Amazon Web Services"
                         />
                         <FormField
-                          id={`cert-${index}-date`}
-                          name={`cert-${index}-date`}
+                          id={`cert-${certId}-date`}
+                          name={`cert-${certId}-date`}
                           label="Issue Date (Optional)"
                           type="date"
                           value={cert.date || ''}
@@ -504,8 +629,8 @@ export default function SkillsTab({
                           disabled={false}
                         />
                         <FormField
-                          id={`cert-${index}-expiry-date`}
-                          name={`cert-${index}-expiry-date`}
+                          id={`cert-${certId}-expiry-date`}
+                          name={`cert-${certId}-expiry-date`}
                           label="Expiry Date (Optional)"
                           type="date"
                           value={cert.expiryDate || ''}
@@ -513,8 +638,8 @@ export default function SkillsTab({
                           disabled={false}
                         />
                         <FormField
-                          id={`cert-${index}-credential-url`}
-                          name={`cert-${index}-credential-url`}
+                          id={`cert-${certId}-credential-url`}
+                          name={`cert-${certId}-credential-url`}
                           label="Credential URL (Optional)"
                           type="url"
                           value={cert.credentialUrl || ''}
@@ -535,12 +660,13 @@ export default function SkillsTab({
                           }}
                           className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2"
                           style={{
-                            background: colors.primaryBlue,
-                            color: 'white',
+                            background: colors.inputBackground,
+                            color: colors.secondaryText,
+                            border: `1px solid ${colors.border}`,
                           }}
                         >
-                          <Save size={14} />
-                          Save
+                          <ArrowLeft size={14} />
+                          Back
                         </button>
                         <button
                           type="button"
@@ -559,16 +685,20 @@ export default function SkillsTab({
                           Delete
                         </button>
                       </div>
+                      <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                        Changes will be saved when you click "Save" in the header
+                      </p>
                     </div>
                   ) : (
                     <div className="flex items-start gap-4">
                       <div 
                         className="p-2 rounded-lg flex-shrink-0"
                         style={{
-                          background: colors.badgeWarningBg,
+                          background: colors.inputBackground,
+                          border: `1px solid ${colors.border}`,
                         }}
                       >
-                        <Award size={20} style={{ color: colors.badgeWarningText }} />
+                        <Award size={20} style={{ color: colors.primaryText }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -834,6 +964,293 @@ export default function SkillsTab({
                 <Plus size={18} className="inline mr-1" />
                 Add
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Education */}
+        <div 
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 
+              className="text-xl font-semibold"
+              style={{ color: colors.primaryText }}
+            >
+              Education
+            </h3>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addEducation();
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg"
+                style={{
+                  background: colors.primaryBlue,
+                  color: 'white',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                <Plus size={16} />
+                Add Education
+              </button>
+            )}
+          </div>
+
+          {education.length === 0 ? (
+            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
+              <GraduationCap size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
+              <p>No education entries added yet</p>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addEducation();
+                  }}
+                  className="mt-4 px-6 py-3 rounded-xl"
+                  style={{
+                    background: colors.primaryBlue,
+                    color: 'white',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <Plus size={16} className="inline mr-2" />
+                  Add Your First Education
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {education.map((edu, index) => {
+                const entryId = edu.id || `edu-${index}`;
+                const isEditingEducation = isEditing && editingEducationId === entryId;
+                const degreeField = [edu.degree, edu.field].filter((value) => value && value.length > 0).join(' • ');
+                const dateRange = [edu.startDate, edu.endDate]
+                  .filter((value) => value && value.length > 0)
+                  .join(' - ');
+
+                return (
+                  <div
+                    key={entryId}
+                    className="p-6 rounded-xl transition-all"
+                    style={{
+                      background: colors.cardBackground,
+                      border: `1px solid ${isEditingEducation ? colors.primaryBlue : colors.border}`,
+                    }}
+                  >
+                    {isEditingEducation ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-institution`}
+                            name={`education-${entryId}-institution`}
+                            label="Institution"
+                            value={edu.institution || ''}
+                            onChange={(value) => updateEducation(entryId, { institution: value })}
+                            disabled={false}
+                            placeholder="e.g., Stanford University"
+                          />
+                          <FormField
+                            id={`education-${entryId}-location`}
+                            name={`education-${entryId}-location`}
+                            label="Location (Optional)"
+                            value={edu.location || ''}
+                            onChange={(value) => updateEducation(entryId, { location: value })}
+                            disabled={false}
+                            placeholder="e.g., Stanford, CA"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-degree`}
+                            name={`education-${entryId}-degree`}
+                            label="Degree"
+                            value={edu.degree || ''}
+                            onChange={(value) => updateEducation(entryId, { degree: value })}
+                            disabled={false}
+                            placeholder="e.g., Bachelor of Science"
+                          />
+                          <FormField
+                            id={`education-${entryId}-field`}
+                            name={`education-${entryId}-field`}
+                            label="Field of Study"
+                            value={edu.field || ''}
+                            onChange={(value) => updateEducation(entryId, { field: value })}
+                            disabled={false}
+                            placeholder="e.g., Computer Science"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-start`}
+                            name={`education-${entryId}-start`}
+                            label="Start Date"
+                            value={edu.startDate || ''}
+                            onChange={(value) => updateEducation(entryId, { startDate: value })}
+                            disabled={false}
+                            placeholder="e.g., 2015-09 or Sep 2015"
+                          />
+                          <FormField
+                            id={`education-${entryId}-end`}
+                            name={`education-${entryId}-end`}
+                            label="End Date"
+                            value={edu.endDate || ''}
+                            onChange={(value) => updateEducation(entryId, { endDate: value })}
+                            disabled={false}
+                            placeholder="e.g., 2019-05 or Present"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            id={`education-${entryId}-gpa`}
+                            name={`education-${entryId}-gpa`}
+                            label="GPA (Optional)"
+                            value={edu.gpa || ''}
+                            onChange={(value) => updateEducation(entryId, { gpa: value })}
+                            disabled={false}
+                            placeholder="e.g., 3.8"
+                          />
+                          <FormField
+                            id={`education-${entryId}-honors`}
+                            name={`education-${entryId}-honors`}
+                            label="Honors & Awards (Optional)"
+                            value={edu.honors || ''}
+                            onChange={(value) => updateEducation(entryId, { honors: value })}
+                            disabled={false}
+                            placeholder="e.g., Summa Cum Laude"
+                          />
+                        </div>
+
+                        <FormField
+                          id={`education-${entryId}-description`}
+                          name={`education-${entryId}-description`}
+                          label="Description (Optional)"
+                          type="textarea"
+                          value={edu.description || ''}
+                          onChange={(value) => updateEducation(entryId, { description: value })}
+                          disabled={false}
+                          placeholder="Key courses, achievements, activities..."
+                          rows={4}
+                          autoResize={true}
+                          allowBullets={true}
+                        />
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removeEducation(entryId);
+                            }}
+                            className="px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                            style={{
+                              background: colors.errorRed,
+                              color: 'white',
+                            }}
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
+                        <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                          Changes will be saved when you click "Save" in the header
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0 space-y-3">
+                          <div>
+                            <h4 className="font-semibold" style={{ color: colors.primaryText }}>
+                              {edu.institution || 'Institution not specified'}
+                            </h4>
+                            <p className="text-sm" style={{ color: colors.secondaryText }}>
+                              {degreeField || 'Degree information not provided'}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-3 text-xs" style={{ color: colors.tertiaryText }}>
+                            <span>
+                              {dateRange || 'Dates not specified'}
+                            </span>
+                            {edu.location && (
+                              <span>Location: {edu.location}</span>
+                            )}
+                            {edu.gpa && (
+                              <span>GPA: {edu.gpa}</span>
+                            )}
+                            {edu.honors && (
+                              <span>Honors: {edu.honors}</span>
+                            )}
+                          </div>
+                          {edu.description && (
+                            <p className="text-sm" style={{ color: colors.secondaryText }}>
+                              {edu.description}
+                            </p>
+                          )}
+                        </div>
+                        {isEditing && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingEducationId(entryId)}
+                              className="p-2 rounded-lg transition-colors"
+                              style={{ color: colors.primaryBlue }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeInfoBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              aria-label="Edit education"
+                              title="Edit education"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeEducation(entryId)}
+                              className="p-2 rounded-lg transition-colors"
+                              style={{ color: colors.errorRed }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeErrorBg;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              aria-label="Remove education"
+                              title="Remove education"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

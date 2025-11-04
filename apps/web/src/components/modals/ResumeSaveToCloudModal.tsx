@@ -8,7 +8,7 @@ import { Cloud, X } from 'lucide-react';
 
 interface ResumeSaveToCloudModalProps {
   onClose: () => void;
-  onConfirm: (fileName: string, description: string, tags: string[]) => void;
+  onConfirm: (fileName: string, description: string) => void;
   defaultFileName: string;
 }
 
@@ -19,19 +19,6 @@ export default function ResumeSaveToCloudModal({
 }: ResumeSaveToCloudModalProps) {
   const [fileName, setFileName] = useState(defaultFileName);
   const [description, setDescription] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
-
-  const handleAddTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()]);
-      setNewTag('');
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(t => t !== tagToRemove));
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -82,46 +69,6 @@ export default function ResumeSaveToCloudModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tags
-            </label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                placeholder="Add tag"
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                onClick={handleAddTag}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-              >
-                Add
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm flex items-center gap-2"
-                >
-                  {tag}
-                  <button
-                    onClick={() => handleRemoveTag(tag)}
-                    className="hover:text-indigo-600"
-                    title="Remove tag"
-                    aria-label={`Remove tag ${tag}`}
-                  >
-                    <X size={14} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -132,7 +79,7 @@ export default function ResumeSaveToCloudModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(fileName, description, tags)}
+            onClick={() => onConfirm(fileName, description)}
             disabled={!fileName.trim()}
             className={`flex-1 px-4 py-2 text-white rounded-lg ${
               !fileName.trim()

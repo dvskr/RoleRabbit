@@ -30,7 +30,6 @@ model StorageFile {
   
   // Organization
   folderId    String?
-  tags        String[] @default([])
   description String?
   
   // Sharing & Access
@@ -347,7 +346,7 @@ Create `apps/api/routes/storage.routes.js`:
 // Download file
 
 // PUT /api/storage/files/:id
-// Update file metadata (name, description, tags, etc.)
+// Update file metadata (name, type, description, visibility, etc.)
 
 // DELETE /api/storage/files/:id
 // Soft delete file

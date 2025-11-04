@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserCircle, Mail, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { UserCircle, Mail, Phone, MapPin, AlertCircle, Linkedin, Github, Link2, Globe } from 'lucide-react';
 import FormField from '../components/FormField';
 import ProfilePicture from '../components/ProfilePicture';
 import { UserData } from '../types/profile';
@@ -164,6 +164,78 @@ export default function ProfileTab({
                 onChange={(value) => onUserDataChange({ location: value })}
                 disabled={!isEditing}
                 placeholder="Enter your location (City, Country)"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <FormField
+                id="profile-linkedin"
+                name="linkedin"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Linkedin size={16} style={{ color: colors.secondaryText }} />
+                    LinkedIn
+                  </span>
+                }
+                type="url"
+                value={userData.linkedin || ''}
+                onChange={(value) => onUserDataChange({ linkedin: value })}
+                disabled={!isEditing}
+                placeholder="https://linkedin.com/in/yourname"
+              />
+            </div>
+            <div>
+              <FormField
+                id="profile-github"
+                name="github"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Github size={16} style={{ color: colors.secondaryText }} />
+                    GitHub
+                  </span>
+                }
+                type="url"
+                value={userData.github || ''}
+                onChange={(value) => onUserDataChange({ github: value })}
+                disabled={!isEditing}
+                placeholder="https://github.com/username"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div>
+              <FormField
+                id="profile-portfolio"
+                name="portfolio"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Link2 size={16} style={{ color: colors.secondaryText }} />
+                    Portfolio URL
+                  </span>
+                }
+                type="url"
+                value={userData.portfolio || ''}
+                onChange={(value) => onUserDataChange({ portfolio: value })}
+                disabled={!isEditing}
+                placeholder="https://yourportfolio.com"
+              />
+            </div>
+            <div>
+              <FormField
+                id="profile-website"
+                name="website"
+                label={
+                  <span className="flex items-center gap-2">
+                    <Globe size={16} style={{ color: colors.secondaryText }} />
+                    Personal Website
+                  </span>
+                }
+                type="url"
+                value={userData.website || ''}
+                onChange={(value) => onUserDataChange({ website: value })}
+                disabled={!isEditing}
+                placeholder="https://yourwebsite.com"
               />
             </div>
           </div>

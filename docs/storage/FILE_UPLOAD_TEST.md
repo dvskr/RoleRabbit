@@ -18,7 +18,6 @@ curl -X POST http://localhost:3001/api/storage/files/upload \
   -F "file=@/path/to/your/file.pdf" \
   -F "displayName=My Resume" \
   -F "type=resume" \
-  -F "tags=resume,software,engineer" \
   -F "description=My professional resume" \
   -F "isPublic=false"
 ```
@@ -36,7 +35,6 @@ curl -X POST http://localhost:3001/api/storage/files/upload \
      - `file` (File) - Select your file
      - `displayName` (Text) - Optional
      - `type` (Text) - Optional (default: 'document')
-     - `tags` (Text) - Optional (comma-separated)
      - `description` (Text) - Optional
      - `isPublic` (Text) - Optional ('true' or 'false')
      - `folderId` (Text) - Optional
@@ -48,7 +46,6 @@ const formData = new FormData();
 formData.append('file', fileInput.files[0]);
 formData.append('displayName', 'My Resume');
 formData.append('type', 'resume');
-formData.append('tags', 'resume,software');
 formData.append('isPublic', 'false');
 
 const response = await fetch('http://localhost:3001/api/storage/files/upload', {
@@ -73,7 +70,6 @@ console.log('Upload result:', result);
 | `file` | File | ✅ Yes | The file to upload |
 | `displayName` | String | No | Custom display name |
 | `type` | String | No | File type (resume, template, document, etc.) |
-| `tags` | String | No | Comma-separated tags |
 | `description` | String | No | File description |
 | `isPublic` | String | No | 'true' or 'false' (default: false) |
 | `folderId` | String | No | Target folder ID |

@@ -8,6 +8,7 @@ export interface Skill {
 }
 
 export interface Certification {
+  id?: string;
   name: string;
   issuer: string;
   date: string;
@@ -17,13 +18,15 @@ export interface Certification {
 }
 
 export interface Education {
+  id?: string;
   institution: string;
-  degree: string;
-  field: string;
-  startDate: string;
-  endDate: string;
+  degree?: string;
+  field?: string;
+  startDate?: string;
+  endDate?: string;
   gpa?: string;
   honors?: string;
+  location?: string;
   description?: string;
 }
 
@@ -47,7 +50,7 @@ export interface Achievement {
 }
 
 export interface SocialLink {
-  platform: 'LinkedIn' | 'GitHub' | 'Twitter' | 'Behance' | 'Dribbble' | 'Medium' | 'Personal Website';
+  platform: string;
   url: string;
 }
 
@@ -170,6 +173,7 @@ export interface UserData {
   phone: string;
   location: string;
   bio: string;
+  professionalBio?: string;
   profilePicture: string | null;
   
   // Professional Info

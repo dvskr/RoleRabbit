@@ -37,7 +37,7 @@ export interface UseDashboardCloudSaveParams {
 }
 
 export interface UseDashboardCloudSaveReturn {
-  handleConfirmSaveToCloud: (fileName: string, description: string, tags: string[]) => void;
+  handleConfirmSaveToCloud: (fileName: string, description: string) => void;
   handleLoadFromCloud: (file: ResumeFile) => void;
 }
 
@@ -70,7 +70,7 @@ export function useDashboardCloudSave(params: UseDashboardCloudSaveParams): UseD
     setShowImportFromCloudModal,
   } = params;
 
-  const handleConfirmSaveToCloud = useCallback(async (fileName: string, description: string, tags: string[]) => {
+  const handleConfirmSaveToCloud = useCallback(async (fileName: string, description: string) => {
     try {
       // Save via API
       const response = await apiService.saveToCloud(resumeData, fileName);

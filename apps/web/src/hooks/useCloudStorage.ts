@@ -82,7 +82,6 @@ export const useCloudStorage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<FileType>('all');
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [quickFilters, setQuickFilters] = useState<{
     starred?: boolean;
@@ -242,7 +241,6 @@ export const useCloudStorage = () => {
     searchTerm,
     filterType,
     sortBy,
-    viewMode,
     showUploadModal,
     showDeleted,
     storageInfo,
@@ -263,7 +261,6 @@ export const useCloudStorage = () => {
     setSearchTerm,
     setFilterType,
     setSortBy,
-    setViewMode,
     setShowUploadModal,
     setShowDeleted,
     setSelectedFolderId,

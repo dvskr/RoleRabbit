@@ -18,6 +18,7 @@ async function storageRoutes(fastify, options) {
   logger.info('📁 Storage routes registered: /api/storage/*');
   logger.info('   → GET    /api/storage/files');
   logger.info('   → POST   /api/storage/files/upload');
+  logger.info('   → PUT    /api/storage/files/:id');
   logger.info('   → DELETE /api/storage/files/:id (soft delete)');
   logger.info('   → POST   /api/storage/files/:id/restore');
   logger.info('   → DELETE /api/storage/files/:id/permanent');
@@ -91,7 +92,6 @@ async function storageRoutes(fastify, options) {
         sizeBytes: Number(file.size),
         storagePath: file.storagePath,
         publicUrl: file.publicUrl,
-        tags: file.tags || [],
         description: file.description,
         isPublic: file.isPublic,
         isStarred: file.isStarred,
@@ -299,7 +299,6 @@ async function storageRoutes(fastify, options) {
       // Use the form fields we collected during parts iteration
       let displayName = validation.sanitizedFileName;
       let fileType = 'document';
-      let tags = [];
       let description = null;
       let isPublic = false;
       let folderId = null;
@@ -307,20 +306,6 @@ async function storageRoutes(fastify, options) {
       // Process collected form fields
       if (formFields.displayName) displayName = formFields.displayName;
       if (formFields.type) fileType = formFields.type;
-      if (formFields.tags) {
-        // Handle both JSON array and comma-separated string
-        try {
-          const parsedTags = JSON.parse(formFields.tags);
-          if (Array.isArray(parsedTags)) {
-            tags = parsedTags.filter(t => t && typeof t === 'string');
-          } else {
-            tags = formFields.tags.split(',').map(t => t.trim()).filter(t => t);
-          }
-        } catch {
-          // If not JSON, treat as comma-separated
-          tags = formFields.tags.split(',').map(t => t.trim()).filter(t => t);
-        }
-      }
       if (formFields.description) description = formFields.description;
       if (formFields.isPublic) isPublic = formFields.isPublic === 'true';
       if (formFields.folderId) folderId = formFields.folderId === 'null' ? null : formFields.folderId;
@@ -365,7 +350,6 @@ async function storageRoutes(fastify, options) {
             size: BigInt(fileSize),
             storagePath: storageResult.path,
             publicUrl: storageResult.publicUrl || null,
-            tags: tags || [],
             description: description || null,
             isPublic: isPublic,
             folderId: folderId || null
@@ -396,7 +380,6 @@ async function storageRoutes(fastify, options) {
         size: Number(savedFile.size),
         storagePath: savedFile.storagePath,
         publicUrl: savedFile.publicUrl,
-        tags: savedFile.tags,
         description: savedFile.description,
         isPublic: savedFile.isPublic,
         folderId: savedFile.folderId,
@@ -412,7 +395,6 @@ async function storageRoutes(fastify, options) {
         size: fileSize,
         storagePath: storageResult.path,
         publicUrl: storageResult.publicUrl || null,
-        tags: tags,
         description: description || null,
         isPublic: isPublic,
         folderId: folderId || null,
@@ -474,7 +456,6 @@ async function storageRoutes(fastify, options) {
               size: fileMetadata.size,
               storagePath: fileMetadata.storagePath,
               publicUrl: fileMetadata.publicUrl,
-              tags: fileMetadata.tags || [],
               description: fileMetadata.description || null,
               isPublic: fileMetadata.isPublic || false,
               folderId: fileMetadata.folderId || null,
@@ -498,6 +479,129 @@ async function storageRoutes(fastify, options) {
       }
       
       reply.status(500).send(errorResponse);
+    }
+  });
+
+  // Update file metadata (name, type, description, visibility, etc.)
+  fastify.put('/files/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+      const body = request.body || {};
+      const { name, type, description, isPublic, isStarred, isArchived, folderId, displayName } = body;
+
+      const updates = {};
+
+      if (typeof name === 'string') {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+          return reply.status(400).send({
+            error: 'Invalid name',
+            message: 'File name cannot be empty'
+          });
+        }
+        updates.name = trimmedName;
+      }
+
+      if (updates.name === undefined && typeof displayName === 'string') {
+        const trimmedDisplayName = displayName.trim();
+        if (trimmedDisplayName) {
+          updates.name = trimmedDisplayName;
+        }
+      }
+
+      if (typeof type === 'string') {
+        const typeValidation = validateFileType(type);
+        if (!typeValidation.valid) {
+          return reply.status(400).send({
+            error: 'Invalid file type',
+            message: typeValidation.error
+          });
+        }
+        updates.type = type;
+      }
+
+      if (description !== undefined) {
+        updates.description = description ? String(description).trim() : null;
+      }
+
+      if (typeof isPublic === 'boolean') {
+        updates.isPublic = isPublic;
+      }
+
+      if (typeof isStarred === 'boolean') {
+        updates.isStarred = isStarred;
+      }
+
+      if (typeof isArchived === 'boolean') {
+        updates.isArchived = isArchived;
+      }
+
+      if (folderId !== undefined) {
+        updates.folderId = folderId === null || folderId === 'null' ? null : folderId;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return reply.status(400).send({
+          error: 'No updates provided',
+          message: 'Please provide at least one field to update'
+        });
+      }
+
+      // Ensure file belongs to user
+      const existingFile = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!existingFile) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to update it'
+        });
+      }
+
+      const updatedFile = await prisma.storageFile.update({
+        where: { id: fileId },
+        data: updates
+      });
+
+      logger.info(`✅ File updated: ${fileId}`, updates);
+
+      return reply.send({
+        success: true,
+        file: {
+          id: updatedFile.id,
+          name: updatedFile.name,
+          fileName: updatedFile.fileName,
+          type: updatedFile.type,
+          description: updatedFile.description,
+          isPublic: updatedFile.isPublic,
+          isStarred: updatedFile.isStarred,
+          isArchived: updatedFile.isArchived,
+          folderId: updatedFile.folderId,
+          updatedAt: updatedFile.updatedAt.toISOString()
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error updating file metadata:', error);
+      return reply.status(500).send({
+        error: 'Failed to update file',
+        message: error.message || 'An error occurred while updating the file'
+      });
     }
   });
 

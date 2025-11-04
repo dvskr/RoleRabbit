@@ -7,7 +7,6 @@ import { ResumeFile } from '../../../types/cloudStorage';
 export interface FileCardProps {
   file: ResumeFile;
   isSelected: boolean;
-  viewMode: 'grid' | 'list' | 'compact';
   showDeleted?: boolean;
   onSelect: (fileId: string) => void;
   onDownload: (file: ResumeFile, format?: 'pdf' | 'doc') => void;
@@ -16,7 +15,7 @@ export interface FileCardProps {
   onRestore?: (fileId: string) => void;
   onPermanentlyDelete?: (fileId: string) => void;
   onTogglePublic: (fileId: string) => void;
-  onEdit: (fileId: string, updates?: { name?: string; tags?: string[] }) => Promise<void> | void;
+  onEdit: (fileId: string, updates?: { name?: string; type?: ResumeFile['type']; description?: string }) => Promise<void> | void;
   onStar: (fileId: string) => void;
   onArchive: (fileId: string) => void;
   onAddComment: (fileId: string, content: string) => void;

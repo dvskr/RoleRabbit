@@ -59,8 +59,8 @@ async updateCloudFile(
 **Example:**
 ```typescript
 await apiService.updateCloudFile('file123', {
-  displayName: 'Updated Name',
-  tags: ['new', 'tags'],
+  name: 'Updated Name',
+  type: 'template',
   isPublic: true
 });
 ```

@@ -38,7 +38,6 @@ GET /api/storage/files
       "contentType": "application/pdf",
       "lastModified": "2024-01-15T10:30:00Z",
       "isPublic": false,
-      "tags": ["software", "engineer"],
       "downloadCount": 5,
       "viewCount": 12,
       "folderId": "folder456",
@@ -63,7 +62,6 @@ Content-Type: multipart/form-data
 - `file` (required): File to upload
 - `displayName` (optional): Custom display name
 - `type` (optional): File type
-- `tags` (optional): Comma-separated tags
 - `description` (optional): File description
 - `isPublic` (optional, boolean): Public/private
 - `folderId` (optional): Target folder ID
@@ -109,7 +107,6 @@ GET /api/storage/files/:id
   "contentType": "application/pdf",
   "lastModified": "2024-01-15T10:30:00Z",
   "isPublic": false,
-  "tags": ["software", "engineer"],
   "description": "My professional resume",
   "downloadCount": 5,
   "viewCount": 12,
@@ -153,7 +150,7 @@ Content-Type: application/json
 {
   "displayName": "Updated Resume Name",
   "description": "Updated description",
-  "tags": ["updated", "tags"],
+  "type": "document",
   "isPublic": true,
   "folderId": "folder789"
 }

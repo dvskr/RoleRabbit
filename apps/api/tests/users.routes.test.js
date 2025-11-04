@@ -64,7 +64,7 @@ describe('User Profile Routes', () => {
         skills: JSON.stringify(['React', 'Node.js']),
         certifications: null,
         languages: JSON.stringify(['English']),
-        education: JSON.stringify([{ institution: 'Uni', degree: 'BS' }]),
+        education: JSON.stringify([{ institution: 'Uni', degree: 'BS', startDate: '2018', endDate: '2022' }]),
         workExperiences: JSON.stringify([{ company: 'RoleReady', role: 'Dev' }]),
         createdAt: new Date('2025-01-01T00:00:00Z'),
         updatedAt: new Date('2025-01-02T00:00:00Z')
@@ -82,7 +82,14 @@ describe('User Profile Routes', () => {
       expect(payload.user.skills).toEqual(['React', 'Node.js']);
       expect(payload.user.certifications).toEqual([]);
       expect(payload.user.languages).toEqual(['English']);
-      expect(payload.user.education).toEqual([{ institution: 'Uni', degree: 'BS' }]);
+      expect(payload.user.education).toEqual([
+        expect.objectContaining({
+          institution: 'Uni',
+          degree: 'BS',
+          startDate: '2018',
+          endDate: '2022'
+        })
+      ]);
       expect(payload.user.workExperiences).toEqual([{ company: 'RoleReady', role: 'Dev' }]);
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-123' },

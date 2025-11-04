@@ -37,7 +37,12 @@ function calculateProfileCompleteness(user) {
   if (user.email) basicScore += 3;
   if (user.phone) basicScore += 2;
   if (user.location) basicScore += 2;
-  if (user.bio) basicScore += 5;
+  const hasProfessionalBio = Boolean(
+    (user.profile && (user.profile.professionalBio || user.profile.bio)) ||
+    user.professionalBio ||
+    user.bio
+  );
+  if (hasProfessionalBio) basicScore += 5;
   // Note: profilePicture is now in user_profiles table, check user.profile?.profilePicture if needed
   if (user.profilePicture || (user.profile && user.profile.profilePicture)) basicScore += 5;
   breakdown.basicInfo = {

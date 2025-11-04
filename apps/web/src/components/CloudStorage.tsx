@@ -88,9 +88,9 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   } = useFolderModals();
 
   const handleEditFileWrapper = useCallback(
-    async (fileId: string, updates?: { name?: string; tags?: string[] }) => {
+    async (fileId: string, updates?: { name?: string; type?: ResumeFile['type']; description?: string }) => {
       if (updates) {
-        // Direct update with name and/or tags
+        // Direct update with provided fields
         await handleEditFile(fileId, updates);
       } else {
         // Legacy behavior - open edit dialog (for backward compatibility)

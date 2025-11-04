@@ -9,6 +9,7 @@ export interface UserProfile {
   phone?: string;
   website?: string;
   bio?: string;
+  professionalBio?: string;
   skills?: string[];
   experience?: string;
   education?: string;

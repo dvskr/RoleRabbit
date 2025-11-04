@@ -16,7 +16,6 @@ type UploadPayload = {
   file: File;
   displayName?: string;
   type?: ResumeFile['type'] | string;
-  tags?: string[];
   description?: string;
   isPublic?: boolean;
   folderId?: string | null;
@@ -53,7 +52,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       if (response && response.files) {
         const formattedFiles = (response.files as ResumeFile[]).map(file => ({
           ...file,
-          tags: file.tags || [],
           sharedWith: file.sharedWith || [],
           comments: file.comments || [],
           downloadCount: file.downloadCount || 0,
@@ -192,9 +190,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       if (payload.folderId) {
         formData.append('folderId', payload.folderId);
       }
-      if (payload.tags && payload.tags.length > 0) {
-        formData.append('tags', JSON.stringify(payload.tags));
-      }
       if (payload.description) {
         formData.append('description', payload.description);
       }
@@ -215,7 +210,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
         const uploadedFile: ResumeFile = {
           ...response.file,
           // Ensure all required fields have defaults
-          tags: response.file.tags || [],
           sharedWith: response.file.sharedWith || [],
           comments: response.file.comments || [],
           downloadCount: response.file.downloadCount || 0,
@@ -269,25 +263,73 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
-  const handleEditFile = useCallback(async (fileId: string, updates: Partial<ResumeFile> | { name?: string; tags?: string[] }) => {
+  const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isPublic' | 'isStarred' | 'isArchived' | 'folderId'>>) => {
     try {
-      // Ensure tags is an array if provided
-      const updatePayload: any = { ...updates };
-      if ('tags' in updatePayload && Array.isArray(updatePayload.tags)) {
-        updatePayload.tags = updatePayload.tags;
+      const updatePayload: Record<string, any> = {};
+
+      if (updates.name !== undefined) {
+        updatePayload.name = updates.name;
       }
+
+      if (updates.type !== undefined) {
+        updatePayload.type = updates.type;
+      }
+
+      if (updates.description !== undefined) {
+        updatePayload.description = updates.description;
+      }
+
+      if (updates.isPublic !== undefined) {
+        updatePayload.isPublic = updates.isPublic;
+      }
+
+      if (updates.isStarred !== undefined) {
+        updatePayload.isStarred = updates.isStarred;
+      }
+
+      if (updates.isArchived !== undefined) {
+        updatePayload.isArchived = updates.isArchived;
+      }
+
+      if (updates.folderId !== undefined) {
+        updatePayload.folderId = updates.folderId;
+      }
+
       await apiService.updateCloudFile(fileId, updatePayload);
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, ...updates } : file
-      ));
+
+      // Update local state with new references to trigger re-render
+      setFiles(prev => prev.map(file => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            ...updatePayload,
+          } as ResumeFile;
+        }
+        return file;
+      }));
+      
+      logger.info(`✅ File updated locally: ${fileId}`, updatePayload);
+
+      // Refresh from API to ensure consistency with server
+      setTimeout(() => {
+        loadFilesFromAPI(false).catch(error => {
+          logger.warn('Failed to refresh files after edit:', error);
+        });
+      }, 300);
     } catch (error) {
       logger.error('Failed to update file:', error);
       // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, ...updates } : file
-      ));
+      setFiles(prev => prev.map(file => {
+        if (file.id === fileId) {
+          return {
+            ...file,
+            ...updates,
+          } as ResumeFile;
+        }
+        return file;
+      }));
     }
-  }, []);
+  }, [loadFilesFromAPI]);
 
   const handleRefresh = useCallback(async () => {
     logger.debug('Refreshing files...');

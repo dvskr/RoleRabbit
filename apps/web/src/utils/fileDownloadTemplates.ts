@@ -2,7 +2,7 @@ import { ResumeFile } from '../types/cloudStorage';
 
 /**
  * Generates HTML content for file download
- * Creates a formatted HTML document with file information, description, tags, and comments
+ * Creates a formatted HTML document with file information, description, and comments
  */
 export const generateFileHTML = (file: ResumeFile): string => {
   return `
@@ -18,8 +18,6 @@ export const generateFileHTML = (file: ResumeFile): string => {
     .meta { color: #666; font-size: 0.9em; }
     .section { margin-bottom: 25px; }
     .section h2 { color: #2196F3; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-    .tag { background: #e3f2fd; color: #1976D2; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; }
     .description { line-height: 1.6; color: #555; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.85em; color: #999; }
   </style>
@@ -36,15 +34,6 @@ export const generateFileHTML = (file: ResumeFile): string => {
     <h2>Description</h2>
     <p class="description">${file.description || 'No description provided'}</p>
   </div>
-  
-  ${file.tags.length > 0 ? `
-  <div class="section">
-    <h2>Tags</h2>
-    <div class="tags">
-      ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-    </div>
-  </div>
-  ` : ''}
   
   ${file.comments && file.comments.length > 0 ? `
   <div class="section">
