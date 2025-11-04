@@ -75,7 +75,7 @@ async function authRoutes(fastify, options) {
       
       // Send welcome email
       try {
-        await sendWelcomeEmail(user);
+        await sendWelcomeEmail(user, prisma);
       } catch (emailError) {
         logger.error('Failed to send welcome email:', emailError);
         // Don't fail registration if email fails

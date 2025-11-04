@@ -26,6 +26,7 @@ import {
   ProfessionalTab,
   SkillsTab,
   PreferencesTab,
+  BillingTab,
   SupportTab,
   UserData,
   ProfileTabConfig
@@ -705,6 +706,7 @@ export default function Profile() {
     { id: 'professional', label: 'Professional', icon: Briefcase },
     { id: 'skills', label: 'Skills and Education', icon: Award },
     { id: 'preferences', label: 'Preferences & Security', icon: Settings },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
   ];
 
@@ -1420,6 +1422,8 @@ export default function Profile() {
         return <SkillsTab {...commonProps} />;
       case 'preferences':
         return <PreferencesTab {...commonProps} />;
+      case 'billing':
+        return <BillingTab {...commonProps} />;
       case 'support':
         return <SupportTab />;
       default:

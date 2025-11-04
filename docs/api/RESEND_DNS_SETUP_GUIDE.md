@@ -1,8 +1,8 @@
-# Resend DNS Records Setup Guide for roleready.com
+# Resend DNS Records Setup Guide for rolerabbit.com
 
 ## ✅ Current Status
-- Domain: `roleready.com` ✅
-- Resend Domain Added: ✅
+- Domain: `rolerabbit.com` ✅
+- Resend Domain Added: ⏳ (Next step)
 - DNS Records: Need to be added to your domain provider
 
 ## 📋 DNS Records to Add
@@ -55,7 +55,7 @@ Leave this OFF for now (you can enable later if needed).
 ### Option A: Cloudflare (If your domain is there)
 
 1. Login to Cloudflare
-2. Select `roleready.com` domain
+2. Select `rolerabbit.com` domain
 3. Go to **DNS** → **Records**
 4. Click **Add record**
 
@@ -93,7 +93,7 @@ Leave this OFF for now (you can enable later if needed).
 ### Option B: Namecheap
 
 1. Login to Namecheap
-2. Go to **Domain List** → Click **Manage** on `roleready.com`
+2. Go to **Domain List** → Click **Manage** on `rolerabbit.com`
 3. Go to **Advanced DNS** tab
 4. Click **Add New Record**
 
@@ -123,7 +123,7 @@ Once Resend shows domain as verified:
 
 1. **Update `.env` file:**
    ```bash
-   EMAIL_FROM=noreply@roleready.com
+   EMAIL_FROM=noreply@rolerabbit.com
    ```
 
 2. **Restart API Server:**
@@ -135,7 +135,7 @@ Once Resend shows domain as verified:
 
 3. **Test Email:**
    - Try password reset or email update
-   - Emails will now send from `noreply@roleready.com`
+   - Emails will now send from `noreply@rolerabbit.com`
    - Can send to **any email address** ✅
 
 ---
@@ -159,12 +159,12 @@ Once Resend shows domain as verified:
 
 Once verified, you can use any email address on your domain:
 
-- `noreply@roleready.com` ⭐ (Recommended for automated emails)
-- `hello@roleready.com` (For welcome emails)
-- `support@roleready.com` (For support)
-- `notifications@roleready.com` (For notifications)
+- `noreply@rolerabbit.com` ⭐ (Recommended for automated emails)
+- `hello@rolerabbit.com` (For welcome emails)
+- `support@rolerabbit.com` (For support)
+- `notifications@rolerabbit.com` (For notifications)
 
-**Recommended:** Use `noreply@roleready.com` for OTP and automated emails.
+**Recommended:** Use `noreply@rolerabbit.com` for OTP and automated emails.
 
 ---
 
@@ -187,7 +187,7 @@ Once verified, you can use any email address on your domain:
 
 Once you add these DNS records and Resend verifies your domain, you'll be able to:
 - ✅ Send emails to **any recipient**
-- ✅ Use professional `@roleready.com` email addresses
+- ✅ Use professional `@rolerabbit.com` email addresses
 - ✅ Better email deliverability
 - ✅ Professional branding
 

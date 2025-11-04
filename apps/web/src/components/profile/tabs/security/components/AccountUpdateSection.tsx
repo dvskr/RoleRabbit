@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Lock, Mail, ArrowRight, HelpCircle } from 'lucide-react';
-import { SecurityCard } from './SecurityCard';
 import { ThemeColors } from '../../../../contexts/ThemeContext';
 
 interface AccountUpdateSectionProps {
@@ -21,8 +20,7 @@ export const AccountUpdateSection: React.FC<AccountUpdateSectionProps> = ({
   onOpenForgotFlow,
 }) => {
   return (
-    <SecurityCard colors={colors} title="Account & Security">
-      <div className="space-y-4">
+    <div className="space-y-4">
         {/* Login Email */}
         <div 
           className="p-5 rounded-xl transition-all cursor-pointer group"
@@ -242,7 +240,6 @@ export const AccountUpdateSection: React.FC<AccountUpdateSectionProps> = ({
           </div>
         </div>
       </div>
-    </SecurityCard>
   );
 };
 

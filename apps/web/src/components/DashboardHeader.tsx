@@ -3,7 +3,7 @@
 import React from 'react';
 import { Bell, Settings, Search, Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogoIcon } from './common/Logo';
+import { RabbitLogo } from './ui/RabbitLogo';
 
 interface DashboardHeaderProps {
   title: string;
@@ -23,9 +23,9 @@ export default function DashboardHeader({ title, subtitle }: DashboardHeaderProp
     <div className="h-16 bg-[#0D1117] border-b border-[#27272A] flex items-center justify-between px-6 sticky top-0 z-40">
       {/* Left: Logo */}
       <div className="flex items-center gap-4">
-        <LogoIcon size={32} />
+        <RabbitLogo size={32} animated={true} />
         <div className="h-6 w-px bg-[#27272A]" />
-        <span className="text-lg font-semibold text-white">RoleReady</span>
+        <span className="text-lg font-semibold text-white">RoleRabbit</span>
       </div>
 
       {/* Center: Title & Subtitle */}

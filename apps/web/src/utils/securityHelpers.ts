@@ -1,6 +1,8 @@
 import { logger } from './logger';
 import { API_ENDPOINTS } from '../components/profile/tabs/security/constants';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 type ApiResult<T> = { success: true } & T | { success: false; error: string };
 
 const parseError = async (response: Response): Promise<string> => {
@@ -228,7 +230,7 @@ export const revokeOtherSessions = async (): Promise<ApiResult<{}>> => {
  */
 export const sendOTP = async (purpose: 'email_update' | 'password_reset'): Promise<ApiResult<{}>> => {
   try {
-    const response: Response = await fetch('/api/auth/send-otp', {
+    const response: Response = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -253,7 +255,7 @@ export const sendOTP = async (purpose: 'email_update' | 'password_reset'): Promi
  */
 export const sendOTPToNewEmail = async (newEmail: string): Promise<ApiResult<{}>> => {
   try {
-    const response: Response = await fetch('/api/auth/send-otp-to-new-email', {
+    const response: Response = await fetch(`${API_BASE_URL}/api/auth/send-otp-to-new-email`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -282,7 +284,7 @@ export const verifyOTPAndUpdateEmail = async (
   step?: 'verify_current' | 'verify_new'
 ): Promise<ApiResult<{}>> => {
   try {
-    const response: Response = await fetch('/api/auth/verify-otp-update-email', {
+    const response: Response = await fetch(`${API_BASE_URL}/api/auth/verify-otp-update-email`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -311,7 +313,7 @@ export const verifyOTPAndResetPassword = async (
   confirmPassword: string
 ): Promise<ApiResult<{}>> => {
   try {
-    const response: Response = await fetch('/api/auth/verify-otp-reset-password', {
+    const response: Response = await fetch(`${API_BASE_URL}/api/auth/verify-otp-reset-password`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

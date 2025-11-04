@@ -225,6 +225,70 @@
   animation: pulse 2s infinite;
 }
 
+/* RoleRabbit Logo Animations - Clean and Smooth */
+@keyframes rabbitEarWiggle {
+  0%, 100% { 
+    transform: rotate(0deg); 
+  }
+  25% { 
+    transform: rotate(-6deg); 
+  }
+  75% { 
+    transform: rotate(6deg); 
+  }
+}
+
+@keyframes rabbitNoseWiggle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-0.8px); }
+  75% { transform: translateX(0.8px); }
+}
+
+@keyframes rabbitFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes rabbitHop {
+  0%, 100% { transform: translateY(0) scaleX(1); }
+  50% { transform: translateY(-18px) scaleX(0.96); }
+}
+
+@keyframes rabbitBlink {
+  0%, 88%, 100% { transform: scaleY(1); }
+  92%, 96% { transform: scaleY(0.05); }
+}
+
+.rabbit-ear-left {
+  animation: rabbitEarWiggle 2.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.rabbit-ear-right {
+  animation: rabbitEarWiggle 2.5s ease-in-out infinite 0.15s;
+  will-change: transform;
+}
+
+.rabbit-nose {
+  animation: rabbitNoseWiggle 2.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.rabbit-container {
+  animation: rabbitFloat 3.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.rabbit-eye {
+  animation: rabbitBlink 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.rabbit-loading {
+  animation: rabbitHop 1.6s ease-in-out infinite;
+  will-change: transform;
+}
+
 .loading-text {
   color: white;
   font-size: 24px;

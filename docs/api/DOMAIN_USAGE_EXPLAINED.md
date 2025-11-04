@@ -2,7 +2,7 @@
 
 ## ✅ Yes, Domain Can Do BOTH!
 
-Your `roleready.com` domain can be used for **both email AND website hosting** simultaneously. They don't conflict!
+Your `rolerabbit.com` domain can be used for **both email AND website hosting** simultaneously. They don't conflict!
 
 ## Current Setup: Email Only
 
@@ -42,7 +42,7 @@ roleready.com Domain
 
 ### ✅ Configured:
 - Email sending via Resend
-- Email domain: `noreply@roleready.com`
+- Email domain: `noreply@rolerabbit.com`
 
 ### ❌ Not Configured (Can Add Later):
 - Website hosting
@@ -50,7 +50,7 @@ roleready.com Domain
 
 ## Adding Website Hosting Later
 
-When you're ready to host your website on `roleready.com`:
+When you're ready to host your website on `rolerabbit.com`:
 
 1. **Choose hosting provider** (Vercel, Netlify, AWS, etc.)
 2. **Add DNS records** (A or CNAME records)
@@ -62,7 +62,7 @@ DNS Records:
 ├── MX: send → feedback-smtp... (for email) ✅ Already added
 ├── TXT: resend._domainkey → ... (for email) ✅ Already added
 ├── A: @ → 192.0.2.1 (for website) ← Can add later
-└── CNAME: www → roleready.com (for website) ← Can add later
+└── CNAME: www → rolerabbit.com (for website) ← Can add later
 ```
 
 ## Answer: Email Only (For Now)

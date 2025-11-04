@@ -24,13 +24,13 @@ To send emails to **any recipient**, you need to:
 
 1. **Verify Your Domain** in Resend:
    - Go to: https://resend.com/domains
-   - Add your domain (e.g., `roleready.com`)
+   - Add your domain: `rolerabbit.com`
    - Add DNS records (SPF, DKIM, DMARC)
    - Wait for verification (usually 5-10 minutes)
 
 2. **Update EMAIL_FROM** in `.env`:
    ```bash
-   EMAIL_FROM=noreply@roleready.com  # Your verified domain
+   EMAIL_FROM=noreply@rolerabbit.com  # Your verified domain
    ```
 
 ## What Works Now:
@@ -81,8 +81,8 @@ Once you verify your domain in Resend:
 RESEND_API_KEY=re_3xUnsgnY_32RxwGRnQZYGEnno6WHwxvcf
 EMAIL_FROM=onboarding@resend.dev
 
-# 📝 Optional: For production with custom domain
-# EMAIL_FROM=noreply@yourdomain.com
+# 📝 For production with custom domain (after DNS setup)
+# EMAIL_FROM=noreply@rolerabbit.com
 ```
 
 ## Next Steps:

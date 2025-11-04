@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Bell, CheckCircle, Mail, MessageSquare } from 'lucide-react';
+import { Bell, CheckCircle, Mail } from 'lucide-react';
 import { logger } from '../../../utils/logger';
 import { UserData } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
@@ -18,8 +18,10 @@ import {
   PasswordChangeModal,
   EmailUpdateModal,
   ForgotFlowModal,
+  SecurityCard,
 } from './security/components';
 import { useAuth } from '../../../contexts/AuthContext';
+import apiService from '../../../services/apiService';
 
 interface PreferencesTabProps {
   userData: UserData;
@@ -126,6 +128,8 @@ export default function PreferencesTab({
         setIsSendingOTP(false);
         return;
       }
+      // Success - reset loading state
+      setIsSendingOTP(false);
     } catch (error) {
       logger.error('Failed to send OTP:', error);
       setEmailError('Failed to send verification code. Please try again.');
@@ -158,6 +162,8 @@ export default function PreferencesTab({
         setIsSendingOTP(false);
         throw new Error(result.error);
       }
+      // Success - reset loading state
+      setIsSendingOTP(false);
     } catch (error) {
       logger.error('Failed to send OTP to new email:', error);
       setIsSendingOTP(false);
@@ -212,179 +218,128 @@ export default function PreferencesTab({
   };
 
 
+  // Handle email notifications toggle change - save immediately to backend
+  const handleEmailNotificationsChange = async (enabled: boolean) => {
+    try {
+      // Update local state immediately for instant UI feedback
+      onUserDataChange({ emailNotifications: enabled });
+      
+      // Save to backend immediately
+      await apiService.updateUserProfile({ emailNotifications: enabled });
+      
+      logger.info('Email notifications preference saved:', enabled);
+    } catch (error) {
+      logger.error('Failed to save email notifications preference:', error);
+      // Revert on error
+      onUserDataChange({ emailNotifications: !enabled });
+      // Could show error toast here if needed
+    }
+  };
+
   return (
     <div className="max-w-4xl">
       <div className="space-y-8">
-        {/* Account & Security Section */}
-        <AccountUpdateSection
-          colors={colors}
-          currentEmail={currentEmail}
-          onOpenPasswordModal={() => setShowPasswordModal(true)}
-          onOpenEmailModal={() => setShowEmailModal(true)}
-          onOpenForgotFlow={() => setShowForgotModal(true)}
-        />
+        {/* Combined Account & Security and Notification Preferences Section */}
+        <SecurityCard colors={colors} title="Account & Security">
+          <div className="space-y-6">
+            {/* Account & Security Section */}
+            <AccountUpdateSection
+              colors={colors}
+              currentEmail={currentEmail}
+              onOpenPasswordModal={() => setShowPasswordModal(true)}
+              onOpenEmailModal={() => setShowEmailModal(true)}
+              onOpenForgotFlow={() => setShowForgotModal(true)}
+            />
 
-        {/* Notification Preferences Section */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-6">
-            <Bell size={24} style={{ color: colors.primaryBlue }} />
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Notification Preferences
-            </h3>
-          </div>
-          <div className="space-y-4">
-            <div 
-              className="flex items-center justify-between p-5 rounded-xl transition-all"
-              style={{
-                background: colors.inputBackground,
-                border: `1px solid ${userData.emailNotifications ? colors.borderFocused : colors.border}`,
-              }}
-              onMouseEnter={(e) => {
-                if (isEditing) {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = userData.emailNotifications ? colors.borderFocused : colors.border;
-              }}
-            >
-              <div className="flex items-center gap-3">
+            {/* Notification Preferences Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <Bell size={20} style={{ color: colors.primaryBlue }} />
+                <h4 
+                  className="text-lg font-semibold"
+                  style={{ color: colors.primaryText }}
+                >
+                  Notification Preferences
+                </h4>
+              </div>
+              <div className="space-y-4">
                 <div 
-                  className="p-2 rounded-lg"
+                  className="flex items-center justify-between p-5 rounded-xl transition-all"
                   style={{
-                    background: userData.emailNotifications ? colors.badgeInfoBg : colors.inputBackground,
+                    background: colors.inputBackground,
+                    border: `1px solid ${userData.emailNotifications ? colors.borderFocused : colors.border}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = userData.emailNotifications ? colors.borderFocused : colors.border;
                   }}
                 >
-                  <Mail size={18} style={{ color: userData.emailNotifications ? colors.primaryBlue : colors.secondaryText }} />
-                </div>
-                <div>
-                  <p 
-                    id="email-notifications-heading"
-                    className="font-semibold flex items-center gap-2"
-                    style={{ color: colors.primaryText }}
-                  >
-                    Email Notifications
-                    {userData.emailNotifications && (
-                      <CheckCircle size={14} style={{ color: colors.successGreen }} />
-                    )}
-                  </p>
-                  <p 
-                    className="text-sm mt-1"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    Receive important updates and alerts via email
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="p-2 rounded-lg"
+                      style={{
+                        background: userData.emailNotifications ? colors.badgeInfoBg : colors.inputBackground,
+                      }}
+                    >
+                      <Mail size={18} style={{ color: userData.emailNotifications ? colors.primaryBlue : colors.secondaryText }} />
+                    </div>
+                    <div>
+                      <p 
+                        id="email-notifications-heading"
+                        className="font-semibold flex items-center gap-2"
+                        style={{ color: colors.primaryText }}
+                      >
+                        Product Updates & Tips
+                        {userData.emailNotifications && (
+                          <CheckCircle size={14} style={{ color: colors.successGreen }} />
+                        )}
+                      </p>
+                      <p 
+                        className="text-sm mt-1"
+                        style={{ color: colors.secondaryText }}
+                      >
+                        Receive product updates, tips, and new features via email
+                      </p>
+                      <p 
+                        className="text-xs mt-1 italic"
+                        style={{ color: colors.tertiaryText }}
+                      >
+                        Security emails (password reset, OTP) will always be sent
+                      </p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input 
+                      id="email-notifications-toggle"
+                      name="emailNotifications"
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={userData.emailNotifications || false}
+                      onChange={(e) => handleEmailNotificationsChange(e.target.checked)}
+                      aria-labelledby="email-notifications-heading"
+                    />
+                    <div 
+                      className="w-11 h-6 rounded-full relative transition-all duration-200"
+                      style={{
+                        background: userData.emailNotifications ? colors.primaryBlue : colors.inputBackground,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      <div
+                        className="absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-all duration-200 bg-white shadow-sm"
+                        style={{
+                          transform: userData.emailNotifications ? 'translateX(20px)' : 'translateX(0)',
+                        }}
+                      />
+                    </div>
+                  </label>
                 </div>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                <input 
-                  id="email-notifications-toggle"
-                  name="emailNotifications"
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={userData.emailNotifications || false}
-                  onChange={(e) => onUserDataChange({ emailNotifications: e.target.checked })}
-                  disabled={!isEditing}
-                  aria-labelledby="email-notifications-heading"
-                />
-                <div 
-                  className="w-11 h-6 rounded-full relative transition-all duration-200"
-                  style={{
-                    background: userData.emailNotifications ? colors.primaryBlue : colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                >
-                  <div
-                    className="absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-all duration-200 bg-white shadow-sm"
-                    style={{
-                      transform: userData.emailNotifications ? 'translateX(20px)' : 'translateX(0)',
-                    }}
-                  />
-                </div>
-              </label>
-            </div>
-            
-            <div 
-              className="flex items-center justify-between p-5 rounded-xl transition-all"
-              style={{
-                background: colors.inputBackground,
-                border: `1px solid ${userData.smsNotifications ? colors.borderFocused : colors.border}`,
-              }}
-              onMouseEnter={(e) => {
-                if (isEditing) {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = userData.smsNotifications ? colors.borderFocused : colors.border;
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div 
-                  className="p-2 rounded-lg"
-                  style={{
-                    background: userData.smsNotifications ? colors.badgeWarningBg : colors.inputBackground,
-                  }}
-                >
-                  <MessageSquare size={18} style={{ color: userData.smsNotifications ? colors.badgeWarningText : colors.secondaryText }} />
-                </div>
-                <div>
-                  <p 
-                    id="sms-notifications-heading"
-                    className="font-semibold flex items-center gap-2"
-                    style={{ color: colors.primaryText }}
-                  >
-                    SMS Notifications
-                    {userData.smsNotifications && (
-                      <CheckCircle size={14} style={{ color: colors.successGreen }} />
-                    )}
-                  </p>
-                  <p 
-                    className="text-sm mt-1"
-                    style={{ color: colors.secondaryText }}
-                  >
-                    Receive time-sensitive updates via SMS (requires phone number)
-                  </p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                <input 
-                  id="sms-notifications-toggle"
-                  name="smsNotifications"
-                  type="checkbox" 
-                  className="sr-only peer" 
-                  checked={userData.smsNotifications || false}
-                  onChange={(e) => onUserDataChange({ smsNotifications: e.target.checked })}
-                  disabled={!isEditing}
-                  aria-labelledby="sms-notifications-heading"
-                />
-                <div 
-                  className="w-11 h-6 rounded-full relative transition-all duration-200"
-                  style={{
-                    background: userData.smsNotifications ? colors.badgeWarningText : colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                >
-                  <div
-                    className="absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-all duration-200 bg-white shadow-sm"
-                    style={{
-                      transform: userData.smsNotifications ? 'translateX(20px)' : 'translateX(0)',
-                    }}
-                  />
-                </div>
-              </label>
             </div>
           </div>
-        </div>
+        </SecurityCard>
       </div>
 
       {/* Modals */}

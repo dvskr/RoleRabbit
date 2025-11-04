@@ -28,12 +28,58 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Send email using Resend, tempGrid, or fallback SMTP
+ * Check if user has email notifications enabled
+ * Security emails always bypass this check
  */
-async function sendEmail({ to, subject, html, text, from = null }) {
+async function shouldSendMarketingEmail(userId, prisma) {
+  // If no userId provided, assume it's a security email and always send
+  if (!userId) return true;
+  
+  try {
+    // Use provided prisma instance or create one if needed
+    let prismaClient = prisma;
+    if (!prismaClient) {
+      const { PrismaClient } = require('@prisma/client');
+      prismaClient = new PrismaClient();
+    }
+    
+    const user = await prismaClient.user.findUnique({
+      where: { id: userId },
+      select: { emailNotifications: true }
+    });
+    
+    // Default to true if user not found or preference not set
+    return user?.emailNotifications ?? true;
+  } catch (error) {
+    logger.warn('Failed to check email preferences, defaulting to send:', error);
+    return true; // Default to sending if check fails
+  }
+}
+
+/**
+ * Send email using Resend, tempGrid, or fallback SMTP
+ * @param {Object} options - Email options
+ * @param {string} options.to - Recipient email
+ * @param {string} options.subject - Email subject
+ * @param {string} options.html - HTML content
+ * @param {string} options.text - Plain text content
+ * @param {string} options.from - From address (optional)
+ * @param {boolean} options.isSecurityEmail - If true, always sends regardless of preferences
+ * @param {string} options.userId - User ID to check preferences (for marketing emails)
+ */
+async function sendEmail({ to, subject, html, text, from = null, isSecurityEmail = false, userId = null, prisma = null }) {
+  // Security emails always send (OTP, password reset, email change)
+  // Marketing emails check user preferences
+  if (!isSecurityEmail && userId) {
+    const canSend = await shouldSendMarketingEmail(userId, prisma);
+    if (!canSend) {
+      logger.info(`Email not sent to ${to} - user has disabled marketing notifications`);
+      return { success: true, provider: 'skipped', reason: 'user_preferences' };
+    }
+  }
   // Use EMAIL_FROM from env, or Resend test domain, or default
   const defaultFrom = process.env.EMAIL_FROM || 
-                     (resend ? 'onboarding@resend.dev' : 'noreply@roleready.com');
+                     (resend ? 'onboarding@resend.dev' : 'noreply@rolerabbit.com');
   const fromAddress = from || defaultFrom;
   
   try {
@@ -89,9 +135,17 @@ async function sendEmail({ to, subject, html, text, from = null }) {
 }
 
 /**
- * Send welcome email
+ * Send welcome email (marketing email - respects user preferences)
  */
-async function sendWelcomeEmail(user) {
+async function sendWelcomeEmail(user, prisma = null) {
+  // Check if user wants marketing emails
+  if (user.id) {
+    const canSend = await shouldSendMarketingEmail(user.id, prisma);
+    if (!canSend) {
+      logger.info(`Welcome email skipped for ${user.email} - user has disabled marketing notifications`);
+      return { success: true, provider: 'skipped', reason: 'user_preferences' };
+    }
+  }
   const html = `
     <!DOCTYPE html>
     <html>
@@ -136,6 +190,9 @@ async function sendWelcomeEmail(user) {
     subject: 'Welcome to RoleReady!',
     html,
     text: `Hi ${user.name}, Welcome to RoleReady! Get started at https://roleready.com/dashboard`,
+    isSecurityEmail: false, // Marketing email
+    userId: user.id,
+    prisma: prisma
   });
 }
 
@@ -181,6 +238,7 @@ async function sendPasswordResetEmail(email, resetToken) {
     subject: 'Password Reset Request - RoleReady',
     html,
     text: `Reset your password: ${resetUrl} (expires in 1 hour)`,
+    isSecurityEmail: true, // Security email - always send
   });
 }
 
@@ -227,6 +285,7 @@ async function sendOTPEmail(email, otp, purpose) {
     subject: `Verification Code - RoleReady`,
     html,
     text: `Your verification code is: ${otp}. This code expires in 10 minutes.`,
+    isSecurityEmail: true, // Security email - always send
   });
 }
 
@@ -272,6 +331,7 @@ async function sendEmailChangeNotification(oldEmail, newEmail) {
     subject: 'Email Change Request - RoleReady',
     html,
     text: `Email change requested for your RoleReady account. Current: ${oldEmail}, New: ${newEmail}. If you didn't request this, contact support immediately.`,
+    isSecurityEmail: true, // Security email - always send
   });
 }
 
@@ -325,6 +385,24 @@ async function sendEmailChangeConfirmation(email, newEmail, type) {
     text: isOldEmail
       ? `Your RoleReady account email has been changed from ${email} to ${newEmail}. Use ${newEmail} to log in.`
       : `Your RoleReady account email has been changed to ${newEmail}. You can now use this email to log in.`,
+    isSecurityEmail: true, // Security email - always send
+  });
+}
+
+/**
+ * Send marketing email (product updates, tips, features)
+ * Respects user's email notification preferences
+ */
+async function sendMarketingEmail({ to, subject, html, text, userId, prisma = null, from = null }) {
+  return sendEmail({
+    to,
+    subject,
+    html,
+    text,
+    from,
+    isSecurityEmail: false, // Marketing email - respects preferences
+    userId,
+    prisma
   });
 }
 
@@ -335,5 +413,7 @@ module.exports = {
   sendOTPEmail,
   sendEmailChangeNotification,
   sendEmailChangeConfirmation,
+  sendMarketingEmail,
+  shouldSendMarketingEmail,
 };
 

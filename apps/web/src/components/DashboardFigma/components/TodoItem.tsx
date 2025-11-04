@@ -120,10 +120,12 @@ export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Priority Tag */}
         <span 
-          className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap"
+          className="px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap text-center flex items-center justify-center"
           style={{
             background: priorityStyle.background,
             color: priorityStyle.color,
+            minWidth: '60px',
+            width: '60px',
           }}
         >
           {priorityStyle.label}
