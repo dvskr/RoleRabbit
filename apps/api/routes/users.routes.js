@@ -283,6 +283,53 @@ function normalizeWorkExperienceInput(experiencesInput) {
       })();
 
       const description = typeof exp.description === 'string' ? exp.description : '';
+      
+      // Normalize technologies array
+      let technologies = [];
+      if (exp.technologies) {
+        if (Array.isArray(exp.technologies)) {
+          technologies = exp.technologies
+            .map(t => (typeof t === 'string' ? t.trim() : String(t || '').trim()))
+            .filter(t => t.length > 0 && t !== 'null' && t !== 'undefined');
+        } else if (typeof exp.technologies === 'string') {
+          try {
+            const parsed = JSON.parse(exp.technologies);
+            if (Array.isArray(parsed)) {
+              technologies = parsed
+                .map(t => (typeof t === 'string' ? t.trim() : String(t || '').trim()))
+                .filter(t => t.length > 0 && t !== 'null' && t !== 'undefined');
+            } else {
+              // Comma-separated string
+              technologies = exp.technologies
+                .split(',')
+                .map(t => t.trim())
+                .filter(t => t.length > 0);
+            }
+          } catch {
+            // Not JSON, treat as comma-separated
+            technologies = exp.technologies
+              .split(',')
+              .map(t => t.trim())
+              .filter(t => t.length > 0);
+          }
+        } else if (exp.technologies && typeof exp.technologies === 'object') {
+          const entries = Object.keys(exp.technologies)
+            .sort((a, b) => {
+              const aNum = Number(a);
+              const bNum = Number(b);
+              if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+                return aNum - bNum;
+              }
+              return a.localeCompare(b);
+            })
+            .map((key) => exp.technologies[key])
+            .filter((value) => value !== undefined && value !== null)
+            .map((value) => (typeof value === 'string' ? value.trim() : String(value || '').trim()))
+            .filter((value) => value.length > 0 && value !== 'null' && value !== 'undefined');
+
+          technologies = entries;
+        }
+      }
 
       const sanitized = {
         company,
@@ -292,6 +339,7 @@ function normalizeWorkExperienceInput(experiencesInput) {
         endDate: isCurrent ? '' : endDateString,
         isCurrent,
         description,
+        technologies,
         projectType: allowedProjectType
       };
 
@@ -448,6 +496,7 @@ async function userRoutes(fastify, options) {
                   endDate: true,
                   isCurrent: true,
                   description: true,
+                  technologies: true,
                   projectType: true
                 }
               },
@@ -542,7 +591,62 @@ async function userRoutes(fastify, options) {
       }
       
       // Ensure arrays are arrays (not null/undefined)
-      parsedUser.workExperiences = parsedUser.workExperiences || [];
+      // Transform work experiences - ensure technologies is parsed from array if needed
+      const cleanTechnology = (value) => {
+        if (value === null || value === undefined) return '';
+        let tech = String(value).trim();
+        if (!tech) return '';
+        tech = tech.replace(/^\[|\]$/g, '').trim();
+        tech = tech.replace(/\\"/g, '"').replace(/\\'/g, "'");
+        while (
+          (tech.startsWith('"') && tech.endsWith('"')) ||
+          (tech.startsWith("'") && tech.endsWith("'"))
+        ) {
+          tech = tech.substring(1, tech.length - 1).trim();
+        }
+        tech = tech.replace(/^,+|,+$/g, '').trim();
+        return tech;
+      };
+
+      // Transform work experiences - ensure technologies is parsed from array if needed
+      parsedUser.workExperiences = Array.isArray(parsedUser.workExperiences) ? parsedUser.workExperiences.map((exp) => {
+        if (!exp || typeof exp !== 'object') {
+          return null;
+        }
+        
+        // Ensure technologies is an array
+        let technologies = [];
+        if (exp.technologies) {
+          if (Array.isArray(exp.technologies)) {
+            technologies = exp.technologies
+              .map((t) => cleanTechnology(t))
+              .filter((t) => t.length > 0);
+          } else if (typeof exp.technologies === 'string') {
+            // If stored as string (shouldn't happen with native array, but handle it)
+            try {
+              technologies = JSON.parse(exp.technologies);
+              if (Array.isArray(technologies)) {
+                technologies = technologies
+                  .map((t) => cleanTechnology(t))
+                  .filter((t) => t.length > 0);
+              } else {
+                technologies = [];
+              }
+            } catch {
+              technologies = exp.technologies
+                .split(',')
+                .map((t) => cleanTechnology(t))
+                .filter((t) => t.length > 0);
+            }
+          }
+        }
+        
+        return {
+          ...exp,
+          technologies
+        };
+      }).filter(Boolean) : [];
+      
       parsedUser.education = Array.isArray(parsedUser.education) ? parsedUser.education.map((edu) => {
         if (!edu || typeof edu !== 'object') {
           return null;
@@ -847,17 +951,50 @@ async function userRoutes(fastify, options) {
           });
           
           if (normalizedWorkExperiences.length > 0) {
-            const workExpData = normalizedWorkExperiences.map((exp) => ({
-              profileId: profileId,
-              company: exp.company || '',
-              role: exp.role || '',
-              location: exp.location || null,
-              startDate: exp.startDate || '',
-              endDate: exp.isCurrent ? null : (exp.endDate || null),
-              isCurrent: Boolean(exp.isCurrent),
-              description: exp.description || null,
-              projectType: exp.projectType || 'Full-time'
-            }));
+            const workExpData = normalizedWorkExperiences.map((exp) => {
+              // Ensure technologies is properly formatted as array
+              let technologies = [];
+              if (exp.technologies) {
+                if (Array.isArray(exp.technologies)) {
+                  technologies = exp.technologies.filter(t => typeof t === 'string' && t.trim().length > 0);
+                } else if (typeof exp.technologies === 'string') {
+                  // Handle string format (shouldn't happen, but just in case)
+                  try {
+                    const parsed = JSON.parse(exp.technologies);
+                    if (Array.isArray(parsed)) {
+                      technologies = parsed.filter(t => typeof t === 'string' && t.trim().length > 0);
+                    } else {
+                      technologies = exp.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                    }
+                  } catch {
+                    technologies = exp.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                  }
+                }
+              }
+              
+              console.log('WorkExp data being saved:', {
+                company: exp.company,
+                role: exp.role,
+                technologies: technologies,
+                technologiesType: typeof exp.technologies,
+                technologiesIsArray: Array.isArray(exp.technologies),
+                technologiesLength: technologies.length,
+                rawTechnologies: exp.technologies
+              });
+              
+              return {
+                profileId: profileId,
+                company: exp.company || '',
+                role: exp.role || '',
+                location: exp.location || null,
+                startDate: exp.startDate || '',
+                endDate: exp.isCurrent ? null : (exp.endDate || null),
+                isCurrent: Boolean(exp.isCurrent),
+                description: exp.description || null,
+                technologies: technologies,
+                projectType: exp.projectType || 'Full-time'
+              };
+            });
             
             if (workExpData.length > 0) {
             console.log('Creating work experiences:', workExpData);
@@ -1234,7 +1371,8 @@ async function userRoutes(fastify, options) {
                   endDate: true,
                   isCurrent: true,
                   description: true,
-                  projectType: true
+                  projectType: true,
+                  technologies: true
                 }
               },
               education: {
@@ -1322,7 +1460,62 @@ async function userRoutes(fastify, options) {
       }
       
       // Ensure arrays are arrays (not null/undefined)
-      parsedUser.workExperiences = parsedUser.workExperiences || [];
+      // Transform work experiences - ensure technologies is parsed from array if needed
+      const cleanTechnology = (value) => {
+        if (value === null || value === undefined) return '';
+        let tech = String(value).trim();
+        if (!tech) return '';
+        tech = tech.replace(/^\[|\]$/g, '').trim();
+        tech = tech.replace(/\\"/g, '"').replace(/\\'/g, "'");
+        while (
+          (tech.startsWith('"') && tech.endsWith('"')) ||
+          (tech.startsWith("'") && tech.endsWith("'"))
+        ) {
+          tech = tech.substring(1, tech.length - 1).trim();
+        }
+        tech = tech.replace(/^,+|,+$/g, '').trim();
+        return tech;
+      };
+
+      // Transform work experiences - ensure technologies is parsed from array if needed
+      parsedUser.workExperiences = Array.isArray(parsedUser.workExperiences) ? parsedUser.workExperiences.map((exp) => {
+        if (!exp || typeof exp !== 'object') {
+          return null;
+        }
+        
+        // Ensure technologies is an array
+        let technologies = [];
+        if (exp.technologies) {
+          if (Array.isArray(exp.technologies)) {
+            technologies = exp.technologies
+              .map((t) => cleanTechnology(t))
+              .filter((t) => t.length > 0);
+          } else if (typeof exp.technologies === 'string') {
+            // If stored as string (shouldn't happen with native array, but handle it)
+            try {
+              technologies = JSON.parse(exp.technologies);
+              if (Array.isArray(technologies)) {
+                technologies = technologies
+                  .map((t) => cleanTechnology(t))
+                  .filter((t) => t.length > 0);
+              } else {
+                technologies = [];
+              }
+            } catch {
+              technologies = exp.technologies
+                .split(',')
+                .map((t) => cleanTechnology(t))
+                .filter((t) => t.length > 0);
+            }
+          }
+        }
+        
+        return {
+          ...exp,
+          technologies
+        };
+      }).filter(Boolean) : [];
+      
       parsedUser.education = Array.isArray(parsedUser.education) ? parsedUser.education.map((edu) => {
         if (!edu || typeof edu !== 'object') {
           return null;
@@ -1351,20 +1544,63 @@ async function userRoutes(fastify, options) {
         let technologies = [];
         if (proj.technologies) {
           if (typeof proj.technologies === 'string') {
-            try {
-              technologies = JSON.parse(proj.technologies);
-            } catch {
-              // If not JSON, try splitting by comma
-              technologies = proj.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            const techStr = proj.technologies.trim();
+            if (techStr) {
+              // Handle escaped quotes pattern: ["React" "TypeScript"]
+              if (techStr.startsWith('[') && techStr.includes('\\"')) {
+                try {
+                  // Handle pattern like: ["React" "TypeScript" "Python"]
+                  // Replace escaped quotes and add commas between items
+                  let cleaned = techStr.replace(/\\"/g, '"');
+                  // If there are spaces between quoted items but no commas, add them
+                  cleaned = cleaned.replace(/"\s+"/g, '", "');
+                  technologies = JSON.parse(cleaned);
+                } catch {
+                  // Try alternative: split by space and clean each item
+                  try {
+                    const items = techStr
+                      .replace(/^\[|\]$/g, '') // Remove brackets
+                      .split(/\s+/) // Split by whitespace
+                      .map(item => item.replace(/\\"/g, '').replace(/^"|"$/g, '').trim())
+                      .filter(item => item.length > 0);
+                    if (items.length > 0) {
+                      technologies = items;
+                    }
+                  } catch {
+                    // Fall through to other parsing methods
+                  }
+                }
+              }
+              
+              // Try standard JSON parse
+              if (!Array.isArray(technologies)) {
+                try {
+                  technologies = JSON.parse(techStr);
+                } catch {
+                  // If not JSON, try splitting by comma
+                  technologies = techStr.split(',').map(t => t.trim().replace(/^["\[]|["\]]$/g, '')).filter(t => t.length > 0);
+                }
+              }
+              
+              // Ensure it's an array and filter out invalid values
+              if (Array.isArray(technologies)) {
+                technologies = technologies
+                  .map(t => String(t || '').trim())
+                  .filter(t => t.length > 0 && t !== 'null' && t !== 'undefined');
+              } else {
+                technologies = [];
+              }
             }
           } else if (Array.isArray(proj.technologies)) {
-            technologies = proj.technologies;
+            technologies = proj.technologies
+              .map(t => String(t || '').trim())
+              .filter(t => t.length > 0 && t !== 'null' && t !== 'undefined');
           }
         }
         
         return {
           ...proj,
-          technologies: technologies,
+          technologies,
           title: proj.title || '',
           description: proj.description || '',
           date: proj.date || '',

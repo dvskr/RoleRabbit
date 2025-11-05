@@ -7,7 +7,6 @@ const schemaFields = {
   user_profiles: ['id', 'userId', 'firstName', 'lastName', 'phone', 'personalEmail', 'location', 'bio', 'profilePicture', 'currentRole', 'currentCompany', 'linkedin', 'github', 'website', 'profileViews', 'profileCompleteness', 'createdAt', 'updatedAt'],
   work_experiences: ['id', 'profileId', 'company', 'role', 'location', 'startDate', 'endDate', 'isCurrent', 'description', 'projectType', 'createdAt', 'updatedAt'],
   projects: ['id', 'profileId', 'title', 'description', 'technologies', 'date', 'link', 'github', 'createdAt', 'updatedAt'],
-  achievements: ['id', 'profileId', 'type', 'title', 'description', 'date', 'link', 'createdAt', 'updatedAt'],
   education: ['id', 'profileId', 'institution', 'degree', 'field', 'startDate', 'endDate', 'gpa', 'honors', 'location', 'description', 'createdAt', 'updatedAt'],
   certifications: ['id', 'profileId', 'name', 'issuer', 'date', 'expiryDate', 'credentialId', 'credentialUrl', 'createdAt', 'updatedAt'],
   social_links: ['id', 'profileId', 'platform', 'url', 'createdAt', 'updatedAt'],
@@ -29,7 +28,6 @@ console.log('  Certifications fields:', schemaFields.certifications.length, 'fie
 console.log('  UserSkills fields:', schemaFields.user_skills.length, 'fields - OK');
 console.log('  SocialLinks fields:', schemaFields.social_links.length, 'fields - OK');
 console.log('  Projects fields:', schemaFields.projects.length, 'fields - CHECKED');
-console.log('  Achievements fields:', schemaFields.achievements.length, 'fields - CHECKED');
 
 console.log('\n📊 Database Schema Summary:');
 Object.entries(schemaFields).forEach(([table, fields]) => {

@@ -75,14 +75,12 @@ export interface WorkExperience {
   id?: string;
   company: string;
   role: string;
-  client?: string; // For client work/projects
   location?: string;
   startDate: string;
   endDate?: string; // Empty string or null if current role
   isCurrent: boolean;
   description?: string;
-  achievements?: string[];
-  technologies?: string[];
+  technologies?: string[]; // Technologies/tools used in this role
   projectType?: 'Client Project' | 'Full-time' | 'Part-time' | 'Contract' | 'Freelance' | 'Consulting';
 }
 
@@ -176,15 +174,6 @@ export interface UserData {
   profilePicture: string | null;
   
   // Professional Info
-  currentRole: string;
-  currentCompany: string;
-  experience: string;
-  industry: string;
-  jobLevel: string;
-  employmentType: string;
-  availability: string;
-  salaryExpectation: string;
-  workPreference: string;
   professionalSummary?: ProfessionalSummary;
   
   // Skills and Education
@@ -195,12 +184,6 @@ export interface UserData {
   // Education History
   education: Education[];
   
-  // Career Goals (Enhanced)
-  careerGoals: CareerGoal[];
-  targetRoles: string[];
-  targetCompanies: string[];
-  relocationWillingness: string;
-  
   // Portfolio & Links (Enhanced)
   portfolio: string;
   linkedin: string;
@@ -208,29 +191,9 @@ export interface UserData {
   website: string;
   socialLinks: SocialLink[];
   projects: Project[];
-  achievements: Achievement[];
-  
-  // Career Timeline
-  careerTimeline: TimelineEvent[];
   
   // Work Experience History
   workExperiences: WorkExperience[];
-  
-  // Volunteer Experience
-  volunteerExperiences: VolunteerExperience[];
-  
-  // Recommendations & Endorsements
-  recommendations: Recommendation[];
-  
-  // Publications & Research
-  publications: Publication[];
-  patents: Patent[];
-  
-  // Organizations & Associations
-  organizations: Organization[];
-  
-  // Test Scores
-  testScores: TestScore[];
   
   // Preferences
   emailNotifications: boolean;

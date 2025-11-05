@@ -80,15 +80,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             profilePicture: userProfile.profilePicture || userProfile.avatar || null,
             
             // Professional Info
-            currentRole: userProfile.currentRole || userProfile.title || '',
-            currentCompany: userProfile.currentCompany || userProfile.company || '',
-            experience: userProfile.experience || '',
-            industry: userProfile.industry || '',
-            jobLevel: userProfile.jobLevel || '',
-            employmentType: userProfile.employmentType || '',
-            availability: userProfile.availability || '',
-            salaryExpectation: userProfile.salaryExpectation || '',
-            workPreference: userProfile.workPreference || '',
             professionalSummary: userProfile.professionalSummary,
             
             // Skills & Expertise
@@ -99,12 +90,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             // Education
             education: userProfile.education || [],
             
-            // Career Goals
-            careerGoals: userProfile.careerGoals || [],
-            targetRoles: userProfile.targetRoles || [],
-            targetCompanies: userProfile.targetCompanies || [],
-            relocationWillingness: userProfile.relocationWillingness || '',
-            
             // Portfolio & Links
             portfolio: userProfile.portfolio || userProfile.website || '',
             linkedin: userProfile.linkedin || '',
@@ -112,13 +97,9 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             website: userProfile.website || '',
             socialLinks: userProfile.socialLinks || [],
             projects: userProfile.projects || [],
-            achievements: userProfile.achievements || [],
             
-            // Career Timeline
-            careerTimeline: userProfile.careerTimeline || [],
             // CRITICAL: Ensure workExperiences is always an array, never undefined/null
             workExperiences: Array.isArray(userProfile.workExperiences) ? userProfile.workExperiences : (userProfile.workExperiences ? [userProfile.workExperiences] : []),
-            volunteerExperiences: userProfile.volunteerExperiences || [],
             
             // Debug logging
             // eslint-disable-next-line no-console
@@ -128,11 +109,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
               rawWorkExperiences: userProfile.workExperiences,
               mappedWorkExperiences: Array.isArray(userProfile.workExperiences) ? userProfile.workExperiences : (userProfile.workExperiences ? [userProfile.workExperiences] : [])
             } as any,
-            recommendations: userProfile.recommendations || [],
-            publications: userProfile.publications || [],
-            patents: userProfile.patents || [],
-            organizations: userProfile.organizations || [],
-            testScores: userProfile.testScores || [],
             personalEmail: userProfile.personalEmail || '',
             
             // Preferences
@@ -198,34 +174,18 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           bio: professionalBio,
           professionalBio,
           profilePicture: userProfile.profilePicture || userProfile.avatar || null,
-          currentRole: userProfile.currentRole || userProfile.title || '',
-          currentCompany: userProfile.currentCompany || userProfile.company || '',
-          experience: userProfile.experience || '',
-          industry: userProfile.industry || '',
-          jobLevel: userProfile.jobLevel || '',
-          employmentType: userProfile.employmentType || '',
-          availability: userProfile.availability || '',
-          salaryExpectation: userProfile.salaryExpectation || '',
-          workPreference: userProfile.workPreference || '',
           professionalSummary: userProfile.professionalSummary,
           skills: userProfile.skills || [],
           certifications: userProfile.certifications || [],
           languages: userProfile.languages || [],
           education: userProfile.education || [],
-          careerGoals: userProfile.careerGoals || [],
-          targetRoles: userProfile.targetRoles || [],
-          targetCompanies: userProfile.targetCompanies || [],
-          relocationWillingness: userProfile.relocationWillingness || '',
           portfolio: userProfile.portfolio || userProfile.website || '',
           linkedin: userProfile.linkedin || '',
           github: userProfile.github || '',
           website: userProfile.website || '',
           socialLinks: userProfile.socialLinks || [],
           projects: userProfile.projects || [],
-          achievements: userProfile.achievements || [],
-          careerTimeline: userProfile.careerTimeline || [],
           workExperiences: userProfile.workExperiences || [],
-          volunteerExperiences: userProfile.volunteerExperiences || [],
           
           // Debug logging
           // eslint-disable-next-line no-console
@@ -234,11 +194,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
             workExperiencesData: userProfile.workExperiences,
             rawWorkExperiences: userProfile.workExperiences
           } as any,
-          recommendations: userProfile.recommendations || [],
-          publications: userProfile.publications || [],
-          patents: userProfile.patents || [],
-          organizations: userProfile.organizations || [],
-          testScores: userProfile.testScores || [],
           personalEmail: userProfile.personalEmail || '',
           emailNotifications: userProfile.emailNotifications ?? true,
           smsNotifications: userProfile.smsNotifications ?? false,
@@ -292,9 +247,6 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       if (data.projects !== undefined) {
         updatedData.projects = Array.isArray(data.projects) ? data.projects : [];
       }
-      if (data.achievements !== undefined) {
-        updatedData.achievements = Array.isArray(data.achievements) ? data.achievements : [];
-      }
       if (data.socialLinks !== undefined) {
         updatedData.socialLinks = Array.isArray(data.socialLinks) ? data.socialLinks : [];
       }
@@ -311,7 +263,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       }
 
       Object.keys(data).forEach(key => {
-        if (!['workExperiences', 'education', 'certifications', 'skills', 'languages', 'projects', 'achievements', 'socialLinks'].includes(key)) {
+        if (!['workExperiences', 'education', 'certifications', 'skills', 'languages', 'projects', 'socialLinks'].includes(key)) {
           (updatedData as any)[key] = (data as any)[key];
         }
       });

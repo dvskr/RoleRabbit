@@ -34,7 +34,6 @@ import {
     Palette,
     MessageSquare,
     Check,
-    Twitter,
     Linkedin,
     Facebook,
     Instagram,
@@ -189,6 +188,46 @@ import {
     );
   }
   
+  // X (Twitter) Icon Component - Double-line outlined style
+  function XIcon({ size = 18, className = "" }: { size?: number; className?: string }) {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        className={className}
+      >
+        {/* Top-left to bottom-right diagonal - double line with gap */}
+        <path
+          d="M6.7 5.7L17.7 16.7"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M5.3 4.3L16.3 15.3"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        {/* Top-right to bottom-left diagonal - double line with gap */}
+        <path
+          d="M16.3 5.7L5.3 16.7"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <path
+          d="M17.7 4.3L6.7 15.3"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+
   // Navigation with scroll effect
   function Navigation({
     onEnterApp,
@@ -257,89 +296,87 @@ import {
       <motion.nav
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          isScrolled
-            ? "bg-[#0d1117]/95 backdrop-blur-xl border-b border-white/[0.08]"
-            : "bg-[#0d1117]/80 backdrop-blur-sm"
-        }`}
+        className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center pt-4 pb-4 px-4"
       >
-        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          {/* Logo */}
-          <motion.div
-            className="flex items-center gap-2.5 cursor-pointer"
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 400 }}
-            onClick={() =>
-              window.scrollTo({ top: 0, behavior: "smooth" })
-            }
-          >
-            <motion.div
-              animate={{ rotate: [0, 8, -8, 0] }}
-              transition={{
-                duration: 2.5,
-                repeat: Infinity,
-                repeatDelay: 4,
-              }}
-            >
-              <RabbitLogo size={44} />
-            </motion.div>
-            <span className="text-xl font-bold">
-              <span className="text-white">Role</span>
-              <span className="text-emerald-500">Rabbit</span>
-            </span>
-          </motion.div>
-  
-          {/* Center Navigation */}
-          <div className="hidden md:flex items-center gap-10">
-            {["Features", "Pricing", "Testimonials"].map(
-              (item, i) => {
-                const sectionId = item.toLowerCase();
-                const isActive = activeSection === sectionId;
-  
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => {
-                      console.log("BUTTON CLICKED:", item);
-                      handleNavClick(sectionId);
-                    }}
-                    className={`text-base font-semibold relative py-2 px-4 cursor-pointer bg-transparent border-none outline-none hover:opacity-70 transition-opacity ${
-                      isActive ? "text-teal-400" : "text-white"
-                    }`}
-                  >
-                    {item}
-  
-                    {/* Underline indicator */}
-                    {isActive && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full" />
-                    )}
-                  </button>
-                );
-              },
-            )}
-          </div>
-  
-          {/* Right Buttons */}
-          <div className="flex items-center gap-3">
-            <motion.a
-              href="/login"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-base text-white font-semibold hover:text-gray-300 transition-colors px-5 py-2 cursor-pointer"
-            >
-              Sign In
-            </motion.a>
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              onClick={onEnterApp}
-              className="text-base px-6 py-2.5 rounded-lg bg-white text-black hover:bg-gray-100 transition-all font-bold"
-            >
-              Get Started Free
-            </motion.button>
+        <div className="max-w-7xl w-full mx-auto px-6">
+          <div className="rounded-full backdrop-blur-xl border border-white/[0.15] shadow-xl">
+            <div className="px-6 py-3.5 flex items-center justify-between">
+              {/* Logo */}
+              <motion.div
+                className="flex items-center gap-2.5 cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 400 }}
+                onClick={() =>
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }
+              >
+                <motion.div
+                  animate={{ rotate: [0, 8, -8, 0] }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    repeatDelay: 4,
+                  }}
+                >
+                  <RabbitLogo size={44} />
+                </motion.div>
+                <span className="text-xl font-bold">
+                  <span className="text-white">Role</span>
+                  <span className="text-emerald-500">Rabbit</span>
+                </span>
+              </motion.div>
+    
+              {/* Center Navigation */}
+              <div className="hidden md:flex items-center gap-8">
+                {["Features", "Pricing", "Testimonials"].map(
+                  (item, i) => {
+                    const sectionId = item.toLowerCase();
+                    const isActive = activeSection === sectionId;
+    
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => {
+                          console.log("BUTTON CLICKED:", item);
+                          handleNavClick(sectionId);
+                        }}
+                        className="relative py-2 px-4 cursor-pointer bg-transparent border-none outline-none"
+                      >
+                        <span className="text-base font-medium text-gray-300 hover:text-gray-200 transition-colors">
+                          {item}
+                        </span>
+    
+                        {/* Vibrant green underline - always visible */}
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-400 via-green-400 to-emerald-500 rounded-full" />
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+    
+              {/* Right Buttons */}
+              <div className="flex items-center gap-4">
+                <motion.a
+                  href="/login"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-base text-white font-semibold hover:text-gray-200 transition-colors px-5 py-2 rounded-lg bg-gray-800/80 border border-gray-500/50 hover:border-gray-400/70 cursor-pointer"
+                >
+                  Sign In
+                </motion.a>
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 }}
+                  onClick={onEnterApp}
+                  className="text-base px-6 py-2.5 rounded-lg bg-white text-gray-800 hover:bg-gray-50 transition-all font-semibold"
+                >
+                  Get Started Free
+                </motion.button>
+              </div>
+            </div>
           </div>
         </div>
       </motion.nav>
@@ -1163,7 +1200,7 @@ import {
               animate={isInView ? { opacity: 1, scale: 1 } : {}}
               transition={{ duration: 0.5 }}
             >
-              <h2 className="text-4xl md:text-5xl lg:text-6xl mb-6 bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent leading-tight">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl mb-6 text-white leading-normal break-words px-4">
                 Everything you need to succeed
               </h2>
               <p className="text-lg md:text-xl text-gray-400">
@@ -2890,8 +2927,8 @@ import {
             >
               {[
                 {
-                  Icon: Twitter,
-                  label: "Twitter",
+                  Icon: XIcon,
+                  label: "X (Twitter)",
                   color:
                     "hover:text-sky-400 hover:border-sky-500/50",
                 },

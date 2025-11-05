@@ -39,20 +39,9 @@ const ARRAY_FIELD_KEYS: Array<keyof UserData | string> = [
   'certifications',
   'languages',
   'education',
-  'careerGoals',
-  'targetRoles',
-  'targetCompanies',
   'socialLinks',
   'projects',
-  'achievements',
-  'careerTimeline',
-  'workExperiences',
-  'volunteerExperiences',
-  'recommendations',
-  'publications',
-  'patents',
-  'organizations',
-  'testScores'
+  'workExperiences'
 ];
 
 const VALID_WORK_EXPERIENCE_TYPES = [
@@ -150,6 +139,43 @@ const sanitizeWorkExperiences = (experiences: any, options?: { keepDrafts?: bool
       })();
 
       const description = typeof exp?.description === 'string' ? exp.description : '';
+      
+      // Preserve technologies array
+      let technologies = [];
+      if (exp?.technologies) {
+        if (Array.isArray(exp.technologies)) {
+          technologies = exp.technologies
+            .map(t => typeof t === 'string' ? t.trim() : String(t || '').trim())
+            .filter(t => t.length > 0 && t !== 'null' && t !== 'undefined');
+        } else if (typeof exp.technologies === 'string') {
+          try {
+            const parsed = JSON.parse(exp.technologies);
+            if (Array.isArray(parsed)) {
+              technologies = parsed
+                .map(t => String(t || '').trim())
+                .filter(t => t.length > 0 && t !== 'null' && t !== 'undefined');
+            } else {
+              technologies = exp.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            }
+          } catch {
+            technologies = exp.technologies.split(',').map(t => t.trim()).filter(t => t.length > 0);
+          }
+        } else if (exp.technologies && typeof exp.technologies === 'object') {
+          technologies = Object.keys(exp.technologies)
+            .sort((a, b) => {
+              const aNum = Number(a);
+              const bNum = Number(b);
+              if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+                return aNum - bNum;
+              }
+              return a.localeCompare(b);
+            })
+            .map(key => exp.technologies[key])
+            .filter(value => value !== undefined && value !== null)
+            .map(value => (typeof value === 'string' ? value.trim() : String(value || '').trim()))
+            .filter(value => value.length > 0 && value !== 'null' && value !== 'undefined');
+        }
+      }
 
       const sanitized = {
         ...(id ? { id } : {}),
@@ -160,6 +186,7 @@ const sanitizeWorkExperiences = (experiences: any, options?: { keepDrafts?: bool
         endDate: isCurrent ? '' : endDate,
         isCurrent,
         description,
+        technologies,
         projectType: normalizedProjectType,
       };
 
@@ -499,12 +526,62 @@ const sanitizeProjects = (projects: any, options?: { keepDrafts?: boolean }): an
       const link = toStringSafe(proj.link || '');
       const github = toStringSafe(proj.github || '');
       
-      // Handle technologies - can be array or comma-separated string
+      const cleanTechnology = (value: any): string => {
+        if (value === null || value === undefined) return '';
+        let tech = toStringSafe(value).trim();
+        if (!tech) return '';
+        tech = tech.replace(/^\[|\]$/g, '').trim();
+        tech = tech.replace(/\\"/g, '"').replace(/\\'/g, "'");
+        while (
+          (tech.startsWith('"') && tech.endsWith('"')) ||
+          (tech.startsWith("'") && tech.endsWith("'"))
+        ) {
+          tech = tech.substring(1, tech.length - 1).trim();
+        }
+        tech = tech.replace(/^,+|,+$/g, '').trim();
+        return tech;
+      };
+
       let technologies: string[] = [];
       if (Array.isArray(proj.technologies)) {
-        technologies = proj.technologies.map((t: any) => toStringSafe(t)).filter((t: string) => t.length > 0);
+        technologies = proj.technologies
+          .map((t: any) => cleanTechnology(t))
+          .filter((t: string) => t.length > 0);
       } else if (typeof proj.technologies === 'string') {
-        technologies = proj.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+        const raw = proj.technologies.trim();
+        if (raw.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(raw.replace(/"\s+"/g, '", "'));
+            if (Array.isArray(parsed)) {
+              technologies = parsed
+                .map((t: any) => cleanTechnology(t))
+                .filter((t: string) => t.length > 0);
+            }
+          } catch {
+            // Fall back to comma-separated split below
+          }
+        }
+
+        if (technologies.length === 0) {
+          technologies = raw
+            .split(',')
+            .map((t: string) => cleanTechnology(t))
+            .filter((t: string) => t.length > 0);
+        }
+      } else if (proj.technologies && typeof proj.technologies === 'object') {
+        technologies = Object.keys(proj.technologies)
+          .sort((a, b) => {
+            const aNum = Number(a);
+            const bNum = Number(b);
+            if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+              return aNum - bNum;
+            }
+            return a.localeCompare(b);
+          })
+          .map((key) => proj.technologies[key])
+          .filter((value) => value !== undefined && value !== null)
+          .map((value) => cleanTechnology(value))
+          .filter((value: string) => value.length > 0);
       }
 
       // Check if project has any content
@@ -523,7 +600,7 @@ const sanitizeProjects = (projects: any, options?: { keepDrafts?: boolean }): an
         ...(id ? { id } : {}),
         title: keepDrafts ? title : title.trim(),
         description: keepDrafts ? description : description.trim(),
-        technologies: technologies,
+        technologies,
         date: keepDrafts ? date : date.trim(),
         link: keepDrafts ? link : link.trim(),
         github: keepDrafts ? github : github.trim()
@@ -718,40 +795,19 @@ export default function Profile() {
     phone: '',
     location: '',
     bio: '',
-  professionalBio: '',
+    professionalBio: '',
     profilePicture: null,
-    currentRole: '',
-    currentCompany: '',
-    experience: '',
-    industry: '',
-    jobLevel: '',
-    employmentType: '',
-    availability: '',
-    salaryExpectation: '',
-    workPreference: '',
     skills: [],
     certifications: [],
     languages: [],
     education: [],
-    careerGoals: [],
-    targetRoles: [],
-    targetCompanies: [],
-    relocationWillingness: '',
     portfolio: '',
     linkedin: '',
     github: '',
     website: '',
     socialLinks: [],
     projects: [],
-    achievements: [],
-      careerTimeline: [],
-      workExperiences: [],
-      volunteerExperiences: [],
-      recommendations: [],
-      publications: [],
-      patents: [],
-      organizations: [],
-      testScores: [],
+    workExperiences: [],
     emailNotifications: true,
     smsNotifications: false,
     privacyLevel: 'Professional',
@@ -833,18 +889,7 @@ export default function Profile() {
           skills: sanitizeSkills(localProfileData.skills),
           languages: sanitizeLanguages(localProfileData.languages),
           projects: normalizeToArray(localProfileData.projects),
-          achievements: normalizeToArray(localProfileData.achievements),
           socialLinks: normalizeToArray(localProfileData.socialLinks),
-          careerGoals: normalizeToArray(localProfileData.careerGoals),
-          targetRoles: normalizeToArray(localProfileData.targetRoles),
-          targetCompanies: normalizeToArray(localProfileData.targetCompanies),
-          careerTimeline: normalizeToArray(localProfileData.careerTimeline),
-          volunteerExperiences: normalizeToArray(localProfileData.volunteerExperiences),
-          recommendations: normalizeToArray(localProfileData.recommendations),
-          publications: normalizeToArray(localProfileData.publications),
-          patents: normalizeToArray(localProfileData.patents),
-          organizations: normalizeToArray(localProfileData.organizations),
-          testScores: normalizeToArray(localProfileData.testScores),
         };
       }
       // Fallback to userData if localProfileData is null
@@ -858,18 +903,7 @@ export default function Profile() {
           skills: sanitizeSkills(userData.skills),
           languages: sanitizeLanguages(userData.languages),
           projects: normalizeToArray(userData.projects),
-          achievements: normalizeToArray(userData.achievements),
           socialLinks: normalizeToArray(userData.socialLinks),
-          careerGoals: normalizeToArray(userData.careerGoals),
-          targetRoles: normalizeToArray(userData.targetRoles),
-          targetCompanies: normalizeToArray(userData.targetCompanies),
-          careerTimeline: normalizeToArray(userData.careerTimeline),
-          volunteerExperiences: normalizeToArray(userData.volunteerExperiences),
-          recommendations: normalizeToArray(userData.recommendations),
-          publications: normalizeToArray(userData.publications),
-          patents: normalizeToArray(userData.patents),
-          organizations: normalizeToArray(userData.organizations),
-          testScores: normalizeToArray(userData.testScores),
         };
       }
       return defaultUserData;
@@ -885,18 +919,7 @@ export default function Profile() {
         skills: sanitizeSkills(userData.skills),
         languages: sanitizeLanguages(userData.languages),
         projects: normalizeToArray(userData.projects),
-        achievements: normalizeToArray(userData.achievements),
         socialLinks: normalizeToArray(userData.socialLinks),
-        careerGoals: normalizeToArray(userData.careerGoals),
-        targetRoles: normalizeToArray(userData.targetRoles),
-        targetCompanies: normalizeToArray(userData.targetCompanies),
-        careerTimeline: normalizeToArray(userData.careerTimeline),
-        volunteerExperiences: normalizeToArray(userData.volunteerExperiences),
-        recommendations: normalizeToArray(userData.recommendations),
-        publications: normalizeToArray(userData.publications),
-        patents: normalizeToArray(userData.patents),
-        organizations: normalizeToArray(userData.organizations),
-        testScores: normalizeToArray(userData.testScores),
       };
     }
     return defaultUserData;
@@ -935,7 +958,6 @@ export default function Profile() {
       location: !!data.location,
       bio: !!(((data.professionalBio ?? data.bio) || '').length > 50),
       profilePicture: !!data.profilePicture,
-      currentRole: !!data.currentRole
     };
     const personalCompleted = Object.values(personalInfo).filter(Boolean).length;
     completed += personalCompleted;
@@ -980,6 +1002,10 @@ export default function Profile() {
     setIsSaving(true);
     setSaveMessage(null);
     try {
+      // CRITICAL: Force sync any pending edits from child components before saving
+      // This ensures technologies and other edits are included even if user hasn't blurred fields
+      // We'll trigger a refresh of displayData to get latest state
+      
       // Save user profile via API using displayData (which has latest local edits)
       // CRITICAL: Use displayData as it reflects the current UI state
       const dataToSave = displayData;
@@ -1053,6 +1079,15 @@ export default function Profile() {
       logger.debug('=== CLEANED DATA TO SEND ===');
       logger.debug('workExperiences in cleanedData:', cleanedData.workExperiences);
       logger.debug('workExperiences count:', cleanedData.workExperiences?.length || 0);
+      logger.debug('workExperiences with technologies:', cleanedData.workExperiences?.map((exp: any) => ({
+        id: exp.id,
+        company: exp.company,
+        role: exp.role,
+        technologies: exp.technologies,
+        technologiesType: typeof exp.technologies,
+        technologiesIsArray: Array.isArray(exp.technologies),
+        technologiesLength: exp.technologies?.length || 0
+      })));
       logger.debug('projects in cleanedData:', cleanedData.projects);
       logger.debug('projects count:', cleanedData.projects?.length || 0);
       logger.debug('projects type:', typeof cleanedData.projects, Array.isArray(cleanedData.projects));
@@ -1091,7 +1126,6 @@ export default function Profile() {
         const apiCertifications = savedUserData.certifications || profileData.certifications || [];
         const apiSocialLinks = savedUserData.socialLinks || profileData.socialLinks || [];
         const apiProjects = savedUserData.projects || profileData.projects || [];
-        const apiAchievements = savedUserData.achievements || profileData.achievements || [];
         const apiSkills = savedUserData.skills || profileData.skills || [];
         
         logger.debug('Extracted API data:', {
@@ -1117,7 +1151,6 @@ export default function Profile() {
           certifications: apiCertifications,
           socialLinks: apiSocialLinks,
           projects: apiProjects,
-          achievements: apiAchievements,
           skills: apiSkills,
         } : {
           ...savedUserData,
@@ -1127,7 +1160,6 @@ export default function Profile() {
           certifications: apiCertifications,
           socialLinks: apiSocialLinks,
           projects: apiProjects,
-          achievements: apiAchievements,
           skills: apiSkills,
         };
         
@@ -1225,6 +1257,15 @@ export default function Profile() {
         const sanitizedExperiences = sanitizeWorkExperiences(value);
         (normalizedChange as any)[key] = sanitizedExperiences;
         logger.debug(`Sanitized work experiences field ${key}:`, sanitizedExperiences);
+        logger.debug(`WorkExp technologies check after sanitize:`, sanitizedExperiences?.map((exp: any) => ({
+          id: exp.id,
+          company: exp.company,
+          role: exp.role,
+          technologies: exp.technologies,
+          technologiesType: typeof exp.technologies,
+          technologiesIsArray: Array.isArray(exp.technologies),
+          technologiesLength: exp.technologies?.length || 0
+        })));
       } else if (key === 'education') {
         const sanitizedEdu = sanitizeEducation(value);
         (normalizedChange as any)[key] = sanitizedEdu;
@@ -1257,32 +1298,40 @@ export default function Profile() {
         (updatedData as any)[key] = (normalizedChange as any)[key];
       });
 
-      // CRITICAL: Ensure arrays are always defined (never undefined/null)
-      // This prevents workExperiences from being lost
+      // CRITICAL: When updating workExperiences, preserve the technologies from normalizedChange
+      // Don't re-sanitize workExperiences if it was already sanitized in normalizedChange
+      // This prevents losing technologies during the update
       const safeUpdatedData = {
         ...updatedData,
-        workExperiences: sanitizeWorkExperiences(updatedData.workExperiences),
-        education: sanitizeEducation(updatedData.education),
-        certifications: sanitizeCertifications(updatedData.certifications),
-        skills: sanitizeSkills(updatedData.skills),
-        languages: sanitizeLanguages(updatedData.languages),
+        // Use normalizedChange.workExperiences if it exists (already sanitized), otherwise sanitize updatedData
+        workExperiences: normalizedChange.workExperiences 
+          ? (normalizedChange.workExperiences as any[]) 
+          : sanitizeWorkExperiences(updatedData.workExperiences),
+        education: normalizedChange.education 
+          ? (normalizedChange.education as any[]) 
+          : sanitizeEducation(updatedData.education),
+        certifications: normalizedChange.certifications 
+          ? (normalizedChange.certifications as any[]) 
+          : sanitizeCertifications(updatedData.certifications),
+        skills: normalizedChange.skills 
+          ? (normalizedChange.skills as any[]) 
+          : sanitizeSkills(updatedData.skills),
+        languages: normalizedChange.languages 
+          ? (normalizedChange.languages as any[]) 
+          : sanitizeLanguages(updatedData.languages),
         projects: normalizeToArray(updatedData.projects),
-        achievements: normalizeToArray(updatedData.achievements),
         socialLinks: normalizeToArray(updatedData.socialLinks),
-        careerGoals: normalizeToArray(updatedData.careerGoals),
-        targetRoles: normalizeToArray(updatedData.targetRoles),
-        targetCompanies: normalizeToArray(updatedData.targetCompanies),
-        careerTimeline: normalizeToArray(updatedData.careerTimeline),
-        volunteerExperiences: normalizeToArray(updatedData.volunteerExperiences),
-        recommendations: normalizeToArray(updatedData.recommendations),
-        publications: normalizeToArray(updatedData.publications),
-        patents: normalizeToArray(updatedData.patents),
-        organizations: normalizeToArray(updatedData.organizations),
-        testScores: normalizeToArray(updatedData.testScores),
       };
 
       logger.debug('Updated localProfileData workExperiences:', safeUpdatedData.workExperiences);
       logger.debug('Updated localProfileData workExperiences count:', safeUpdatedData.workExperiences?.length || 0);
+      logger.debug('WorkExp technologies check:', safeUpdatedData.workExperiences?.map((exp: any) => ({
+        id: exp.id,
+        company: exp.company,
+        role: exp.role,
+        technologies: exp.technologies,
+        hasTechnologies: !!exp.technologies && Array.isArray(exp.technologies) && exp.technologies.length > 0
+      })));
       logger.debug('Safe updated data keys:', Object.keys(safeUpdatedData));
 
       setLocalProfileData(safeUpdatedData);
@@ -1335,18 +1384,7 @@ export default function Profile() {
         skills: resolveArrayField('skills'),
         languages: resolveArrayField('languages'),
         projects: resolveArrayField('projects'),
-        achievements: resolveArrayField('achievements'),
         socialLinks: resolveArrayField('socialLinks'),
-        careerGoals: resolveArrayField('careerGoals'),
-        targetRoles: resolveArrayField('targetRoles'),
-        targetCompanies: resolveArrayField('targetCompanies'),
-        careerTimeline: resolveArrayField('careerTimeline'),
-        volunteerExperiences: resolveArrayField('volunteerExperiences'),
-        recommendations: resolveArrayField('recommendations'),
-        publications: resolveArrayField('publications'),
-        patents: resolveArrayField('patents'),
-        organizations: resolveArrayField('organizations'),
-        testScores: resolveArrayField('testScores'),
       };
       logger.debug('Initializing localProfileData with workExperiences:', newData.workExperiences);
       logger.debug('Initializing localProfileData workExperiences count:', newData.workExperiences?.length || 0);

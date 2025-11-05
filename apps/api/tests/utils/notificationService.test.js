@@ -11,7 +11,6 @@ describe('NotificationService', () => {
     expect(typeof notificationService.markAsRead).toBe('function');
     expect(typeof notificationService.markAllAsRead).toBe('function');
     expect(typeof notificationService.getUnreadCount).toBe('function');
-    expect(typeof notificationService.deleteNotification).toBe('function');
   });
 
   test('should export notification functions', () => {

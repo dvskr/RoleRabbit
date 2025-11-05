@@ -150,9 +150,16 @@ fastify.register(require('@fastify/cors'), {
 
 // Register rate limiting globally
 fastify.register(require('@fastify/rate-limit'), {
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || (process.env.NODE_ENV === 'production' ? 100 : 10000), // Much higher limit for development
+  timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || (process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 60 * 1000), // 1 minute window for dev
   skip: (request) => {
+    // Skip rate limiting for localhost in development
+    if (process.env.NODE_ENV !== 'production') {
+      const isLocalhost = request.ip === '127.0.0.1' || request.ip === '::1' || request.ip === '::ffff:127.0.0.1' || request.hostname === 'localhost';
+      if (isLocalhost) {
+        return true; // Skip rate limiting for localhost in development
+      }
+    }
     // Skip rate limiting for long-running operations if needed
     return false;
   },

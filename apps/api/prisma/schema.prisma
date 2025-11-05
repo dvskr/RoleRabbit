@@ -484,6 +484,7 @@ model WorkExperience {
   endDate     String?
   isCurrent   Boolean @default(false)
   description String?
+  technologies String[] @default([]) // Technologies/tools used in this role
   projectType String? @default("Full-time") // Full-time, Part-time, Contract, etc.
 
   createdAt DateTime @default(now())

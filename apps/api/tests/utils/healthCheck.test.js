@@ -5,8 +5,9 @@ describe('Health Check', () => {
     const health = await getHealthStatus();
     expect(health).toHaveProperty('status');
     expect(health).toHaveProperty('timestamp');
-    expect(health).toHaveProperty('services');
-    expect(health).toHaveProperty('system');
+    expect(health).toHaveProperty('checks');
+    expect(health.checks).toHaveProperty('database');
+    expect(health.checks).toHaveProperty('memory');
   });
 
   test('should determine if system is healthy', async () => {
