@@ -74,14 +74,14 @@
 }
 
 .force-scrollbar::-webkit-scrollbar-track {
-  background: rgba(15, 10, 30, 0.3) !important;
+  background: rgba(0, 0, 0, 0.3) !important;
   border-radius: 6px !important;
 }
 
 .force-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.5) !important;
   border-radius: 6px !important;
-  border: 2px solid rgba(15, 10, 30, 0.3) !important;
+  border: 2px solid rgba(0, 0, 0, 0.3) !important;
 }
 
 .force-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -89,7 +89,7 @@
 }
 
 .force-scrollbar::-webkit-scrollbar-corner {
-  background: rgba(15, 10, 30, 0.3) !important;
+  background: rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Line clamp utility */
@@ -176,7 +176,7 @@
   
   body[data-theme="dark"],
   body.dark {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
     color: #f8fafc;
   }
   /* Only apply fixed positioning for dashboard */
@@ -203,7 +203,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
   display: flex;
   flex-direction: column;
   justify-content: center;

@@ -50,18 +50,24 @@ export function TodosWidget({
     todos.filter(t => t.priority === 'low')
   ).filter(todo => showCompleted || !todo.completed);
 
-  const isDark = colors.background.includes('0f0a1e') || colors.background.includes('rgb(15, 10, 30)');
+  const isDark = (
+    colors.background.includes('0f0a1e') ||
+    colors.background.includes('rgb(15, 10, 30)') ||
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
 
   return (
     <div
       className="rounded-2xl p-5 flex flex-col"
       style={{
         background: isDark 
-          ? 'rgba(255, 255, 255, 0.05)' 
+          ? colors.cardBackground 
           : '#ffffff',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+        backdropFilter: isDark ? 'blur(12px)' : 'none',
+        WebkitBackdropFilter: isDark ? 'blur(12px)' : 'none',
+        border: `1px solid ${isDark ? colors.border : 'rgba(0, 0, 0, 0.08)'}`,
         boxShadow: isDark
           ? '0 4px 20px rgba(0, 0, 0, 0.3)'
           : '0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06)',
@@ -72,13 +78,13 @@ export function TodosWidget({
         <div>
           <h2 
             className="text-2xl font-bold mb-1"
-            style={{ color: isDark ? '#ffffff' : '#1f2937' }}
+            style={{ color: isDark ? colors.primaryText : '#1f2937' }}
           >
             Smart To-Dos
           </h2>
           <p 
             className="text-sm"
-            style={{ color: isDark ? 'rgba(255, 255, 255, 0.6)' : '#6b7280' }}
+            style={{ color: isDark ? colors.tertiaryText : '#6b7280' }}
           >
             AI-prioritized tasks for your job search
           </p>
@@ -87,15 +93,29 @@ export function TodosWidget({
           onClick={onShowAddTodo}
           className="px-4 py-2 rounded-lg font-medium text-sm transition-all hover:shadow-lg hover:scale-105"
           style={{
-            background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
+            background: isDark
+              ? `linear-gradient(135deg, ${colors.accentTeal} 0%, ${colors.accentCyan} 100%)`
+              : 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
             color: '#ffffff',
-            boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)',
+            boxShadow: isDark
+              ? `0 4px 12px ${colors.accentCyan}40`
+              : '0 4px 12px rgba(168, 85, 247, 0.4)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.5)';
+            if (isDark) {
+              e.currentTarget.style.boxShadow = `0 6px 16px ${colors.accentCyan}50`;
+              e.currentTarget.style.transform = 'scale(1.02)';
+            } else {
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.5)';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.4)';
+            if (isDark) {
+              e.currentTarget.style.boxShadow = `0 4px 12px ${colors.accentCyan}40`;
+              e.currentTarget.style.transform = 'scale(1)';
+            } else {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.4)';
+            }
           }}
         >
           Add Task
@@ -127,7 +147,7 @@ export function TodosWidget({
       >
         {filteredTodos.length === 0 ? (
           <div className="text-center py-8">
-            <p style={{ color: isDark ? 'rgba(255, 255, 255, 0.5)' : '#9ca3af' }}>
+            <p style={{ color: isDark ? colors.tertiaryText : '#9ca3af' }}>
               No tasks yet. Add one to get started!
             </p>
           </div>

@@ -9,12 +9,12 @@ export default function ThemeToggle() {
   const isDark = themeMode === 'dark';
   const colors = theme.colors;
 
-  // Dark Mode styling - subtle dark background matching UI
+  // Dark Mode styling - black background matching UI
   const darkModeStyles = {
-    background: '#1a1625', // Subtle dark purple matching the theme
-    border: '#5C4E80',
-    iconColor: '#B088F9',
-    textColor: '#D0D0D0',
+    background: '#000000', // Pure black
+    border: 'rgba(255, 255, 255, 0.1)', // Subtle white border
+    iconColor: '#ffffff', // White icon
+    textColor: '#ffffff', // White text
   };
 
   // Light Mode styling - subtle light background matching UI

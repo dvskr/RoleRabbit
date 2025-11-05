@@ -10,6 +10,11 @@ interface ActivityItemProps {
 export function ActivityItem({ activity, colors }: ActivityItemProps) {
   const Icon = activity.icon;
   const statusColor = getStatusColor(activity.status);
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
 
   return (
     <div
@@ -18,7 +23,7 @@ export function ActivityItem({ activity, colors }: ActivityItemProps) {
         background: 'transparent',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = colors.hoverBackground;
+        e.currentTarget.style.background = isDark ? '#111111' : colors.hoverBackground;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'transparent';

@@ -28,6 +28,8 @@ export interface ThemeColors {
   // Accent colors
   primaryBlue: string;
   primaryBlueHover: string;
+  accentTeal: string; // Teal-400 #2dd4bf
+  accentCyan: string; // Cyan-500 #06b6d4
   
   // Badge colors
   badgeInfoBg: string;
@@ -65,29 +67,31 @@ const darkTheme: ThemeConfig = {
   mode: 'dark',
   colors: {
     // Backgrounds
-    background: '#0f0a1e',
-    sidebarBackground: 'linear-gradient(180deg, rgba(25, 15, 45, 0.6) 0%, rgba(15, 10, 30, 0.6) 100%)',
-    headerBackground: 'rgba(15, 10, 30, 0.4)',
-    toolbarBackground: 'rgba(15, 10, 30, 0.2)',
-    cardBackground: 'rgba(255, 255, 255, 0.02)',
-    hoverBackground: 'rgba(255, 255, 255, 0.02)',
-    hoverBackgroundStrong: 'rgba(255, 255, 255, 0.04)',
-    inputBackground: 'rgba(255, 255, 255, 0.03)',
+    background: '#000000',
+    sidebarBackground: 'linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.9) 100%)',
+    headerBackground: 'rgba(0, 0, 0, 0.5)',
+    toolbarBackground: 'rgba(0, 0, 0, 0.3)',
+    cardBackground: '#000000',
+    hoverBackground: '#111111',
+    hoverBackgroundStrong: '#1a1a1a',
+    inputBackground: '#111111',
     
     // Text colors
     primaryText: '#f1f5f9',
     secondaryText: '#cbd5e1',
     tertiaryText: '#94a3b8',
-    activeText: '#e9d5ff',
+    activeText: '#60a5fa', // Blue instead of pink/purple
     activeBlueText: '#60a5fa',
     
     // Border colors
-    border: 'rgba(203, 213, 225, 0.15)',
-    borderFocused: 'rgba(203, 213, 225, 0.4)',
+    border: 'rgba(255, 255, 255, 0.1)',
+    borderFocused: 'rgba(255, 255, 255, 0.2)',
     
     // Accent colors
     primaryBlue: '#3b82f6',
     primaryBlueHover: '#2563eb',
+    accentTeal: '#2dd4bf', // Teal-400
+    accentCyan: '#06b6d4', // Cyan-500
     
     // Badge colors
     badgeInfoBg: 'rgba(59, 130, 246, 0.15)',
@@ -102,9 +106,9 @@ const darkTheme: ThemeConfig = {
     badgeErrorBg: 'rgba(239, 68, 68, 0.15)',
     badgeErrorText: '#ef4444',
     badgeErrorBorder: 'rgba(239, 68, 68, 0.3)',
-    badgePurpleBg: 'rgba(168, 85, 247, 0.2)',
-    badgePurpleText: '#a855f7',
-    badgePurpleBorder: 'rgba(168, 85, 247, 0.3)',
+    badgePurpleBg: 'rgba(59, 130, 246, 0.2)', // Blue instead of purple
+    badgePurpleText: '#3b82f6', // Blue instead of purple
+    badgePurpleBorder: 'rgba(59, 130, 246, 0.3)', // Blue instead of purple
     badgeNeutralBg: 'rgba(148, 163, 184, 0.15)',
     badgeNeutralText: '#cbd5e1',
     badgeNeutralBorder: 'rgba(148, 163, 184, 0.3)',
@@ -144,6 +148,8 @@ const lightTheme: ThemeConfig = {
     // Accent colors
     primaryBlue: '#3b82f6',
     primaryBlueHover: '#2563eb',
+    accentTeal: '#2dd4bf', // Teal-400
+    accentCyan: '#06b6d4', // Cyan-500
     
     // Badge colors
     badgeInfoBg: 'rgba(59, 130, 246, 0.1)',

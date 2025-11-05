@@ -9,12 +9,18 @@ interface PremiumFeaturesWidgetProps {
 }
 
 export function PremiumFeaturesWidget({ colors }: PremiumFeaturesWidgetProps) {
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
+
   return (
     <div
       className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-hidden mb-3 sm:mb-4"
       style={{
-        background: colors.badgeWarningBg,
-        border: `1px solid ${colors.badgeWarningBorder}`,
+        background: isDark ? '#000000' : colors.badgeWarningBg,
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : `1px solid ${colors.badgeWarningBorder}`,
       }}
     >
       <div className="flex items-center justify-between mb-3">

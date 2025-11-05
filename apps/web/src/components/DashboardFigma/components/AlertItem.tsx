@@ -9,6 +9,11 @@ interface AlertItemProps {
 export function AlertItem({ alert, colors }: AlertItemProps) {
   const Icon = alert.icon;
   const isUrgent = alert.priority === 'urgent';
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
   
   const iconBg = isUrgent 
     ? colors.badgeErrorBg 
@@ -24,7 +29,7 @@ export function AlertItem({ alert, colors }: AlertItemProps) {
         background: 'transparent',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = colors.hoverBackground;
+        e.currentTarget.style.background = isDark ? '#111111' : colors.hoverBackground;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'transparent';

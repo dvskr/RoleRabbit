@@ -32,6 +32,14 @@ export default function ContactFieldsGrid({
   setShowAddFieldModal,
   colors,
 }: ContactFieldsGridProps) {
+  // Use accentCyan for icons that should have the accent color
+  const getIconColor = (index: number) => {
+    // Email, Location use gray (tertiaryText)
+    if (index === 0 || index === 2) return colors.tertiaryText;
+    // Phone, LinkedIn, Github, Website use accent color
+    return colors.accentCyan;
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 text-sm mb-6 lg:mb-10">
       {/* Standard Contact Fields */}
@@ -39,7 +47,7 @@ export default function ContactFieldsGrid({
         const IconComponent = CONTACT_FIELD_ICONS[idx];
         return (
           <div key={field} className="flex items-center gap-2 group">
-            {IconComponent && <IconComponent size={16} style={{ color: colors.tertiaryText }} />}
+            {IconComponent && <IconComponent size={16} style={{ color: getIconColor(idx) }} />}
             <input 
               className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
               style={{
@@ -51,8 +59,8 @@ export default function ContactFieldsGrid({
               onChange={(e) => setResumeData({...resumeData, [field]: e.target.value})}
               placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
               onFocus={(e) => {
-                e.target.style.borderColor = colors.primaryBlue;
-                e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+                e.target.style.borderColor = colors.accentCyan;
+                e.target.style.outline = `2px solid ${colors.accentCyan}40`;
               }}
               onBlur={(e) => {
                 e.target.style.borderColor = colors.border;
@@ -66,7 +74,7 @@ export default function ContactFieldsGrid({
       {/* Custom Fields */}
       {customFields.map((field) => (
         <div key={field.id} className="flex items-center gap-2 group">
-          {getFieldIcon(field.icon || 'default')}
+          {getFieldIcon(field.icon || 'default', colors.accentCyan)}
           <input 
             className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
             style={{
@@ -83,8 +91,8 @@ export default function ContactFieldsGrid({
             }}
             placeholder={field.name}
             onFocus={(e) => {
-              e.target.style.borderColor = colors.primaryBlue;
-              e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+              e.target.style.borderColor = colors.accentCyan;
+              e.target.style.outline = `2px solid ${colors.accentCyan}40`;
             }}
             onBlur={(e) => {
               e.target.style.borderColor = colors.border;
@@ -106,9 +114,9 @@ export default function ContactFieldsGrid({
             color: colors.secondaryText,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = colors.primaryBlue;
-            e.currentTarget.style.background = colors.badgeInfoBg;
-            e.currentTarget.style.color = colors.primaryBlue;
+            e.currentTarget.style.borderColor = colors.accentCyan;
+            e.currentTarget.style.background = `${colors.accentCyan}10`;
+            e.currentTarget.style.color = colors.accentCyan;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = colors.border;

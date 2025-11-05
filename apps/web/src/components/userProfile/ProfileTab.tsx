@@ -116,7 +116,7 @@ export default function ProfileTab({
               value={profileForm.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
 
@@ -129,7 +129,7 @@ export default function ProfileTab({
                 value={profileForm.email}
                 onChange={() => {}} // Read-only, cannot be changed
                 disabled={true}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">This is your login email and cannot be changed</p>
@@ -144,7 +144,7 @@ export default function ProfileTab({
                 value={(profileForm as any).personalEmail || ''}
                 onChange={(e) => handleInputChange('personalEmail' as any, e.target.value)}
                 disabled={!isEditing}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
                 placeholder="Enter your personal/contact email"
               />
             </div>
@@ -160,7 +160,7 @@ export default function ProfileTab({
                 value={profileForm.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 disabled={!isEditing}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
               />
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function ProfileTab({
                 value={profileForm.website || ''}
                 onChange={(e) => handleInputChange('website', e.target.value)}
                 disabled={!isEditing}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
               />
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function ProfileTab({
               value={profileForm.title || ''}
               onChange={(e) => handleInputChange('title', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function ProfileTab({
               value={profileForm.company || ''}
               onChange={(e) => handleInputChange('company', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
 
@@ -218,7 +218,7 @@ export default function ProfileTab({
                 value={profileForm.location || ''}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 disabled={!isEditing}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
               />
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function ProfileTab({
               value={profileForm.experience || ''}
               onChange={(e) => handleInputChange('experience', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
 
@@ -241,7 +241,7 @@ export default function ProfileTab({
               value={profileForm.education || ''}
               onChange={(e) => handleInputChange('education', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
             />
           </div>
         </div>
@@ -255,7 +255,7 @@ export default function ProfileTab({
           onChange={(e) => handleInputChange('professionalBio', e.target.value)}
           disabled={!isEditing}
           rows={4}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 resize-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100 resize-none"
           placeholder="Tell us about yourself..."
         />
       </div>
@@ -286,7 +286,7 @@ export default function ProfileTab({
             <input
               type="text"
               placeholder="Add a skill"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
                   handleSkillAdd(e.currentTarget.value);

@@ -8,23 +8,28 @@ interface MetricCardProps {
 
 export function MetricCard({ metric, colors }: MetricCardProps) {
   const Icon = metric.icon;
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
 
   return (
     <div
       className="group relative rounded-lg p-3 transition-all duration-200 hover:shadow-lg cursor-pointer"
       style={{
-        background: colors.cardBackground,
+        background: isDark ? '#000000' : colors.cardBackground,
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        border: `1px solid ${colors.border}`,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : `1px solid ${colors.border}`,
+        boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.5)' : '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = colors.borderFocused;
-        e.currentTarget.style.boxShadow = `0 4px 12px ${colors.borderFocused}15`;
+        e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : colors.borderFocused;
+        e.currentTarget.style.boxShadow = isDark ? '0 4px 12px rgba(0, 0, 0, 0.6)' : `0 4px 12px ${colors.borderFocused}15`;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = colors.border;
+        e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border;
         e.currentTarget.style.boxShadow = 'none';
       }}
     >

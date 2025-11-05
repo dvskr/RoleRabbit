@@ -476,7 +476,7 @@ export const MobileButton: React.FC<MobileButtonProps> = ({
       onClick={handleClick}
       className={`
         inline-flex items-center justify-center font-medium rounded-lg
-        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500
         disabled:opacity-50 disabled:cursor-not-allowed
         transition-colors duration-200
         ${variantClasses[variant]}

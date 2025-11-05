@@ -34,7 +34,13 @@ const getPriorityStyle = (priority: Todo['priority']) => {
 };
 
 export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
-  const isDark = colors.background.includes('0f0a1e') || colors.background.includes('rgb(15, 10, 30)');
+  const isDark = (
+    colors.background.includes('0f0a1e') ||
+    colors.background.includes('rgb(15, 10, 30)') ||
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
   const priorityStyle = getPriorityStyle(todo.priority);
 
   return (
@@ -42,19 +48,21 @@ export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
       className="flex items-start gap-3 py-3 px-4 rounded-xl transition-all group"
       style={{
         background: isDark 
-          ? 'rgba(255, 255, 255, 0.03)' 
+          ? colors.hoverBackground 
           : '#f9fafb',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+        border: `1px solid ${isDark ? colors.border : 'rgba(0, 0, 0, 0.06)'}`,
         boxShadow: isDark
           ? '0 1px 3px rgba(0, 0, 0, 0.2)'
           : '0 1px 2px rgba(0, 0, 0, 0.05)',
       }}
       onMouseEnter={(e) => {
+        e.currentTarget.style.background = isDark ? colors.hoverBackgroundStrong : '#f3f4f6';
         e.currentTarget.style.boxShadow = isDark
           ? '0 2px 6px rgba(0, 0, 0, 0.3)'
           : '0 2px 4px rgba(0, 0, 0, 0.08)';
       }}
       onMouseLeave={(e) => {
+        e.currentTarget.style.background = isDark ? colors.hoverBackground : '#f9fafb';
         e.currentTarget.style.boxShadow = isDark
           ? '0 1px 3px rgba(0, 0, 0, 0.2)'
           : '0 1px 2px rgba(0, 0, 0, 0.05)';
@@ -69,10 +77,10 @@ export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
           className="w-5 h-5 rounded cursor-pointer transition-all appearance-none border-2"
           style={{
             borderColor: todo.completed 
-              ? (isDark ? '#10b981' : '#22c55e')
-              : (isDark ? 'rgba(255, 255, 255, 0.3)' : '#d1d5db'),
+              ? (isDark ? colors.successGreen : '#22c55e')
+              : (isDark ? colors.border : '#d1d5db'),
             background: todo.completed 
-              ? (isDark ? '#10b981' : '#22c55e')
+              ? (isDark ? colors.successGreen : '#22c55e')
               : 'transparent',
           }}
           title={todo.completed ? "Mark as incomplete" : "Mark as complete"}
@@ -94,8 +102,8 @@ export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
           }`}
           style={{ 
             color: todo.completed 
-              ? (isDark ? 'rgba(255, 255, 255, 0.4)' : '#9ca3af')
-              : (isDark ? '#ffffff' : '#1f2937')
+              ? (isDark ? colors.tertiaryText : '#9ca3af')
+              : (isDark ? colors.primaryText : '#1f2937')
           }}
         >
           {todo.title}
@@ -105,11 +113,11 @@ export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
         <div className="flex items-center gap-1.5">
           <Clock 
             size={14} 
-            style={{ color: isDark ? 'rgba(255, 255, 255, 0.5)' : '#9ca3af' }}
+            style={{ color: isDark ? colors.tertiaryText : '#9ca3af' }}
           />
           <span 
             className="text-sm"
-            style={{ color: isDark ? 'rgba(255, 255, 255, 0.5)' : '#9ca3af' }}
+            style={{ color: isDark ? colors.tertiaryText : '#9ca3af' }}
           >
             {todo.time}
           </span>
@@ -134,13 +142,13 @@ export function TodoItem({ todo, onToggle, onDelete, colors }: TodoItemProps) {
         {/* Delete Button */}
         <button
           onClick={() => onDelete(todo.id)}
-          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all hover:bg-red-50 dark:hover:bg-red-900/20"
+          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all"
           style={{
-            color: '#ef4444',
+            color: colors.errorRed,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = isDark 
-              ? 'rgba(239, 68, 68, 0.2)' 
+              ? `rgba(239, 68, 68, 0.2)` 
               : '#fef2f2';
           }}
           onMouseLeave={(e) => {
