@@ -55,8 +55,8 @@ const NavigationItems = memo(({
               sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'
             } rounded-xl transition-all duration-300 ${
               activeTab === item.id
-                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 scale-102'
-                : 'text-gray-700 hover:bg-white/60 hover:shadow-md'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-black dark:to-black text-white shadow-lg shadow-blue-500/30 scale-102'
+                : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'
             }`}
             title={sidebarCollapsed ? item.label : ''}
           >
@@ -133,12 +133,12 @@ const Sidebar = memo<SidebarProps>(({ onTabChange, onShowNewResumeModal, onShowI
 
   // Memoized class names to prevent recalculation
   const sidebarClasses = useMemo(() => 
-    `${sidebarCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-blue-50/30 to-purple-50/30 backdrop-blur-xl border-r border-blue-200/30 shadow-xl flex flex-col mt-2`,
+    `${sidebarCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-blue-50/30 to-purple-50/30 dark:from-black/50 dark:to-black/70 backdrop-blur-xl border-r border-blue-200/30 dark:border-white/10 shadow-xl flex flex-col mt-2`,
     [sidebarCollapsed]
   );
 
   const headerClasses = useMemo(() =>
-    `${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-blue-200/20 bg-gradient-to-r from-blue-100/20 to-purple-100/20`,
+    `${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-blue-200/20 dark:border-white/10 bg-gradient-to-r from-blue-100/20 to-purple-100/20 dark:from-black/40 dark:to-black/40`,
     [sidebarCollapsed]
   );
 

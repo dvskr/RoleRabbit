@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Github, Chrome, Star, Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { Logo } from '@/components/common/Logo';
+import { RabbitLogo, RabbitLogoOld } from '@/components/ui/RabbitLogo';
 
 export default function MinimalAuthPage() {
   const router = useRouter();
@@ -142,28 +142,137 @@ export default function MinimalAuthPage() {
   const currentTestimonial = testimonials[activeContent];
 
   return (
-    <div className="h-screen bg-[#0A0E14] flex">
-      {/* Left Side - Minimal Content */}
-      <div className="hidden lg:flex lg:w-[45%] items-center justify-center relative bg-[#0F1419]">
-        <div className="max-w-md px-8 text-center">
+    <div className="h-screen bg-[#0a0a0a] flex relative overflow-hidden">
+      {/* Animated gradient mesh background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <motion.div
+          animate={{
+            x: [0, 100, 0],
+            y: [0, 50, 0],
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -top-1/2 -left-1/4 w-96 h-96 bg-teal-500/20 rounded-full blur-[120px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -100, 0],
+            y: [0, -50, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute top-1/3 -right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[120px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, 50, 0],
+            y: [0, 100, 0],
+            scale: [1, 1.15, 1],
+          }}
+          transition={{
+            duration: 30,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px]"
+        />
+
+        {/* Animated grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `linear-gradient(white 1px, transparent 1px),
+                             linear-gradient(90deg, white 1px, transparent 1px)`,
+            backgroundSize: "64px 64px",
+          }}
+        />
+      </div>
+
+      {/* Floating particles */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {Array.from({ length: 20 }).map((_, i) => {
+          const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
+          const height = typeof window !== 'undefined' ? window.innerHeight : 1080;
+          return (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-teal-400/30 rounded-full"
+              initial={{
+                x: Math.random() * width,
+                y: Math.random() * height,
+              }}
+              animate={{
+                x: Math.random() * width,
+                y: Math.random() * height,
+              }}
+              transition={{
+                duration: 20 + Math.random() * 20,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "linear",
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Left Side - Enhanced Content */}
+      <div className="hidden lg:flex lg:w-[45%] items-center justify-center relative">
+        <div className="max-w-md px-8 text-center relative z-10">
+          {/* Animated Rabbit Logo - Old Version */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.8, type: "spring", stiffness: 100 }}
+            className="mb-8 flex justify-center"
+          >
+            <motion.div
+              animate={{
+                y: [0, -15, 0],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <RabbitLogoOld size={120} animated={true} />
+            </motion.div>
+          </motion.div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={activeContent}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
             >
               <div className="flex justify-center gap-1 mb-6">
                 {[...Array(currentTestimonial.rating)].map((_, i) => (
-                  <Star key={i} size={16} className="fill-[#34B27B] text-[#34B27B]" />
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Star size={18} className="fill-teal-400 text-teal-400" />
+                  </motion.div>
                 ))}
               </div>
-              <p className="text-xl text-[#EDEDED] mb-6">
+              <p className="text-xl text-white mb-6 leading-relaxed">
                 "{currentTestimonial.quote}"
               </p>
-              <p className="text-[#34B27B] font-medium">{currentTestimonial.name}</p>
-              <p className="text-sm text-[#A0A0A0]">{currentTestimonial.role}</p>
+              <p className="text-teal-400 font-semibold text-lg">{currentTestimonial.name}</p>
+              <p className="text-sm text-gray-400 mt-1">{currentTestimonial.role}</p>
             </motion.div>
           </AnimatePresence>
           
@@ -172,8 +281,8 @@ export default function MinimalAuthPage() {
               <button
                 key={i}
                 onClick={() => setActiveContent(i)}
-                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  activeContent === i ? 'bg-[#34B27B] w-4' : 'bg-[#27272A]'
+                className={`h-1.5 rounded-full transition-all ${
+                  activeContent === i ? 'bg-teal-400 w-8' : 'bg-white/20 w-1.5'
                 }`}
               />
             ))}
@@ -181,64 +290,95 @@ export default function MinimalAuthPage() {
         </div>
       </div>
 
-      {/* Right Side - Minimal Form */}
-      <div className="w-full lg:w-[55%] flex items-center justify-center p-8 overflow-y-auto">
+      {/* Right Side - Enhanced Form */}
+      <div className="w-full lg:w-[55%] flex items-center justify-center p-8 overflow-y-auto relative z-10">
         <div className="w-full max-w-[400px]">
           {/* Logo */}
-          <div className="mb-12">
-            <Link href="/">
-              <Logo size={32} />
+          <motion.div
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            className="mb-6 flex justify-center"
+          >
+            <Link href="/landing" className="flex items-center gap-1 group">
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                transition={{ type: "spring", stiffness: 400 }}
+              >
+                <RabbitLogo size={64} />
+              </motion.div>
+              <span className="text-4xl font-bold">
+                <span className="text-white">Role</span>
+                <span className="text-emerald-500">Rabbit</span>
+              </span>
             </Link>
-          </div>
+          </motion.div>
 
           {/* Tab Toggle */}
-          <div className="flex gap-1 mb-8 bg-[#1A1F26] rounded-lg p-1">
+          <motion.div
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            className="flex gap-1 mb-6 bg-white/[0.03] border border-white/[0.08] rounded-full p-1 backdrop-blur-sm"
+          >
             <button
               onClick={() => setActiveTab('signin')}
-              className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
+              className={`flex-1 py-2.5 px-4 rounded-full font-medium text-sm transition-all ${
                 activeTab === 'signin'
-                  ? 'bg-[#34B27B] text-white'
-                  : 'text-[#A0A0A0] hover:text-white'
+                  ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30'
+                  : 'text-gray-400 hover:text-white'
               }`}
             >
               Sign In
             </button>
             <button
               onClick={() => setActiveTab('signup')}
-              className={`flex-1 py-2.5 px-4 rounded-md font-medium text-sm transition-all ${
+              className={`flex-1 py-2.5 px-4 rounded-full font-medium text-sm transition-all ${
                 activeTab === 'signup'
-                  ? 'bg-[#34B27B] text-white'
-                  : 'text-[#A0A0A0] hover:text-white'
+                  ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30'
+                  : 'text-gray-400 hover:text-white'
               }`}
             >
               Sign Up
             </button>
-          </div>
+          </motion.div>
 
           {/* Title - Removed for minimalist design */}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name (Sign Up only) */}
-            {activeTab === 'signup' && (
-              <div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Full name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className="w-full px-4 py-3 bg-[#1A1F26] border border-[#27272A] rounded-lg text-white placeholder-[#6B7280] focus:outline-none focus:border-[#34B27B] transition-colors text-sm"
-                    required
-                  />
-                </div>
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {activeTab === 'signup' && (
+                <motion.div
+                  key="name-field"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="name"
+                      placeholder="Full name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 bg-black/40 border border-white/[0.08] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/50 transition-colors text-sm backdrop-blur-sm"
+                      required
+                      autoComplete="name"
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Email */}
-            <div>
+            <motion.div
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              className="relative"
+            >
               <div className="relative">
                 <input
                   type="email"
@@ -247,21 +387,22 @@ export default function MinimalAuthPage() {
                   value={formData.email}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-3 bg-[#1A1F26] border rounded-lg text-white placeholder-[#6B7280] focus:outline-none transition-colors text-sm ${
+                  className={`w-full px-4 py-3 bg-black/40 border rounded-lg text-white placeholder-gray-500 focus:outline-none transition-colors text-sm backdrop-blur-sm ${
                     touched.email 
                       ? fieldErrors.email 
                         ? 'border-red-500/50 focus:border-red-500' 
-                        : 'border-[#34B27B]/50 focus:border-[#34B27B]'
-                      : 'border-[#27272A] focus:border-[#34B27B]'
+                        : 'border-teal-500/50 focus:border-teal-500'
+                      : 'border-white/[0.08] focus:border-teal-500/50'
                   }`}
                   required
+                  autoComplete="email"
                 />
                 {touched.email && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {fieldErrors.email ? (
                       <XCircle size={16} className="text-red-400" />
                     ) : (
-                      <CheckCircle2 size={16} className="text-[#34B27B]" />
+                      <CheckCircle2 size={16} className="text-teal-400" />
                     )}
                   </div>
                 )}
@@ -269,10 +410,14 @@ export default function MinimalAuthPage() {
               {fieldErrors.email && (
                 <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>
               )}
-            </div>
+            </motion.div>
 
             {/* Password */}
-            <div>
+            <motion.div
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              className="relative"
+            >
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -281,23 +426,25 @@ export default function MinimalAuthPage() {
                   value={formData.password}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-3 pr-12 bg-[#1A1F26] border rounded-lg text-white placeholder-[#6B7280] focus:outline-none transition-colors text-sm ${
+                  className={`w-full px-4 py-3 pr-12 bg-black/40 border rounded-lg text-white placeholder-gray-500 focus:outline-none transition-colors text-sm backdrop-blur-sm ${
                     touched.password 
                       ? fieldErrors.password 
                         ? 'border-red-500/50 focus:border-red-500' 
-                        : 'border-[#34B27B]/50 focus:border-[#34B27B]'
-                      : 'border-[#27272A] focus:border-[#34B27B]'
+                        : 'border-teal-500/50 focus:border-teal-500'
+                      : 'border-white/[0.08] focus:border-teal-500/50'
                   }`}
                   required
+                  autoComplete={activeTab === 'signin' ? 'current-password' : 'new-password'}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {touched.password && !fieldErrors.password && (
-                    <CheckCircle2 size={16} className="text-[#34B27B]" />
+                    <CheckCircle2 size={16} className="text-teal-400" />
                   )}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-[#6B7280] hover:text-white"
+                    className="text-gray-500 hover:text-white transition-colors"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -306,52 +453,75 @@ export default function MinimalAuthPage() {
               {fieldErrors.password && (
                 <p className="mt-1 text-xs text-red-400">{fieldErrors.password}</p>
               )}
-            </div>
+            </motion.div>
 
             {/* Confirm Password (Sign Up only) */}
-            {activeTab === 'signup' && (
-              <div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    placeholder="Confirm password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-3 pr-10 bg-[#1A1F26] border rounded-lg text-white placeholder-[#6B7280] focus:outline-none transition-colors text-sm ${
-                      touched.confirmPassword 
-                        ? fieldErrors.confirmPassword 
-                          ? 'border-red-500/50 focus:border-red-500' 
-                          : 'border-[#34B27B]/50 focus:border-[#34B27B]'
-                        : 'border-[#27272A] focus:border-[#34B27B]'
-                    }`}
-                    required
-                  />
-                  {touched.confirmPassword && !fieldErrors.confirmPassword && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <CheckCircle2 size={16} className="text-[#34B27B]" />
-                    </div>
+            <AnimatePresence mode="wait">
+              {activeTab === 'signup' && (
+                <motion.div
+                  key="confirm-password-field"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="confirmPassword"
+                      placeholder="Confirm password"
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-3 pr-10 bg-black/40 border rounded-lg text-white placeholder-gray-500 focus:outline-none transition-colors text-sm backdrop-blur-sm ${
+                        touched.confirmPassword 
+                          ? fieldErrors.confirmPassword 
+                            ? 'border-red-500/50 focus:border-red-500' 
+                            : 'border-teal-500/50 focus:border-teal-500'
+                          : 'border-white/[0.08] focus:border-teal-500/50'
+                      }`}
+                      required
+                      autoComplete="new-password"
+                    />
+                    {touched.confirmPassword && !fieldErrors.confirmPassword && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <CheckCircle2 size={16} className="text-teal-400" />
+                      </div>
+                    )}
+                  </div>
+                  {fieldErrors.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-400">{fieldErrors.confirmPassword}</p>
                   )}
-                </div>
-                {fieldErrors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-400">{fieldErrors.confirmPassword}</p>
-                )}
-              </div>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Remember / Forgot (Sign In only) */}
-            {activeTab === 'signin' && (
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-[#374151] bg-[#1A1F26] text-[#34B27B]" />
-                  <span className="text-[#A0A0A0]">Remember me</span>
-                </label>
-                <Link href="#" className="text-[#34B27B] hover:text-[#3ECF8E]">
-                  Forgot?
-                </Link>
-              </div>
-            )}
+            <AnimatePresence mode="wait">
+              {activeTab === 'signin' && (
+                <motion.div
+                  key="remember-forgot"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center justify-between text-sm overflow-hidden"
+                >
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded border-white/20 bg-black/40 text-teal-500 focus:ring-teal-500" 
+                      autoComplete="off"
+                    />
+                    <span className="text-gray-400">Remember me</span>
+                  </label>
+                  <Link href="#" className="text-teal-400 hover:text-teal-300 transition-colors">
+                    Forgot?
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Error */}
             <AnimatePresence>
@@ -368,45 +538,65 @@ export default function MinimalAuthPage() {
             </AnimatePresence>
 
             {/* Submit */}
-            <button
+            <motion.button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-[#34B27B] text-white font-medium rounded-lg hover:bg-[#3ECF8E] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              whileHover={{ scale: isLoading ? 1 : 1.02 }}
+              whileTap={{ scale: isLoading ? 1 : 0.98 }}
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              className="w-full py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-medium rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm shadow-lg shadow-teal-500/25"
             >
               {isLoading && <Loader2 size={16} className="animate-spin" />}
               {isLoading ? 'Loading...' : (activeTab === 'signin' ? 'Sign In' : 'Create Account')}
-            </button>
+            </motion.button>
           </form>
 
           {/* Social Login */}
-          <div className="mt-6">
+          <motion.div
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            className="mt-6"
+          >
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#27272A]"></div>
+                <div className="w-full border-t border-white/[0.08]"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-2 bg-[#0A0E14] text-[#6B7280]">Or continue with</span>
+                <span className="px-2 bg-[#0a0a0a] text-gray-500">Or continue with</span>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <button className="flex items-center justify-center gap-2 py-2.5 bg-[#1A1F26] border border-[#27272A] rounded-lg hover:bg-[#27272A] transition-colors">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center justify-center gap-2 py-2.5 bg-black/40 border border-white/[0.08] rounded-lg hover:bg-black/60 transition-colors backdrop-blur-sm"
+              >
                 <Chrome size={18} className="text-white" />
                 <span className="text-sm text-white font-medium">Google</span>
-              </button>
-              <button className="flex items-center justify-center gap-2 py-2.5 bg-[#1A1F26] border border-[#27272A] rounded-lg hover:bg-[#27272A] transition-colors">
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center justify-center gap-2 py-2.5 bg-black/40 border border-white/[0.08] rounded-lg hover:bg-black/60 transition-colors backdrop-blur-sm"
+              >
                 <Github size={18} className="text-white" />
                 <span className="text-sm text-white font-medium">GitHub</span>
-              </button>
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
 
           {/* Terms (Sign Up) */}
           {activeTab === 'signup' && (
-            <p className="mt-6 text-center text-xs text-[#6B7280]">
+            <motion.p
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 1 }}
+              className="mt-6 text-center text-xs text-gray-500"
+            >
               By creating an account, you agree to our{' '}
-              <Link href="/terms" className="text-[#34B27B] hover:text-[#3ECF8E]">Terms</Link> and{' '}
-              <Link href="/privacy" className="text-[#34B27B] hover:text-[#3ECF8E]">Privacy</Link>
-            </p>
+              <Link href="/terms" className="text-teal-400 hover:text-teal-300 transition-colors">Terms</Link> and{' '}
+              <Link href="/privacy" className="text-teal-400 hover:text-teal-300 transition-colors">Privacy</Link>
+            </motion.p>
           )}
         </div>
       </div>

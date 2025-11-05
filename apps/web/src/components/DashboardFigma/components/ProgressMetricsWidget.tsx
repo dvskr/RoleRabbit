@@ -11,14 +11,19 @@ export function ProgressMetricsWidget({ metrics }: ProgressMetricsWidgetProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const isLightTheme = theme.mode === 'light';
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
   
   // Theme-aware background and border
   const widgetBackground = isLightTheme 
     ? colors.cardBackground 
-    : 'rgba(255, 255, 255, 0.05)';
+    : (isDark ? '#000000' : 'rgba(255, 255, 255, 0.05)');
   const widgetBorder = isLightTheme
     ? `1px solid ${colors.border}`
-    : '1px solid rgba(255, 255, 255, 0.1)';
+    : (isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 255, 255, 0.1)');
   const headingColor = isLightTheme ? colors.primaryText : '#ffffff';
   
   return (
@@ -31,7 +36,7 @@ export function ProgressMetricsWidget({ metrics }: ProgressMetricsWidgetProps) {
         border: widgetBorder,
         boxShadow: isLightTheme 
           ? '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)'
-          : '0 2px 8px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3)',
+          : (isDark ? '0 2px 8px rgba(0, 0, 0, 0.5)' : '0 2px 8px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3)'),
       }}
     >
       <h2 className="text-base font-semibold mb-3" style={{ color: headingColor }}>Progress</h2>

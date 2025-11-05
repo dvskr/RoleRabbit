@@ -11,11 +11,16 @@ export function ProgressMetricItem({ metric, isLast = false }: ProgressMetricIte
   const { theme } = useTheme();
   const colors = theme.colors;
   const isLightTheme = theme.mode === 'light';
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
   
   // Use theme-aware colors
   const labelColor = isLightTheme ? colors.secondaryText : '#94a3b8'; // slate-400 equivalent
   const valueColor = isLightTheme ? colors.primaryText : '#ffffff';
-  const progressBgColor = isLightTheme ? colors.inputBackground : '#1e293b'; // slate-800 equivalent
+  const progressBgColor = isLightTheme ? colors.inputBackground : (isDark ? '#111111' : '#1e293b'); // slate-800 equivalent or black
   
   return (
     <div className="w-full">

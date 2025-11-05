@@ -359,7 +359,7 @@ export const MobileInput: React.FC<MobileInputProps> = ({
         <input
           className={`
             w-full px-4 py-3 text-base border border-gray-300 rounded-lg
-            focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+            focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500
             disabled:bg-gray-100 disabled:cursor-not-allowed
             transition-colors duration-200
             ${icon ? 'pl-10' : ''}

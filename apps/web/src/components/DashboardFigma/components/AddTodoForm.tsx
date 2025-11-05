@@ -28,11 +28,17 @@ export function AddTodoForm({
 }: AddTodoFormProps) {
   if (!isOpen) return null;
 
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
+
   return (
     <div 
       className="mb-1.5 p-1.5 rounded-lg border"
       style={{
-        background: colors.inputBackground,
+        background: isDark ? colors.inputBackground : colors.inputBackground,
         border: `1px solid ${colors.border}`,
       }}
     >
@@ -43,15 +49,17 @@ export function AddTodoForm({
         onChange={(e) => onTitleChange(e.target.value)}
         className="w-full mb-1 px-1.5 py-1 rounded text-xs focus:outline-none transition-colors"
         style={{
-          background: colors.cardBackground,
+          background: isDark ? colors.cardBackground : colors.cardBackground,
           border: `1px solid ${colors.border}`,
           color: colors.primaryText,
         }}
         onFocus={(e) => {
-          e.currentTarget.style.borderColor = colors.borderFocused;
+          e.currentTarget.style.borderColor = colors.accentCyan;
+          e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.accentCyan}40`;
         }}
         onBlur={(e) => {
           e.currentTarget.style.borderColor = colors.border;
+          e.currentTarget.style.boxShadow = 'none';
         }}
       />
       <div className="flex items-center gap-1">
@@ -60,15 +68,17 @@ export function AddTodoForm({
           onChange={(e) => onPriorityChange(e.target.value as Priority)}
           className="flex-1 px-1.5 py-1 rounded text-xs focus:outline-none transition-colors"
           style={{
-            background: colors.cardBackground,
+            background: isDark ? colors.cardBackground : colors.cardBackground,
             border: `1px solid ${colors.border}`,
             color: colors.primaryText,
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = colors.borderFocused;
+            e.currentTarget.style.borderColor = colors.accentCyan;
+            e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.accentCyan}40`;
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = colors.border;
+            e.currentTarget.style.boxShadow = 'none';
           }}
           title="Priority"
         >
@@ -80,14 +90,22 @@ export function AddTodoForm({
           onClick={onSubmit}
           className="px-2 py-1 text-xs font-medium rounded transition-all"
           style={{
-            background: colors.badgePurpleText,
-            color: 'white',
+            background: isDark
+              ? `linear-gradient(135deg, ${colors.accentTeal} 0%, ${colors.accentCyan} 100%)`
+              : colors.badgePurpleText,
+            color: '#ffffff',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '0.9';
+            if (isDark) {
+              e.currentTarget.style.opacity = '0.9';
+              e.currentTarget.style.boxShadow = `0 2px 8px ${colors.accentCyan}40`;
+            } else {
+              e.currentTarget.style.opacity = '0.92';
+            }
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.boxShadow = 'none';
           }}
         >
           Add
@@ -96,7 +114,7 @@ export function AddTodoForm({
           onClick={onCancel}
           className="px-2 py-1 text-xs font-medium rounded transition-all"
           style={{
-            background: colors.inputBackground,
+            background: isDark ? colors.inputBackground : colors.inputBackground,
             color: colors.secondaryText,
             border: `1px solid ${colors.border}`,
           }}
@@ -107,7 +125,7 @@ export function AddTodoForm({
             e.currentTarget.style.background = colors.inputBackground;
           }}
         >
-          ×
+          A-
         </button>
       </div>
     </div>

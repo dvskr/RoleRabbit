@@ -33,6 +33,11 @@ const getIconColor = (actionId: string): string => {
 export function QuickActionButton({ action, colors }: QuickActionButtonProps) {
   const Icon = action.icon;
   const iconColor = getIconColor(action.id);
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -40,17 +45,17 @@ export function QuickActionButton({ action, colors }: QuickActionButtonProps) {
         onClick={action.action}
         className="aspect-square w-full flex items-center justify-center rounded-lg sm:rounded-xl transition-all duration-200 hover:scale-110"
         style={{
-          background: colors.inputBackground,
-          border: `1px solid ${colors.border}`,
+          background: isDark ? '#111111' : colors.inputBackground,
+          border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : `1px solid ${colors.border}`,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = colors.hoverBackground;
+          e.currentTarget.style.background = isDark ? '#1a1a1a' : colors.hoverBackground;
           e.currentTarget.style.borderColor = iconColor;
           e.currentTarget.style.transform = 'scale(1.1)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = colors.inputBackground;
-          e.currentTarget.style.borderColor = colors.border;
+          e.currentTarget.style.background = isDark ? '#111111' : colors.inputBackground;
+          e.currentTarget.style.borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : colors.border;
           e.currentTarget.style.transform = 'scale(1)';
         }}
         title={action.label}

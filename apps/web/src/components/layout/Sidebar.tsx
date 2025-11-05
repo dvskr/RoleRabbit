@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot } from 'lucide-react';
+import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot } from 'lucide-react';
+import { RabbitLogo, RabbitLogoWithText } from '@/components/ui/RabbitLogo';
 
 interface SidebarProps {
   activeTab: string;
@@ -15,16 +16,13 @@ export default function Sidebar({
   onTabChange
 }: SidebarProps) {
   return (
-    <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-blue-50/30 to-purple-50/30 border-r border-blue-200/30 shadow-xl flex flex-col`}>
-      <div className={`${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-blue-200/20 bg-gradient-to-r from-blue-100/20 to-purple-100/20`}>
+    <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-blue-50/30 to-purple-50/30 dark:from-slate-800/60 dark:to-slate-900/60 border-r border-blue-200/30 dark:border-slate-700/40 shadow-xl flex flex-col`}>
+      <div className={`${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-blue-200/20 dark:border-slate-700/40 bg-gradient-to-r from-blue-100/20 to-purple-100/20 dark:from-slate-900/40 dark:to-slate-800/40`}>
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
-            <Sparkles size={20} className="text-white" />
-          </div>
-          {!sidebarCollapsed && (
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">RoleReady</h1>
-            </div>
+          {sidebarCollapsed ? (
+            <RabbitLogo size={40} />
+          ) : (
+            <RabbitLogoWithText size={40} textSize="md" />
           )}
         </div>
       </div>
@@ -32,7 +30,7 @@ export default function Sidebar({
       <nav className={`flex-1 ${sidebarCollapsed ? 'p-2' : 'p-3'} space-y-1 overflow-y-auto`}>
         <button 
           onClick={() => onTabChange('dashboard')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'dashboard' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Dashboard' : ''}
         >
           <HomeIcon size={20} />
@@ -40,7 +38,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('profile')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'profile' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'profile' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Profile' : ''}
         >
           <User size={20} />
@@ -48,7 +46,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('storage')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'storage' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'storage' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Cloud Storage' : ''}
         >
           <Cloud size={20} />
@@ -56,7 +54,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('editor')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'editor' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'editor' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Resume Editor' : ''}
         >
           <Edit size={20} />
@@ -64,7 +62,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('templates')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'templates' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'templates' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Templates' : ''}
         >
           <Layout size={20} />
@@ -72,7 +70,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('tracker')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'tracker' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'tracker' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Job Tracker' : ''}
         >
           <Briefcase size={20} />
@@ -80,7 +78,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('discussion')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'discussion' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'discussion' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Discussion' : ''}
         >
           <MessageSquare size={20} />
@@ -88,7 +86,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('email')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'email' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'email' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Email' : ''}
         >
           <Mail size={20} />
@@ -96,7 +94,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('cover-letter')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'cover-letter' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'cover-letter' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Cover Letter' : ''}
         >
           <FileText size={20} />
@@ -104,7 +102,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('portfolio')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'portfolio' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'portfolio' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'Portfolio' : ''}
         >
           <Globe size={20} />
@@ -112,7 +110,7 @@ export default function Sidebar({
         </button>
         <button 
           onClick={() => onTabChange('agents')} 
-          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'agents' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md'}`}
+          className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-4 py-3.5'} rounded-xl ${activeTab === 'agents' ? 'bg-gradient-to-r from-blue-500 to-blue-600 dark:from-slate-600 dark:to-slate-700 text-white shadow-lg shadow-blue-500/30 ' : 'text-gray-700 hover:bg-white/60 hover:shadow-md dark:text-gray-200 dark:hover:bg-white/10'}`}
           title={sidebarCollapsed ? 'AI Agents' : ''}
         >
           <Bot size={20} />

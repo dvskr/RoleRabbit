@@ -192,8 +192,8 @@ export default function FormField({
             }}
             onFocus={(e) => {
               if (!disabled) {
-                e.currentTarget.style.borderColor = colors.borderFocused;
-                e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.badgeInfoBg}`;
+                e.currentTarget.style.borderColor = colors.accentCyan;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.accentCyan}40`;
               }
             }}
             onBlur={(e) => {
@@ -239,8 +239,8 @@ export default function FormField({
             }}
             onFocus={(e) => {
               if (!disabled) {
-                e.currentTarget.style.borderColor = colors.borderFocused;
-                e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.badgeInfoBg}`;
+                e.currentTarget.style.borderColor = colors.accentCyan;
+                e.currentTarget.style.boxShadow = `0 0 0 2px ${colors.accentCyan}40`;
               }
             }}
             onBlur={(e) => {

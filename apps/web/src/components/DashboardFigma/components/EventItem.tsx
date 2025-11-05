@@ -8,19 +8,24 @@ interface EventItemProps {
 
 export function EventItem({ event, colors }: EventItemProps) {
   const Icon = event.icon;
+  const isDark = (
+    colors.background.includes('#000000') ||
+    colors.background === '#000' ||
+    colors.background.toLowerCase().includes('black')
+  );
 
   return (
     <div
       className="p-2.5 rounded-lg border transition-all"
       style={{
-        border: `1px solid ${event.urgent ? colors.badgeWarningBorder : colors.border}`,
-        background: event.urgent ? colors.badgeWarningBg : colors.inputBackground,
+        border: isDark ? `1px solid ${event.urgent ? colors.badgeWarningBorder : 'rgba(255, 255, 255, 0.1)'}` : `1px solid ${event.urgent ? colors.badgeWarningBorder : colors.border}`,
+        background: isDark ? (event.urgent ? colors.badgeWarningBg : '#111111') : (event.urgent ? colors.badgeWarningBg : colors.inputBackground),
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = colors.hoverBackground;
+        e.currentTarget.style.background = isDark ? '#1a1a1a' : colors.hoverBackground;
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = event.urgent ? colors.badgeWarningBg : colors.inputBackground;
+        e.currentTarget.style.background = isDark ? (event.urgent ? colors.badgeWarningBg : '#111111') : (event.urgent ? colors.badgeWarningBg : colors.inputBackground);
       }}
     >
       <div className="flex items-start gap-2.5">

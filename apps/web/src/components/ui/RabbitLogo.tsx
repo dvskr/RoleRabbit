@@ -6,13 +6,215 @@ interface RabbitLogoProps {
   size?: number;
   animated?: boolean;
   className?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
 /**
- * RoleRabbit Logo Component - Detailed Portrait Style with Green
- * Exact recreation of the HTML portrait logo
+ * NEW RoleRabbit Logo Component - Enhanced with better animations
  */
 export function RabbitLogo({ 
+  size = 48, 
+  className = '', 
+  primaryColor = '#0d9488',
+  secondaryColor = '#14b8a6'
+}: RabbitLogoProps) {
+  const logoId = `rabbit-logo-${Math.random().toString(36).substr(2, 9)}`;
+  
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 180 180" 
+      className={`${className} rabbit-logo-animated`}
+      style={{ overflow: 'visible' }}
+    >
+      <defs>
+        <radialGradient id={`headGrad-${logoId}`} cx="50%" cy="40%">
+          <stop offset="0%" style={{ stopColor: secondaryColor, stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: primaryColor, stopOpacity: 1 }} />
+        </radialGradient>
+        
+        {/* Shadow filter for depth */}
+        <filter id={`shadow-${logoId}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+          <feOffset dx="0" dy="2" result="offsetblur"/>
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.3"/>
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        
+        {/* Glow filter */}
+        <filter id={`glow-${logoId}`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <g transform="translate(90,100)">
+        {/* Neck/shoulders hint */}
+        <ellipse cx="0" cy="40" rx="35" ry="20" fill={primaryColor} opacity="0.7" style={{ filter: 'brightness(0.8)' }} />
+        
+        {/* Main head shape */}
+        <ellipse cx="0" cy="0" rx="45" ry="40" fill={`url(#headGrad-${logoId})`} filter={`url(#shadow-${logoId})`} />
+        <ellipse cx="0" cy="0" rx="45" ry="40" fill="none" stroke={secondaryColor} strokeWidth="1" opacity="0.3" />
+        
+        {/* Cheek fluff */}
+        <ellipse cx="-30" cy="5" rx="18" ry="15" fill={secondaryColor} opacity="0.8" style={{ filter: 'brightness(1.2)' }} />
+        <ellipse cx="30" cy="5" rx="18" ry="15" fill={secondaryColor} opacity="0.8" style={{ filter: 'brightness(1.2)' }} />
+        
+        {/* Forehead */}
+        <ellipse cx="0" cy="-20" rx="35" ry="25" fill={primaryColor} opacity="0.7" style={{ filter: 'brightness(1.2)' }} />
+        
+        {/* Ears - detailed */}
+        <path 
+          d="M -15 -35 C -18 -60, -16 -75, -12 -75 C -8 -75, -6 -60, -8 -35" 
+          fill={secondaryColor}
+          style={{ filter: 'brightness(1.2) drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+          stroke={primaryColor}
+          strokeWidth="0.5"
+          className="ear-twitch-left"
+        />
+        <path 
+          d="M 15 -35 C 18 -60, 16 -75, 12 -75 C 8 -75, 6 -60, 8 -35" 
+          fill={secondaryColor}
+          style={{ filter: 'brightness(1.2) drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+          stroke={primaryColor}
+          strokeWidth="0.5"
+          className="ear-twitch-right"
+        />
+        
+        {/* Inner ear details */}
+        <path 
+          d="M -12 -40 C -14 -55, -13 -65, -12 -65 C -11 -65, -10 -55, -11 -40" 
+          fill="#f9a8d4" 
+          opacity="0.8" 
+        />
+        <path 
+          d="M 12 -40 C 14 -55, 13 -65, 12 -65 C 11 -65, 10 -55, 11 -40" 
+          fill="#f9a8d4" 
+          opacity="0.8" 
+        />
+        
+        {/* Eyes - very detailed */}
+        <ellipse cx="-15" cy="-5" rx="10" ry="12" fill="#ffffff" stroke="#0f172a" strokeWidth="0.5" />
+        <ellipse cx="15" cy="-5" rx="10" ry="12" fill="#ffffff" stroke="#0f172a" strokeWidth="0.5" />
+        
+        {/* Iris */}
+        <circle cx="-15" cy="-4" r="8" fill="#1e293b" stroke="#0f172a" strokeWidth="0.5" />
+        <circle cx="15" cy="-4" r="8" fill="#1e293b" stroke="#0f172a" strokeWidth="0.5" />
+        
+        {/* Pupils */}
+        <circle 
+          cx="-15" 
+          cy="-4" 
+          r="4" 
+          fill="#000000"
+          className="eye-blink"
+        />
+        <circle 
+          cx="15" 
+          cy="-4" 
+          r="4" 
+          fill="#000000"
+          className="eye-blink"
+        />
+        
+        {/* Eye highlights */}
+        <ellipse cx="-13" cy="-6" rx="3" ry="4" fill="white" opacity="1" />
+        <ellipse cx="17" cy="-6" rx="3" ry="4" fill="white" opacity="1" />
+        <circle cx="-16" cy="-2" r="1.5" fill="white" opacity="0.9" />
+        <circle cx="14" cy="-2" r="1.5" fill="white" opacity="0.9" />
+        
+        {/* Nose - detailed */}
+        <path 
+          d="M 0 8 L -3 5 L -2 3 L 0 4 L 2 3 L 3 5 Z" 
+          fill="#ec4899" 
+          stroke="#be185d"
+          strokeWidth="0.5"
+          opacity="0.95"
+          className="nose-wiggle"
+        />
+        
+        {/* Nose highlight */}
+        <ellipse cx="0" cy="5" rx="1.5" ry="1" fill="white" opacity="0.7" />
+        
+        {/* Mouth/muzzle area */}
+        <path d="M 0 8 Q -5 10, -8 8" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.6" />
+        <path d="M 0 8 Q 5 10, 8 8" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.6" />
+        
+        {/* Detailed whiskers */}
+        <path d="M -25 0 C -35 -2, -45 -3, -55 -5" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.75" />
+        <path d="M -25 5 C -35 5, -45 5, -55 5" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.75" />
+        <path d="M -25 10 C -35 12, -45 13, -55 15" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.75" />
+        <path d="M 25 0 C 35 -2, 45 -3, 55 -5" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.75" />
+        <path d="M 25 5 C 35 5, 45 5, 55 5" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.75" />
+        <path d="M 25 10 C 35 12, 45 13, 55 15" stroke="#1e293b" strokeWidth="1.5" fill="none" opacity="0.75" />
+      </g>
+
+      <style>
+        {`
+          /* Override global animation disable for rabbit logo */
+          .rabbit-logo-animated * {
+            animation-duration: initial !important;
+            animation-delay: initial !important;
+            transition-duration: initial !important;
+            transition-delay: initial !important;
+          }
+          
+          @keyframes earTwitch {
+            0%, 100% { transform: rotate(0deg); }
+            10% { transform: rotate(-5deg); }
+            20% { transform: rotate(5deg); }
+            30% { transform: rotate(0deg); }
+          }
+          
+          @keyframes noseWiggle {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-1px); }
+            75% { transform: translateX(1px); }
+          }
+          
+          @keyframes blink {
+            0%, 90%, 100% { opacity: 1; }
+            95% { opacity: 0; }
+          }
+          
+          .ear-twitch-left {
+            animation: earTwitch 4s ease-in-out infinite !important;
+            transform-origin: bottom center;
+          }
+          
+          .ear-twitch-right {
+            animation: earTwitch 4s ease-in-out infinite !important;
+            animation-delay: 0.4s !important;
+            transform-origin: bottom center;
+          }
+          
+          .nose-wiggle {
+            animation: noseWiggle 2s ease-in-out infinite !important;
+          }
+          
+          .eye-blink {
+            animation: blink 5s infinite !important;
+          }
+        `}
+      </style>
+    </svg>
+  );
+}
+
+/**
+ * OLD RoleRabbit Logo Component - Detailed Portrait Style with Green (Preserved)
+ */
+export function RabbitLogoOld({ 
   size = 120, 
   animated = true,
   className = ''
@@ -123,7 +325,7 @@ export function RabbitLogo({
           {/* Nose */}
           <g className={animated ? 'rabbit-nose' : ''}>
             <path d="M 150 175 L 145 170 L 147 167 L 150 169 L 153 167 L 155 170 Z" 
-                  fill="#ec4899" opacity="0.8" />
+                  fill="#3b82f6" opacity="0.8" />
             <ellipse cx="150" cy="170" rx="2" ry="1" fill="white" opacity="0.5" />
           </g>
           
@@ -155,17 +357,18 @@ export function RabbitLogo({
 /**
  * Rabbit Logo with Text - "RoleRabbit"
  */
-interface RabbitLogoWithTextProps extends RabbitLogoProps {
+interface RabbitLogoWithTextProps extends Omit<RabbitLogoProps, 'animated'> {
   showText?: boolean;
   textSize?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export function RabbitLogoWithText({ 
   size = 80,
-  animated = true,
   showText = true,
   textSize = 'lg',
-  className = ''
+  className = '',
+  primaryColor,
+  secondaryColor
 }: RabbitLogoWithTextProps) {
   const textSizeClasses = {
     sm: 'text-2xl',
@@ -185,7 +388,9 @@ export function RabbitLogoWithText({
     <div className={`flex items-center gap-1 -ml-2 ${className}`}>
       <RabbitLogo 
         size={size} 
-        animated={animated}
+        className={className}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
       />
       {showText && (
         <div className="-ml-2">
@@ -205,10 +410,10 @@ export function RabbitLogoWithText({
 /**
  * Loading state rabbit (with breathe animation)
  */
-export function RabbitLoading({ size = 80, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
+export function RabbitLoading({ size = 80, className = '', primaryColor, secondaryColor }: Omit<RabbitLogoProps, 'animated'>) {
   return (
     <div className={`rabbit-loading ${className}`}>
-      <RabbitLogo size={size} animated={true} />
+      <RabbitLogo size={size} className={className} primaryColor={primaryColor} secondaryColor={secondaryColor} />
     </div>
   );
 }
@@ -216,10 +421,10 @@ export function RabbitLoading({ size = 80, className = '' }: Omit<RabbitLogoProp
 /**
  * Success state rabbit (with checkmark)
  */
-export function RabbitSuccess({ size = 80, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
+export function RabbitSuccess({ size = 80, className = '', primaryColor, secondaryColor }: Omit<RabbitLogoProps, 'animated'>) {
   return (
     <div className={`relative ${className}`}>
-      <RabbitLogo size={size} animated={true} />
+      <RabbitLogo size={size} className={className} primaryColor={primaryColor} secondaryColor={secondaryColor} />
       <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <path d="M4 9 L8 13 L14 4" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -232,10 +437,10 @@ export function RabbitSuccess({ size = 80, className = '' }: Omit<RabbitLogoProp
 /**
  * Error state rabbit (with X mark)
  */
-export function RabbitError({ size = 80, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
+export function RabbitError({ size = 80, className = '', primaryColor, secondaryColor }: Omit<RabbitLogoProps, 'animated'>) {
   return (
     <div className={`relative ${className}`}>
-      <RabbitLogo size={size} animated={true} />
+      <RabbitLogo size={size} className={className} primaryColor={primaryColor} secondaryColor={secondaryColor} />
       <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <path d="M5 5 L13 13 M13 5 L5 13" stroke="white" strokeWidth="3" strokeLinecap="round" />
