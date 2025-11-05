@@ -166,7 +166,7 @@ const Header = memo<HeaderProps>(({
           <Menu size={20} className="text-gray-600" />
         </button>
 
-        <RabbitLogoWithText size={32} animated={true} textSize="md" />
+                <RabbitLogoWithText size={80} animated={true} textSize="lg" />
       </div>
 
       {/* Center Section - Search */}

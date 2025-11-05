@@ -91,26 +91,26 @@ export default function SidebarNew({
       <div 
         className="px-4 py-4"
       >
-        {sidebarCollapsed ? (
-          <div className="w-full flex justify-center">
-            <RabbitLogo size={32} animated={true} />
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 w-full">
-            <RabbitLogo size={28} animated={true} />
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="text-lg font-bold leading-tight roleready-gradient">
-                  RoleRabbit
-                </span>
-                <span 
-                  className="text-xs leading-tight mt-0.5"
-                  style={{ color: colors.secondaryText }}
-                >
-                  Your Career Hub
-                </span>
+            {sidebarCollapsed ? (
+              <div className="w-full flex justify-center">
+                <RabbitLogo size={100} animated={true} />
               </div>
-            </div>
-        )}
+            ) : (
+              <div className="flex items-center gap-1 w-full -ml-2">
+                <RabbitLogo size={80} animated={true} />
+                  <div className="flex flex-col flex-1 min-w-0 -ml-2">
+                    <span className="text-xl font-bold leading-tight">
+                      <span className="text-gray-800 dark:text-white">Role</span><span className="text-green-400">Rabbit</span>
+                    </span>
+                    <span 
+                      className="text-sm leading-tight mt-0.5"
+                      style={{ color: colors.secondaryText }}
+                    >
+                      Your Career Companion
+                    </span>
+                  </div>
+                </div>
+            )}
       </div>
       
       {/* Navigation */}

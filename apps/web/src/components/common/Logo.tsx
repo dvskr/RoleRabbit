@@ -227,7 +227,7 @@ export function Logo({ className = '', size = 32, variant = 'full' }: LogoProps)
           RoleReady
           {variant === 'full' && (
             <span className="block text-xs font-normal text-slate-400 mt-0.5" style={{ fontSize: `${sizeNumber * 0.3}px` }}>
-              Your Career Hub
+              Your Career Companion
             </span>
           )}
         </span>

@@ -95,7 +95,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
           </MobileButton>
 
           {/* App Title */}
-          <RabbitLogoWithText size={28} animated={true} textSize="sm" />
+                <RabbitLogoWithText size={60} animated={true} textSize="md" />
 
           {/* Fullscreen Button */}
           <MobileButton

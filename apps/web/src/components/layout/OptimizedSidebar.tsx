@@ -165,11 +165,11 @@ const Sidebar = memo<SidebarProps>(({ onTabChange, onShowNewResumeModal, onShowI
       {/* Header */}
       <div className={headerClasses}>
         <div className="flex items-center gap-3 mb-1">
-          {sidebarCollapsed ? (
-            <RabbitLogo size={40} animated={true} />
-          ) : (
-            <RabbitLogoWithText size={40} animated={true} textSize="lg" />
-          )}
+            {sidebarCollapsed ? (
+              <RabbitLogo size={100} animated={true} />
+            ) : (
+              <RabbitLogoWithText size={100} animated={true} textSize="xl" />
+            )}
         </div>
       </div>
       

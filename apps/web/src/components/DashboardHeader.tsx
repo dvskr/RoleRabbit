@@ -22,10 +22,12 @@ export default function DashboardHeader({ title, subtitle }: DashboardHeaderProp
   return (
     <div className="h-16 bg-[#0D1117] border-b border-[#27272A] flex items-center justify-between px-6 sticky top-0 z-40">
       {/* Left: Logo */}
-      <div className="flex items-center gap-4">
-        <RabbitLogo size={32} animated={true} />
-        <div className="h-6 w-px bg-[#27272A]" />
-        <span className="text-lg font-semibold text-white">RoleRabbit</span>
+        <div className="flex items-center gap-2 -ml-2">
+          <RabbitLogo size={80} animated={true} />
+          <div className="h-6 w-px bg-[#27272A]" />
+          <span className="text-xl font-semibold -ml-1">
+            <span className="text-white">Role</span><span className="text-green-400">Rabbit</span>
+          </span>
       </div>
 
       {/* Center: Title & Subtitle */}

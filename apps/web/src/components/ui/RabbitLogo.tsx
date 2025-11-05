@@ -9,181 +9,130 @@ interface RabbitLogoProps {
 }
 
 /**
- * RoleRabbit Logo Component
- * Exact recreation of the glossy green rabbit logo with clean animations
+ * RoleRabbit Logo Component - Detailed Portrait Style with Green
+ * Exact recreation of the HTML portrait logo
  */
 export function RabbitLogo({ 
-  size = 40, 
+  size = 120, 
   animated = true,
-  className = '' 
+  className = ''
 }: RabbitLogoProps) {
-  const viewBoxSize = 100;
+  const viewBoxSize = 300;
+  const scale = size / viewBoxSize;
 
   return (
-    <div className={`inline-flex items-center justify-center ${animated ? 'rabbit-container' : ''} ${className}`}>
+    <div className={`inline-flex items-center justify-center ${className}`}>
       <svg
         width={size}
         height={size}
         viewBox={`0 0 ${viewBoxSize} ${viewBoxSize}`}
-        fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Head gradient - glossy sphere effect (mint green at top, emerald at bottom) */}
-          <radialGradient id="rabbit-head-gradient" cx="50%" cy="35%">
-            <stop offset="0%" stopColor="#a7f3d0" stopOpacity="1" /> {/* Light mint green */}
-            <stop offset="30%" stopColor="#6ee7b7" stopOpacity="1" /> {/* Medium mint */}
-            <stop offset="60%" stopColor="#34d399" stopOpacity="1" /> {/* Emerald */}
-            <stop offset="100%" stopColor="#10b981" stopOpacity="1" /> {/* Dark emerald */}
+          {/* Main gradient for head - SHINY GREEN */}
+          <radialGradient id="rabbit-headGradient" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stopColor="#4ade80" stopOpacity="1" />
+            <stop offset="50%" stopColor="#22c55e" stopOpacity="1" />
+            <stop offset="100%" stopColor="#16a34a" stopOpacity="1" />
           </radialGradient>
           
-
-          {/* Ear gradient - dark green */}
-          <linearGradient id="rabbit-ear-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#059669" stopOpacity="1" /> {/* Dark green */}
-            <stop offset="100%" stopColor="#047857" stopOpacity="1" /> {/* Darker green */}
+          {/* Ear gradient - SHINY GREEN */}
+          <linearGradient id="rabbit-earGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#86efac" stopOpacity="1" />
+            <stop offset="50%" stopColor="#4ade80" stopOpacity="1" />
+            <stop offset="100%" stopColor="#22c55e" stopOpacity="1" />
           </linearGradient>
-
-          {/* Bright white glossy highlight on top-left */}
-          <radialGradient id="rabbit-highlight" cx="35%" cy="25%">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-            <stop offset="30%" stopColor="#ffffff" stopOpacity="0.6" />
-            <stop offset="60%" stopColor="#ffffff" stopOpacity="0.3" />
+          
+          {/* Shine effect */}
+          <linearGradient id="rabbit-shine" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.1" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-          </radialGradient>
-
-          {/* Pink inner ear gradient */}
-          <linearGradient id="rabbit-inner-ear-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#fbcfe8" stopOpacity="1" /> {/* Light pink */}
-            <stop offset="100%" stopColor="#f9a8d4" stopOpacity="1" /> {/* Medium pink */}
           </linearGradient>
+          
+          {/* Shadow filter */}
+          <filter id="rabbit-softShadow">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity="0.15"/>
+          </filter>
         </defs>
-
-        {/* Rabbit Head - glossy spherical shape */}
-        <circle
-          cx="50"
-          cy="50"
-          r="38"
-          fill="url(#rabbit-head-gradient)"
-        />
-
-        {/* Bright white glossy highlight on top-left surface */}
-        <ellipse
-          cx="38"
-          cy="32"
-          rx="18"
-          ry="22"
-          fill="url(#rabbit-highlight)"
-        />
-
-        {/* Left Ear - elongated dark green, pointing upwards */}
-        <g className={animated ? 'rabbit-ear-left' : ''} style={{ transformOrigin: '32px 40px' }}>
-          <ellipse
-            cx="32"
-            cy="18"
-            rx="9"
-            ry="22"
-            fill="url(#rabbit-ear-gradient)"
-            transform="rotate(-12 32 18)"
-          />
-          {/* Inner ear - pale pink */}
-          <ellipse
-            cx="32"
-            cy="20"
-            rx="5"
-            ry="16"
-            fill="url(#rabbit-inner-ear-gradient)"
-            transform="rotate(-12 32 18)"
-          />
-        </g>
-
-        {/* Right Ear - elongated dark green, pointing upwards */}
-        <g className={animated ? 'rabbit-ear-right' : ''} style={{ transformOrigin: '68px 40px' }}>
-          <ellipse
-            cx="68"
-            cy="18"
-            rx="9"
-            ry="22"
-            fill="url(#rabbit-ear-gradient)"
-            transform="rotate(12 68 18)"
-          />
-          {/* Inner ear - pale pink */}
-          <ellipse
-            cx="68"
-            cy="20"
-            rx="5"
-            ry="16"
-            fill="url(#rabbit-inner-ear-gradient)"
-            transform="rotate(12 68 18)"
-          />
-        </g>
-
-        {/* Left Eye - large round white with black pupil */}
-        <g className={animated ? 'rabbit-eye' : ''} style={{ transformOrigin: '42px 48px' }}>
-          <circle
-            cx="42"
-            cy="48"
-            r="10"
-            fill="white"
-          />
-          <circle
-            cx="42"
-            cy="48"
-            r="6"
-            fill="black"
-          />
-          {/* Eye highlight - white circle in top-right */}
-          <circle
-            cx="44"
-            cy="46"
-            r="2"
-            fill="white"
-          />
-        </g>
-
-        {/* Right Eye - large round white with black pupil */}
-        <g className={animated ? 'rabbit-eye' : ''} style={{ transformOrigin: '58px 48px' }}>
-          <circle
-            cx="58"
-            cy="48"
-            r="10"
-            fill="white"
-          />
-          <circle
-            cx="58"
-            cy="48"
-            r="6"
-            fill="black"
-          />
-          {/* Eye highlight - white circle in top-right */}
-          <circle
-            cx="60"
-            cy="46"
-            r="2"
-            fill="white"
-          />
-        </g>
-
-        {/* Nose - light pink inverted triangle/heart shape */}
-        <g className={animated ? 'rabbit-nose' : ''}>
-          <path
-            d="M 50 58 L 46 62 L 50 63 L 54 62 Z"
-            fill="#fbcfe8"
-          />
-        </g>
-
-        {/* Left Whiskers - three thin dark purple lines */}
-        <g stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" opacity="0.85">
-          <line x1="26" y1="58" x2="36" y2="58" />
-          <line x1="24" y1="62" x2="34" y2="61.5" />
-          <line x1="24" y1="66" x2="34" y2="65" />
-        </g>
-
-        {/* Right Whiskers - three thin dark purple lines */}
-        <g stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" opacity="0.85">
-          <line x1="64" y1="58" x2="74" y2="58" />
-          <line x1="66" y1="62" x2="76" y2="61.5" />
-          <line x1="66" y1="66" x2="76" y2="65" />
+        
+        {/* Main group */}
+        <g className={animated ? 'rabbit-breathe' : ''}>
+          {/* Neck/shoulders - light peach */}
+          <ellipse cx="150" cy="220" rx="60" ry="35" fill="#f5c6a0" />
+          
+          {/* Main head shape */}
+          <ellipse cx="150" cy="160" rx="75" ry="70" fill="url(#rabbit-headGradient)" filter="url(#rabbit-softShadow)" />
+          
+          {/* Shine overlay on head */}
+          <ellipse cx="130" cy="140" rx="45" ry="40" fill="url(#rabbit-shine)" opacity="0.7" />
+          
+          {/* Cheek patches left - light brown */}
+          <circle cx="100" cy="165" r="28" fill="#B39780" />
+          
+          {/* Cheek patches right - light brown */}
+          <circle cx="200" cy="165" r="28" fill="#B39780" />
+          
+          {/* Left Ear */}
+          <g className={animated ? 'rabbit-ear-left' : ''}>
+            <ellipse cx="115" cy="85" rx="18" ry="50" fill="url(#rabbit-earGradient)" transform="rotate(-10 115 85)" />
+            <ellipse cx="115" cy="85" rx="10" ry="40" fill="#9b8aa0" transform="rotate(-10 115 85)" />
+          </g>
+          
+          {/* Right Ear */}
+          <g className={animated ? 'rabbit-ear-right' : ''}>
+            <ellipse cx="185" cy="85" rx="18" ry="50" fill="url(#rabbit-earGradient)" transform="rotate(10 185 85)" />
+            <ellipse cx="185" cy="85" rx="10" ry="40" fill="#9b8aa0" transform="rotate(10 185 85)" />
+          </g>
+          
+          {/* Left Eye */}
+          <g className={animated ? 'rabbit-eye-left' : ''}>
+            {/* Eye white */}
+            <ellipse cx="125" cy="155" rx="16" ry="20" fill="#f8fafc" />
+            {/* Iris */}
+            <circle cx="125" cy="156" r="13" fill="#1e293b" />
+            {/* Pupil */}
+            <circle cx="125" cy="156" r="7" fill="#020617" />
+            {/* Eye highlight large */}
+            <ellipse cx="128" cy="152" rx="5" ry="6" fill="white" opacity="0.9" />
+            {/* Eye highlight small */}
+            <circle cx="123" cy="158" r="2" fill="white" opacity="0.6" />
+          </g>
+          
+          {/* Right Eye */}
+          <g className={animated ? 'rabbit-eye-right' : ''}>
+            {/* Eye white */}
+            <ellipse cx="175" cy="155" rx="16" ry="20" fill="#f8fafc" />
+            {/* Iris */}
+            <circle cx="175" cy="156" r="13" fill="#1e293b" />
+            {/* Pupil */}
+            <circle cx="175" cy="156" r="7" fill="#020617" />
+            {/* Eye highlight large */}
+            <ellipse cx="178" cy="152" rx="5" ry="6" fill="white" opacity="0.9" />
+            {/* Eye highlight small */}
+            <circle cx="173" cy="158" r="2" fill="white" opacity="0.6" />
+          </g>
+          
+          {/* Nose */}
+          <g className={animated ? 'rabbit-nose' : ''}>
+            <path d="M 150 175 L 145 170 L 147 167 L 150 169 L 153 167 L 155 170 Z" 
+                  fill="#ec4899" opacity="0.8" />
+            <ellipse cx="150" cy="170" rx="2" ry="1" fill="white" opacity="0.5" />
+          </g>
+          
+          {/* Mouth */}
+          <path d="M 150 175 Q 140 178 135 175" stroke="#059669" strokeWidth="1.5" fill="none" opacity="0.6" strokeLinecap="round" />
+          <path d="M 150 175 Q 160 178 165 175" stroke="#059669" strokeWidth="1.5" fill="none" opacity="0.6" strokeLinecap="round" />
+          
+          {/* Left Whiskers - peach/orange */}
+          <line x1="85" y1="160" x2="50" y2="155" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="85" y1="170" x2="50" y2="170" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="85" y1="180" x2="50" y2="185" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
+          
+          {/* Right Whiskers - peach/orange */}
+          <line x1="215" y1="160" x2="250" y2="155" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="215" y1="170" x2="250" y2="170" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="215" y1="180" x2="250" y2="185" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
         </g>
       </svg>
     </div>
@@ -195,41 +144,55 @@ export function RabbitLogo({
  */
 interface RabbitLogoWithTextProps extends RabbitLogoProps {
   showText?: boolean;
-  textSize?: 'sm' | 'md' | 'lg';
+  textSize?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export function RabbitLogoWithText({ 
-  size = 40,
+  size = 80,
   animated = true,
   showText = true,
-  textSize = 'md',
+  textSize = 'lg',
   className = ''
 }: RabbitLogoWithTextProps) {
   const textSizeClasses = {
+    sm: 'text-2xl',
+    md: 'text-3xl',
+    lg: 'text-4xl',
+    xl: 'text-5xl'
+  };
+
+  const taglineSizes = {
     sm: 'text-sm',
-    md: 'text-xl',
-    lg: 'text-2xl'
+    md: 'text-base',
+    lg: 'text-lg',
+    xl: 'text-xl'
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-1 -ml-2 ${className}`}>
       <RabbitLogo 
         size={size} 
         animated={animated}
       />
       {showText && (
-        <h1 className={`font-bold bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent ${textSizeClasses[textSize]}`}>
-          RoleRabbit
-        </h1>
+        <div className="-ml-2">
+          <h1 className={`font-semibold ${textSizeClasses[textSize]} leading-tight`}>
+            <span className="text-gray-800 dark:text-white">Role</span>
+            <span className="text-green-400">Rabbit</span>
+          </h1>
+          <p className={`text-gray-500 dark:text-gray-400 ${taglineSizes[textSize]} -mt-1`}>
+            Your Career Companion
+          </p>
+        </div>
       )}
     </div>
   );
 }
 
 /**
- * Loading state rabbit (bouncing animation)
+ * Loading state rabbit (with breathe animation)
  */
-export function RabbitLoading({ size = 40, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
+export function RabbitLoading({ size = 80, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
   return (
     <div className={`rabbit-loading ${className}`}>
       <RabbitLogo size={size} animated={true} />
@@ -240,13 +203,13 @@ export function RabbitLoading({ size = 40, className = '' }: Omit<RabbitLogoProp
 /**
  * Success state rabbit (with checkmark)
  */
-export function RabbitSuccess({ size = 40, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
+export function RabbitSuccess({ size = 80, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
   return (
     <div className={`relative ${className}`}>
       <RabbitLogo size={size} animated={true} />
-      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M2 6 L5 9 L10 2" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M4 9 L8 13 L14 4" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
     </div>
@@ -256,13 +219,13 @@ export function RabbitSuccess({ size = 40, className = '' }: Omit<RabbitLogoProp
 /**
  * Error state rabbit (with X mark)
  */
-export function RabbitError({ size = 40, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
+export function RabbitError({ size = 80, className = '' }: Omit<RabbitLogoProps, 'animated'>) {
   return (
     <div className={`relative ${className}`}>
       <RabbitLogo size={size} animated={true} />
-      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M3 3 L9 9 M9 3 L3 9" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <path d="M5 5 L13 13 M13 5 L5 13" stroke="white" strokeWidth="3" strokeLinecap="round" />
         </svg>
       </div>
     </div>
