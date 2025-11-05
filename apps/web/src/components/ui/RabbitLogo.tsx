@@ -29,18 +29,18 @@ export function RabbitLogo({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Main gradient for head - SHINY GREEN */}
+          {/* Main gradient for head - EMERALD GREEN */}
           <radialGradient id="rabbit-headGradient" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stopColor="#4ade80" stopOpacity="1" />
-            <stop offset="50%" stopColor="#22c55e" stopOpacity="1" />
-            <stop offset="100%" stopColor="#16a34a" stopOpacity="1" />
+            <stop offset="0%" stopColor="#10b981" stopOpacity="1" />
+            <stop offset="50%" stopColor="#059669" stopOpacity="1" />
+            <stop offset="100%" stopColor="#047857" stopOpacity="1" />
           </radialGradient>
           
-          {/* Ear gradient - SHINY GREEN */}
+          {/* Ear gradient - EMERALD GREEN */}
           <linearGradient id="rabbit-earGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#86efac" stopOpacity="1" />
-            <stop offset="50%" stopColor="#4ade80" stopOpacity="1" />
-            <stop offset="100%" stopColor="#22c55e" stopOpacity="1" />
+            <stop offset="0%" stopColor="#6ee7b7" stopOpacity="1" />
+            <stop offset="50%" stopColor="#10b981" stopOpacity="1" />
+            <stop offset="100%" stopColor="#059669" stopOpacity="1" />
           </linearGradient>
           
           {/* Shine effect */}
@@ -54,12 +54,19 @@ export function RabbitLogo({
           <filter id="rabbit-softShadow">
             <feDropShadow dx="0" dy="3" stdDeviation="4" floodOpacity="0.15"/>
           </filter>
+          
+          {/* Shiny white gradient for body */}
+          <radialGradient id="rabbit-goldGradient" cx="50%" cy="30%" r="80%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+            <stop offset="50%" stopColor="#F5F5F5" stopOpacity="1" />
+            <stop offset="100%" stopColor="#E5E5E5" stopOpacity="1" />
+          </radialGradient>
         </defs>
         
         {/* Main group */}
         <g className={animated ? 'rabbit-breathe' : ''}>
-          {/* Neck/shoulders - light peach */}
-          <ellipse cx="150" cy="220" rx="60" ry="35" fill="#f5c6a0" />
+          {/* Neck/shoulders - shiny white */}
+          <ellipse cx="150" cy="220" rx="60" ry="35" fill="url(#rabbit-goldGradient)" />
           
           {/* Main head shape */}
           <ellipse cx="150" cy="160" rx="75" ry="70" fill="url(#rabbit-headGradient)" filter="url(#rabbit-softShadow)" />
@@ -67,11 +74,11 @@ export function RabbitLogo({
           {/* Shine overlay on head */}
           <ellipse cx="130" cy="140" rx="45" ry="40" fill="url(#rabbit-shine)" opacity="0.7" />
           
-          {/* Cheek patches left - light brown */}
-          <circle cx="100" cy="165" r="28" fill="#B39780" />
+          {/* Cheek patches left - orange */}
+          <circle cx="100" cy="165" r="28" fill="#fb923c" />
           
-          {/* Cheek patches right - light brown */}
-          <circle cx="200" cy="165" r="28" fill="#B39780" />
+          {/* Cheek patches right - orange */}
+          <circle cx="200" cy="165" r="28" fill="#fb923c" />
           
           {/* Left Ear */}
           <g className={animated ? 'rabbit-ear-left' : ''}>
@@ -120,9 +127,15 @@ export function RabbitLogo({
             <ellipse cx="150" cy="170" rx="2" ry="1" fill="white" opacity="0.5" />
           </g>
           
-          {/* Mouth */}
-          <path d="M 150 175 Q 140 178 135 175" stroke="#059669" strokeWidth="1.5" fill="none" opacity="0.6" strokeLinecap="round" />
-          <path d="M 150 175 Q 160 178 165 175" stroke="#059669" strokeWidth="1.5" fill="none" opacity="0.6" strokeLinecap="round" />
+          {/* Mouth - Rabbit Y-shaped mouth */}
+          <g className={animated ? 'rabbit-mouth' : ''}>
+            {/* Center vertical line */}
+            <line x1="150" y1="175" x2="150" y2="182" stroke="#047857" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
+            {/* Left curve */}
+            <path d="M 150 182 Q 142 184 138 182" stroke="#047857" strokeWidth="2" fill="none" opacity="0.7" strokeLinecap="round" />
+            {/* Right curve */}
+            <path d="M 150 182 Q 158 184 162 182" stroke="#047857" strokeWidth="2" fill="none" opacity="0.7" strokeLinecap="round" />
+          </g>
           
           {/* Left Whiskers - peach/orange */}
           <line x1="85" y1="160" x2="50" y2="155" stroke="#f5a97f" strokeWidth="1.5" strokeLinecap="round" />
@@ -178,7 +191,7 @@ export function RabbitLogoWithText({
         <div className="-ml-2">
           <h1 className={`font-semibold ${textSizeClasses[textSize]} leading-tight`}>
             <span className="text-gray-800 dark:text-white">Role</span>
-            <span className="text-green-400">Rabbit</span>
+            <span className="text-emerald-500">Rabbit</span>
           </h1>
           <p className={`text-gray-500 dark:text-gray-400 ${taglineSizes[textSize]} -mt-1`}>
             Your Career Companion
