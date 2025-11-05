@@ -3,7 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { Award, Globe, Trash2, Edit2, X, Plus, GraduationCap, ArrowLeft } from 'lucide-react';
 import { UserData, Skill, Certification, Education } from '../types/profile';
-import { sanitizeSkills } from '../../Profile';
+import { 
+  sanitizeSkills, 
+  sanitizeCertifications, 
+  sanitizeLanguages, 
+  sanitizeEducation,
+  normalizeToArray
+} from '../utils/dataSanitizer';
 import { useTheme } from '../../../contexts/ThemeContext';
 import FormField from '../components/FormField';
 
@@ -33,34 +39,8 @@ export default function SkillsTab({
     }
   }, [isEditing]);
   
-  // Normalize skills to always be an array
-  const normalizeSkills = (skills: any): Skill[] => {
-    if (!skills) return [];
-    if (Array.isArray(skills)) {
-      return skills.map(skill => {
-        if (typeof skill === 'string') {
-          return { name: skill, verified: false };
-        }
-        return {
-          name: skill.name || '',
-          yearsOfExperience: skill.yearsOfExperience,
-          verified: skill.verified || false
-        };
-      });
-    }
-    if (typeof skills === 'string') {
-      try {
-        const parsed = JSON.parse(skills);
-        return normalizeSkills(parsed);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-  
-  const skills: Skill[] = normalizeSkills(userData.skills);
-  const sanitizedSkills = sanitizeSkills(skills, { keepDrafts: true });
+  // Use sanitizeSkills directly - it handles normalization internally
+  const sanitizedSkills = sanitizeSkills(userData.skills, { keepDrafts: true });
 
   const addSkill = (skillNameOrList: string) => {
     // Support comma-separated skills: "Python, JavaScript, React" or single skill: "Python"
@@ -109,32 +89,8 @@ export default function SkillsTab({
     }
   };
 
-  // Normalize certifications to always be an array
-  const normalizeCertifications = (certs: any): Certification[] => {
-    if (!certs) return [];
-    if (Array.isArray(certs)) {
-      return certs.map(cert => ({
-        id: cert.id || cert._id || cert.uuid || cert.tempId || undefined,
-        name: cert.name || '',
-        issuer: cert.issuer || '',
-        date: cert.date || '', // Optional - allow blank
-        expiryDate: cert.expiryDate || '',
-        credentialUrl: cert.credentialUrl || '',
-        verified: cert.verified || false
-      }));
-    }
-    if (typeof certs === 'string') {
-      try {
-        const parsed = JSON.parse(certs);
-        return normalizeCertifications(parsed);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-  
-  const certifications: Certification[] = normalizeCertifications(userData.certifications);
+  // Use sanitizeCertifications directly - it handles normalization internally
+  const certifications: Certification[] = sanitizeCertifications(userData.certifications, { keepDrafts: true });
   
   const addCertification = () => {
     const cert: Certification = {
@@ -160,27 +116,8 @@ export default function SkillsTab({
     setEditingCertId(null);
   };
 
-  // Normalize languages to always be an array
-  const normalizeLanguages = (langs: any): any[] => {
-    if (!langs) return [];
-    if (Array.isArray(langs)) {
-      return langs.map(lang => ({
-        name: lang.name || '',
-        proficiency: lang.proficiency || 'Native'
-      }));
-    }
-    if (typeof langs === 'string') {
-      try {
-        const parsed = JSON.parse(langs);
-        return normalizeLanguages(parsed);
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  };
-  
-  const languages = normalizeLanguages(userData.languages);
+  // Use sanitizeLanguages directly - it handles normalization internally
+  const languages = sanitizeLanguages(userData.languages, { keepDrafts: true });
   
   const addLanguage = (langNameOrList: string) => {
     // Support comma-separated languages: "English, Spanish, French" or single language: "English"
@@ -222,70 +159,8 @@ export default function SkillsTab({
   };
 
 
-  const normalizeEducation = (educationInput: any): Education[] => {
-    const toArray = (input: any): any[] => {
-      if (!input) return [];
-      if (Array.isArray(input)) return input;
-      if (typeof input === 'string') {
-        try {
-          const parsed = JSON.parse(input);
-          return toArray(parsed);
-        } catch {
-          return [];
-        }
-      }
-      if (input instanceof Map || input instanceof Set) {
-        return Array.from((input as Map<any, any> | Set<any>).values());
-      }
-      if (typeof input === 'object') {
-        return Object.values(input);
-      }
-      return [];
-    };
-
-    const toStringValue = (value: any): string => {
-      if (value === null || value === undefined) return '';
-      return typeof value === 'string' ? value : String(value);
-    };
-
-    return toArray(educationInput).map((edu: any, index) => {
-      if (!edu || typeof edu !== 'object') {
-        const institutionValue = typeof edu === 'string' ? edu : '';
-        return {
-          id: `edu-${index}`,
-          institution: toStringValue(institutionValue),
-          degree: '',
-          field: '',
-          startDate: '',
-          endDate: '',
-          gpa: '',
-          honors: '',
-          location: '',
-          description: '',
-        };
-      }
-
-      const idSource = edu.id ?? edu._id ?? edu.uuid ?? edu.tempId ?? edu.educationId;
-      const id = typeof idSource === 'string'
-        ? idSource
-        : (idSource !== undefined && idSource !== null ? String(idSource) : `edu-${index}`);
-
-      return {
-        id,
-        institution: toStringValue(edu.institution ?? edu.school ?? edu.university ?? ''),
-        degree: toStringValue(edu.degree ?? edu.program ?? ''),
-        field: toStringValue(edu.field ?? edu.major ?? ''),
-        startDate: toStringValue(edu.startDate ?? edu.start ?? ''),
-        endDate: toStringValue(edu.endDate ?? edu.graduationDate ?? edu.completionDate ?? ''),
-        gpa: toStringValue(edu.gpa ?? ''),
-        honors: toStringValue(edu.honors ?? edu.awards ?? ''),
-        location: toStringValue(edu.location ?? ''),
-        description: toStringValue(edu.description ?? edu.summary ?? ''),
-      } as Education;
-    });
-  };
-
-  const education = normalizeEducation(userData.education);
+  // Use sanitizeEducation directly - it handles normalization internally
+  const education = sanitizeEducation(userData.education, { keepDrafts: true });
 
   useEffect(() => {
     if (!isEditing && editingEducationId) {

@@ -10,6 +10,7 @@ const { authenticate } = require('../middleware/auth');
 const { validateEmail } = require('../utils/validation');
 const { errorHandler } = require('../utils/errorMiddleware');
 const logger = require('../utils/logger');
+const { profileGetRateLimit, profilePutRateLimit, profilePictureRateLimit } = require('../middleware/rateLimit');
 
 /**
  * Extract storage path from Supabase URL or return path as-is
@@ -83,8 +84,9 @@ const VALID_WORK_EXPERIENCE_TYPES = [
  * @param {string} category - Optional category (defaults to 'Technical')
  * @returns {Promise<Object>} The skill object from dictionary
  */
-async function getOrCreateSkillInDictionary(skillName, category = 'Technical') {
-  const { prisma } = require('../utils/db');
+async function getOrCreateSkillInDictionary(skillName, category = 'Technical', prismaClient = null) {
+  // Use provided transaction client or default prisma client
+  const prisma = prismaClient || require('../utils/db').prisma;
   
   if (!skillName || !skillName.trim()) {
     throw new Error('Skill name is required');
@@ -441,8 +443,22 @@ function normalizeCertificationInput(certificationsInput) {
  */
 async function userRoutes(fastify, options) {
   // Get user profile
+  /**
+   * GET /api/users/profile
+   * Get current user's profile with all related data
+   * @route GET /api/users/profile
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.user - Authenticated user from JWT
+   * @param {string} request.user.userId - User ID from JWT token
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<{user: Object}>} User profile data
+   * @throws {401} Unauthorized - If user is not authenticated
+   * @throws {404} Not Found - If user profile not found
+   * @throws {429} Too Many Requests - If rate limit exceeded
+   * @throws {500} Internal Server Error - If database query fails
+   */
   fastify.get('/api/users/profile', {
-    preHandler: authenticate
+    preHandler: [authenticate, profileGetRateLimit]
   }, async (request, reply) => {
     // SECURITY: Always use the authenticated user's ID from JWT token
     // This ensures users can ONLY access their own profile
@@ -680,32 +696,9 @@ async function userRoutes(fastify, options) {
       }
 
       // Debug logging for GET endpoint
-      console.log('=== GET PROFILE RESPONSE ===');
-      console.log('userId (from JWT):', userId);
-      console.log('user.id:', user.id);
-      console.log('user.profile:', user.profile ? 'exists' : 'null');
-      console.log('user.profile.id:', user.profile?.id);
-      console.log('user.profile.workExperiences count:', user.profile?.workExperiences?.length || 0);
-      console.log('user.profile.workExperiences:', JSON.stringify(user.profile?.workExperiences, null, 2));
-      console.log('parsedUser.workExperiences count:', parsedUser.workExperiences?.length || 0);
-      console.log('parsedUser.workExperiences data:', JSON.stringify(parsedUser.workExperiences, null, 2));
-      console.log('parsedUser.id (profile.id):', parsedUser.id);
-      
-      // Additional check: Query work experiences directly to verify they exist
-      if (user.profile?.id) {
-        const directWorkExp = await prisma.workExperience.findMany({
-          where: { profileId: user.profile.id }
-        });
-        console.log('=== DIRECT DB QUERY CHECK ===');
-        console.log('Profile ID:', user.profile.id);
-        console.log('Direct query workExperiences count:', directWorkExp.length);
-        console.log('Direct query workExperiences:', JSON.stringify(directWorkExp, null, 2));
-      }
-      
-      // Auto-recalculate completeness if missing or seems outdated (optional - can be removed for performance)
+      // Auto-recalculate completeness if missing or seems outdated
       // This ensures completeness is always up-to-date
       const currentCompleteness = parsedUser.profileCompleteness || 0;
-      console.log('Current profileCompleteness from DB:', currentCompleteness);
       
       if (user.profile) {
         try {
@@ -727,26 +720,20 @@ async function userRoutes(fastify, options) {
             profile: parsedUser.profile || {}
           };
           const completeness = calculateProfileCompleteness(userForCompleteness);
-          console.log('Calculated completeness:', completeness.score, '| Breakdown:', JSON.stringify(completeness.breakdown));
           
-          // Always update if different (don't restrict to < 100, just update if different)
+          // Always update if different
           if (completeness.score !== currentCompleteness) {
             await prisma.userProfile.update({
               where: { userId: userId },
               data: { profileCompleteness: completeness.score }
             });
             parsedUser.profileCompleteness = completeness.score;
-            console.log('✅ Updated profileCompleteness from', currentCompleteness, 'to', completeness.score, '%');
-          } else {
-            console.log('ProfileCompleteness unchanged:', completeness.score, '%');
           }
         } catch (completenessError) {
           console.error('Error auto-recalculating completeness:', completenessError);
           // Don't fail the request, just log the error
         }
       }
-      
-      console.log('Final parsedUser.profileCompleteness being returned:', parsedUser.profileCompleteness);
       
       return { user: parsedUser };
     } catch (error) {
@@ -756,9 +743,33 @@ async function userRoutes(fastify, options) {
     }
   });
 
-  // Update user profile
+  /**
+   * PUT /api/users/profile
+   * Update user profile data
+   * @route PUT /api/users/profile
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.user - Authenticated user from JWT
+   * @param {string} request.user.userId - User ID from JWT token
+   * @param {Object} request.body - Profile update data
+   * @param {string} [request.body.firstName] - First name
+   * @param {string} [request.body.lastName] - Last name
+   * @param {string} [request.body.phone] - Phone number
+   * @param {string} [request.body.location] - Location
+   * @param {string} [request.body.professionalBio] - Professional bio (max 5000 chars)
+   * @param {Array} [request.body.workExperiences] - Work experiences array
+   * @param {Array} [request.body.education] - Education array
+   * @param {Array} [request.body.projects] - Projects array
+   * @param {Array} [request.body.skills] - Skills array
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<{user: Object, success: boolean}>} Updated user profile
+   * @throws {400} Bad Request - If validation fails or invalid data
+   * @throws {401} Unauthorized - If user is not authenticated
+   * @throws {404} Not Found - If user profile not found
+   * @throws {429} Too Many Requests - If rate limit exceeded
+   * @throws {500} Internal Server Error - If update fails
+   */
   fastify.put('/api/users/profile', {
-    preHandler: authenticate
+    preHandler: [authenticate, profilePutRateLimit]
   }, errorHandler(async (request, reply) => {
     // SECURITY: Always use the authenticated user's ID from JWT token
     // This ensures users can ONLY update their own profile
@@ -771,12 +782,17 @@ async function userRoutes(fastify, options) {
     
     const updates = request.body;
     
-    // Debug: Log the raw request body
-    console.log('=== RAW REQUEST BODY ===');
-    console.log('Request body type:', typeof updates);
-    console.log('Request body keys:', updates ? Object.keys(updates) : 'null/undefined');
-    console.log('Request body workExperiences:', updates?.workExperiences);
-    console.log('Request Content-Type:', request.headers['content-type']);
+    // Validate input data
+    const { validateProfileData } = require('../utils/validation');
+    const validation = validateProfileData(updates);
+    
+    if (!validation.valid) {
+      reply.status(400).send({ 
+        error: 'Validation failed', 
+        details: validation.errors 
+      });
+      return;
+    }
     
     // SECURITY: Explicitly reject any attempt to change user ID or login email
     if (updates.id !== undefined || updates.userId !== undefined) {
@@ -863,21 +879,6 @@ async function userRoutes(fastify, options) {
     const socialLinks = updates.socialLinks; // Will be converted to individual fields
     const projects = updates.projects;
     
-    // Debug logging
-    console.log('=== PROFILE UPDATE DEBUG ===');
-    console.log('Received workExperiences:', JSON.stringify(workExperiences, null, 2));
-    console.log('workExperiences - typeof:', typeof workExperiences, '| isArray:', Array.isArray(workExperiences), '| isObject:', typeof workExperiences === 'object' && !Array.isArray(workExperiences));
-    console.log('workExperiences length:', workExperiences?.length, '| Object.keys().length:', workExperiences ? Object.keys(workExperiences).length : 0);
-    console.log('Received projects:', JSON.stringify(projects, null, 2));
-    console.log('projects - typeof:', typeof projects, '| isArray:', Array.isArray(projects), '| isObject:', typeof projects === 'object' && !Array.isArray(projects));
-    console.log('projects length:', projects?.length, '| Object.keys().length:', projects ? Object.keys(projects).length : 0);
-    console.log('Received education:', JSON.stringify(education, null, 2));
-    console.log('education - typeof:', typeof education, '| isArray:', Array.isArray(education), '| isObject:', typeof education === 'object' && !Array.isArray(education));
-    console.log('education length:', education?.length, '| Object.keys().length:', education ? Object.keys(education).length : 0);
-    console.log('Received languages:', JSON.stringify(languages, null, 2));
-    console.log('languages - typeof:', typeof languages, '| isArray:', Array.isArray(languages), '| isObject:', typeof languages === 'object' && !Array.isArray(languages));
-    console.log('languages length:', languages?.length, '| Object.keys().length:', languages ? Object.keys(languages).length : 0);
-    console.log('All updates keys:', Object.keys(updates));
     
     // Handle socialLinks - convert to individual fields
     if (socialLinks && Array.isArray(socialLinks)) {
@@ -910,88 +911,87 @@ async function userRoutes(fastify, options) {
     const { prisma } = require('../utils/db');
     
     try {
-      // Get or create UserProfile first (needed for workExperiences and skills)
-      let userProfile = await prisma.userProfile.findUnique({
-        where: { userId: userId }
-      });
-      
-      if (!userProfile) {
-        // Create profile if it doesn't exist
-        userProfile = await prisma.userProfile.create({
-          data: {
-            userId: userId,
-            ...profileUpdateData
-          }
+      // Use a transaction to ensure all updates happen atomically and faster
+      const result = await prisma.$transaction(async (tx) => {
+        // Get or create UserProfile first (needed for workExperiences and skills)
+        let userProfile = await tx.userProfile.findUnique({
+          where: { userId: userId }
         });
-      }
-      
-      // Build update data
-      const dataToUpdate = { ...userUpdateData };
-      
-      // Update or create UserProfile using nested write if there are profile fields to update
-      if (Object.keys(profileUpdateData).length > 0) {
-        dataToUpdate.profile = {
-          upsert: {
-            create: {
+        
+        if (!userProfile) {
+          // Create profile if it doesn't exist
+          userProfile = await tx.userProfile.create({
+            data: {
+              userId: userId,
               ...profileUpdateData
-            },
-            update: profileUpdateData
-          }
-        };
-      }
-      
-      // Update User model
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: dataToUpdate,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          emailNotifications: true,
-          createdAt: true,
-          updatedAt: true,
-          profile: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              phone: true,
-              personalEmail: true,
-              location: true,
-              professionalBio: true,
-              profilePicture: true,
-              linkedin: true,
-              github: true,
-              portfolio: true,
-              website: true,
-              createdAt: true,
-              updatedAt: true
+            }
+          });
+        }
+        
+        // Build update data
+        const dataToUpdate = { ...userUpdateData };
+        
+        // Update or create UserProfile using nested write if there are profile fields to update
+        if (Object.keys(profileUpdateData).length > 0) {
+          dataToUpdate.profile = {
+            upsert: {
+              create: {
+                ...profileUpdateData
+              },
+              update: profileUpdateData
+            }
+          };
+        }
+        
+        // Update User model
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data: dataToUpdate,
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            emailNotifications: true,
+            createdAt: true,
+            updatedAt: true,
+            profile: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                personalEmail: true,
+                location: true,
+                professionalBio: true,
+                profilePicture: true,
+                linkedin: true,
+                github: true,
+                portfolio: true,
+                website: true,
+                createdAt: true,
+                updatedAt: true
+              }
             }
           }
-        }
-      });
-      
-      const profileId = updatedUser.profile?.id || userProfile.id;
-      
-      if (!profileId) {
-        console.error('ERROR: profileId is undefined!', { updatedUser, userProfile });
-        reply.status(500).send({ error: 'Failed to update profile: profileId is missing' });
-        return;
-      }
-      
-      // Handle workExperiences - replace all existing ones
-      if (workExperiences !== undefined) {
-        const normalizedWorkExperiences = normalizeWorkExperienceInput(workExperiences);
-        console.log('Processing workExperiences:', { count: normalizedWorkExperiences.length, profileId });
+        });
         
-        try {
-          await prisma.workExperience.deleteMany({
-            where: { profileId: profileId }
-          });
+        const profileId = updatedUser.profile?.id || userProfile.id;
+        
+        if (!profileId) {
+          throw new Error('profileId is missing after user update');
+        }
+        
+        // Handle workExperiences - replace all existing ones
+        if (workExperiences !== undefined) {
+          const normalizedWorkExperiences = normalizeWorkExperienceInput(workExperiences);
           
-          if (normalizedWorkExperiences.length > 0) {
-            const workExpData = normalizedWorkExperiences.map((exp) => {
+          try {
+            await tx.workExperience.deleteMany({
+              where: { profileId: profileId }
+            });
+            
+            if (normalizedWorkExperiences.length > 0) {
+              const workExpData = normalizedWorkExperiences.map((exp) => {
               // Ensure technologies is properly formatted as array
               let technologies = [];
               if (exp.technologies) {
@@ -1012,16 +1012,6 @@ async function userRoutes(fastify, options) {
                 }
               }
               
-              console.log('WorkExp data being saved:', {
-                company: exp.company,
-                role: exp.role,
-                technologies: technologies,
-                technologiesType: typeof exp.technologies,
-                technologiesIsArray: Array.isArray(exp.technologies),
-                technologiesLength: technologies.length,
-                rawTechnologies: exp.technologies
-              });
-              
               return {
                 profileId: profileId,
                 company: exp.company || '',
@@ -1036,33 +1026,23 @@ async function userRoutes(fastify, options) {
               };
             });
             
-            if (workExpData.length > 0) {
-            console.log('Creating work experiences:', workExpData);
-            
-            const result = await prisma.workExperience.createMany({
-              data: workExpData
-            });
-            
-            console.log('Successfully created work experiences:', result);
-            console.log('Created count:', result.count);
-            
-            const verifyCount = await prisma.workExperience.count({
-              where: { profileId: profileId }
-            });
-            console.log('Verification: Total work experiences in DB for this profile:', verifyCount);
+              if (workExpData.length > 0) {
+                await tx.workExperience.createMany({
+                  data: workExpData
+                });
+              }
             }
+          } catch (workExpError) {
+            console.error('Error saving work experiences:', workExpError);
+            console.error('WorkExp Error Details:', {
+              message: workExpError.message,
+              stack: workExpError.stack,
+              workExperiences: normalizedWorkExperiences,
+              profileId: profileId
+            });
+            throw new Error(`Failed to save work experiences: ${workExpError.message}`);
           }
-        } catch (workExpError) {
-          console.error('Error saving work experiences:', workExpError);
-          console.error('WorkExp Error Details:', {
-            message: workExpError.message,
-            stack: workExpError.stack,
-            workExperiences: normalizedWorkExperiences,
-            profileId: profileId
-          });
-          throw new Error(`Failed to save work experiences: ${workExpError.message}`);
         }
-      }
 
       // Handle education - replace all existing ones
       // Normalize education from object format (e.g., {"0": {...}, "1": {...}}) to array
@@ -1082,17 +1062,14 @@ async function userRoutes(fastify, options) {
             normalizedEducation = Object.values(education);
           }
         }
-        console.log('Normalized education:', JSON.stringify(normalizedEducation, null, 2));
-        console.log('Normalized education count:', normalizedEducation.length);
       }
       
-      // Always process education if it's defined (even if empty array - need to clear existing)
-      if (education !== undefined) {
-        console.log('Processing education:', { count: normalizedEducation.length, profileId, educationDefined: true });
-        try {
-          await prisma.education.deleteMany({ where: { profileId: profileId } });
-          if (normalizedEducation.length > 0) {
-            const result = await prisma.education.createMany({
+        // Always process education if it's defined (even if empty array - need to clear existing)
+        if (education !== undefined) {
+          try {
+            await tx.education.deleteMany({ where: { profileId: profileId } });
+            if (normalizedEducation.length > 0) {
+              const result = await tx.education.createMany({
               data: normalizedEducation.map(edu => ({
                 profileId: profileId,
                 institution: (edu.institution || '').trim(),
@@ -1106,42 +1083,34 @@ async function userRoutes(fastify, options) {
                 description: edu.description ? (edu.description.trim() || null) : null
               }))
             });
-            console.log('Successfully created education records:', result);
-            console.log('Created count:', result.count);
             
-            // Verify education was saved
-            const verifyEducation = await prisma.education.findMany({
-              where: { profileId: profileId }
+              // Verify education was saved
+              const verifyEducation = await tx.education.findMany({
+                where: { profileId: profileId }
+              });
+            } else {
+            }
+          } catch (eduError) {
+            console.error('Error saving education:', eduError);
+            console.error('Education error details:', {
+              message: eduError.message,
+              stack: eduError.stack,
+              normalizedEducation: normalizedEducation,
+              profileId: profileId
             });
-            console.log('Verification: Education in DB after save:', verifyEducation.length);
-            console.log('Verification: Education institutions:', verifyEducation.map(e => e.institution));
-          } else {
-            console.log('No education to save (empty array)');
+            throw new Error(`Failed to save education: ${eduError.message}`);
           }
-        } catch (eduError) {
-          console.error('Error saving education:', eduError);
-          console.error('Education error details:', {
-            message: eduError.message,
-            stack: eduError.stack,
-            normalizedEducation: normalizedEducation,
-            profileId: profileId
-          });
-          throw new Error(`Failed to save education: ${eduError.message}`);
         }
-      } else {
-        console.log('Education not provided in update (undefined)');
-      }
 
-      // Handle certifications - replace all existing ones
-      if (certifications !== undefined) {
-        const normalizedCertifications = normalizeCertificationInput(certifications);
-        console.log('Processing certifications:', { count: normalizedCertifications.length, profileId });
+        // Handle certifications - replace all existing ones
+        if (certifications !== undefined) {
+          const normalizedCertifications = normalizeCertificationInput(certifications);
 
-        try {
-          await prisma.certification.deleteMany({ where: { profileId: profileId } });
+          try {
+            await tx.certification.deleteMany({ where: { profileId: profileId } });
 
-          if (normalizedCertifications.length > 0) {
-            await prisma.certification.createMany({
+            if (normalizedCertifications.length > 0) {
+              await tx.certification.createMany({
               data: normalizedCertifications.map((cert) => ({
                 profileId: profileId,
                 name: cert.name || '',
@@ -1151,44 +1120,39 @@ async function userRoutes(fastify, options) {
                 credentialUrl: cert.credentialUrl || null
               }))
             });
-            console.log('Successfully created certification records');
           }
-        } catch (certError) {
-          console.error('Error saving certifications:', certError);
-          throw new Error(`Failed to save certifications: ${certError.message}`);
+          } catch (certError) {
+            console.error('Error saving certifications:', certError);
+            throw new Error(`Failed to save certifications: ${certError.message}`);
+          }
         }
-      }
 
-      // Handle projects - replace all existing ones
-      // Normalize projects from object format (e.g., {"0": {...}, "1": {...}}) to array
-      let normalizedProjects = [];
-      if (projects !== undefined) {
-        if (Array.isArray(projects)) {
-          normalizedProjects = projects;
-        } else if (projects && typeof projects === 'object') {
-          // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
-          const keys = Object.keys(projects);
-          const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
-          if (hasNumericKeys && keys.length > 0) {
-            // Sort by numeric key to maintain order
-            const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
-            normalizedProjects = sortedKeys.map(key => projects[key]);
-          } else {
-            normalizedProjects = Object.values(projects);
+        // Handle projects - replace all existing ones
+        // Normalize projects from object format (e.g., {"0": {...}, "1": {...}}) to array
+        let normalizedProjects = [];
+        if (projects !== undefined) {
+          if (Array.isArray(projects)) {
+            normalizedProjects = projects;
+          } else if (projects && typeof projects === 'object') {
+            // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+            const keys = Object.keys(projects);
+            const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+            if (hasNumericKeys && keys.length > 0) {
+              // Sort by numeric key to maintain order
+              const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+              normalizedProjects = sortedKeys.map(key => projects[key]);
+            } else {
+              normalizedProjects = Object.values(projects);
+            }
           }
         }
-        console.log('Normalized projects:', JSON.stringify(normalizedProjects, null, 2));
-        console.log('Normalized projects count:', normalizedProjects.length);
-      }
-      
-      // Always process projects if they're defined (even if empty array - need to clear existing)
-      if (projects !== undefined) {
-        console.log('Processing projects:', { count: normalizedProjects.length, profileId, projectsDefined: true });
-        try {
-          await prisma.project.deleteMany({ where: { profileId: profileId } });
-          if (normalizedProjects.length > 0) {
-            console.log('Creating projects:', JSON.stringify(normalizedProjects, null, 2));
-            const result = await prisma.project.createMany({
+        
+        // Always process projects if they're defined (even if empty array - need to clear existing)
+        if (projects !== undefined) {
+          try {
+            await tx.project.deleteMany({ where: { profileId: profileId } });
+            if (normalizedProjects.length > 0) {
+              const result = await tx.project.createMany({
               data: normalizedProjects.map(proj => {
                 // Serialize technologies array to JSON string for database storage
                 let technologiesJson = null;
@@ -1234,126 +1198,126 @@ async function userRoutes(fastify, options) {
                 };
               })
             });
-            console.log('Successfully created project records:', result);
-            console.log('Created count:', result.count);
             
-            // Verify projects were saved
-            const verifyProjects = await prisma.project.findMany({
-              where: { profileId: profileId }
+              // Verify projects were saved
+              const verifyProjects = await tx.project.findMany({
+                where: { profileId: profileId }
+              });
+            } else {
+            }
+          } catch (projError) {
+            console.error('Error saving projects:', projError);
+            console.error('Project error details:', {
+              message: projError.message,
+              stack: projError.stack,
+              normalizedProjects: normalizedProjects,
+              profileId: profileId
             });
-            console.log('Verification: Projects in DB after save:', verifyProjects.length);
-            console.log('Verification: Project titles:', verifyProjects.map(p => p.title));
-          } else {
-            console.log('No projects to save (empty array)');
+            throw new Error(`Failed to save projects: ${projError.message}`);
           }
-        } catch (projError) {
-          console.error('Error saving projects:', projError);
-          console.error('Project error details:', {
-            message: projError.message,
-            stack: projError.stack,
-            normalizedProjects: normalizedProjects,
-            profileId: profileId
-          });
-          throw new Error(`Failed to save projects: ${projError.message}`);
         }
-      } else {
-        console.log('Projects not provided in update (undefined)');
-      }
 
-      // Handle languages - replace all existing ones
-      // Normalize languages from object format (e.g., {"0": {...}, "1": {...}}) to array
-      let normalizedLanguages = [];
-      if (languages !== undefined) {
-        if (Array.isArray(languages)) {
-          normalizedLanguages = languages;
-        } else if (languages && typeof languages === 'object') {
-          // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
-          const keys = Object.keys(languages);
-          const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
-          if (hasNumericKeys && keys.length > 0) {
-            // Sort by numeric key to maintain order
-            const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
-            normalizedLanguages = sortedKeys.map(key => languages[key]);
-          } else {
-            normalizedLanguages = Object.values(languages);
+        // Handle languages - replace all existing ones
+        // Normalize languages from object format (e.g., {"0": {...}, "1": {...}}) to array
+        let normalizedLanguages = [];
+        if (languages !== undefined) {
+          if (Array.isArray(languages)) {
+            normalizedLanguages = languages;
+          } else if (languages && typeof languages === 'object') {
+            // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+            const keys = Object.keys(languages);
+            const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+            if (hasNumericKeys && keys.length > 0) {
+              // Sort by numeric key to maintain order
+              const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+              normalizedLanguages = sortedKeys.map(key => languages[key]);
+            } else {
+              normalizedLanguages = Object.values(languages);
+            }
           }
         }
-        console.log('Normalized languages:', JSON.stringify(normalizedLanguages, null, 2));
-        console.log('Normalized languages count:', normalizedLanguages.length);
-      }
-      
-      // Always process languages if they're defined (even if empty array - need to clear existing)
-      if (languages !== undefined) {
-        console.log('Processing languages:', { count: normalizedLanguages.length, profileId, languagesDefined: true });
-        try {
-          await prisma.language.deleteMany({ where: { profileId: profileId } });
-          if (normalizedLanguages.length > 0) {
-            const result = await prisma.language.createMany({
+        
+        // Always process languages if they're defined (even if empty array - need to clear existing)
+        if (languages !== undefined) {
+          try {
+            await tx.language.deleteMany({ where: { profileId: profileId } });
+            if (normalizedLanguages.length > 0) {
+              const result = await tx.language.createMany({
               data: normalizedLanguages.map(lang => ({
                 profileId: profileId,
                 name: (lang.name || '').trim(),
                 proficiency: lang.proficiency ? (lang.proficiency.trim() || 'Native') : 'Native'
               }))
             });
-            console.log('Successfully created language records:', result);
-            console.log('Created count:', result.count);
             
-            // Verify languages were saved
-            const verifyLanguages = await prisma.language.findMany({
-              where: { profileId: profileId }
+              // Verify languages were saved
+              const verifyLanguages = await tx.language.findMany({
+                where: { profileId: profileId }
+              });
+            } else {
+            }
+          } catch (langError) {
+            console.error('Error saving languages:', langError);
+            console.error('Language error details:', {
+              message: langError.message,
+              stack: langError.stack,
+              normalizedLanguages: normalizedLanguages,
+              profileId: profileId
             });
-            console.log('Verification: Languages in DB after save:', verifyLanguages.length);
-            console.log('Verification: Language names:', verifyLanguages.map(l => l.name));
-          } else {
-            console.log('No languages to save (empty array)');
+            throw new Error(`Failed to save languages: ${langError.message}`);
           }
-        } catch (langError) {
-          console.error('Error saving languages:', langError);
-          console.error('Language error details:', {
-            message: langError.message,
-            stack: langError.stack,
-            normalizedLanguages: normalizedLanguages,
-            profileId: profileId
-          });
-          throw new Error(`Failed to save languages: ${langError.message}`);
         }
-      } else {
-        console.log('Languages not provided in update (undefined)');
-      }
 
-      // Handle skills - replace all existing ones
-      if (skills !== undefined) {
-        const normalizedSkills = normalizeSkillInput(skills);
-        
-        // Delete all existing user skills for this profile
-        await prisma.userSkill.deleteMany({
-          where: { profileId: profileId }
-        });
-        
-        // Insert the normalized skills using dictionary pattern
-        for (const skillData of normalizedSkills) {
-          const skillName = skillData.name;
-          if (!skillName) {
-            continue;
-          }
+        // Handle skills - replace all existing ones
+        if (skills !== undefined) {
+          const normalizedSkills = normalizeSkillInput(skills);
           
-          // Use dictionary pattern: get or create skill in skills table (dictionary)
-          const skill = await getOrCreateSkillInDictionary(skillName, 'Technical');
+          // Delete all existing user skills for this profile
+          await tx.userSkill.deleteMany({
+            where: { profileId: profileId }
+          });
           
-          // Create user_skills relation linking user profile to dictionary skill
-          // This is the join table that connects users to skills in the dictionary
-          await prisma.userSkill.create({
-            data: {
+          // Batch process skills for better performance
+          // First, get or create all skills in dictionary (parallelizable)
+          const validSkills = normalizedSkills.filter(skillData => skillData.name && skillData.name.trim());
+          const skillPromises = validSkills.map(skillData => 
+            getOrCreateSkillInDictionary(skillData.name.trim(), 'Technical', tx)
+          );
+          
+          const dictionarySkills = await Promise.all(skillPromises);
+          
+          // Then batch create all user_skills relations
+          if (dictionarySkills.length > 0) {
+            const userSkillData = validSkills.map((skillData, index) => ({
               profileId: profileId,
-              skillId: skill.id, // Reference to skill in dictionary (skills table)
+              skillId: dictionarySkills[index].id,
               yearsOfExperience: skillData.yearsOfExperience || null,
               verified: Boolean(skillData.verified)
+            }));
+            
+            if (userSkillData.length > 0) {
+              await tx.userSkill.createMany({
+                data: userSkillData
+              });
             }
-          });
-        }
+          }
 
-        // Cleanup: Remove skills from dictionary that are no longer used by any user
-        // This maintains the dictionary pattern - only keep skills that are actively referenced
+          // Cleanup: Remove skills from dictionary that are no longer used by any user
+          // This maintains the dictionary pattern - only keep skills that are actively referenced
+          // Note: Cleanup happens outside transaction to avoid blocking
+        }
+        
+        // Return profileId for use after transaction
+        return { profileId, updatedUser };
+      }, {
+        timeout: 30000, // 30 second timeout for transaction
+        isolationLevel: 'ReadCommitted' // Use ReadCommitted for better performance
+      });
+      
+      const { profileId, updatedUser } = result;
+      
+      // Cleanup unused skills outside transaction (non-blocking)
+      if (skills !== undefined) {
         try {
           const cleanupResult = await prisma.skill.deleteMany({
             where: {
@@ -1363,7 +1327,6 @@ async function userRoutes(fastify, options) {
             }
           });
           if (cleanupResult.count > 0) {
-            console.log('Cleaned up unused skills from dictionary:', cleanupResult.count);
           }
         } catch (cleanupError) {
           console.error('Failed to clean up unused skills from dictionary:', cleanupError);
@@ -1682,13 +1645,6 @@ async function userRoutes(fastify, options) {
           profile: parsedUser.profile || {} // Keep profile reference for nested checks
         };
         const completeness = calculateProfileCompleteness(userForCompleteness);
-        console.log('Profile completeness calculated:', {
-          score: completeness.score,
-          breakdown: completeness.breakdown,
-          skillsCount: userForCompleteness.skills?.length || 0,
-          educationCount: userForCompleteness.education?.length || 0,
-          workExpCount: userForCompleteness.workExperiences?.length || 0
-        });
         // Update profileCompleteness in UserProfile if profile exists
         if (fullProfile.profile) {
           await prisma.userProfile.update({
@@ -1709,9 +1665,24 @@ async function userRoutes(fastify, options) {
     }
   }));
 
-  // Upload profile picture
+  /**
+   * POST /api/users/profile/picture
+   * Upload profile picture
+   * @route POST /api/users/profile/picture
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.user - Authenticated user from JWT
+   * @param {string} request.user.userId - User ID from JWT token
+   * @param {Object} request.file - Uploaded file (multipart/form-data)
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<{success: boolean, url: string}>} Upload result
+   * @throws {400} Bad Request - If no file or invalid file type
+   * @throws {401} Unauthorized - If user is not authenticated
+   * @throws {413} Payload Too Large - If file exceeds size limit
+   * @throws {429} Too Many Requests - If rate limit exceeded
+   * @throws {500} Internal Server Error - If upload fails
+   */
   fastify.post('/api/users/profile/picture', {
-    preHandler: authenticate
+    preHandler: [authenticate, profilePictureRateLimit]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;

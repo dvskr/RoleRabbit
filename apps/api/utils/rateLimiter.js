@@ -1,132 +1,53 @@
 /**
- * Rate Limiting Utility
- * Implements per-IP and per-user rate limiting
+ * Rate limiting utilities for different endpoints
+ * @module utils/rateLimiter
  */
-
-const { getFromCache, setToCache } = require('./cache');
-const logger = require('./logger');
 
 /**
- * Check if request is within rate limit
+ * Create rate limiter configuration for profile endpoints
+ * @param {number} max - Maximum requests per time window
+ * @param {number} timeWindow - Time window in milliseconds
+ * @returns {Object} Rate limiter configuration
  */
-async function checkRateLimit(identifier, limit, windowMs) {
-  try {
-    const key = `ratelimit:${identifier}`;
-    const current = parseInt(getFromCache(key) || '0');
-    
-    if (current >= limit) {
-      logger.warn(`Rate limit exceeded for ${identifier}`);
+function createRateLimiter(max, timeWindow) {
+  return {
+    max,
+    timeWindow,
+    skip: (request) => {
+      // Skip rate limiting for localhost in development
+      if (process.env.NODE_ENV !== 'production') {
+        const isLocalhost = request.ip === '127.0.0.1' || 
+                           request.ip === '::1' || 
+                           request.ip === '::ffff:127.0.0.1' || 
+                           request.hostname === 'localhost';
+        if (isLocalhost) {
+          return true;
+        }
+      }
+      return false;
+    },
+    errorResponseBuilder: (request, context) => {
       return {
-        allowed: false,
-        remaining: 0,
-        resetTime: Date.now() + windowMs
+        error: 'Rate limit exceeded. Please try again later.',
+        message: 'Rate limit exceeded. Please try again later.',
+        retryAfter: Math.round(context.ttl / 1000)
       };
     }
-    
-    // Increment counter
-    const newCount = current + 1;
-    setToCache(key, newCount.toString(), windowMs);
-    
-    return {
-      allowed: true,
-      remaining: limit - newCount,
-      resetTime: Date.now() + windowMs
-    };
-  } catch (error) {
-    logger.error('Rate limit check failed', error);
-    // On error, allow the request (fail open)
-    return {
-      allowed: true,
-      remaining: limit,
-      resetTime: Date.now() + windowMs
-    };
-  }
-}
-
-/**
- * Get client identifier (IP address or user ID)
- */
-function getClientIdentifier(request) {
-  // Prioritize user ID if authenticated
-  if (request.user?.userId) {
-    return `user:${request.user.userId}`;
-  }
-  
-  // Fall back to IP address
-  return `ip:${request.ip || request.socket.remoteAddress}`;
-}
-
-/**
- * Apply rate limiting based on endpoint and user type
- */
-function getRateLimitConfig(path) {
-  // Strict limits for authentication endpoints
-  if (path.startsWith('/api/auth/login') || path.startsWith('/api/auth/register')) {
-    return { limit: 5, windowMs: 15 * 60 * 1000 }; // 5 requests per 15 minutes
-  }
-  
-  // Password reset endpoints
-  if (path.startsWith('/api/auth/reset-password') || path.startsWith('/api/auth/forgot-password')) {
-    return { limit: 3, windowMs: 60 * 60 * 1000 }; // 3 requests per hour
-  }
-  
-  // General API endpoints
-  if (path.startsWith('/api/')) {
-    return { limit: 100, windowMs: 60 * 1000 }; // 100 requests per minute
-  }
-  
-  // Default: very lenient
-  return { limit: 1000, windowMs: 60 * 1000 };
-}
-
-/**
- * Rate limiting middleware factory
- */
-function rateLimitMiddleware(options = {}) {
-  const defaultOptions = {
-    identifier: getClientIdentifier,
-    getConfig: getRateLimitConfig
-  };
-  
-  const config = { ...defaultOptions, ...options };
-  
-  return async (request, reply, done) => {
-    try {
-      const identifier = config.identifier(request);
-      const rateConfig = config.getConfig(request.url);
-      
-      const result = await checkRateLimit(
-        identifier,
-        rateConfig.limit,
-        rateConfig.windowMs
-      );
-      
-      // Set rate limit headers
-      reply.header('X-RateLimit-Limit', rateConfig.limit);
-      reply.header('X-RateLimit-Remaining', result.remaining);
-      reply.header('X-RateLimit-Reset', new Date(result.resetTime).toISOString());
-      
-      if (!result.allowed) {
-        reply.code(429).send({
-          error: 'Too many requests',
-          retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000)
-        });
-        return;
-      }
-      
-      done();
-    } catch (error) {
-      logger.error('Rate limiting middleware error', error);
-      // On error, allow the request
-      done();
-    }
   };
 }
+
+// Profile GET endpoint: 60 requests per minute
+const profileGetLimiter = createRateLimiter(60, 60 * 1000);
+
+// Profile PUT endpoint: 10 requests per minute
+const profilePutLimiter = createRateLimiter(10, 60 * 1000);
+
+// Profile picture upload: 5 requests per minute
+const profilePictureLimiter = createRateLimiter(5, 60 * 1000);
 
 module.exports = {
-  checkRateLimit,
-  getClientIdentifier,
-  getRateLimitConfig,
-  rateLimitMiddleware
+  profileGetLimiter,
+  profilePutLimiter,
+  profilePictureLimiter,
+  createRateLimiter
 };
-

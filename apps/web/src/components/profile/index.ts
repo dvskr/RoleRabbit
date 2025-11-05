@@ -16,5 +16,12 @@ export { default as FormField } from './components/FormField';
 export { default as ProfilePicture } from './components/ProfilePicture';
 export { default as BulletListEditor } from './components/BulletListEditor';
 
+// Error Boundary
+export { default as ProfileErrorBoundary } from './ProfileErrorBoundary';
+
+// Container
+export { ProfileContainer } from './ProfileContainer';
+export type { ProfileContainerRenderProps } from './ProfileContainer';
+
 // Types
 export type { UserData, ProfileTabConfig, ProfileHeaderProps, ProfileSidebarProps, FormFieldProps } from './types/profile';

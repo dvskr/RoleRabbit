@@ -22,7 +22,7 @@ export default function ProfessionalTab({
   
   const VALID_PROJECT_TYPES: WorkExperience['projectType'][] = ['Client Project', 'Full-time', 'Part-time', 'Contract', 'Freelance', 'Consulting', 'Internship'];
 
-  const cleanTechnologyString = (value: any): string => {
+  const cleanTechnologyString = (value: unknown): string => {
     if (value === null || value === undefined) return '';
     let tech = String(value).trim();
     if (!tech) return '';
@@ -53,10 +53,10 @@ export default function ProfessionalTab({
     return tech;
   };
 
-  const normalizeTechnologiesField = (raw: any): string[] => {
+  const normalizeTechnologiesField = (raw: unknown): string[] => {
     if (!raw) return [];
 
-    const collect = (values: any[]): string[] =>
+    const collect = (values: unknown[]): string[] =>
       values
         .map((item) => cleanTechnologyString(item))
         .filter((item) => item.length > 0);
@@ -75,7 +75,7 @@ export default function ProfessionalTab({
           }
           return a.localeCompare(b);
         })
-        .map((key) => (raw as Record<string, any>)[key]);
+        .map((key) => (raw as Record<string, unknown>)[key]);
       return collect(values);
     }
 
@@ -101,10 +101,10 @@ export default function ProfessionalTab({
     return collect([raw]);
   };
 
-  const normalizeWorkExperiences = (experiences: any): WorkExperience[] => {
+  const normalizeWorkExperiences = (experiences: unknown): WorkExperience[] => {
     if (!experiences) return [];
 
-    const toArray = (input: any): any[] => {
+    const toArray = (input: unknown): unknown[] => {
       if (!input) return [];
       if (Array.isArray(input)) return input;
       if (typeof input === 'string') {
@@ -126,13 +126,29 @@ export default function ProfessionalTab({
 
     const items = toArray(experiences);
 
-    return items.map((exp: any) => {
-      const id = exp?.id || exp?._id || exp?.uuid || exp?.tempId || `exp-${Date.now()}-${Math.random()}`;
-      const rawEndDate = exp?.endDate ?? exp?.end ?? '';
+    return items.map((exp: unknown) => {
+      if (!exp || typeof exp !== 'object') {
+        return {
+          id: `exp-${Date.now()}-${Math.random()}`,
+          company: '',
+          role: '',
+          location: '',
+          startDate: '',
+          endDate: '',
+          isCurrent: false,
+          description: '',
+          technologies: [],
+          projectType: 'Full-time' as const
+        } as WorkExperience;
+      }
+      
+      const expObj = exp as Record<string, unknown>;
+      const id = (expObj.id || expObj._id || expObj.uuid || expObj.tempId || `exp-${Date.now()}-${Math.random()}`) as string;
+      const rawEndDate = (expObj.endDate ?? expObj.end ?? '') as string | null | undefined;
       const normalizedEndDateValue = typeof rawEndDate === 'string' ? rawEndDate.trim() : rawEndDate;
-      const startDate = exp?.startDate ?? exp?.start ?? '';
-      const isCurrent = Boolean(exp?.isCurrent) || normalizedEndDateValue === '' || normalizedEndDateValue === null || normalizedEndDateValue === 'Present';
-      const normalizeProjectType = (value: any): WorkExperience['projectType'] => {
+      const startDate = (expObj.startDate ?? expObj.start ?? '') as string;
+      const isCurrent = Boolean(expObj.isCurrent) || normalizedEndDateValue === '' || normalizedEndDateValue === null || normalizedEndDateValue === 'Present';
+      const normalizeProjectType = (value: unknown): WorkExperience['projectType'] => {
         if (typeof value === 'string') {
           const match = VALID_PROJECT_TYPES.find(
             (type) => type.toLowerCase() === value.toLowerCase()
@@ -143,20 +159,20 @@ export default function ProfessionalTab({
         }
         return 'Full-time';
       };
-      const projectType = normalizeProjectType(exp?.projectType ?? exp?.type);
+      const projectType = normalizeProjectType(expObj.projectType ?? expObj.type);
 
       // Normalize technologies array
-      const technologies = normalizeTechnologiesField(exp?.technologies);
+      const technologies = normalizeTechnologiesField(expObj.technologies);
 
       return {
         id,
-        company: exp?.company || '',
-        role: exp?.role || exp?.title || '',
-        location: exp?.location || '',
+        company: (expObj.company as string) || '',
+        role: (expObj.role as string) || (expObj.title as string) || '',
+        location: (expObj.location as string) || '',
         startDate,
         endDate: isCurrent ? '' : (normalizedEndDateValue || ''),
         isCurrent,
-        description: exp?.description || '',
+        description: (expObj.description as string) || '',
         technologies,
         projectType
       } as WorkExperience;
@@ -318,23 +334,36 @@ export default function ProfessionalTab({
   // Normalize projects array
   // Note: We don't trim values here to preserve spaces during editing
   // Trimming should only happen when saving/validating, not during user input
-  const normalizeProjects = (projects: any): Project[] => {
+  const normalizeProjects = (projects: unknown): Project[] => {
     if (!projects) return [];
     if (Array.isArray(projects)) {
-      return projects.map((proj: any) => ({
-        id: proj?.id || proj?._id || proj?.uuid || proj?.tempId || `proj-${Date.now()}-${Math.random()}`,
-        title: typeof proj?.title === 'string' ? proj.title : '',
-        description: typeof proj?.description === 'string' ? proj.description : '',
-        technologies: (() => {
-          if (!proj?.technologies) return [];
-          if (Array.isArray(proj.technologies)) {
+      return projects.map((proj: unknown) => {
+        if (!proj || typeof proj !== 'object') {
+          return {
+            id: `proj-${Date.now()}-${Math.random()}`,
+            title: '',
+            description: '',
+            technologies: [],
+            date: ''
+          } as Project;
+        }
+        
+        const projObj = proj as Record<string, unknown>;
+        
+        return {
+          id: (projObj.id || projObj._id || projObj.uuid || projObj.tempId || `proj-${Date.now()}-${Math.random()}`) as string,
+          title: (typeof projObj.title === 'string' ? projObj.title : '') as string,
+          description: (typeof projObj.description === 'string' ? projObj.description : '') as string,
+          technologies: (() => {
+            if (!projObj.technologies) return [];
+            if (Array.isArray(projObj.technologies)) {
             // Ensure all items are strings and filter out empty values
-            return proj.technologies
-              .map((t: any) => String(t || '').trim())
-              .filter((t: string) => t.length > 0 && t !== 'null' && t !== 'undefined');
-          }
-          if (typeof proj.technologies === 'string') {
-            const techStr = proj.technologies.trim();
+              return projObj.technologies
+                .map((t: unknown) => String(t || '').trim())
+                .filter((t: string) => t.length > 0 && t !== 'null' && t !== 'undefined');
+            }
+            if (typeof projObj.technologies === 'string') {
+              const techStr = projObj.technologies.trim();
             if (!techStr) return [];
             
             // Check if it looks like a stringified array with escaped quotes: [\"React\" \"TypeScript\"]
@@ -348,7 +377,7 @@ export default function ProfessionalTab({
                 const parsed = JSON.parse(cleaned);
                 if (Array.isArray(parsed)) {
                   return parsed
-                    .map((t: any) => String(t || '').trim())
+                    .map((t: unknown) => String(t || '').trim())
                     .filter((t: string) => t.length > 0);
                 }
               } catch {
@@ -388,11 +417,12 @@ export default function ProfessionalTab({
           }
           return [];
         })(),
-        date: typeof proj?.date === 'string' ? proj.date : '',
-        link: typeof proj?.link === 'string' ? proj.link : '',
-        github: typeof proj?.github === 'string' ? proj.github : '',
-        media: Array.isArray(proj?.media) ? proj.media : []
-      }));
+            date: (typeof projObj.date === 'string' ? projObj.date : '') as string,
+            link: (typeof projObj.link === 'string' ? projObj.link : '') as string,
+            github: (typeof projObj.github === 'string' ? projObj.github : '') as string,
+            media: Array.isArray(projObj.media) ? (projObj.media as unknown[]) : []
+          } as Project;
+        });
     }
     return [];
   };
@@ -442,6 +472,41 @@ export default function ProfessionalTab({
       });
     }
   };
+
+  // CRITICAL: Sync all raw technologies before save
+  // This ensures technologies are saved even if user clicks Save before blurring
+  const syncAllRawTechnologies = () => {
+    const updatedProjects = [...projects];
+    let hasChanges = false;
+
+    Object.keys(projectTechnologiesRaw).forEach(projectId => {
+      const rawString = projectTechnologiesRaw[projectId];
+      if (rawString !== undefined && rawString.trim()) {
+        const technologies = normalizeTechnologiesField(rawString.split(',').map(t => t.trim()));
+        const projectIndex = updatedProjects.findIndex(p => p.id === projectId);
+        if (projectIndex >= 0) {
+          updatedProjects[projectIndex] = {
+            ...updatedProjects[projectIndex],
+            technologies
+          };
+          hasChanges = true;
+        }
+      }
+    });
+
+    if (hasChanges) {
+      onUserDataChange({ projects: updatedProjects });
+      // Clear all raw strings after syncing
+      setProjectTechnologiesRaw({});
+    }
+  };
+
+  // Sync raw technologies when editing ends (before save)
+  useEffect(() => {
+    if (!isEditing && Object.keys(projectTechnologiesRaw).length > 0) {
+      syncAllRawTechnologies();
+    }
+  }, [isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const autoCreateExperienceRef = useRef(false);
 
@@ -625,7 +690,12 @@ export default function ProfessionalTab({
                       <select
                         id={`employment-type-${stableId}`}
                         value={displayExp.projectType || 'Full-time'}
-                        onChange={(e) => updateWorkExperience(displayExp.id || stableId, { projectType: e.target.value as any })}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (VALID_PROJECT_TYPES.includes(value as WorkExperience['projectType'])) {
+                            updateWorkExperience(displayExp.id || stableId, { projectType: value as WorkExperience['projectType'] });
+                          }
+                        }}
                         className="w-full px-4 py-3 rounded-lg transition-all"
                         style={{
                           background: colors.inputBackground,
