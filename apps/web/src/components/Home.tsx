@@ -18,57 +18,11 @@ import {
   Play,
   Quote
 } from 'lucide-react';
-import { MissionControlDashboard } from './dashboard';
-import { DashboardConfig } from './dashboard/types/dashboard';
-import OnboardingWizard from './OnboardingWizard';
-
 interface HomeProps {
-  // NEW OPTIONAL PROPS (backward compatible)
-  enableMissionControl?: boolean; // Default: false
-  dashboardConfig?: Partial<DashboardConfig>;
-  onQuickAction?: (actionId: string) => void;
-  onNavigateToTab?: (tab: string) => void;
-  onOpenApplicationAnalytics?: () => void;
+  // Props kept for backward compatibility but MissionControlDashboard removed
 }
 
-export default function Home({ 
-  enableMissionControl = false,
-  dashboardConfig,
-  onQuickAction,
-  onNavigateToTab,
-  onOpenApplicationAnalytics
-}: HomeProps) {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  // Check if this is first-time user
-  useEffect(() => {
-    if (enableMissionControl) {
-      const hasSeenOnboarding = localStorage.getItem('roleready-onboarding-completed');
-      if (!hasSeenOnboarding) {
-        setShowOnboarding(true);
-      }
-    }
-  }, [enableMissionControl]);
-
-  const handleOnboardingComplete = () => {
-    localStorage.setItem('roleready-onboarding-completed', 'true');
-    setShowOnboarding(false);
-  };
-
-  // If Mission Control is enabled, render the dashboard
-  if (enableMissionControl) {
-    return (
-      <>
-        {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
-        <MissionControlDashboard
-          config={dashboardConfig}
-          onQuickAction={onQuickAction}
-          onNavigateToTab={onNavigateToTab}
-          onOpenApplicationAnalytics={onOpenApplicationAnalytics}
-        />
-      </>
-    );
-  }
+export default function Home({}: HomeProps) {
 
   // Existing marketing page (unchanged)
   const [activeFeature, setActiveFeature] = useState(0);

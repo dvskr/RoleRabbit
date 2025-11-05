@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import { Camera, CheckCircle, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { Camera, CheckCircle, Loader2 } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import apiService from '@/services/apiService';
 import { logger } from '@/utils/logger';
@@ -97,12 +97,6 @@ export default function ProfilePicture({
     fileInputRef.current?.click();
   };
 
-  const handleEditExisting = () => {
-    if (profilePicture) {
-      setSelectedImage(profilePicture);
-      setShowEditor(true);
-    }
-  };
 
   const handleRemovePicture = async () => {
     if (!profilePicture) return;
@@ -167,21 +161,6 @@ export default function ProfilePicture({
                     <Loader2 className="animate-spin text-white" size={24} />
                   </div>
                 )}
-                {!isUploading && (
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
-                    <button
-                      onClick={handleEditExisting}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full"
-                      style={{
-                        background: colors.primaryBlue,
-                        color: 'white',
-                      }}
-                      title="Edit photo"
-                    >
-                      <Edit2 size={18} />
-                    </button>
-                  </div>
-                )}
               </div>
             ) : (
               <div 
@@ -208,17 +187,11 @@ export default function ProfilePicture({
           </div>
           <div className="flex-1">
             <h3 
-              className="text-xl font-semibold mb-2"
+              className="text-xl font-semibold mb-3"
               style={{ color: colors.primaryText }}
             >
               Profile Picture
             </h3>
-            <p 
-              className="mb-4"
-              style={{ color: colors.secondaryText }}
-            >
-              Upload a professional headshot to make your profile stand out. Crop and edit your photo for the perfect look.
-            </p>
             <div className="flex items-center gap-3">
               <input
                 ref={fileInputRef}
@@ -234,7 +207,7 @@ export default function ProfilePicture({
               <button 
                 onClick={handleButtonClick}
                 disabled={isUploading}
-                className="px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: colors.primaryBlue,
                   color: 'white',
@@ -250,30 +223,16 @@ export default function ProfilePicture({
               >
                 {isUploading ? (
                   <>
-                    <Loader2 size={18} className="animate-spin" />
+                    <Loader2 size={16} className="animate-spin" />
                     Uploading...
                   </>
                 ) : (
                   <>
-                    <Camera size={18} />
+                    <Camera size={16} />
                     {profilePicture ? 'Change Photo' : 'Upload Photo'}
                   </>
                 )}
               </button>
-              {profilePicture && !isUploading && (
-                <button
-                  onClick={handleEditExisting}
-                  className="px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 border-2 hover:shadow-lg"
-                  style={{
-                    borderColor: colors.border,
-                    color: colors.primaryText,
-                    background: colors.cardBackground,
-                  }}
-                >
-                  <Edit2 size={18} />
-                  Edit
-                </button>
-              )}
             </div>
             {uploadError && (
               <p 
@@ -285,10 +244,10 @@ export default function ProfilePicture({
             )}
             {!uploadError && (
               <p 
-                className="text-sm mt-2"
+                className="text-xs mt-2"
                 style={{ color: colors.tertiaryText }}
               >
-                JPG, PNG, WebP up to 10MB • Recommended: 800x800px headshot
+                JPG, PNG, WebP up to 10MB • Recommended: 800x800px
               </p>
             )}
           </div>

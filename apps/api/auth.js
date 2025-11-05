@@ -124,10 +124,12 @@ async function updateUserPassword(userId, oldPassword, newPassword) {
     throw new Error('User not found');
   }
 
-  // Verify old password
-  const isValid = await verifyPassword(oldPassword, user.password);
-  if (!isValid) {
-    throw new Error('Invalid old password');
+  // Verify old password only if provided (skip if null - used for OTP-based reset)
+  if (oldPassword !== null && oldPassword !== undefined) {
+    const isValid = await verifyPassword(oldPassword, user.password);
+    if (!isValid) {
+      throw new Error('Invalid old password');
+    }
   }
 
   // Validate new password

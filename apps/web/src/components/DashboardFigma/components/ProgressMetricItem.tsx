@@ -4,9 +4,10 @@ import { useTheme } from '../../../contexts/ThemeContext';
 
 interface ProgressMetricItemProps {
   metric: ProgressMetric;
+  isLast?: boolean;
 }
 
-export function ProgressMetricItem({ metric }: ProgressMetricItemProps) {
+export function ProgressMetricItem({ metric, isLast = false }: ProgressMetricItemProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const isLightTheme = theme.mode === 'light';

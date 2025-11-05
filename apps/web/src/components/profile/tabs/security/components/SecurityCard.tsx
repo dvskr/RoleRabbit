@@ -13,7 +13,6 @@ export const SecurityCard: React.FC<SecurityCardProps> = ({
       className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
       style={{
         background: colors.cardBackground,
-        border: `1px solid ${colors.border}`,
       }}
     >
       {title && (

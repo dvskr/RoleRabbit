@@ -12,7 +12,9 @@
     "db:seed": "node utils/seeder.js",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
-    "migrate:profile-pictures": "node scripts/migrate-profile-pictures.js"
+    "migrate:profile-pictures": "node scripts/migrate-profile-pictures.js",
+    "test:security": "node test-security-endpoints.js",
+    "check:otp": "node scripts/check-otp-tokens.js"
   },
   "dependencies": {
     "@fastify/compress": "^8.1.0",

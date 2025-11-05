@@ -23,7 +23,7 @@ export function ProgressMetricsWidget({ metrics }: ProgressMetricsWidgetProps) {
   
   return (
     <div
-      className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-green-500/10"
+      className="rounded-xl sm:rounded-2xl pt-4 px-4 pb-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-green-500/10"
       style={{
         background: widgetBackground,
         backdropFilter: 'blur(12px)',
@@ -37,7 +37,11 @@ export function ProgressMetricsWidget({ metrics }: ProgressMetricsWidgetProps) {
       <h2 className="text-base font-semibold mb-3" style={{ color: headingColor }}>Progress</h2>
       <div className="space-y-3">
         {metrics.map((metric, index) => (
-          <ProgressMetricItem key={index} metric={metric} />
+          <ProgressMetricItem 
+            key={index} 
+            metric={metric} 
+            isLast={index === metrics.length - 1} 
+          />
         ))}
       </div>
     </div>

@@ -128,6 +128,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             onToggleShowPassword={() => setPasswordData(prev => ({ ...prev, showCurrentPassword: !prev.showCurrentPassword }))}
             placeholder="Enter current password"
             colors={colors}
+            autoComplete="current-password"
           />
 
           <PasswordInput
@@ -138,6 +139,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             onToggleShowPassword={() => setPasswordData(prev => ({ ...prev, showNewPassword: !prev.showNewPassword }))}
             placeholder="Enter new password (min. 8 characters)"
             colors={colors}
+            autoComplete="new-password"
           />
 
           <PasswordInput
@@ -148,6 +150,7 @@ export const PasswordChangeModal: React.FC<PasswordChangeModalProps> = ({
             onToggleShowPassword={() => setPasswordData(prev => ({ ...prev, showConfirmPassword: !prev.showConfirmPassword }))}
             placeholder="Confirm new password"
             colors={colors}
+            autoComplete="new-password"
           />
 
           <div 

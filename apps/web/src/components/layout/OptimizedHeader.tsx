@@ -5,7 +5,6 @@ import {
   Settings, 
   User, 
   Search,
-  Sparkles,
   ChevronDown,
   LogOut,
   Moon,
@@ -14,6 +13,7 @@ import {
   Minimize2
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
+import { RabbitLogoWithText } from '../ui/RabbitLogo';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -166,14 +166,7 @@ const Header = memo<HeaderProps>(({
           <Menu size={20} className="text-gray-600" />
         </button>
 
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-            <Sparkles size={16} className="text-white" />
-          </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            RoleReady
-          </h1>
-        </div>
+                <RabbitLogoWithText size={80} animated={true} textSize="lg" />
       </div>
 
       {/* Center Section - Search */}

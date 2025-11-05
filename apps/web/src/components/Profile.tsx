@@ -25,8 +25,8 @@ import {
   ProfileTab,
   ProfessionalTab,
   SkillsTab,
-  SecurityTab,
   PreferencesTab,
+  BillingTab,
   SupportTab,
   UserData,
   ProfileTabConfig
@@ -87,6 +87,15 @@ const normalizeToArray = <T = any>(value: any): T[] => {
     return Array.from(value.values()) as T[];
   }
   if (typeof value === 'object') {
+    // Handle objects with numeric string keys (e.g., {"0": {...}, "1": {...}})
+    // Sort by numeric key to maintain order
+    const keys = Object.keys(value);
+    const hasNumericKeys = keys.every(key => /^\d+$/.test(key));
+    if (hasNumericKeys && keys.length > 0) {
+      // Sort by numeric key to maintain order
+      const sortedKeys = keys.sort((a, b) => parseInt(a) - parseInt(b));
+      return sortedKeys.map(key => (value as any)[key]).filter((item) => item !== undefined && item !== null) as T[];
+    }
     return Object.values(value).filter((item) => item !== undefined && item !== null) as T[];
   }
   return [];
@@ -456,6 +465,84 @@ const sanitizeEducation = (educationInput: any, options?: { keepDrafts?: boolean
     .filter(Boolean) as Education[];
 };
 
+const sanitizeProjects = (projects: any, options?: { keepDrafts?: boolean }): any[] => {
+  const keepDrafts = options?.keepDrafts ?? true;
+  const normalizedArray = normalizeToArray(projects);
+
+  const toStringSafe = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return typeof value === 'string' ? value : String(value);
+  };
+
+  return (normalizedArray as any[])
+    .map((proj, index) => {
+      if (!proj) {
+        if (keepDrafts) {
+          return {
+            id: `proj-${Date.now()}-${index}`,
+            title: '',
+            description: '',
+            technologies: [],
+            date: '',
+            link: '',
+            github: ''
+          };
+        }
+        return null;
+      }
+
+      const id = proj?.id || proj?._id || proj?.uuid || proj?.tempId || (keepDrafts ? `proj-${Date.now()}-${index}` : undefined);
+      
+      const title = toStringSafe(proj.title || '');
+      const description = toStringSafe(proj.description || '');
+      const date = toStringSafe(proj.date || '');
+      const link = toStringSafe(proj.link || '');
+      const github = toStringSafe(proj.github || '');
+      
+      // Handle technologies - can be array or comma-separated string
+      let technologies: string[] = [];
+      if (Array.isArray(proj.technologies)) {
+        technologies = proj.technologies.map((t: any) => toStringSafe(t)).filter((t: string) => t.length > 0);
+      } else if (typeof proj.technologies === 'string') {
+        technologies = proj.technologies.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+      }
+
+      // Check if project has any content
+      // For saving (keepDrafts: false), require at least title OR description OR technologies
+      // Don't filter out projects that have any meaningful content
+      const hasContent = !keepDrafts 
+        ? (title.trim().length > 0 || description.trim().length > 0 || technologies.length > 0 || date.trim().length > 0 || link.trim().length > 0 || github.trim().length > 0)
+        : true; // Keep all projects during editing
+
+      if (!hasContent && !keepDrafts) {
+        // Only filter out completely empty projects
+        return null;
+      }
+
+      const sanitized: any = {
+        ...(id ? { id } : {}),
+        title: keepDrafts ? title : title.trim(),
+        description: keepDrafts ? description : description.trim(),
+        technologies: technologies,
+        date: keepDrafts ? date : date.trim(),
+        link: keepDrafts ? link : link.trim(),
+        github: keepDrafts ? github : github.trim()
+      };
+
+      // If not keeping drafts, trim all string fields
+      if (!keepDrafts) {
+        sanitized.title = sanitized.title.trim();
+        sanitized.description = sanitized.description.trim();
+        sanitized.date = sanitized.date.trim();
+        sanitized.link = sanitized.link.trim();
+        sanitized.github = sanitized.github.trim();
+      }
+
+      return sanitized;
+    })
+    .filter(Boolean);
+};
+
 const sanitizeCertifications = (certifications: any, options?: { keepDrafts?: boolean }): any[] => {
   const keepDrafts = options?.keepDrafts ?? true;
   const normalizedArray = normalizeToArray(certifications);
@@ -617,9 +704,9 @@ export default function Profile() {
   const tabs: ProfileTabConfig[] = [
     { id: 'profile', label: 'Profile', icon: UserCircle },
     { id: 'professional', label: 'Professional', icon: Briefcase },
-    { id: 'skills', label: 'Skills & Expertise', icon: Award },
-    { id: 'preferences', label: 'Preferences', icon: Settings },
-    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'skills', label: 'Skills and Education', icon: Award },
+    { id: 'preferences', label: 'Preferences & Security', icon: Settings },
+    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'support', label: 'Help & Support', icon: HelpCircle }
   ];
 
@@ -940,6 +1027,15 @@ export default function Profile() {
           } else if (key === 'certifications') {
             const sanitizedCerts = sanitizeCertifications(value, { keepDrafts: false });
             cleanedData[key as keyof UserData] = sanitizedCerts as any;
+          } else if (key === 'projects') {
+            logger.debug('=== PROJECTS SANITIZATION ===');
+            logger.debug('Projects before sanitization:', value);
+            logger.debug('Projects type:', typeof value, Array.isArray(value));
+            logger.debug('Projects length:', value?.length);
+            const sanitizedProjects = sanitizeProjects(value, { keepDrafts: false });
+            logger.debug('Projects after sanitization:', sanitizedProjects);
+            logger.debug('Sanitized projects count:', sanitizedProjects.length);
+            cleanedData[key as keyof UserData] = sanitizedProjects as any;
           } else {
             const normalizedArray = normalizeToArray(value);
             cleanedData[key as keyof UserData] = normalizedArray as any;
@@ -957,6 +1053,9 @@ export default function Profile() {
       logger.debug('=== CLEANED DATA TO SEND ===');
       logger.debug('workExperiences in cleanedData:', cleanedData.workExperiences);
       logger.debug('workExperiences count:', cleanedData.workExperiences?.length || 0);
+      logger.debug('projects in cleanedData:', cleanedData.projects);
+      logger.debug('projects count:', cleanedData.projects?.length || 0);
+      logger.debug('projects type:', typeof cleanedData.projects, Array.isArray(cleanedData.projects));
       logger.debug('All cleanedData keys:', Object.keys(cleanedData));
       
       const response = await apiService.updateUserProfile(cleanedData);
@@ -965,6 +1064,10 @@ export default function Profile() {
       logger.debug('API Response:', response);
       logger.debug('Response workExperiences:', response?.user?.workExperiences);
       logger.debug('Response workExperiences count:', response?.user?.workExperiences?.length || 0);
+      logger.debug('Response projects:', response?.user?.projects);
+      logger.debug('Response projects count:', response?.user?.projects?.length || 0);
+      logger.debug('Response profile.projects:', response?.user?.profile?.projects);
+      logger.debug('Response profile.projects count:', response?.user?.profile?.projects?.length || 0);
       
       // Update local state with the response data (which includes nested arrays from DB)
       if (response && response.user) {
@@ -1062,14 +1165,12 @@ export default function Profile() {
       setIsSaving(false);
       setIsSaved(true);
       
-      // Reset saved status after 15 seconds but stay in edit mode to prevent flashing
-      // User can manually exit edit mode when ready
-      // Keep isSaved flag longer to prevent useEffect from overwriting data
-      // Extended to 15s to ensure context update happens first and prevents race conditions
+      // Reset saved status after 3 seconds - faster transition back to "Save" button
+      // This gives enough time to show "Saved" feedback but allows quick re-saving
       setTimeout(() => {
         setIsSaved(false);
         logger.debug('isSaved flag cleared');
-      }, 15000); // Increased to 15s to give time for context update and state stabilization
+      }, 3000); // Reduced to 3s for faster transition
     } catch (error: any) {
       logger.error('Failed to save profile:', error);
       setIsSaving(false);
@@ -1104,6 +1205,12 @@ export default function Profile() {
       });
       setTimeout(() => setSaveMessage(null), 5000);
       return;
+    }
+    
+    // Reset saved state when user makes changes - button should change back to "Save"
+    if (isSaved) {
+      setIsSaved(false);
+      logger.debug('isSaved reset to false - user made changes');
     }
     
     logger.debug('=== handleUserDataChange called ===');
@@ -1313,10 +1420,10 @@ export default function Profile() {
         return <ProfessionalTab {...commonProps} />;
       case 'skills':
         return <SkillsTab {...commonProps} />;
-      case 'security':
-        return <SecurityTab />;
       case 'preferences':
         return <PreferencesTab {...commonProps} />;
+      case 'billing':
+        return <BillingTab {...commonProps} />;
       case 'support':
         return <SupportTab />;
       default:

@@ -225,6 +225,67 @@
   animation: pulse 2s infinite;
 }
 
+/* RoleRabbit Logo Animations - Exact from HTML */
+@keyframes earTwitch {
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-5deg); }
+  20% { transform: rotate(5deg); }
+  30% { transform: rotate(0deg); }
+}
+
+@keyframes noseWiggle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1px); }
+  75% { transform: translateX(1px); }
+}
+
+@keyframes eyeBlink {
+  0%, 90%, 100% { opacity: 1; }
+  95% { opacity: 0; }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.rabbit-ear-left {
+  animation: earTwitch 4s ease-in-out infinite !important;
+  transform-origin: 15px 35px;
+  will-change: transform;
+}
+
+.rabbit-ear-right {
+  animation: earTwitch 4s ease-in-out 0.4s infinite !important;
+  transform-origin: 105px 35px;
+  will-change: transform;
+}
+
+.rabbit-nose {
+  animation: noseWiggle 2s ease-in-out infinite !important;
+  will-change: transform;
+}
+
+.rabbit-eye-left {
+  animation: eyeBlink 5s ease infinite !important;
+  will-change: opacity;
+}
+
+.rabbit-eye-right {
+  animation: eyeBlink 5s ease 0.1s infinite !important;
+  will-change: opacity;
+}
+
+.rabbit-breathe {
+  animation: breathe 3s ease-in-out infinite !important;
+  will-change: transform;
+}
+
+.rabbit-loading {
+  animation: breathe 2s ease-in-out infinite !important;
+  will-change: transform;
+}
+
 .loading-text {
   color: white;
   font-size: 24px;

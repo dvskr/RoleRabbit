@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import type { Todo, Priority, ThemeColors } from '../types/dashboardFigma';
 import { TodoItem } from './TodoItem';
 import { AddTodoForm } from './AddTodoForm';
@@ -29,7 +29,6 @@ export function TodosWidget({
   todos,
   todoFilter,
   showCompleted,
-  todoProgress,
   showAddTodo,
   newTodoTitle,
   newTodoSubtitle,
@@ -49,67 +48,61 @@ export function TodosWidget({
     todoFilter === 'Urgent' ? todos.filter(t => t.priority === 'urgent') :
     todoFilter === 'High Priority' ? todos.filter(t => t.priority === 'high') :
     todos.filter(t => t.priority === 'low')
-  ).filter(todo => showCompleted || !todo.completed).slice(0, 5);
+  ).filter(todo => showCompleted || !todo.completed);
+
+  const isDark = colors.background.includes('0f0a1e') || colors.background.includes('rgb(15, 10, 30)');
 
   return (
     <div
-      className="rounded-xl sm:rounded-2xl p-3 sm:p-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl flex flex-col overflow-visible"
+      className="rounded-2xl p-5 flex flex-col"
       style={{
-        background: colors.cardBackground,
+        background: isDark 
+          ? 'rgba(255, 255, 255, 0.05)' 
+          : '#ffffff',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        border: `1px solid ${colors.border}`,
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06)',
+        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+        boxShadow: isDark
+          ? '0 4px 20px rgba(0, 0, 0, 0.3)'
+          : '0 2px 12px rgba(0, 0, 0, 0.08), 0 4px 24px rgba(0, 0, 0, 0.06)',
       }}
     >
-      <div className="mb-2 sm:mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-base font-semibold" style={{ color: colors.primaryText }}>
-            To-Dos
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 
+            className="text-2xl font-bold mb-1"
+            style={{ color: isDark ? '#ffffff' : '#1f2937' }}
+          >
+            Smart To-Dos
           </h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: colors.secondaryText }}>
-              {todos.filter(t => !t.completed).length} active
-            </span>
-            <button
-              onClick={onShowAddTodo}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{
-                background: colors.badgePurpleBg,
-                border: `1px solid ${colors.badgePurpleBorder}`,
-                color: colors.badgePurpleText,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.9';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-              title="Add new todo"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
+          <p 
+            className="text-sm"
+            style={{ color: isDark ? 'rgba(255, 255, 255, 0.6)' : '#6b7280' }}
+          >
+            AI-prioritized tasks for your job search
+          </p>
         </div>
-        <div className="mb-2">
-          <div className="flex items-center justify-between text-xs mb-1">
-            <span style={{ color: colors.secondaryText }}>Progress</span>
-            <span className="font-medium" style={{ color: colors.secondaryText }}>
-              {todoProgress}%
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: colors.inputBackground }}>
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ 
-                width: `${todoProgress}%`,
-                background: colors.successGreen,
-              }}
-            />
-          </div>
-        </div>
+        <button
+          onClick={onShowAddTodo}
+          className="px-4 py-2 rounded-lg font-medium text-sm transition-all hover:shadow-lg hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
+            color: '#ffffff',
+            boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.4)';
+          }}
+        >
+          Add Task
+        </button>
       </div>
 
+      {/* Add Todo Form */}
       <AddTodoForm
         isOpen={showAddTodo}
         title={newTodoTitle}
@@ -123,18 +116,33 @@ export function TodosWidget({
         colors={colors}
       />
 
-      <div className="space-y-1.5">
-        {filteredTodos.map((todo) => (
-          <TodoItem
-            key={todo.id}
-            todo={todo}
-            onToggle={onToggleTodo}
-            onDelete={onDeleteTodo}
-            colors={colors}
-          />
-        ))}
+      {/* Task List - Scrollable */}
+      <div 
+        className="overflow-y-auto pr-2 space-y-2.5"
+        style={{ 
+          maxHeight: '500px',
+          scrollbarWidth: 'thin',
+          scrollbarColor: isDark ? 'rgba(255, 255, 255, 0.2) transparent' : 'rgba(0, 0, 0, 0.2) transparent'
+        }}
+      >
+        {filteredTodos.length === 0 ? (
+          <div className="text-center py-8">
+            <p style={{ color: isDark ? 'rgba(255, 255, 255, 0.5)' : '#9ca3af' }}>
+              No tasks yet. Add one to get started!
+            </p>
+          </div>
+        ) : (
+          filteredTodos.map((todo) => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={onToggleTodo}
+              onDelete={onDeleteTodo}
+              colors={colors}
+            />
+          ))
+        )}
       </div>
     </div>
   );
 }
-

@@ -13,7 +13,7 @@ export default function ProfileSidebar({
 }: ProfileSidebarProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true); // Collapsed by default
   
   // Profile sidebar uses blue accent color (similar to Prepare section)
   const profileAccentColor = '#3b82f6'; // Blue

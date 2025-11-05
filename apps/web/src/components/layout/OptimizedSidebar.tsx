@@ -10,10 +10,10 @@ import {
   Mail, 
   FileText, 
   Plus, 
-  Upload,
-  Sparkles
+  Upload
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
+import { RabbitLogo, RabbitLogoWithText } from '../ui/RabbitLogo';
 
 interface SidebarProps {
   onTabChange: (tab: string) => void;
@@ -165,16 +165,11 @@ const Sidebar = memo<SidebarProps>(({ onTabChange, onShowNewResumeModal, onShowI
       {/* Header */}
       <div className={headerClasses}>
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
-            <Sparkles size={20} className="text-white" />
-          </div>
-          {!sidebarCollapsed && (
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                RoleReady
-              </h1>
-            </div>
-          )}
+            {sidebarCollapsed ? (
+              <RabbitLogo size={100} animated={true} />
+            ) : (
+              <RabbitLogoWithText size={100} animated={true} textSize="xl" />
+            )}
         </div>
       </div>
       

@@ -49,5 +49,5 @@ if ($stillInUse) {
     Write-Host "✅ All ports are free!" -ForegroundColor Green
 }
 
-Write-Host "`n✨ Done!`n" -ForegroundColor Cyan
+Write-Host "`nDone!`n" -ForegroundColor Cyan
 

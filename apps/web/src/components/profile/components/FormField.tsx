@@ -10,6 +10,7 @@ export default function FormField({
   type = 'text',
   value,
   onChange,
+  onBlur,
   disabled = false,
   placeholder,
   rows = 1,
@@ -198,6 +199,9 @@ export default function FormField({
             onBlur={(e) => {
               e.currentTarget.style.borderColor = isOverLimit ? colors.errorRed : colors.border;
               e.currentTarget.style.boxShadow = 'none';
+              if (onBlur) {
+                onBlur();
+              }
             }}
             onInput={(e) => {
               // Auto-resize on input, but respect maxHeight
@@ -242,6 +246,9 @@ export default function FormField({
             onBlur={(e) => {
               e.currentTarget.style.borderColor = isOverLimit ? colors.errorRed : colors.border;
               e.currentTarget.style.boxShadow = 'none';
+              if (onBlur) {
+                onBlur();
+              }
             }}
             placeholder={placeholder}
           />
