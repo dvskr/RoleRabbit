@@ -463,9 +463,6 @@ async function userRoutes(fastify, options) {
           email: true,
           name: true,
           emailNotifications: true,
-          smsNotifications: true,
-          privacyLevel: true,
-          profileVisibility: true,
           createdAt: true,
           updatedAt: true,
           profile: {
@@ -482,6 +479,7 @@ async function userRoutes(fastify, options) {
               github: true,
               portfolio: true,
               website: true,
+              profileCompleteness: true,
               createdAt: true,
               updatedAt: true,
               // Include related data
@@ -704,6 +702,52 @@ async function userRoutes(fastify, options) {
         console.log('Direct query workExperiences:', JSON.stringify(directWorkExp, null, 2));
       }
       
+      // Auto-recalculate completeness if missing or seems outdated (optional - can be removed for performance)
+      // This ensures completeness is always up-to-date
+      const currentCompleteness = parsedUser.profileCompleteness || 0;
+      console.log('Current profileCompleteness from DB:', currentCompleteness);
+      
+      if (user.profile) {
+        try {
+          const { calculateProfileCompleteness } = require('../utils/profileCompleteness');
+          const userForCompleteness = {
+            name: parsedUser.name,
+            email: parsedUser.email,
+            phone: parsedUser.phone,
+            location: parsedUser.location,
+            professionalBio: parsedUser.professionalBio,
+            profilePicture: parsedUser.profilePicture,
+            linkedin: parsedUser.linkedin,
+            github: parsedUser.github,
+            portfolio: parsedUser.portfolio,
+            website: parsedUser.website,
+            skills: parsedUser.skills || [],
+            education: parsedUser.education || [],
+            workExperiences: parsedUser.workExperiences || [],
+            profile: parsedUser.profile || {}
+          };
+          const completeness = calculateProfileCompleteness(userForCompleteness);
+          console.log('Calculated completeness:', completeness.score, '| Breakdown:', JSON.stringify(completeness.breakdown));
+          
+          // Always update if different (don't restrict to < 100, just update if different)
+          if (completeness.score !== currentCompleteness) {
+            await prisma.userProfile.update({
+              where: { userId: userId },
+              data: { profileCompleteness: completeness.score }
+            });
+            parsedUser.profileCompleteness = completeness.score;
+            console.log('✅ Updated profileCompleteness from', currentCompleteness, 'to', completeness.score, '%');
+          } else {
+            console.log('ProfileCompleteness unchanged:', completeness.score, '%');
+          }
+        } catch (completenessError) {
+          console.error('Error auto-recalculating completeness:', completenessError);
+          // Don't fail the request, just log the error
+        }
+      }
+      
+      console.log('Final parsedUser.profileCompleteness being returned:', parsedUser.profileCompleteness);
+      
       return { user: parsedUser };
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -760,8 +804,7 @@ async function userRoutes(fastify, options) {
     // User model fields (excluding 'email' - login email cannot be changed)
     const userFields = [
       'name',
-      'emailNotifications', 'smsNotifications',
-      'privacyLevel', 'profileVisibility'
+      'emailNotifications'
     ];
     
     // UserProfile model fields
@@ -906,9 +949,6 @@ async function userRoutes(fastify, options) {
           email: true,
           name: true,
           emailNotifications: true,
-          smsNotifications: true,
-          privacyLevel: true,
-          profileVisibility: true,
           createdAt: true,
           updatedAt: true,
           profile: {
@@ -1339,9 +1379,6 @@ async function userRoutes(fastify, options) {
           email: true,
           name: true,
           emailNotifications: true,
-          smsNotifications: true,
-          privacyLevel: true,
-          profileVisibility: true,
           createdAt: true,
           updatedAt: true,
           profile: {
@@ -1627,7 +1664,31 @@ async function userRoutes(fastify, options) {
       // Auto-calculate and update profile completeness
       try {
         const { calculateProfileCompleteness } = require('../utils/profileCompleteness');
-        const completeness = calculateProfileCompleteness(parsedUser);
+        // Ensure parsedUser has all fields needed for calculation
+        const userForCompleteness = {
+          name: parsedUser.name,
+          email: parsedUser.email,
+          phone: parsedUser.phone,
+          location: parsedUser.location,
+          professionalBio: parsedUser.professionalBio,
+          profilePicture: parsedUser.profilePicture,
+          linkedin: parsedUser.linkedin,
+          github: parsedUser.github,
+          portfolio: parsedUser.portfolio,
+          website: parsedUser.website,
+          skills: parsedUser.skills || [],
+          education: parsedUser.education || [],
+          workExperiences: parsedUser.workExperiences || [],
+          profile: parsedUser.profile || {} // Keep profile reference for nested checks
+        };
+        const completeness = calculateProfileCompleteness(userForCompleteness);
+        console.log('Profile completeness calculated:', {
+          score: completeness.score,
+          breakdown: completeness.breakdown,
+          skillsCount: userForCompleteness.skills?.length || 0,
+          educationCount: userForCompleteness.education?.length || 0,
+          workExpCount: userForCompleteness.workExperiences?.length || 0
+        });
         // Update profileCompleteness in UserProfile if profile exists
         if (fullProfile.profile) {
           await prisma.userProfile.update({
@@ -1826,7 +1887,7 @@ async function userRoutes(fastify, options) {
       }
       
       // Update profile to remove profile picture URL from database
-      await prisma.userProfile.updateMany({
+      await prisma.userProfile.update({
         where: { userId: userId },
         data: {
           profilePicture: null
@@ -1855,9 +1916,11 @@ async function userRoutes(fastify, options) {
       const { calculateProfileCompleteness } = require('../utils/profileCompleteness');
       const { prisma } = require('../utils/db');
       
+      // Fetch all data needed for completeness calculation
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
+          id: true,
           name: true,
           email: true,
           profile: {
@@ -1865,7 +1928,34 @@ async function userRoutes(fastify, options) {
               phone: true,
               location: true,
               professionalBio: true,
-              profilePicture: true
+              profilePicture: true,
+              linkedin: true,
+              github: true,
+              portfolio: true,
+              website: true,
+              workExperiences: {
+                select: {
+                  id: true,
+                  company: true,
+                  role: true,
+                  startDate: true
+                }
+              },
+              education: {
+                select: {
+                  id: true,
+                  institution: true
+                }
+              },
+              userSkills: {
+                select: {
+                  skill: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -1878,7 +1968,11 @@ async function userRoutes(fastify, options) {
       // Merge profile data for completeness calculation
       const userForCompleteness = {
         ...user,
-        ...(user.profile || {})
+        ...(user.profile || {}),
+        // Transform userSkills to skills array
+        skills: user.profile?.userSkills?.map(us => us.skill.name) || [],
+        workExperiences: user.profile?.workExperiences || [],
+        education: user.profile?.education || []
       };
       
       const completeness = calculateProfileCompleteness(userForCompleteness);
@@ -2026,18 +2120,12 @@ async function userRoutes(fastify, options) {
       const userId = request.user.userId;
       const { prisma } = require('../utils/db');
       
-      // Get user with analytics fields
+      // Get user with analytics fields (only fields that exist in database)
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
-          profileViews: true,
-          applicationsSent: true,
-          interviewsScheduled: true,
-          offersReceived: true,
-          successRate: true,
-          profileCompleteness: true,
-          skillMatchRate: true,
-          avgResponseTime: true
+          id: true
+          // Note: Analytics fields (profileViews, applicationsSent, etc.) not in database - returning zeros
         }
       });
       
@@ -2045,16 +2133,16 @@ async function userRoutes(fastify, options) {
         return reply.status(404).send({ error: 'User not found' });
       }
       
-      // Return user metrics
+      // Return user metrics (returning zeros since fields don't exist in database)
       return {
-        profileViews: user.profileViews || 0,
-        applicationsSent: user.applicationsSent || 0,
-        interviewsScheduled: user.interviewsScheduled || 0,
-        offersReceived: user.offersReceived || 0,
-        successRate: user.successRate || 0,
-        profileCompleteness: user.profileCompleteness || 0,
-        skillMatchRate: user.skillMatchRate || 0,
-        avgResponseTime: user.avgResponseTime || 0
+        profileViews: 0,
+        applicationsSent: 0,
+        interviewsScheduled: 0,
+        offersReceived: 0,
+        successRate: 0,
+        profileCompleteness: 0,
+        skillMatchRate: 0,
+        avgResponseTime: 0
       };
     } catch (error) {
       console.error('Error fetching analytics:', error);
@@ -2224,16 +2312,13 @@ async function userRoutes(fastify, options) {
           id: true,
           name: true,
           email: true,
-          profileVisibility: true,
-          privacyLevel: true,
           profile: {
             select: {
               professionalBio: true,
               linkedin: true,
               github: true,
               portfolio: true,
-              website: true,
-              profileViews: true
+              website: true
             }
           }
         }
@@ -2243,41 +2328,25 @@ async function userRoutes(fastify, options) {
         return reply.status(404).send({ error: 'Profile not found' });
       }
       
-      // Check if profile is public
-      if (user.profileVisibility !== 'Public') {
-        return reply.status(403).send({ error: 'Profile is not public' });
-      }
-      
-      // Increment profile views in user_profiles table
-      if (user.profile) {
-        await prisma.userProfile.update({
-          where: { userId: userId },
-          data: {
-            profileViews: {
-              increment: 1
-            }
-          }
-        });
-      }
+      // Note: profileVisibility and privacyLevel not in database, treating all profiles as public
+      // Note: profileViews removed from database
       
       // Merge user and profile data
       const parsedUser = {
         id: user.id,
         name: user.name,
         email: user.email,
-        profileVisibility: user.profileVisibility,
-        privacyLevel: user.privacyLevel,
         ...(user.profile || {}),
         skills: [] // Skills are now in user_skills table, would need separate query
       };
       
-      // Remove sensitive fields based on privacy level
+      // Build public profile (privacy level not in database, showing all fields)
       const publicProfile = {
         id: parsedUser.id,
         name: parsedUser.name,
         profilePicture: parsedUser.profilePicture || null,
         professionalBio: parsedUser.professionalBio || null,
-        skills: parsedUser.privacyLevel === 'Professional' ? parsedUser.skills : [],
+        skills: parsedUser.skills || [],
         linkedin: parsedUser.linkedin || null,
         github: parsedUser.github || null,
         portfolio: parsedUser.portfolio || null,

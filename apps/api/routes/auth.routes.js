@@ -215,9 +215,9 @@ async function authRoutes(fastify, options) {
         email: String(user.email || ''),
         name: user.name ? String(user.name) : null,
         emailNotifications: user.emailNotifications ?? true,
-        smsNotifications: user.smsNotifications ?? false,
-        privacyLevel: user.privacyLevel || null,
-        profileVisibility: user.profileVisibility || null,
+        smsNotifications: false, // Not supported in current database schema
+        privacyLevel: null, // Not supported in current database schema
+        profileVisibility: null, // Not supported in current database schema
         createdAt: user.createdAt ? user.createdAt.toISOString() : null,
         updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
         // Merge profile data if it exists

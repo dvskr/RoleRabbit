@@ -3,8 +3,8 @@ const prisma = new PrismaClient();
 
 // Schema definitions from database
 const schemaFields = {
-  user: ['id', 'email', 'name', 'password', 'provider', 'providerId', 'twoFactorEnabled', 'twoFactorSecret', 'twoFactorBackupCodes', 'emailNotifications', 'smsNotifications', 'privacyLevel', 'profileVisibility', 'createdAt', 'updatedAt'],
-  user_profiles: ['id', 'userId', 'firstName', 'lastName', 'phone', 'personalEmail', 'location', 'bio', 'profilePicture', 'currentRole', 'currentCompany', 'linkedin', 'github', 'website', 'profileViews', 'profileCompleteness', 'createdAt', 'updatedAt'],
+  user: ['id', 'email', 'name', 'password', 'provider', 'providerId', 'twoFactorEnabled', 'twoFactorSecret', 'twoFactorBackupCodes', 'emailNotifications', 'createdAt', 'updatedAt'],
+  user_profiles: ['id', 'userId', 'firstName', 'lastName', 'phone', 'personalEmail', 'location', 'profilePicture', 'professionalBio', 'linkedin', 'github', 'portfolio', 'website', 'profileCompleteness', 'createdAt', 'updatedAt'],
   work_experiences: ['id', 'profileId', 'company', 'role', 'location', 'startDate', 'endDate', 'isCurrent', 'description', 'projectType', 'createdAt', 'updatedAt'],
   projects: ['id', 'profileId', 'title', 'description', 'technologies', 'date', 'link', 'github', 'createdAt', 'updatedAt'],
   education: ['id', 'profileId', 'institution', 'degree', 'field', 'startDate', 'endDate', 'gpa', 'honors', 'location', 'description', 'createdAt', 'updatedAt'],

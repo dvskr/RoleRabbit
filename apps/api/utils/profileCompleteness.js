@@ -25,46 +25,43 @@ function calculateProfileCompleteness(user) {
     return Array.isArray(field) ? field : [];
   };
   
-  const skills = parseJsonField(user.skills);
+  // Handle skills - can be array of strings or array of objects with 'name' property
+  let skills = [];
+  if (user.skills) {
+    const parsed = parseJsonField(user.skills);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // If it's an array of objects with 'name' property, extract names
+      if (typeof parsed[0] === 'object' && parsed[0].name) {
+        skills = parsed.map(s => s.name).filter(Boolean);
+      } else {
+        // If it's already an array of strings
+        skills = parsed.filter(s => s && typeof s === 'string');
+      }
+    }
+  }
+  
   const education = parseJsonField(user.education);
   const workExperiences = parseJsonField(user.workExperiences);
-  const targetRoles = parseJsonField(user.targetRoles);
-  const targetCompanies = parseJsonField(user.targetCompanies);
   
-  // Basic Info (20%)
+  // Basic Info (30% - increased from 20% to compensate for removed Professional Info section)
   let basicScore = 0;
-  if (user.name) basicScore += 3;
-  if (user.email) basicScore += 3;
-  if (user.phone) basicScore += 2;
-  if (user.location) basicScore += 2;
+  if (user.name) basicScore += 5;
+  if (user.email) basicScore += 5;
+  if (user.phone) basicScore += 4;
+  if (user.location) basicScore += 4;
   const hasProfessionalBio = Boolean(
-    (user.profile && (user.profile.professionalBio || user.profile.bio)) ||
-    user.professionalBio ||
-    user.bio
+    (user.profile && user.profile.professionalBio) ||
+    user.professionalBio
   );
-  if (hasProfessionalBio) basicScore += 5;
+  if (hasProfessionalBio) basicScore += 7;
   // Note: profilePicture is now in user_profiles table, check user.profile?.profilePicture if needed
   if (user.profilePicture || (user.profile && user.profile.profilePicture)) basicScore += 5;
   breakdown.basicInfo = {
     score: basicScore,
-    maxScore: 20,
-    percentage: Math.round((basicScore / 20) * 100)
+    maxScore: 30,
+    percentage: Math.round((basicScore / 30) * 100)
   };
   score += basicScore;
-  
-  // Professional Info (25%)
-  let professionalScore = 0;
-  if (user.currentRole) professionalScore += 5;
-  if (user.currentCompany) professionalScore += 5;
-  if (user.experience) professionalScore += 5;
-  if (user.industry) professionalScore += 5;
-  if (user.jobLevel) professionalScore += 5;
-  breakdown.professionalInfo = {
-    score: professionalScore,
-    maxScore: 25,
-    percentage: Math.round((professionalScore / 25) * 100)
-  };
-  score += professionalScore;
   
   // Skills (15%)
   let skillsScore = 0;
@@ -94,31 +91,50 @@ function calculateProfileCompleteness(user) {
   };
   score += educationScore;
   
-  // Work Experience (15%)
+  // Work Experience (20% - 1+ experience gets full points)
   let experienceScore = 0;
-  if (workExperiences.length > 0) {
-    experienceScore = 15;
+  if (workExperiences.length >= 1) {
+    experienceScore = 20;
   }
   breakdown.workExperience = {
     score: experienceScore,
-    maxScore: 15,
-    percentage: workExperiences.length > 0 ? 100 : 0,
+    maxScore: 20,
+    percentage: workExperiences.length >= 1 ? 100 : 0,
     count: workExperiences.length
   };
   score += experienceScore;
   
-  // Career Preferences (10%)
-  let careerScore = 0;
-  if (targetRoles.length > 0) careerScore += 5;
-  if (targetCompanies.length > 0) careerScore += 5;
-  breakdown.careerPreferences = {
-    score: careerScore,
-    maxScore: 10,
-    percentage: Math.round((careerScore / 10) * 100),
-    targetRoles: targetRoles.length,
-    targetCompanies: targetCompanies.length
+  // Social Links (20% - LinkedIn, GitHub, Portfolio, Website)
+  let socialScore = 0;
+  const hasLinkedIn = Boolean(
+    (user.profile && user.profile.linkedin) ||
+    user.linkedin
+  );
+  const hasGitHub = Boolean(
+    (user.profile && user.profile.github) ||
+    user.github
+  );
+  const hasPortfolio = Boolean(
+    (user.profile && user.profile.portfolio) ||
+    user.portfolio
+  );
+  const hasWebsite = Boolean(
+    (user.profile && user.profile.website) ||
+    user.website
+  );
+  
+  if (hasLinkedIn) socialScore += 5;
+  if (hasGitHub) socialScore += 5;
+  if (hasPortfolio) socialScore += 5;
+  if (hasWebsite) socialScore += 5;
+  
+  breakdown.socialLinks = {
+    score: socialScore,
+    maxScore: 20,
+    percentage: Math.round((socialScore / 20) * 100),
+    count: [hasLinkedIn, hasGitHub, hasPortfolio, hasWebsite].filter(Boolean).length
   };
-  score += careerScore;
+  score += socialScore;
   
   // Ensure score is between 0 and 100
   score = Math.min(100, Math.max(0, Math.round(score)));

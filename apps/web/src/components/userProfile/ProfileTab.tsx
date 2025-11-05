@@ -224,17 +224,6 @@ export default function ProfileTab({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
-            <input
-              type="text"
-              value={profileForm.experience || ''}
-              onChange={(e) => handleInputChange('experience', e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
-            />
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
             <input
               type="text"

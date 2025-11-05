@@ -392,7 +392,6 @@ model UserProfile {
   professionalBio String? @map("professionalBio")
 
   // Profile Analytics & Metrics
-  profileViews        Int @default(0)
   profileCompleteness Int @default(0) // Percentage (0-100)
 
   createdAt DateTime @default(now())
@@ -446,9 +445,6 @@ model User {
 
   // Preferences (frequently accessed)
   emailNotifications Boolean @default(true)
-  smsNotifications   Boolean @default(false)
-  privacyLevel       String? @default("Professional")
-  profileVisibility  String? @default("Public")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

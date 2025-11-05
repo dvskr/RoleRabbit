@@ -996,7 +996,9 @@ export default function Profile() {
     return Math.round((completed / total) * 100);
   };
 
-  const profileCompleteness = calculateCompleteness();
+  // Use API-provided profileCompleteness instead of calculating locally
+  // The backend calculates this using the updated formula (100% max)
+  const profileCompleteness = contextUserData?.profileCompleteness ?? calculateCompleteness();
 
   const handleSave = async () => {
     setIsSaving(true);

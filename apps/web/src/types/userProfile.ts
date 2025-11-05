@@ -11,7 +11,6 @@ export interface UserProfile {
   bio?: string;
   professionalBio?: string;
   skills?: string[];
-  experience?: string;
   education?: string;
   createdAt: string;
   updatedAt: string;

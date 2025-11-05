@@ -848,7 +848,7 @@ export default function ProfessionalTab({
                           {exp.description && (
                             <p 
                               className="text-sm mt-3 leading-relaxed whitespace-pre-wrap"
-                              style={{ color: colors.secondaryText }}
+                              style={{ color: '#ffffff' }}
                             >
                               {exp.description}
                             </p>
@@ -1109,7 +1109,7 @@ export default function ProfessionalTab({
                             {project.title || 'Untitled Project'}
                           </h3>
                           {project.description && (
-                            <p className="text-sm mb-3 leading-relaxed" style={{ color: colors.secondaryText }}>
+                            <p className="text-sm mb-3 leading-relaxed" style={{ color: '#ffffff' }}>
                               {project.description}
                             </p>
                           )}

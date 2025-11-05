@@ -51,6 +51,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         console.log('=== ProfileContext - API Response ===');
         console.log('Response:', response);
         console.log('Response.user:', response?.user);
+        console.log('Response.user.profileCompleteness:', response?.user?.profileCompleteness);
         console.log('Response.user.workExperiences:', response?.user?.workExperiences);
         console.log('Response.user.workExperiences type:', typeof response?.user?.workExperiences);
         console.log('Response.user.workExperiences isArray:', Array.isArray(response?.user?.workExperiences));
@@ -127,6 +128,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
           
           // CRITICAL: Log after mapping
           console.log('=== ProfileContext - After Mapping ===');
+          console.log('userProfile.profileCompleteness (from API):', userProfile.profileCompleteness);
+          console.log('userDataWithDefaults.profileCompleteness (mapped):', userDataWithDefaults.profileCompleteness);
           console.log('userDataWithDefaults.workExperiences:', userDataWithDefaults.workExperiences);
           console.log('userDataWithDefaults.workExperiences count:', userDataWithDefaults.workExperiences?.length || 0);
           
