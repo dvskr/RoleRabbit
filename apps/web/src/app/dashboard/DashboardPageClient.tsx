@@ -16,7 +16,14 @@ const Profile = dynamic(() => import('../../components/Profile'), { ssr: false }
 const CloudStorage = dynamic(() => import('../../components/CloudStorage'), { ssr: false });
 const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor').then(mod => ({ default: mod.default })), { 
   ssr: false,
-  loading: () => <div>Loading Resume Editor...</div>
+  loading: () => (
+    <div className="h-full flex items-center justify-center" style={{ background: 'var(--background)' }}>
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mb-4"></div>
+        <p className="text-gray-400">Loading Resume Editor...</p>
+      </div>
+    </div>
+  )
 });
 const AIPanel = dynamic(() => import('../../components/features/AIPanel'), { ssr: false });
 const Templates = dynamic(() => import('../../components/Templates'), { ssr: false });
@@ -408,7 +415,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setShowImportFromCloudModal,
   });
 
-  const renderSection = (section: string) => {
+  // Memoize renderSection to prevent unnecessary re-renders in ResumeEditor
+  const renderSection = useCallback((section: string) => {
     if (!sectionVisibility[section]) return null;
 
     // Handle custom sections
@@ -490,7 +498,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       default:
         return null;
     }
-  };
+  }, [sectionVisibility, customSections, colors, resumeData, setResumeData, hideSection, deleteCustomSection, updateCustomSection, openAIGenerateModal]);
 
   const renderActiveComponent = () => {
     switch (activeTab) {

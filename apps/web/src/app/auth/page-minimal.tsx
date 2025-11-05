@@ -198,26 +198,30 @@ export default function MinimalAuthPage() {
 
       {/* Floating particles */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-teal-400/30 rounded-full"
-            initial={{
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
-            }}
-            animate={{
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
-            }}
-            transition={{
-              duration: 20 + Math.random() * 20,
-              repeat: Infinity,
-              repeatType: "reverse",
-              ease: "linear",
-            }}
-          />
-        ))}
+        {Array.from({ length: 20 }).map((_, i) => {
+          const width = typeof window !== 'undefined' ? window.innerWidth : 1920;
+          const height = typeof window !== 'undefined' ? window.innerHeight : 1080;
+          return (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-teal-400/30 rounded-full"
+              initial={{
+                x: Math.random() * width,
+                y: Math.random() * height,
+              }}
+              animate={{
+                x: Math.random() * width,
+                y: Math.random() * height,
+              }}
+              transition={{
+                duration: 20 + Math.random() * 20,
+                repeat: Infinity,
+                repeatType: "reverse",
+                ease: "linear",
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Left Side - Enhanced Content */}

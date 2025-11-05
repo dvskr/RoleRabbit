@@ -74,13 +74,20 @@ export default function ResumeEditor({
   useTemplateApplication(selectedTemplateId, onTemplateApply);
 
   // Memoize sections to prevent unnecessary re-renders
+  // Only render visible sections and optimize dependencies
   const renderedSections = useMemo(() => {
-    return sectionOrder.map((section) => (
-      <div key={section}>
-        {renderSection(section)}
-      </div>
-    ));
-  }, [sectionOrder, renderSection, sectionVisibility, customSections, resumeData]);
+    return sectionOrder
+      .filter((section) => sectionVisibility[section] !== false)
+      .map((section) => {
+        const sectionElement = renderSection(section);
+        return sectionElement ? (
+          <div key={section}>
+            {sectionElement}
+          </div>
+        ) : null;
+      })
+      .filter(Boolean);
+  }, [sectionOrder, renderSection, sectionVisibility]);
 
 
   // Calculate sidebar width and padding based on collapse state - responsive
