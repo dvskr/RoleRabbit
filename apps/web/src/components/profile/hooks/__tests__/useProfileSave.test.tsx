@@ -2,6 +2,7 @@
  * Unit tests for useProfileSave hook
  */
 
+import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useProfileSave } from '../useProfileSave';
 import apiService from '@/services/apiService';

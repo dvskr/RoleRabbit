@@ -253,6 +253,7 @@ model ShareLink {
 
   token         String    @unique
   password      String? // Hashed password if protected
+  permission    String    @default("view") // view, comment, edit, admin
   expiresAt     DateTime?
   maxDownloads  Int?
   downloadCount Int       @default(0)
@@ -296,7 +297,6 @@ model StorageFile {
   publicUrl   String? // Public URL if bucket is public
 
   // Metadata
-  tags        String[] // Tags for organization
   description String? // File description
   isPublic    Boolean  @default(false)
   isStarred   Boolean  @default(false)

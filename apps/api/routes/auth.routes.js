@@ -19,7 +19,7 @@ const { createSession, getUserSessions, deactivateSession } = require('../utils/
 const { createPasswordResetToken } = require('../utils/passwordReset');
 const { sendWelcomeEmail, sendPasswordResetEmail, sendOTPEmail, sendEmailChangeNotification, sendEmailChangeConfirmation } = require('../utils/emailService');
 const { sendOTPToEmail, verifyOTP, createOTP } = require('../utils/otpService');
-const { validateEmail, validatePassword, validateRequired, validateLength } = require('../utils/validation');
+const { validateEmail, validatePassword } = require('../utils/validation');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
 
@@ -38,36 +38,41 @@ async function authRoutes(fastify, options) {
       const { email, password, name } = request.body;
       
       // Validate required fields
-      const requiredValidation = validateRequired(['email', 'password', 'name'], request.body);
-      if (!requiredValidation.isValid) {
+      const missingFields = [];
+      if (!email) missingFields.push('email');
+      if (!password) missingFields.push('password');
+      if (!name) missingFields.push('name');
+      
+      if (missingFields.length > 0) {
         return reply.status(400).send({
           success: false,
-          error: `Missing required fields: ${requiredValidation.missing.join(', ')}`
+          error: `Missing required fields: ${missingFields.join(', ')}`
         });
       }
       
       // Validate email format
-      if (!validateEmail(email)) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
         return reply.status(400).send({
           success: false,
-          error: 'Invalid email format'
+          error: emailValidation.error || 'Invalid email format'
         });
       }
       
       // Validate password strength
-      if (!validatePassword(password)) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
         return reply.status(400).send({
           success: false,
-          error: 'Password must be at least 8 characters with uppercase, lowercase, and number'
+          error: passwordValidation.error || 'Password must be at least 8 characters with uppercase, lowercase, and number'
         });
       }
       
-      // Validate name length
-      const nameValidation = validateLength('Name', name, 1, 100);
-      if (!nameValidation.isValid) {
+      // Validate name length (basic check)
+      if (typeof name !== 'string' || name.trim().length === 0 || name.length > 100) {
         return reply.status(400).send({
           success: false,
-          error: nameValidation.message
+          error: 'Name must be between 1 and 100 characters'
         });
       }
       

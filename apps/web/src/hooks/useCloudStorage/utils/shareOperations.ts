@@ -7,10 +7,11 @@ export const createShareId = (): string => {
 
 export const createSharePermission = (
   userEmail: string,
-  permission: 'view' | 'comment' | 'edit' | 'admin'
+  permission: 'view' | 'comment' | 'edit' | 'admin',
+  shareId?: string
 ): SharePermission => {
   return {
-    id: createShareId(),
+    id: shareId || createShareId(),
     userId: `user_${Date.now()}`,
     userEmail,
     userName: userEmail.split('@')[0],

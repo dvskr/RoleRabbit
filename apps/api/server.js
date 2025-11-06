@@ -105,6 +105,9 @@ const { sendEmail, sendWelcomeEmail, sendPasswordResetEmail } = require('./utils
 // WebSocket Server
 const WebSocketServer = require('./utils/websocketServer');
 
+// Socket.IO Server
+const socketIOServer = require('./utils/socketIOServer');
+
 // Health Check utilities
 const {
   getHealthStatus,
@@ -388,7 +391,22 @@ const start = async () => {
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || 'localhost';
     
+    // Start listening first
     await fastify.listen({ port, host });
+    
+    // Initialize Socket.IO server after HTTP server starts
+    // Use fastify.server which is the underlying Node.js HTTP server
+    try {
+      if (fastify.server) {
+        socketIOServer.initialize(fastify.server);
+        logger.info('✅ Socket.IO server initialized');
+      } else {
+        logger.warn('⚠️ Fastify server instance not available, skipping Socket.IO initialization');
+      }
+    } catch (socketError) {
+      logger.error('⚠️ Failed to initialize Socket.IO (server will continue without real-time features):', socketError.message);
+      // Don't fail server startup if Socket.IO fails
+    }
     
     logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
     logger.info(`📊 Health check: http://${host}:${port}/health`);

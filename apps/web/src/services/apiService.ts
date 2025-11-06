@@ -65,27 +65,66 @@ class ApiService {
 
       if (!response.ok) {
         // Try to get error details from response
-        let errorMessage = `API error: ${response.statusText}`;
+        let errorMessage = `API error (${response.status})`;
         let errorDetails: any = undefined;
+        
+        // Build base error message
+        const statusText = response.statusText || 'Unknown error';
+        errorMessage = `API error (${response.status}): ${statusText}`;
+        
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
-          if (errorData.details) {
-            errorDetails = errorData.details;
-            if (typeof errorData.details === 'string' && !errorMessage.includes(errorData.details)) {
-              errorMessage += ` - ${errorData.details}`;
+          // Try to read response body for error details
+          let text = '';
+          try {
+            // Try cloning first (works for most responses)
+            const clonedResponse = response.clone();
+            text = await clonedResponse.text();
+          } catch (cloneError) {
+            // If cloning fails, try reading directly (will consume response)
+            text = await response.text();
+          }
+          
+          if (text && text.trim()) {
+            try {
+              const errorData = JSON.parse(text);
+              const parsedMessage = errorData.error || errorData.message;
+              if (parsedMessage && typeof parsedMessage === 'string') {
+                errorMessage = parsedMessage;
+              } else if (parsedMessage && typeof parsedMessage === 'object') {
+                errorMessage = `API error (${response.status}): ${JSON.stringify(parsedMessage).substring(0, 100)}`;
+              }
+              if (errorData.details) {
+                errorDetails = errorData.details;
+                if (typeof errorData.details === 'string' && !errorMessage.includes(errorData.details)) {
+                  errorMessage += ` - ${errorData.details}`;
+                }
+              }
+            } catch (jsonError) {
+              // If not JSON, use the text as error message if it's meaningful
+              if (text.length < 500 && text.trim()) {
+                errorMessage = `API error (${response.status}): ${text.substring(0, 200).trim()}`;
+              }
             }
           }
-        } catch (e) {
-          // If response isn't JSON, use status text
+        } catch (readError: any) {
+          // If we can't read response, use status-based message
+          const errorMsg = readError?.message || 'Could not read error response';
+          errorMessage = `API request failed with status ${response.status}: ${statusText}. ${errorMsg}`;
         }
 
-        const error: any = new Error(errorMessage);
-        error.statusCode = response.status;
-        if (errorDetails !== undefined) {
-          error.details = errorDetails;
+        // Final safety check: Ensure errorMessage is never empty, undefined, or invalid
+        if (!errorMessage || typeof errorMessage !== 'string' || errorMessage.trim() === '') {
+          errorMessage = `An unexpected error occurred (HTTP ${response.status})`;
         }
-        throw error;
+
+        // Create error object
+        const errorObj: any = new Error(String(errorMessage));
+        errorObj.statusCode = response.status;
+        errorObj.originalResponse = statusText;
+        if (errorDetails !== undefined) {
+          errorObj.details = errorDetails;
+        }
+        throw errorObj;
       }
 
       return await response.json();
@@ -287,6 +326,28 @@ class ApiService {
   }
 
   /**
+   * Copy cloud file (duplicate)
+   */
+  async copyCloudFile(fileId: string, newName?: string, folderId?: string | null): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/copy`, {
+      method: 'POST',
+      body: JSON.stringify({ newName, folderId }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Move cloud file to folder
+   */
+  async moveCloudFile(fileId: string, folderId: string | null): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ folderId }),
+      credentials: 'include',
+    });
+  }
+
+  /**
    * Restore cloud file from trash
    */
   async restoreCloudFile(fileId: string): Promise<any> {
@@ -352,9 +413,10 @@ class ApiService {
    * Share file with user
    */
   async shareFile(fileId: string, data: {
-    userId: string;
+    userEmail: string;
     permission: string;
     expiresAt?: string;
+    maxDownloads?: number;
   }): Promise<any> {
     return this.request(`/api/storage/files/${fileId}/share`, {
       method: 'POST',
@@ -395,6 +457,30 @@ class ApiService {
     return this.request(`/api/storage/files/${fileId}/share-link`, {
       method: 'POST',
       body: JSON.stringify(options || {}),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get file comments
+   */
+  async getFileComments(fileId: string): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/comments`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add file comment
+   */
+  async addFileComment(fileId: string, data: {
+    content: string;
+    parentId?: string;
+  }): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
       credentials: 'include',
     });
   }

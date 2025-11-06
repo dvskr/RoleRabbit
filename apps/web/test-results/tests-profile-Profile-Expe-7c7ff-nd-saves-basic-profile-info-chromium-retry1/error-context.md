@@ -1,0 +1,203 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic [ref=e1]:
+    - generic [ref=e2]:
+      - generic [ref=e4]:
+        - img [ref=e5]
+        - generic [ref=e35]:
+          - generic [ref=e36]: RoleRabbit
+          - generic [ref=e37]: Your Career Companion
+      - navigation [ref=e38]:
+        - generic [ref=e39]:
+          - heading "WORKSPACE" [level=3] [ref=e40]
+          - generic [ref=e41]:
+            - button "Dashboard" [ref=e42] [cursor=pointer]:
+              - generic [ref=e43]:
+                - img [ref=e45]
+                - generic [ref=e48]: Dashboard
+            - button "Profile" [ref=e49] [cursor=pointer]:
+              - generic [ref=e50]:
+                - img [ref=e52]
+                - generic [ref=e55]: Profile
+            - button "My Files" [ref=e56] [cursor=pointer]:
+              - generic [ref=e57]:
+                - img [ref=e59]
+                - generic [ref=e61]: My Files
+        - generic [ref=e62]:
+          - heading "PREPARE" [level=3] [ref=e63]
+          - generic [ref=e64]:
+            - button "Resume Builder" [ref=e65] [cursor=pointer]:
+              - generic [ref=e66]:
+                - img [ref=e68]
+                - generic [ref=e71]: Resume Builder
+            - button "Cover Letter" [ref=e72] [cursor=pointer]:
+              - generic [ref=e73]:
+                - img [ref=e75]
+                - generic [ref=e78]: Cover Letter
+            - button "Portfolio Builder" [ref=e79] [cursor=pointer]:
+              - generic [ref=e80]:
+                - img [ref=e82]
+                - generic [ref=e85]: Portfolio Builder
+            - button "Templates" [ref=e86] [cursor=pointer]:
+              - generic [ref=e87]:
+                - img [ref=e89]
+                - generic [ref=e91]: Templates
+        - generic [ref=e92]:
+          - heading "APPLY" [level=3] [ref=e93]
+          - generic [ref=e94]:
+            - button "AI Auto-Apply" [ref=e95] [cursor=pointer]:
+              - generic [ref=e96]:
+                - img [ref=e98]
+                - generic [ref=e101]: AI Auto-Apply
+            - button "Job Tracker" [ref=e102] [cursor=pointer]:
+              - generic [ref=e103]:
+                - img [ref=e105]
+                - generic [ref=e108]: Job Tracker
+        - generic [ref=e109]:
+          - heading "CONNECT" [level=3] [ref=e110]
+          - generic [ref=e111]:
+            - button "Email Hub" [ref=e112] [cursor=pointer]:
+              - generic [ref=e113]:
+                - img [ref=e115]
+                - generic [ref=e118]: Email Hub
+            - button "Community" [ref=e119] [cursor=pointer]:
+              - generic [ref=e120]:
+                - img [ref=e122]
+                - generic [ref=e124]: Community
+      - button "Collapse sidebar" [ref=e126] [cursor=pointer]:
+        - img [ref=e127]
+    - generic [ref=e133]:
+      - generic [ref=e135]:
+        - generic [ref=e136]:
+          - img [ref=e138]
+          - generic [ref=e142]:
+            - heading "Profile" [level=1] [ref=e143]
+            - paragraph [ref=e144]: Manage your profile information
+        - generic [ref=e145]:
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - img [ref=e149]
+              - generic [ref=e152]: Profile
+            - generic [ref=e153]: 72%
+          - button "Cancel" [ref=e156] [cursor=pointer]
+          - button "Save" [ref=e157] [cursor=pointer]:
+            - img [ref=e158]
+            - text: Save
+      - generic [ref=e162]:
+        - generic [ref=e163]:
+          - navigation [ref=e164]:
+            - list [ref=e165]:
+              - listitem [ref=e166]:
+                - button "Profile" [ref=e167] [cursor=pointer]:
+                  - img [ref=e170]
+              - listitem [ref=e174]:
+                - button "Professional" [ref=e175] [cursor=pointer]:
+                  - img [ref=e178]
+              - listitem [ref=e181]:
+                - button "Skills and Education" [ref=e182] [cursor=pointer]:
+                  - img [ref=e185]
+              - listitem [ref=e188]:
+                - button "Preferences & Security" [ref=e189] [cursor=pointer]:
+                  - img [ref=e192]
+              - listitem [ref=e195]:
+                - button "Billing" [ref=e196] [cursor=pointer]:
+                  - img [ref=e199]
+              - listitem [ref=e201]:
+                - button "Help & Support" [ref=e202] [cursor=pointer]:
+                  - img [ref=e205]
+          - button "Expand sidebar" [ref=e209] [cursor=pointer]:
+            - img [ref=e210]
+        - generic [ref=e216]:
+          - generic [ref=e218]:
+            - generic [ref=e220]: JD
+            - generic [ref=e221]:
+              - heading "Profile Picture" [level=3] [ref=e222]
+              - button "Upload Photo" [ref=e224] [cursor=pointer]:
+                - img [ref=e225]
+                - text: Upload Photo
+              - paragraph [ref=e228]: "JPG, PNG, WebP up to 10MB • Recommended: 800x800px"
+          - generic [ref=e229]:
+            - generic [ref=e230]:
+              - img [ref=e231]
+              - heading "Basic Information" [level=3] [ref=e235]
+            - generic [ref=e236]:
+              - generic [ref=e238]:
+                - generic [ref=e240]: First Name
+                - textbox "First Name First Name" [active] [ref=e241]:
+                  - /placeholder: Enter your first name
+                  - text: Janet
+              - generic [ref=e243]:
+                - generic [ref=e245]: Last Name
+                - textbox "Last Name Last Name" [ref=e246]:
+                  - /placeholder: Enter your last name
+                  - text: Doe
+            - generic [ref=e247]:
+              - generic [ref=e248]:
+                - generic [ref=e249]:
+                  - generic [ref=e252]:
+                    - img [ref=e253]
+                    - text: Login Email (Username)
+                  - textbox "Login Email (Username) Login Email (Username)" [disabled] [ref=e256]:
+                    - /placeholder: Login email
+                    - text: jane.doe@example.com
+                - paragraph [ref=e257]:
+                  - img [ref=e258]
+                  - text: This is your login email and cannot be changed
+              - generic [ref=e260]:
+                - generic [ref=e261]:
+                  - generic [ref=e264]:
+                    - img [ref=e265]
+                    - text: Personal Email
+                  - textbox "Personal Email Personal Email" [ref=e268]:
+                    - /placeholder: Enter your personal/contact email
+                    - text: contact.jane@example.com
+                - paragraph [ref=e269]: "Optional: Your personal or contact email (different from login email)"
+            - generic [ref=e270]:
+              - generic [ref=e272]:
+                - generic [ref=e275]:
+                  - img [ref=e276]
+                  - text: Phone Number
+                - textbox "Phone Number Phone Number" [ref=e278]:
+                  - /placeholder: Enter your phone number
+                  - text: +1 555 0100
+              - generic [ref=e280]:
+                - generic [ref=e283]:
+                  - img [ref=e284]
+                  - text: Location
+                - textbox "Location Location" [ref=e287]:
+                  - /placeholder: Enter your location (City, Country)
+                  - text: Austin, TX
+            - generic [ref=e288]:
+              - generic [ref=e289]:
+                - generic [ref=e290]:
+                  - img [ref=e291]
+                  - text: LinkedIn
+                - textbox [ref=e296]:
+                  - /placeholder: https://linkedin.com/in/yourname
+                  - text: linkedin.com/in/janedoe
+              - generic [ref=e297]:
+                - generic [ref=e298]:
+                  - img [ref=e299]
+                  - text: GitHub
+                - textbox [ref=e303]:
+                  - /placeholder: https://github.com/username
+                  - text: github.com/janedoe
+            - generic [ref=e304]:
+              - generic [ref=e305]:
+                - generic [ref=e306]:
+                  - img [ref=e307]
+                  - text: Portfolio URL
+                - textbox [ref=e311]:
+                  - /placeholder: https://yourportfolio.com
+                  - text: janedoe.dev
+              - generic [ref=e312]:
+                - generic [ref=e313]:
+                  - img [ref=e314]
+                  - text: Personal Website
+                - textbox [ref=e318]:
+                  - /placeholder: https://yourwebsite.com
+                  - text: janedoe.dev
+  - alert [ref=e319]
+```

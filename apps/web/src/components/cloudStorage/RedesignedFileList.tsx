@@ -125,7 +125,10 @@ interface RedesignedFileListProps {
   onStar: (fileId: string) => void;
   onArchive: (fileId: string) => void;
   onAddComment: (fileId: string, comment: string) => void;
-  onShareWithUser: (fileId: string, email: string, permission: string) => void;
+  onShareWithUser: (fileId: string, email: string, permission: string, expiresAt?: string, maxDownloads?: number) => void | Promise<void>;
+  onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
+  onCopy?: (fileId: string, newName?: string, folderId?: string | null) => void | Promise<void>;
+  onMove?: (fileId: string, folderId: string | null) => void | Promise<void>;
   showDeleted: boolean;
   colors?: any;
   onUpload: () => void;
@@ -158,6 +161,9 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   onArchive,
   onAddComment,
   onShareWithUser,
+  onRemoveShare,
+  onCopy,
+  onMove,
   showDeleted,
   colors,
   onUpload,
@@ -217,6 +223,9 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
             onArchive={onArchive}
             onAddComment={onAddComment}
             onShareWithUser={onShareWithUser}
+            onRemoveShare={onRemoveShare}
+            onCopy={onCopy}
+            onMove={onMove}
           />
         ))}
       </div>

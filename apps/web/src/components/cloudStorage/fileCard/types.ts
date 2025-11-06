@@ -18,8 +18,11 @@ export interface FileCardProps {
   onEdit: (fileId: string, updates?: { name?: string; type?: ResumeFile['type']; description?: string }) => Promise<void> | void;
   onStar: (fileId: string) => void;
   onArchive: (fileId: string) => void;
-  onAddComment: (fileId: string, content: string) => void;
-  onShareWithUser: (fileId: string, userEmail: string, permission: 'view' | 'comment' | 'edit' | 'admin') => void;
+  onAddComment: (fileId: string, content: string) => void | Promise<void>;
+  onShareWithUser: (fileId: string, userEmail: string, permission: 'view' | 'comment' | 'edit' | 'admin', expiresAt?: string, maxDownloads?: number) => void | Promise<void>;
+  onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
+  onCopy?: (fileId: string, newName?: string, folderId?: string | null) => void | Promise<void>;
+  onMove?: (fileId: string, folderId: string | null) => void | Promise<void>;
 }
 
 export type SharePermission = 'view' | 'comment' | 'edit' | 'admin';

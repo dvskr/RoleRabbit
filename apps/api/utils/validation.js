@@ -228,78 +228,116 @@ function validateProfileData(data) {
     if (!bioValidation.valid) errors.professionalBio = bioValidation.error;
   }
   
-  // Arrays
-  if (data.workExperiences !== undefined) {
-    const workExpValidation = validateArray(data.workExperiences, 'Work Experiences');
-    if (!workExpValidation.valid) {
-      errors.workExperiences = workExpValidation.error;
-    } else if (Array.isArray(data.workExperiences)) {
-      // Validate each work experience
-      data.workExperiences.forEach((exp, index) => {
-        if (exp) {
-          if (exp.company) {
-            const companyValidation = validateTextLength(exp.company, 200, 'Company name');
-            if (!companyValidation.valid) {
-              errors[`workExperiences.${index}.company`] = companyValidation.error;
-            }
-          }
-          if (exp.role) {
-            const roleValidation = validateTextLength(exp.role, 200, 'Role');
-            if (!roleValidation.valid) {
-              errors[`workExperiences.${index}.role`] = roleValidation.error;
-            }
-          }
-          if (exp.startDate) {
-            const startDateValidation = validateDate(exp.startDate, 'Start date');
-            if (!startDateValidation.valid) {
-              errors[`workExperiences.${index}.startDate`] = startDateValidation.error;
-            }
-          }
-          if (exp.endDate && exp.endDate !== 'Present') {
-            const endDateValidation = validateDate(exp.endDate, 'End date');
-            if (!endDateValidation.valid) {
-              errors[`workExperiences.${index}.endDate`] = endDateValidation.error;
-            }
-          }
-          if (exp.description) {
-            const descValidation = validateTextLength(exp.description, 10000, 'Description');
-            if (!descValidation.valid) {
-              errors[`workExperiences.${index}.description`] = descValidation.error;
-            }
+  // Arrays - only validate if value is actually an array (skip if null, undefined, or non-array)
+  if (data.workExperiences !== undefined && data.workExperiences !== null && Array.isArray(data.workExperiences)) {
+    // Validate each work experience
+    data.workExperiences.forEach((exp, index) => {
+      if (exp) {
+        if (exp.company) {
+          const companyValidation = validateTextLength(exp.company, 200, 'Company name');
+          if (!companyValidation.valid) {
+            errors[`workExperiences.${index}.company`] = companyValidation.error;
           }
         }
-      });
-    }
+        if (exp.role) {
+          const roleValidation = validateTextLength(exp.role, 200, 'Role');
+          if (!roleValidation.valid) {
+            errors[`workExperiences.${index}.role`] = roleValidation.error;
+          }
+        }
+        if (exp.startDate) {
+          const startDateValidation = validateDate(exp.startDate, 'Start date');
+          if (!startDateValidation.valid) {
+            errors[`workExperiences.${index}.startDate`] = startDateValidation.error;
+          }
+        }
+        if (exp.endDate && exp.endDate !== 'Present') {
+          const endDateValidation = validateDate(exp.endDate, 'End date');
+          if (!endDateValidation.valid) {
+            errors[`workExperiences.${index}.endDate`] = endDateValidation.error;
+          }
+        }
+        if (exp.description) {
+          const descValidation = validateTextLength(exp.description, 10000, 'Description');
+          if (!descValidation.valid) {
+            errors[`workExperiences.${index}.description`] = descValidation.error;
+          }
+        }
+      }
+    });
   }
   
-  if (data.projects !== undefined) {
-    const projectsValidation = validateArray(data.projects, 'Projects');
-    if (!projectsValidation.valid) {
-      errors.projects = projectsValidation.error;
-    } else if (Array.isArray(data.projects)) {
-      data.projects.forEach((project, index) => {
-        if (project) {
-          if (project.title) {
-            const titleValidation = validateTextLength(project.title, 200, 'Project title');
-            if (!titleValidation.valid) {
-              errors[`projects.${index}.title`] = titleValidation.error;
-            }
-          }
-          if (project.description) {
-            const descValidation = validateTextLength(project.description, 10000, 'Project description');
-            if (!descValidation.valid) {
-              errors[`projects.${index}.description`] = descValidation.error;
-            }
+  if (data.projects !== undefined && data.projects !== null && Array.isArray(data.projects)) {
+    data.projects.forEach((project, index) => {
+      if (project) {
+        if (project.title) {
+          const titleValidation = validateTextLength(project.title, 200, 'Project title');
+          if (!titleValidation.valid) {
+            errors[`projects.${index}.title`] = titleValidation.error;
           }
         }
-      });
-    }
+        if (project.description) {
+          const descValidation = validateTextLength(project.description, 10000, 'Project description');
+          if (!descValidation.valid) {
+            errors[`projects.${index}.description`] = descValidation.error;
+          }
+        }
+      }
+    });
   }
   
   return {
     valid: Object.keys(errors).length === 0,
     errors
   };
+}
+
+/**
+ * Validate password strength
+ * @param {string} password - Password to validate
+ * @returns {{valid: boolean, error: string|null}} Validation result
+ */
+function validatePassword(password) {
+  if (!password) {
+    return {
+      valid: false,
+      error: 'Password is required'
+    };
+  }
+  
+  // Check minimum length
+  if (password.length < 8) {
+    return {
+      valid: false,
+      error: 'Password must be at least 8 characters'
+    };
+  }
+  
+  // Check for uppercase
+  if (!/[A-Z]/.test(password)) {
+    return {
+      valid: false,
+      error: 'Password must contain at least one uppercase letter'
+    };
+  }
+  
+  // Check for lowercase
+  if (!/[a-z]/.test(password)) {
+    return {
+      valid: false,
+      error: 'Password must contain at least one lowercase letter'
+    };
+  }
+  
+  // Check for number
+  if (!/\d/.test(password)) {
+    return {
+      valid: false,
+      error: 'Password must contain at least one number'
+    };
+  }
+  
+  return { valid: true };
 }
 
 module.exports = {
@@ -310,5 +348,6 @@ module.exports = {
   validateTextLength,
   validateRequired,
   validateArray,
-  validateProfileData
+  validateProfileData,
+  validatePassword
 };

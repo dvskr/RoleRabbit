@@ -2,6 +2,7 @@
  * Unit tests for useProfileData hook
  */
 
+import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useProfileData } from '../useProfileData';
 import { useProfile } from '@/contexts/ProfileContext';

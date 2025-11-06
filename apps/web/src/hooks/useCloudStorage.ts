@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { FileType, SortBy, ViewMode, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
 import { filterAndSortFiles } from './useCloudStorage/utils/fileFiltering';
-import { useFileOperations } from './useCloudStorage/hooks/useFileOperations';
+import { useFileOperations, useCopyMoveOperations } from './useCloudStorage/hooks/useFileOperations';
 import { useSharingOperations } from './useCloudStorage/hooks/useSharingOperations';
 import { useCredentialOperations } from './useCloudStorage/hooks/useCredentialOperations';
 import { useFolderOperations } from './useCloudStorage/hooks/useFolderOperations';
@@ -11,6 +11,8 @@ import { useCloudIntegration } from './useCloudStorage/hooks/useCloudIntegration
 import { useAccessTracking } from './useCloudStorage/hooks/useAccessTracking';
 import { logger } from '../utils/logger';
 import apiService from '../services/apiService';
+import { webSocketService } from '../services/webSocketService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const BYTES_IN_GB = 1024 ** 3;
 
@@ -59,6 +61,9 @@ export const normalizeStorageInfo = (storage?: any): StorageInfo => {
 };
 
 export const useCloudStorage = () => {
+  // Get current user for WebSocket authentication
+  const { user } = useAuth();
+
   // File operations hook
   const [storageInfoState, setStorageInfoState] = useState<StorageInfo>(EMPTY_STORAGE_INFO);
 
@@ -68,6 +73,10 @@ export const useCloudStorage = () => {
 
   const fileOps = useFileOperations({ onStorageUpdate: handleStorageUpdate });
   const { files, setFiles, isLoading, selectedFiles, setSelectedFiles } = fileOps;
+  
+  // Copy and Move operations
+  const copyMoveOps = useCopyMoveOperations(setFiles);
+  const { handleCopyFile, handleMoveFile } = copyMoveOps;
 
   // UI state
   const [showDeleted, setShowDeleted] = useState(false); // Recycle bin toggle
@@ -77,6 +86,156 @@ export const useCloudStorage = () => {
     fileOps.loadFilesFromAPI(showDeleted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
+
+  // Real-time WebSocket listeners for file updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Authenticate WebSocket connection
+    if (webSocketService.isConnected()) {
+      webSocketService.emit('authenticate', { userId: user.id });
+    }
+
+    // Set up real-time event listeners
+    const unsubscribeFileCreated = webSocketService.on('file_created', (data) => {
+      if (!showDeleted && data.file) {
+        // Add new file to the list
+        setFiles((prevFiles) => {
+          // Check if file already exists to avoid duplicates
+          if (prevFiles.some(f => f.id === data.file.id)) {
+            return prevFiles;
+          }
+          return [...prevFiles, { ...data.file, shares: [], comments: [] }];
+        });
+        logger.info('Real-time: File created', data.file.id);
+      }
+    });
+
+    const unsubscribeFileUpdated = webSocketService.on('file_updated', (data) => {
+      if (data.fileId && data.file) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) =>
+            file.id === data.fileId
+              ? { ...file, ...data.file, updatedAt: new Date().toISOString() }
+              : file
+          )
+        );
+        logger.info('Real-time: File updated', data.fileId);
+      }
+    });
+
+    const unsubscribeFileDeleted = webSocketService.on('file_deleted', (data) => {
+      if (data.fileId) {
+        if (showDeleted) {
+          // If viewing recycle bin, update deletedAt timestamp
+          setFiles((prevFiles) =>
+            prevFiles.map((file) =>
+              file.id === data.fileId
+                ? { ...file, deletedAt: new Date().toISOString() }
+                : file
+            )
+          );
+        } else {
+          // Remove from active files list
+          setFiles((prevFiles) => prevFiles.filter((file) => file.id !== data.fileId));
+        }
+        logger.info('Real-time: File deleted', data.fileId);
+      }
+    });
+
+    const unsubscribeFileRestored = webSocketService.on('file_restored', (data) => {
+      if (data.file && !showDeleted) {
+        // Add restored file back to active list
+        setFiles((prevFiles) => {
+          const exists = prevFiles.some(f => f.id === data.file.id);
+          if (exists) {
+            // Update existing file
+            return prevFiles.map((file) =>
+              file.id === data.file.id
+                ? { ...file, ...data.file, deletedAt: null }
+                : file
+            );
+          }
+          return [...prevFiles, { ...data.file, deletedAt: null, shares: [], comments: [] }];
+        });
+        logger.info('Real-time: File restored', data.file.id);
+      }
+    });
+
+    const unsubscribeFileShared = webSocketService.on('file_shared', (data) => {
+      if (data.fileId && data.share) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) => {
+            if (file.id === data.fileId) {
+              const updatedShares = file.shares || [];
+              const shareExists = updatedShares.some((s: any) => s.id === data.share.id);
+              return {
+                ...file,
+                shares: shareExists
+                  ? updatedShares.map((s: any) => s.id === data.share.id ? data.share : s)
+                  : [...updatedShares, data.share]
+              };
+            }
+            return file;
+          })
+        );
+        logger.info('Real-time: File shared', data.fileId);
+      }
+    });
+
+    const unsubscribeShareRemoved = webSocketService.on('share_removed', (data) => {
+      if (data.fileId && data.shareId) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) =>
+            file.id === data.fileId
+              ? {
+                  ...file,
+                  shares: (file.shares || []).filter((s: any) => s.id !== data.shareId)
+                }
+              : file
+          )
+        );
+        logger.info('Real-time: Share removed', data.fileId, data.shareId);
+      }
+    });
+
+    const unsubscribeCommentAdded = webSocketService.on('comment_added', (data) => {
+      if (data.fileId && data.comment) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) => {
+            if (file.id === data.fileId) {
+              const updatedComments = file.comments || [];
+              const commentExists = updatedComments.some((c: any) => c.id === data.comment.id);
+              
+              // If comment exists, update it; otherwise add it to the beginning
+              const newComments = commentExists
+                ? updatedComments.map((c: any) => c.id === data.comment.id ? data.comment : c)
+                : [data.comment, ...updatedComments]; // Add new comment at the beginning
+              
+              logger.info('Real-time: Comment added', data.fileId, data.comment.id, 'Total comments:', newComments.length);
+              
+              return {
+                ...file,
+                comments: newComments
+              };
+            }
+            return file;
+          })
+        );
+      }
+    });
+
+    // Cleanup listeners on unmount
+    return () => {
+      unsubscribeFileCreated();
+      unsubscribeFileUpdated();
+      unsubscribeFileDeleted();
+      unsubscribeFileRestored();
+      unsubscribeFileShared();
+      unsubscribeShareRemoved();
+      unsubscribeCommentAdded();
+    };
+  }, [user?.id, showDeleted, setFiles]);
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
@@ -270,14 +429,14 @@ export const useCloudStorage = () => {
     handleFileSelect: fileOps.handleFileSelect,
     handleSelectAll,
     handleDeleteFiles: fileOps.handleDeleteFiles,
-    handleDeleteFile: fileOps.handleDeleteFile,
+    handleDeleteFile: (fileId: string) => fileOps.handleDeleteFile(fileId, showDeleted),
     handleRestoreFile: fileOps.handleRestoreFile,
     handlePermanentlyDeleteFile: fileOps.handlePermanentlyDeleteFile,
     handleTogglePublic: fileOps.handleTogglePublic,
     handleDownloadFile: fileOps.handleDownloadFile,
     handleShareFile: fileOps.handleShareFile,
     handleUploadFile,
-    handleEditFile: fileOps.handleEditFile,
+    handleEditFile: (fileId: string, updates: any) => fileOps.handleEditFile(fileId, updates, showDeleted),
     handleRefresh: async () => {
       try {
         await fileOps.handleRefresh();
@@ -288,6 +447,8 @@ export const useCloudStorage = () => {
     },
     handleStarFile: fileOps.handleStarFile,
     handleArchiveFile: fileOps.handleArchiveFile,
+    handleCopyFile,
+    handleMoveFile,
     
     // Sharing and Access Management
     handleShareWithUser: sharingOps.handleShareWithUser,

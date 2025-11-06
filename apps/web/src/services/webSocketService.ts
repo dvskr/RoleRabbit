@@ -26,6 +26,16 @@ export interface WebSocketEvents {
   // Notification events
   notification: (data: { type: string; message: string; userId: string }) => void;
   
+  // File storage events
+  file_created: (data: { file: any; timestamp: string }) => void;
+  file_updated: (data: { fileId: string; file: any; updates: any; timestamp: string }) => void;
+  file_deleted: (data: { fileId: string; permanently: boolean; timestamp: string }) => void;
+  file_restored: (data: { file: any; timestamp: string }) => void;
+  file_shared: (data: { fileId: string; share: any; timestamp: string }) => void;
+  file_shared_with_you: (data: { fileId: string; share: any; timestamp: string }) => void;
+  share_removed: (data: { fileId: string; shareId: string; timestamp: string }) => void;
+  comment_added: (data: { fileId: string; comment: any; timestamp: string }) => void;
+  
   // Error events
   error: (data: { message: string; code?: string }) => void;
 }
@@ -51,13 +61,17 @@ class WebSocketService {
     this.isConnecting = true;
 
     try {
-      this.socket = io(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      this.socket = io(apiUrl, {
         transports: ['websocket', 'polling'],
         timeout: 20000,
         reconnection: true,
         reconnectionAttempts: this.maxReconnectAttempts,
         reconnectionDelay: this.reconnectDelay,
-        reconnectionDelayMax: 5000
+        reconnectionDelayMax: 5000,
+        // Increase ping/pong timeout to handle slow networks better
+        pingTimeout: 60000, // 60 seconds instead of default 20 seconds
+        pingInterval: 25000 // 25 seconds - keep connection alive
       });
 
       this.setupEventHandlers();
@@ -71,31 +85,55 @@ class WebSocketService {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('WebSocket connected');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket connected');
+      }
       this.reconnectAttempts = 0;
       this.isConnecting = false;
       this.emitToListeners('connect');
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('WebSocket disconnected:', reason);
+      // Filter out common transient disconnect reasons that Socket.io handles automatically
+      const transientReasons = [
+        'transport close',      // Transport closed but will reconnect
+        'ping timeout',         // Ping timeout but will reconnect  
+        'transport error'        // Transport error but will reconnect
+      ];
+      
+      const isExpectedDisconnect = reason === 'io server disconnect' || reason === 'io client disconnect';
+      const isTransientIssue = transientReasons.includes(reason);
+      
+      // Only log if it's a non-transient disconnect that needs attention
+      // Transient disconnects are handled automatically by Socket.io reconnection
+      if (!isExpectedDisconnect && !isTransientIssue) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('WebSocket disconnected (unexpected):', reason);
+        }
+      }
+      
       this.isConnecting = false;
       this.emitToListeners('disconnect');
     });
 
     this.socket.on('reconnect', (attemptNumber) => {
-      console.log('WebSocket reconnected after', attemptNumber, 'attempts');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket reconnected after', attemptNumber, 'attempts');
+      }
       this.reconnectAttempts = 0;
       this.emitToListeners('reconnect');
     });
 
     this.socket.on('reconnect_error', (error) => {
-      console.error('WebSocket reconnection error:', error);
+      // Only log reconnection errors if we're close to max attempts
+      if (this.reconnectAttempts >= this.maxReconnectAttempts - 1) {
+        console.error('WebSocket reconnection error:', error);
+      }
       this.reconnectAttempts++;
     });
 
     this.socket.on('reconnect_failed', () => {
-      console.error('WebSocket reconnection failed');
+      console.error('WebSocket reconnection failed - max attempts reached');
       this.emitToListeners('error', { message: 'Failed to reconnect to server', code: 'RECONNECT_FAILED' });
     });
 

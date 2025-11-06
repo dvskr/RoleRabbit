@@ -8,6 +8,7 @@ const { prisma } = require('../utils/db');
 const storageHandler = require('../utils/storageHandler');
 const { validateFileUpload, validateFileType } = require('../utils/storageValidation');
 const logger = require('../utils/logger');
+const socketIOServer = require('../utils/socketIOServer');
 
 /**
  * Register all storage routes with Fastify instance
@@ -18,10 +19,15 @@ async function storageRoutes(fastify, options) {
   logger.info('📁 Storage routes registered: /api/storage/*');
   logger.info('   → GET    /api/storage/files');
   logger.info('   → POST   /api/storage/files/upload');
+  logger.info('   → GET    /api/storage/files/:id/download');
   logger.info('   → PUT    /api/storage/files/:id');
   logger.info('   → DELETE /api/storage/files/:id (soft delete)');
   logger.info('   → POST   /api/storage/files/:id/restore');
   logger.info('   → DELETE /api/storage/files/:id/permanent');
+  logger.info('   → POST   /api/storage/files/:id/share');
+  logger.info('   → POST   /api/storage/files/:id/share-link');
+  logger.info('   → GET    /api/storage/files/:id/comments');
+  logger.info('   → POST   /api/storage/files/:id/comments');
   
   // Get all files for authenticated user
   fastify.get('/files', {
@@ -77,6 +83,55 @@ async function storageRoutes(fastify, options) {
               id: true,
               name: true
             }
+          },
+          shares: {
+            include: {
+              sharer: {
+                select: {
+                  name: true,
+                  email: true
+                }
+              },
+              recipient: {
+                select: {
+                  name: true,
+                  email: true
+                }
+              }
+            }
+          },
+          comments: {
+            where: {
+              parentId: null // Only top-level comments for listing
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true
+                }
+              },
+              replies: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true
+                    }
+                  }
+                },
+                orderBy: {
+                  createdAt: 'asc'
+                },
+                take: 5 // Limit replies in listing
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 10 // Limit comments in listing
           }
         }
       });
@@ -104,8 +159,35 @@ async function storageRoutes(fastify, options) {
         updatedAt: file.updatedAt.toISOString(),
         lastModified: file.updatedAt.toISOString(),
         owner: userId,
-        sharedWith: [],
-        comments: [],
+        sharedWith: file.shares ? file.shares.map((share) => ({
+          id: share.id,
+          userId: share.sharedWith,
+          userEmail: share.recipient?.email || share.sharedWith,
+          userName: share.recipient?.name || 'Unknown User',
+          permission: share.permission,
+          grantedBy: share.userId,
+          grantedAt: share.createdAt.toISOString(),
+          expiresAt: share.expiresAt?.toISOString() || null
+        })) : [],
+        comments: file.comments ? file.comments.map((comment) => ({
+          id: comment.id,
+          userId: comment.userId,
+          userName: comment.user.name,
+          userAvatar: null,
+          content: comment.content,
+          timestamp: comment.createdAt.toISOString(),
+          isResolved: comment.isResolved,
+          replies: comment.replies.map((reply) => ({
+            id: reply.id,
+            userId: reply.userId,
+            userName: reply.user.name,
+            userAvatar: null,
+            content: reply.content,
+            timestamp: reply.createdAt.toISOString(),
+            isResolved: reply.isResolved,
+            replies: []
+          }))
+        })) : [],
         version: 1,
         deletedAt: file.deletedAt ? file.deletedAt.toISOString() : null // Include deletedAt for filtering
       }));
@@ -446,6 +528,11 @@ async function storageRoutes(fastify, options) {
 
       logger.info(`File uploaded successfully: ${storageResult.path}`);
 
+      // Emit real-time event for file creation
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyFileCreated(userId, fileMetadata);
+      }
+
           reply.status(201).send({
             success: true,
             file: {
@@ -580,20 +667,28 @@ async function storageRoutes(fastify, options) {
 
       logger.info(`✅ File updated: ${fileId}`, updates);
 
+      // Format file for real-time event
+      const formattedFile = {
+        id: updatedFile.id,
+        name: updatedFile.name,
+        fileName: updatedFile.fileName,
+        type: updatedFile.type,
+        description: updatedFile.description,
+        isPublic: updatedFile.isPublic,
+        isStarred: updatedFile.isStarred,
+        isArchived: updatedFile.isArchived,
+        folderId: updatedFile.folderId,
+        updatedAt: updatedFile.updatedAt.toISOString()
+      };
+
+      // Emit real-time event for file update
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyFileUpdated(userId, formattedFile, updates);
+      }
+
       return reply.send({
         success: true,
-        file: {
-          id: updatedFile.id,
-          name: updatedFile.name,
-          fileName: updatedFile.fileName,
-          type: updatedFile.type,
-          description: updatedFile.description,
-          isPublic: updatedFile.isPublic,
-          isStarred: updatedFile.isStarred,
-          isArchived: updatedFile.isArchived,
-          folderId: updatedFile.folderId,
-          updatedAt: updatedFile.updatedAt.toISOString()
-        }
+        file: formattedFile
       });
 
     } catch (error) {
@@ -645,6 +740,11 @@ async function storageRoutes(fastify, options) {
       });
 
       logger.info(`✅ File soft deleted (moved to recycle bin): ${fileId}`);
+
+      // Emit real-time event for file deletion
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyFileDeleted(userId, fileId, false);
+      }
 
       return reply.send({
         success: true,
@@ -711,6 +811,20 @@ async function storageRoutes(fastify, options) {
       });
 
       logger.info(`✅ File restored from recycle bin: ${fileId}`);
+
+      // Format file for real-time event
+      const restoredFile = {
+        id: updatedFile.id,
+        name: updatedFile.name,
+        fileName: updatedFile.fileName,
+        type: updatedFile.type,
+        deletedAt: null
+      };
+
+      // Emit real-time event for file restore
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyFileRestored(userId, restoredFile);
+      }
 
       return reply.send({
         success: true,
@@ -815,6 +929,637 @@ async function storageRoutes(fastify, options) {
       return reply.status(500).send({
         error: 'Failed to permanently delete file',
         message: error.message || 'An error occurred while deleting the file'
+      });
+    }
+  });
+
+  // Download file
+  fastify.get('/files/:id/download', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+
+      // Check if file exists and belongs to user
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId,
+          deletedAt: null // Don't allow downloading deleted files
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to download it'
+        });
+      }
+
+      // Get file from storage
+      let fileBuffer;
+      try {
+        const fileStream = await storageHandler.download(file.storagePath);
+        // Convert stream to buffer
+        const chunks = [];
+        for await (const chunk of fileStream) {
+          chunks.push(chunk);
+        }
+        fileBuffer = Buffer.concat(chunks);
+      } catch (error) {
+        logger.error('Failed to download file from storage:', error);
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found in storage'
+        });
+      }
+      
+      if (!fileBuffer || fileBuffer.length === 0) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found in storage or file is empty'
+        });
+      }
+
+      // Increment download count
+      await prisma.storageFile.update({
+        where: { id: fileId },
+        data: {
+          downloadCount: { increment: 1 }
+        }
+      });
+
+      // Set appropriate headers
+      reply.type(file.contentType || 'application/octet-stream');
+      reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName || file.name)}"`);
+      
+      return reply.send(fileBuffer);
+
+    } catch (error) {
+      logger.error('Error downloading file:', error);
+      return reply.status(500).send({
+        error: 'Failed to download file',
+        message: error.message || 'An error occurred while downloading the file'
+      });
+    }
+  });
+
+  // Share file with user
+  fastify.post('/files/:id/share', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+      const { userEmail, permission = 'view', expiresAt, maxDownloads } = request.body || {};
+
+      if (!userEmail) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'userEmail is required'
+        });
+      }
+
+      // Check if file exists and belongs to user
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId,
+          deletedAt: null
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to share it'
+        });
+      }
+
+      // Find the shared user (if exists)
+      let sharedUser = await prisma.user.findUnique({
+        where: { email: userEmail.toLowerCase() }
+      });
+
+      // Get the file owner's info for email
+      const fileOwner = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, email: true }
+      });
+
+      // Create share record - use user ID if exists, otherwise use email as identifier
+      let share;
+      if (sharedUser) {
+        // User exists - create share with user ID
+        share = await prisma.fileShare.create({
+          data: {
+            fileId,
+            userId,
+            sharedWith: sharedUser.id,
+            permission,
+            expiresAt: expiresAt ? new Date(expiresAt) : null
+          },
+          include: {
+            recipient: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
+        });
+      } else {
+        // User doesn't exist - create a temporary user or use email-based sharing
+        // For now, we'll create a share link instead and send email
+        // This allows sharing with external users
+        
+        // Generate a share token
+        const crypto = require('crypto');
+        const shareToken = crypto.randomBytes(32).toString('hex');
+        
+        // Create share link with token
+        const shareLink = await prisma.shareLink.create({
+          data: {
+            fileId,
+            userId,
+            token: shareToken,
+            permission: permission || 'view',
+            expiresAt: expiresAt ? new Date(expiresAt) : null,
+            maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+            password: null // Password protection can be added later
+          }
+        });
+
+        // Send email notification with share link
+        const { sendEmail } = require('../utils/emailService');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const shareUrl = `${frontendUrl}/shared/${shareToken}`;
+        
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+              .content { padding: 20px; background: #f9fafb; }
+              .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+              .file-info { background: #e5e7eb; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>File Shared with You</h1>
+              </div>
+              <div class="content">
+                <p>Hello,</p>
+                <p><strong>${fileOwner?.name || 'Someone'}</strong> has shared a file with you.</p>
+                <div class="file-info">
+                  <p><strong>File:</strong> ${file.name}</p>
+                  <p><strong>Permission:</strong> ${permission}</p>
+                  ${expiresAt ? `<p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleString()}</p>` : ''}
+                </div>
+                <p>
+                  <a href="${shareUrl}" class="button">View File</a>
+                </p>
+                <p>Or copy this link: <a href="${shareUrl}">${shareUrl}</a></p>
+                <p>If you didn't expect this file, you can safely ignore this email.</p>
+                <p>Best regards,<br>The RoleReady Team</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        try {
+          await sendEmail({
+            to: userEmail,
+            subject: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you`,
+            html: emailHtml,
+            text: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you. View it here: ${shareUrl}`,
+            isSecurityEmail: false
+          });
+          logger.info(`✅ Share email sent to ${userEmail}`);
+        } catch (emailError) {
+          logger.error('Failed to send share email:', emailError);
+          // Don't fail the share if email fails
+        }
+
+        return reply.send({
+          success: true,
+          share: {
+            id: shareLink.id,
+            fileId: shareLink.fileId,
+            shareLink: shareUrl,
+            permission: shareLink.permission,
+            expiresAt: shareLink.expiresAt?.toISOString() || null,
+            createdAt: shareLink.createdAt.toISOString()
+          },
+          emailSent: true
+        });
+      }
+
+      logger.info(`✅ File shared: ${fileId} with ${userEmail}`);
+
+      // Send email notification to existing user
+      if (sharedUser) {
+        const { sendEmail } = require('../utils/emailService');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const fileUrl = `${frontendUrl}/dashboard?tab=storage&fileId=${fileId}`;
+        
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #4F46E5; color: white; padding: 20px; text-align: center; }
+              .content { padding: 20px; background: #f9fafb; }
+              .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+              .file-info { background: #e5e7eb; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>File Shared with You</h1>
+              </div>
+              <div class="content">
+                <p>Hello ${sharedUser.name || userEmail},</p>
+                <p><strong>${fileOwner?.name || 'Someone'}</strong> has shared a file with you.</p>
+                <div class="file-info">
+                  <p><strong>File:</strong> ${file.name}</p>
+                  <p><strong>Permission:</strong> ${permission}</p>
+                  ${expiresAt ? `<p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleString()}</p>` : ''}
+                </div>
+                <p>
+                  <a href="${fileUrl}" class="button">View File</a>
+                </p>
+                <p>If you didn't expect this file, you can safely ignore this email.</p>
+                <p>Best regards,<br>The RoleReady Team</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        try {
+          await sendEmail({
+            to: userEmail,
+            subject: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you`,
+            html: emailHtml,
+            text: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you. View it here: ${fileUrl}`,
+            isSecurityEmail: false
+          });
+          logger.info(`✅ Share email sent to ${userEmail}`);
+        } catch (emailError) {
+          logger.error('Failed to send share email:', emailError);
+          // Don't fail the share if email fails
+        }
+      }
+
+      // Emit real-time event for file sharing
+      if (socketIOServer.isInitialized() && sharedUser) {
+        socketIOServer.notifyFileShared(userId, {
+          fileId,
+          share: {
+            id: share.id,
+            fileId: share.fileId,
+            sharedWith: share.sharedWith,
+            sharedWithUserId: share.sharedWith,
+            permission: share.permission,
+            expiresAt: share.expiresAt?.toISOString() || null,
+            createdAt: share.createdAt.toISOString()
+          }
+        });
+      }
+
+      return reply.send({
+        success: true,
+        share: {
+          id: share.id,
+          fileId: share.fileId,
+          sharedWith: share.sharedWith,
+          sharedWithEmail: userEmail,
+          permission: share.permission,
+          expiresAt: share.expiresAt?.toISOString() || null,
+          createdAt: share.createdAt.toISOString()
+        },
+        emailSent: true
+      });
+
+    } catch (error) {
+      logger.error('Error sharing file:', error);
+      return reply.status(500).send({
+        error: 'Failed to share file',
+        message: error.message || 'An error occurred while sharing the file'
+      });
+    }
+  });
+
+  // Create share link
+  fastify.post('/files/:id/share-link', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+      const { password, expiresAt, maxDownloads } = request.body || {};
+
+      // Check if file exists and belongs to user
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId,
+          deletedAt: null
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to create share link'
+        });
+      }
+
+      // Generate unique token
+      const crypto = require('crypto');
+      const token = crypto.randomBytes(32).toString('hex');
+
+      // Create share link
+      const shareLink = await prisma.shareLink.create({
+        data: {
+          fileId,
+          userId,
+          token,
+          password: password || null,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+          maxDownloads: maxDownloads || null
+        }
+      });
+
+      logger.info(`✅ Share link created: ${fileId} - token: ${token}`);
+
+      return reply.send({
+        success: true,
+        shareLink: {
+          id: shareLink.id,
+          token: shareLink.token,
+          url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/share/${token}`,
+          expiresAt: shareLink.expiresAt?.toISOString() || null,
+          maxDownloads: shareLink.maxDownloads,
+          hasPassword: !!shareLink.password
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error creating share link:', error);
+      return reply.status(500).send({
+        error: 'Failed to create share link',
+        message: error.message || 'An error occurred while creating share link'
+      });
+    }
+  });
+
+  // Get file comments
+  fastify.get('/files/:id/comments', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+
+      // Check if file exists and user has access
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          OR: [
+            { userId },
+            { shares: { some: { sharedWith: userId } } }
+          ],
+          deletedAt: null
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have access'
+        });
+      }
+
+      // Get comments
+      const comments = await prisma.fileComment.findMany({
+        where: {
+          fileId,
+          parentId: null // Only top-level comments
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          replies: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'asc'
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      const formattedComments = comments.map(comment => ({
+        id: comment.id,
+        userId: comment.userId,
+        userName: comment.user.name,
+        userAvatar: null, // Can be added later if profile pictures are available
+        content: comment.content,
+        timestamp: comment.createdAt.toISOString(),
+        isResolved: comment.isResolved,
+        replies: comment.replies.map(reply => ({
+          id: reply.id,
+          userId: reply.userId,
+          userName: reply.user.name,
+          userAvatar: null,
+          content: reply.content,
+          timestamp: reply.createdAt.toISOString(),
+          isResolved: reply.isResolved,
+          replies: []
+        }))
+      }));
+
+      return reply.send({
+        success: true,
+        comments: formattedComments
+      });
+
+    } catch (error) {
+      logger.error('Error fetching comments:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch comments',
+        message: error.message || 'An error occurred while fetching comments'
+      });
+    }
+  });
+
+  // Add comment to file
+  fastify.post('/files/:id/comments', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+      const { content, parentId } = request.body || {};
+
+      if (!content || !content.trim()) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Comment content is required'
+        });
+      }
+
+      // Check if file exists and user has access
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          OR: [
+            { userId },
+            { shares: { some: { sharedWith: userId } } }
+          ],
+          deletedAt: null
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have access'
+        });
+      }
+
+      // If parentId is provided, verify it exists
+      if (parentId) {
+        const parentComment = await prisma.fileComment.findFirst({
+          where: {
+            id: parentId,
+            fileId
+          }
+        });
+
+        if (!parentComment) {
+          return reply.status(404).send({
+            error: 'Not Found',
+            message: 'Parent comment not found'
+          });
+        }
+      }
+
+      // Create comment
+      const comment = await prisma.fileComment.create({
+        data: {
+          fileId,
+          userId,
+          content: content.trim(),
+          parentId: parentId || null
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      logger.info(`✅ Comment added to file: ${fileId} by user: ${userId}`);
+
+      const formattedComment = {
+        id: comment.id,
+        userId: comment.userId,
+        userName: comment.user.name,
+        userAvatar: null,
+        content: comment.content,
+        timestamp: comment.createdAt.toISOString(),
+        isResolved: comment.isResolved,
+        replies: []
+      };
+
+      // Emit real-time event for comment added
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyCommentAdded(userId, fileId, formattedComment);
+      }
+
+      return reply.send({
+        success: true,
+        comment: formattedComment
+      });
+
+    } catch (error) {
+      logger.error('Error adding comment:', error);
+      return reply.status(500).send({
+        error: 'Failed to add comment',
+        message: error.message || 'An error occurred while adding comment'
       });
     }
   });

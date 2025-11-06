@@ -14,7 +14,9 @@ import {
   Star,
   Users,
   Calendar,
-  Check
+  Check,
+  Copy,
+  FolderMove
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
@@ -82,7 +84,10 @@ const FileCard = React.memo(function FileCard({
   onStar,
   onArchive,
   onAddComment,
-  onShareWithUser
+  onShareWithUser,
+  onRemoveShare,
+  onCopy,
+  onMove
 }: FileCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -98,9 +103,15 @@ const FileCard = React.memo(function FileCard({
     onShareWithUser,
   });
 
+  // Use file.comments directly - they're already loaded from API
   const comments = useComments({
     fileId: file.id,
     onAddComment,
+    initialComments: file.comments || [], // Comments are already in file data from API
+    onCommentsLoaded: (loadedComments) => {
+      // Only called if we had to load comments (no initial comments)
+      logger.debug('Comments loaded for file:', file.id, 'count:', loadedComments.length);
+    },
   });
 
   const { showDownloadFormat, setShowDownloadFormat } = useFileActions();
@@ -290,10 +301,11 @@ const FileCard = React.memo(function FileCard({
     const typeColorStyle = getTypeColor(file.type, colors);
     return (
       <div 
-        className="group rounded-lg p-3 hover:shadow-lg transition-all duration-300 cursor-pointer"
+        className="group rounded-xl p-4 hover:shadow-xl transition-all duration-300 cursor-pointer"
         style={{
-          border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
+          border: `1.5px solid ${isSelected ? colors.primaryBlue : colors.border}`,
           background: isSelected ? colors.badgeInfoBg : colors.cardBackground,
+          boxShadow: isSelected ? `0 4px 12px ${colors.primaryBlue}20` : 'none',
         }}
         onMouseEnter={(e) => {
           if (!isSelected) {
@@ -307,19 +319,19 @@ const FileCard = React.memo(function FileCard({
         }}
       >
         {/* File Info */}
-        <div className="mb-2">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="mb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
             <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
               style={{
-                background: colors.inputBackground,
+                background: `linear-gradient(135deg, ${colors.inputBackground} 0%, ${colors.hoverBackground} 100%)`,
               }}
             >
               {getFileIcon(file.type, colors)}
             </div>
 
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-1.5">
               {isEditing ? (
                 <input
                   type="text"
@@ -333,18 +345,18 @@ const FileCard = React.memo(function FileCard({
                       handleCancelEdit();
                     }
                   }}
-                  className="font-semibold text-sm mb-1 w-full px-1.5 py-0.5 rounded focus:outline-none"
+                  className="font-semibold text-base w-full px-2 py-1 rounded-lg focus:outline-none"
                   style={{
                     color: colors.primaryText,
                     background: colors.inputBackground,
-                    border: `1px solid ${colors.primaryBlue}`,
+                    border: `2px solid ${colors.primaryBlue}`,
                   }}
                   autoFocus
                   disabled={isSaving}
                 />
               ) : (
                 <h3 
-                  className="font-semibold text-sm mb-1 truncate transition-colors"
+                  className="font-semibold text-base truncate transition-colors leading-tight"
                   style={{ color: colors.primaryText }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = colors.primaryBlue;
@@ -358,14 +370,14 @@ const FileCard = React.memo(function FileCard({
               )}
               {file.description && (
                 <p 
-                  className="text-xs mb-1.5 line-clamp-2"
+                  className="text-xs line-clamp-2 leading-relaxed"
                   style={{ color: colors.secondaryText }}
                 >
                   {file.description}
                 </p>
               )}
               
-              <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 {isEditing ? (
                   <select
                     value={editingType}
@@ -421,18 +433,18 @@ const FileCard = React.memo(function FileCard({
               </div>
 
               <div 
-                className="flex items-center flex-wrap gap-2 text-xs mb-2"
+                className="flex items-center flex-wrap gap-2 text-xs pt-0.5"
                 style={{ color: colors.secondaryText }}
               >
-                <div className="flex items-center gap-1">
-                  <Calendar size={12} />
-                  <span>{formattedDateTime}</span>
-                  <span className="text-[11px]" style={{ color: colors.tertiaryText }}>
+                <div className="flex items-center gap-1.5">
+                  <Calendar size={13} />
+                  <span className="font-medium">{formattedDateTime}</span>
+                  <span className="text-[10px]" style={{ color: colors.tertiaryText }}>
                     ({relativeUpdated})
                   </span>
                 </div>
-                <span className="text-[11px]" style={{ color: colors.tertiaryText }}>•</span>
-                <span>{formattedSize}</span>
+                <span className="text-[10px]" style={{ color: colors.tertiaryText }}>•</span>
+                <span className="font-medium">{formattedSize}</span>
               </div>
 
               {isEditing && (
@@ -500,10 +512,10 @@ const FileCard = React.memo(function FileCard({
 
         {/* Actions */}
         <div 
-          className="pt-3"
-          style={{ borderTop: `1px solid ${colors.border}` }}
+          className="pt-3 mt-3"
+          style={{ borderTop: `1.5px solid ${colors.border}` }}
         >
-          <div className="flex items-center justify-center flex-wrap gap-2 max-w-full">
+          <div className="flex items-center justify-center flex-wrap gap-2.5 max-w-full">
             <button
               onClick={() => setShowPreviewModal(true)}
               className="shadow-sm"
@@ -608,34 +620,76 @@ const FileCard = React.memo(function FileCard({
             )}
 
             {!showDeleted && (
-              <button
-                onClick={handleStartEdit}
-                style={{
-                  ...actionButtonBaseStyle,
-                  color: isEditing ? colors.primaryBlue : colors.secondaryText,
-                  background: isEditing ? colors.hoverBackground : colors.inputBackground,
-                  borderColor: isEditing ? colors.primaryBlue : colors.border,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isEditing) {
-                    applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue);
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isEditing) {
-                    resetHoverStyles(e, colors.secondaryText, colors.inputBackground, colors.border);
-                  } else {
-                    // Keep the active state when editing
-                    e.currentTarget.style.color = colors.primaryBlue;
-                    e.currentTarget.style.background = colors.hoverBackground;
-                    e.currentTarget.style.borderColor = colors.primaryBlue;
-                  }
-                }}
-                title={isEditing ? "Click again to cancel editing" : "Edit file details"}
-                disabled={isSaving}
-              >
-                <Edit size={18} />
-              </button>
+              <>
+                <button
+                  onClick={handleStartEdit}
+                  style={{
+                    ...actionButtonBaseStyle,
+                    color: isEditing ? colors.primaryBlue : colors.secondaryText,
+                    background: isEditing ? colors.hoverBackground : colors.inputBackground,
+                    borderColor: isEditing ? colors.primaryBlue : colors.border,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isEditing) {
+                      applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue);
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isEditing) {
+                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground, colors.border);
+                    } else {
+                      // Keep the active state when editing
+                      e.currentTarget.style.color = colors.primaryBlue;
+                      e.currentTarget.style.background = colors.hoverBackground;
+                      e.currentTarget.style.borderColor = colors.primaryBlue;
+                    }
+                  }}
+                  title={isEditing ? "Click again to cancel editing" : "Edit file details"}
+                  disabled={isSaving}
+                >
+                  <Edit size={18} />
+                </button>
+
+                {onCopy && (
+                  <button
+                    onClick={() => onCopy(file.id)}
+                    style={{
+                      ...actionButtonBaseStyle,
+                      color: colors.secondaryText,
+                    }}
+                    onMouseEnter={(e) =>
+                      applyHoverStyles(e, colors.badgePurpleText, colors.badgePurpleBg, colors.badgePurpleText)
+                    }
+                    onMouseLeave={(e) =>
+                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
+                    }
+                    title="Copy file"
+                    aria-label="Copy file"
+                  >
+                    <Copy size={18} />
+                  </button>
+                )}
+
+                {onMove && (
+                  <button
+                    onClick={() => onMove(file.id, file.folderId || null)}
+                    style={{
+                      ...actionButtonBaseStyle,
+                      color: colors.secondaryText,
+                    }}
+                    onMouseEnter={(e) =>
+                      applyHoverStyles(e, colors.badgeWarningText, colors.badgeWarningBg, colors.badgeWarningText)
+                    }
+                    onMouseLeave={(e) =>
+                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
+                    }
+                    title="Move file"
+                    aria-label="Move file"
+                  >
+                    <FolderMove size={18} />
+                  </button>
+                )}
+              </>
             )}
 
           {!showDeleted && (
@@ -667,6 +721,15 @@ const FileCard = React.memo(function FileCard({
           comments={file.comments}
           colors={colors}
           commentsState={comments}
+        />
+
+        {/* Share Modal */}
+        <ShareModal
+          file={file}
+          colors={colors}
+          theme={theme}
+          fileSharing={fileSharing}
+          onRemoveShare={onRemoveShare}
         />
       </div>
     );

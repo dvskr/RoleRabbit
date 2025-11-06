@@ -224,16 +224,16 @@ export default function SkillsTab({
             >
               Technical Skills
             </h3>
-            {isEditing && skills.length === 0 && (
+            {isEditing && sanitizedSkills.length === 0 && (
               <span className="text-sm" style={{ color: colors.secondaryText }}>
                 Add your first skill to get started
               </span>
             )}
           </div>
           
-          {skills.length > 0 ? (
+          {sanitizedSkills.length > 0 ? (
             <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
-              {skills.map((skill, index) => {
+              {sanitizedSkills.map((skill, index) => {
                 return (
                   <div 
                     key={index} 
