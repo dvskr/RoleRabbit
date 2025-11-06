@@ -514,33 +514,6 @@ async function generateThumbnail(storagePath, contentType) {
   }
 }
 
-/**
- * Copy file (useful for versioning or backups)
- */
-async function copyFile(sourcePath, destinationPath) {
-  await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    // Supabase doesn't have direct copy, so download and upload
-    const buffer = await downloadFromSupabase(sourcePath);
-    await uploadToSupabase(
-      require('stream').Readable.from(buffer),
-      path.dirname(destinationPath).split('/')[0], // Extract userId
-      path.basename(destinationPath),
-      null
-    );
-  } else {
-    // Local copy
-    const sourceFullPath = path.join(STORAGE_PATH, sourcePath);
-    const destFullPath = path.join(STORAGE_PATH, destinationPath);
-    
-    // Create destination directory
-    await fs.mkdir(path.dirname(destFullPath), { recursive: true });
-    
-    await fs.copyFile(sourceFullPath, destFullPath);
-  }
-}
-
 module.exports = {
   upload,
   download,
@@ -549,7 +522,6 @@ module.exports = {
   getMetadata,
   getDownloadUrl,
   generateThumbnail,
-  copyFile,
   // Expose storage type for info
   getStorageType: () => STORAGE_TYPE,
   isSupabase: () => STORAGE_TYPE === 'supabase' && supabaseClient !== null

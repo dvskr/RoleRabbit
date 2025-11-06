@@ -61,10 +61,15 @@ export const filterAndSortFiles = (
       return false;
     }
 
-    // Folder filter: null/undefined means root folder (no folder)
+    // Folder filter: 
+    // - selectedFolderId === null → Show ALL files (no folder filtering)
+    // - selectedFolderId === 'root' → Show only root files (folderId is null)
+    // - selectedFolderId === specific ID → Show files in that folder only
     const matchesFolder = selectedFolderId === null 
-      ? (file.folderId === null || file.folderId === undefined || file.folderId === '') // Root folder - files with no folder
-      : file.folderId === selectedFolderId; // Specific folder - files in that folder
+      ? true // Show all files regardless of folder
+      : selectedFolderId === 'root'
+        ? (file.folderId === null || file.folderId === undefined || file.folderId === '')
+        : file.folderId === selectedFolderId;
     if (!matchesFolder) {
       console.log('🔍 File filtered out (folder mismatch):', file.name, 'file.folderId:', file.folderId, 'selectedFolderId:', selectedFolderId);
       return false;

@@ -2,7 +2,7 @@
  * Hook for managing file sharing state and actions
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { SharePermission } from '../types';
 import { logger } from '../../../../utils/logger';
 
@@ -12,7 +12,7 @@ interface UseFileSharingProps {
 }
 
 export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps) => {
-  const [showShareModal, setShowShareModal] = useState(false);
+  const [showShareModal, setShowShareModalState] = useState(false);
   const [shareEmail, setShareEmail] = useState('');
   const [sharePermission, setSharePermission] = useState<SharePermission>('view');
   const [shareExpiresAt, setShareExpiresAt] = useState('');
@@ -73,6 +73,7 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
       
       // Show success state
       setShareSuccess(true);
+      setIsSharing(false);
       
       // Reset form on success (but keep modal open)
       setShareEmail('');
@@ -91,11 +92,12 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
       setShareSuccess(false);
       setIsSharing(false);
       // Don't reset form on error - let user retry
-      throw error; // Re-throw so parent can show error toast
+      // Re-throw error so parent component can show toast notification
+      throw error;
     }
   };
 
-  const resetShareForm = () => {
+  const resetShareForm = useCallback(() => {
     setShareEmail('');
     setSharePassword('');
     setShareExpiresAt('');
@@ -103,16 +105,30 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
     setRequirePassword(false);
     setIsSharing(false);
     setShareSuccess(false);
-  };
+  }, []);
 
-  const closeShareModal = () => {
+  const closeShareModal = useCallback(() => {
     resetShareForm();
-    setShowShareModal(false);
-  };
+    setShowShareModalState(false);
+  }, [resetShareForm]);
+
+  const openShareModal = useCallback(() => {
+    setShowShareModalState(true);
+  }, []);
+
+  const setShowShareModal = useCallback((show: boolean) => {
+    if (show) {
+      openShareModal();
+    } else {
+      closeShareModal();
+    }
+  }, [openShareModal, closeShareModal]);
 
   return {
     showShareModal,
-    setShowShareModal: closeShareModal,
+    setShowShareModal,
+    closeShareModal,
+    openShareModal,
     shareEmail,
     setShareEmail,
     sharePermission,

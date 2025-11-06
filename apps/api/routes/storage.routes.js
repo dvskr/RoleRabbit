@@ -28,6 +28,7 @@ async function storageRoutes(fastify, options) {
   logger.info('   → POST   /api/storage/files/:id/share-link');
   logger.info('   → GET    /api/storage/files/:id/comments');
   logger.info('   → POST   /api/storage/files/:id/comments');
+  logger.info('   → POST   /api/storage/files/:id/move');
   
   // Get all files for authenticated user
   fastify.get('/files', {
@@ -52,7 +53,9 @@ async function storageRoutes(fastify, options) {
       // Build where clause
       const where = {
         userId,
-        ...(includeDeleted ? {} : { deletedAt: null }),
+        // When includeDeleted is true (recycle bin), show only deleted files (deletedAt IS NOT NULL)
+        // When includeDeleted is false (normal view), show only non-deleted files (deletedAt IS NULL)
+        ...(includeDeleted ? { deletedAt: { not: null } } : { deletedAt: null }),
         ...(type ? { type } : {}),
         ...(search ? {
           OR: [
@@ -63,13 +66,12 @@ async function storageRoutes(fastify, options) {
         } : {})
       };
 
-      // Folder filter: null/undefined means root folder (no folder)
-      if (folderId !== null && folderId !== undefined) {
+      // Folder filter: only filter if folderId is explicitly provided
+      // If not provided, return ALL files (client-side will filter)
+      if (folderId !== null && folderId !== undefined && folderId !== '') {
         where.folderId = folderId;
-      } else {
-        // Root folder - files with no folder (folderId is null)
-        where.folderId = null;
       }
+      // If folderId not provided, don't add folder filter - return all files
 
       // Fetch files from database
       const files = await prisma.storageFile.findMany({
@@ -438,6 +440,21 @@ async function storageRoutes(fastify, options) {
           }
         });
         logger.info(`✅ File metadata saved to database: ${savedFile.id}`);
+        
+        // Update publicUrl with the file ID for local storage (enables preview/download via API)
+        if (!storageResult.publicUrl || storageResult.publicUrl.startsWith('/api/storage/files/')) {
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          const publicUrl = `${apiUrl}/api/storage/files/${savedFile.id}/download`;
+          
+          // Update the file with proper public URL
+          savedFile = await prisma.storageFile.update({
+            where: { id: savedFile.id },
+            data: { publicUrl }
+          });
+          
+          logger.info(`✅ Updated publicUrl to: ${publicUrl}`);
+        }
       } catch (dbError) {
         logger.error('❌ Failed to save file metadata to database:', dbError);
         logger.error('❌ Database error details:', {
@@ -844,6 +861,126 @@ async function storageRoutes(fastify, options) {
     }
   });
 
+  // Move file to folder
+  fastify.post('/files/:id/move', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const fileId = request.params.id;
+      const { folderId } = request.body || {};
+
+      // Validate folderId if provided
+      if (folderId !== null && folderId !== undefined) {
+        if (folderId === 'null' || folderId === '') {
+          // Move to root (no folder)
+          const updatedFile = await prisma.storageFile.update({
+            where: { id: fileId },
+            data: { folderId: null }
+          });
+
+          logger.info(`✅ File moved to root: ${fileId}`);
+
+          // Emit real-time event
+          if (socketIOServer.isInitialized()) {
+            socketIOServer.notifyFileUpdated(userId, {
+              id: updatedFile.id,
+              folderId: null
+            }, { folderId: null });
+          }
+
+          return reply.send({
+            success: true,
+            message: 'File moved successfully',
+            file: {
+              id: updatedFile.id,
+              folderId: null
+            }
+          });
+        }
+
+        // Check if folder exists and belongs to user
+        const folder = await prisma.storageFolder.findFirst({
+          where: {
+            id: folderId,
+            userId
+          }
+        });
+
+        if (!folder) {
+          return reply.status(404).send({
+            error: 'Not Found',
+            message: 'Folder not found or you do not have permission to access it'
+          });
+        }
+      }
+
+      // Get file
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found or you do not have permission to move it'
+        });
+      }
+
+      // Update file folderId
+      const updatedFile = await prisma.storageFile.update({
+        where: { id: fileId },
+        data: {
+          folderId: folderId === null || folderId === undefined || folderId === 'null' ? null : folderId
+        }
+      });
+
+      logger.info(`✅ File moved: ${fileId} to folder: ${folderId || 'root'}`);
+
+      // Format file for real-time event
+      const formattedFile = {
+        id: updatedFile.id,
+        name: updatedFile.name,
+        fileName: updatedFile.fileName,
+        type: updatedFile.type,
+        folderId: updatedFile.folderId,
+        updatedAt: updatedFile.updatedAt.toISOString()
+      };
+
+      // Emit real-time event
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyFileUpdated(userId, formattedFile, { folderId: updatedFile.folderId });
+      }
+
+      return reply.send({
+        success: true,
+        message: 'File moved successfully',
+        file: {
+          id: updatedFile.id,
+          folderId: updatedFile.folderId
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error moving file:', error);
+      return reply.status(500).send({
+        error: 'Failed to move file',
+        message: error.message || 'An error occurred while moving the file'
+      });
+    }
+  });
+
   // Permanently delete file (hard delete)
   fastify.delete('/files/:id/permanent', {
     preHandler: [authenticate]
@@ -1151,6 +1288,9 @@ async function storageRoutes(fastify, options) {
           </html>
         `;
 
+        let emailSent = false;
+        let emailError = null;
+        
         try {
           await sendEmail({
             to: userEmail,
@@ -1160,9 +1300,11 @@ async function storageRoutes(fastify, options) {
             isSecurityEmail: false
           });
           logger.info(`✅ Share email sent to ${userEmail}`);
-        } catch (emailError) {
-          logger.error('Failed to send share email:', emailError);
-          // Don't fail the share if email fails
+          emailSent = true;
+        } catch (err) {
+          logger.error('Failed to send share email:', err);
+          emailError = err?.message || 'Failed to send email notification';
+          // Don't fail the share if email fails - just notify the user
         }
 
         return reply.send({
@@ -1175,13 +1317,18 @@ async function storageRoutes(fastify, options) {
             expiresAt: shareLink.expiresAt?.toISOString() || null,
             createdAt: shareLink.createdAt.toISOString()
           },
-          emailSent: true
+          emailSent,
+          emailError: emailError || undefined,
+          warning: emailError ? 'Share link created but email notification failed. Please share the link manually.' : undefined
         });
       }
 
       logger.info(`✅ File shared: ${fileId} with ${userEmail}`);
 
       // Send email notification to existing user
+      let emailSent = false;
+      let emailError = null;
+      
       if (sharedUser) {
         const { sendEmail } = require('../utils/emailService');
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -1233,9 +1380,11 @@ async function storageRoutes(fastify, options) {
             isSecurityEmail: false
           });
           logger.info(`✅ Share email sent to ${userEmail}`);
-        } catch (emailError) {
-          logger.error('Failed to send share email:', emailError);
-          // Don't fail the share if email fails
+          emailSent = true;
+        } catch (err) {
+          logger.error('Failed to send share email:', err);
+          emailError = err?.message || 'Failed to send email notification';
+          // Don't fail the share if email fails - just notify the user
         }
       }
 
@@ -1266,7 +1415,9 @@ async function storageRoutes(fastify, options) {
           expiresAt: share.expiresAt?.toISOString() || null,
           createdAt: share.createdAt.toISOString()
         },
-        emailSent: true
+        emailSent,
+        emailError: emailError || undefined,
+        warning: emailError ? 'File shared successfully but email notification failed. The recipient can still access the file.' : undefined
       });
 
     } catch (error) {
@@ -1560,6 +1711,821 @@ async function storageRoutes(fastify, options) {
       return reply.status(500).send({
         error: 'Failed to add comment',
         message: error.message || 'An error occurred while adding comment'
+      });
+    }
+  });
+
+  // ===== FOLDER MANAGEMENT ENDPOINTS =====
+
+  // Get all folders for user
+  fastify.get('/folders', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const folders = await prisma.storageFolder.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          _count: {
+            select: {
+              files: {
+                where: {
+                  deletedAt: null // Only count non-deleted files
+                }
+              }
+            }
+          }
+        }
+      });
+
+      logger.info(`✅ Retrieved ${folders.length} folders for user: ${userId}`);
+
+      return reply.send({
+        success: true,
+        folders: folders.map(folder => ({
+          id: folder.id,
+          name: folder.name,
+          color: folder.color,
+          fileCount: folder._count.files, // Include count of files in folder
+          createdAt: folder.createdAt.toISOString(),
+          updatedAt: folder.updatedAt.toISOString()
+        }))
+      });
+
+    } catch (error) {
+      logger.error('Error retrieving folders:', error);
+      return reply.status(500).send({
+        error: 'Failed to retrieve folders',
+        message: error.message || 'An error occurred while retrieving folders'
+      });
+    }
+  });
+
+  // Create folder
+  fastify.post('/folders', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const { name, color } = request.body || {};
+
+      if (!name || !name.trim()) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Folder name is required'
+        });
+      }
+
+      const folder = await prisma.storageFolder.create({
+        data: {
+          userId,
+          name: name.trim(),
+          color: color || '#4F46E5'
+        }
+      });
+
+      logger.info(`✅ Folder created: ${folder.id} - ${folder.name}`);
+
+      return reply.send({
+        success: true,
+        folder: {
+          id: folder.id,
+          name: folder.name,
+          color: folder.color,
+          createdAt: folder.createdAt.toISOString(),
+          updatedAt: folder.updatedAt.toISOString()
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error creating folder:', error);
+      return reply.status(500).send({
+        error: 'Failed to create folder',
+        message: error.message || 'An error occurred while creating folder'
+      });
+    }
+  });
+
+  // Update folder (rename/change color)
+  fastify.put('/folders/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const folderId = request.params.id;
+      const { name, color } = request.body || {};
+
+      // Check if folder exists and belongs to user
+      const folder = await prisma.storageFolder.findFirst({
+        where: {
+          id: folderId,
+          userId
+        }
+      });
+
+      if (!folder) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Folder not found or you do not have permission to update it'
+        });
+      }
+
+      // Update folder
+      const updatedFolder = await prisma.storageFolder.update({
+        where: { id: folderId },
+        data: {
+          ...(name && name.trim() ? { name: name.trim() } : {}),
+          ...(color ? { color } : {})
+        }
+      });
+
+      logger.info(`✅ Folder updated: ${folderId}`);
+
+      return reply.send({
+        success: true,
+        folder: {
+          id: updatedFolder.id,
+          name: updatedFolder.name,
+          color: updatedFolder.color,
+          createdAt: updatedFolder.createdAt.toISOString(),
+          updatedAt: updatedFolder.updatedAt.toISOString()
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error updating folder:', error);
+      return reply.status(500).send({
+        error: 'Failed to update folder',
+        message: error.message || 'An error occurred while updating folder'
+      });
+    }
+  });
+
+  // Delete folder
+  fastify.delete('/folders/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const folderId = request.params.id;
+
+      // Check if folder exists and belongs to user
+      const folder = await prisma.storageFolder.findFirst({
+        where: {
+          id: folderId,
+          userId
+        }
+      });
+
+      if (!folder) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Folder not found or you do not have permission to delete it'
+        });
+      }
+
+      // Move all files in this folder to root (folderId = null)
+      await prisma.storageFile.updateMany({
+        where: {
+          folderId,
+          userId
+        },
+        data: {
+          folderId: null
+        }
+      });
+
+      // Delete the folder
+      await prisma.storageFolder.delete({
+        where: { id: folderId }
+      });
+
+      logger.info(`✅ Folder deleted: ${folderId}`);
+
+      return reply.send({
+        success: true,
+        message: 'Folder deleted successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error deleting folder:', error);
+      return reply.status(500).send({
+        error: 'Failed to delete folder',
+        message: error.message || 'An error occurred while deleting folder'
+      });
+    }
+  });
+
+  // ===== CREDENTIALS MANAGEMENT ENDPOINTS =====
+
+  // Get all credentials for user
+  fastify.get('/credentials', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const credentials = await prisma.credential.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      logger.info(`✅ Retrieved ${credentials.length} credentials for user: ${userId}`);
+
+      return reply.send({
+        success: true,
+        credentials: credentials.map(cred => ({
+          id: cred.id,
+          credentialId: cred.credentialId,
+          credentialType: cred.credentialType,
+          name: cred.name,
+          issuer: cred.issuer,
+          issuedDate: cred.issuedDate,
+          expirationDate: cred.expirationDate,
+          verificationUrl: cred.verificationUrl,
+          verificationStatus: cred.verificationStatus,
+          qrCode: cred.qrCode,
+          fileId: cred.fileId,
+          createdAt: cred.createdAt.toISOString(),
+          updatedAt: cred.updatedAt.toISOString()
+        }))
+      });
+
+    } catch (error) {
+      logger.error('Error fetching credentials:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch credentials',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Get expiring credentials (for reminders)
+  fastify.get('/credentials/expiring', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized'
+        });
+      }
+
+      const days = parseInt(request.query.days || '90');
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
+
+      const expiringCredentials = await prisma.credential.findMany({
+        where: {
+          userId,
+          expirationDate: {
+            not: null,
+            lte: futureDate.toISOString().split('T')[0]
+          }
+        },
+        orderBy: {
+          expirationDate: 'asc'
+        }
+      });
+
+      return reply.send({
+        success: true,
+        reminders: expiringCredentials.map(cred => ({
+          id: cred.id,
+          credentialId: cred.id,
+          name: cred.name,
+          type: cred.credentialType,
+          expirationDate: cred.expirationDate,
+          daysUntilExpiration: Math.ceil(
+            (new Date(cred.expirationDate) - new Date()) / (1000 * 60 * 60 * 24)
+          ),
+          priority: Math.ceil((new Date(cred.expirationDate) - new Date()) / (1000 * 60 * 60 * 24)) < 30 ? 'high' : 'medium'
+        }))
+      });
+
+    } catch (error) {
+      logger.error('Error fetching expiring credentials:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch expiring credentials',
+        message: error.message
+      });
+    }
+  });
+
+  // Create credential
+  fastify.post('/credentials', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized'
+        });
+      }
+
+      const {
+        credentialType,
+        name,
+        issuer,
+        issuedDate,
+        expirationDate,
+        credentialId,
+        verificationUrl,
+        fileId
+      } = request.body || {};
+
+      if (!credentialType || !name || !issuer) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'credentialType, name, and issuer are required'
+        });
+      }
+
+      const credential = await prisma.credential.create({
+        data: {
+          userId,
+          credentialType,
+          name,
+          issuer,
+          issuedDate: issuedDate || new Date().toISOString().split('T')[0],
+          expirationDate: expirationDate || null,
+          credentialId: credentialId || null,
+          verificationUrl: verificationUrl || null,
+          fileId: fileId || null,
+          verificationStatus: 'pending'
+        }
+      });
+
+      logger.info(`✅ Credential created: ${credential.id}`);
+
+      return reply.send({
+        success: true,
+        credential: {
+          id: credential.id,
+          credentialId: credential.credentialId,
+          credentialType: credential.credentialType,
+          name: credential.name,
+          issuer: credential.issuer,
+          issuedDate: credential.issuedDate,
+          expirationDate: credential.expirationDate,
+          verificationUrl: credential.verificationUrl,
+          verificationStatus: credential.verificationStatus,
+          qrCode: credential.qrCode,
+          fileId: credential.fileId,
+          createdAt: credential.createdAt.toISOString(),
+          updatedAt: credential.updatedAt.toISOString()
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error creating credential:', error);
+      return reply.status(500).send({
+        error: 'Failed to create credential',
+        message: error.message
+      });
+    }
+  });
+
+  // Update credential
+  fastify.put('/credentials/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized'
+        });
+      }
+
+      const credentialId = request.params.id;
+      const updates = request.body || {};
+
+      const credential = await prisma.credential.findFirst({
+        where: {
+          id: credentialId,
+          userId
+        }
+      });
+
+      if (!credential) {
+        return reply.status(404).send({
+          error: 'Credential not found'
+        });
+      }
+
+      const updated = await prisma.credential.update({
+        where: { id: credentialId },
+        data: updates
+      });
+
+      logger.info(`✅ Credential updated: ${credentialId}`);
+
+      return reply.send({
+        success: true,
+        credential: updated
+      });
+
+    } catch (error) {
+      logger.error('Error updating credential:', error);
+      return reply.status(500).send({
+        error: 'Failed to update credential',
+        message: error.message
+      });
+    }
+  });
+
+  // Delete credential
+  fastify.delete('/credentials/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized'
+        });
+      }
+
+      const credentialId = request.params.id;
+
+      const credential = await prisma.credential.findFirst({
+        where: {
+          id: credentialId,
+          userId
+        }
+      });
+
+      if (!credential) {
+        return reply.status(404).send({
+          error: 'Credential not found'
+        });
+      }
+
+      await prisma.credential.delete({
+        where: { id: credentialId }
+      });
+
+      logger.info(`✅ Credential deleted: ${credentialId}`);
+
+      return reply.send({
+        success: true,
+        message: 'Credential deleted successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error deleting credential:', error);
+      return reply.status(500).send({
+        error: 'Failed to delete credential',
+        message: error.message
+      });
+    }
+  });
+
+  // Generate QR code for credential
+  fastify.post('/credentials/:id/qr', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized'
+        });
+      }
+
+      const credentialId = request.params.id;
+
+      const credential = await prisma.credential.findFirst({
+        where: {
+          id: credentialId,
+          userId
+        }
+      });
+
+      if (!credential) {
+        return reply.status(404).send({
+          error: 'Credential not found'
+        });
+      }
+
+      // Generate QR code data
+      const qrData = JSON.stringify({
+        type: credential.credentialType,
+        name: credential.name,
+        issuer: credential.issuer,
+        issued: credential.issuedDate,
+        expires: credential.expirationDate,
+        id: credential.credentialId,
+        verifyUrl: credential.verificationUrl
+      });
+
+      // For now, return the data (client can generate QR with library)
+      // In production, use qrcode library to generate image
+
+      return reply.send({
+        success: true,
+        qrData,
+        message: 'QR code data generated'
+      });
+
+    } catch (error) {
+      logger.error('Error generating QR code:', error);
+      return reply.status(500).send({
+        error: 'Failed to generate QR code',
+        message: error.message
+      });
+    }
+  });
+
+  // ===== STORAGE QUOTA ENDPOINT =====
+
+  // Get storage quota for user
+  fastify.get('/quota', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      // Get or create quota record
+      let quota = await prisma.storageQuota.findUnique({
+        where: { userId }
+      });
+
+      if (!quota) {
+        // Create default quota (e.g., 5 GB limit)
+        const defaultLimitBytes = BigInt(5 * 1024 * 1024 * 1024); // 5 GB
+        quota = await prisma.storageQuota.create({
+          data: {
+            userId,
+            usedBytes: BigInt(0),
+            limitBytes: defaultLimitBytes
+          }
+        });
+      }
+
+      // Calculate actual used space from files
+      const files = await prisma.storageFile.findMany({
+        where: {
+          userId,
+          deletedAt: null // Only count non-deleted files
+        },
+        select: {
+          size: true
+        }
+      });
+
+      const actualUsedBytes = files.reduce((sum, file) => sum + BigInt(file.size || 0), BigInt(0));
+
+      // Update quota with actual usage
+      if (actualUsedBytes !== quota.usedBytes) {
+        quota = await prisma.storageQuota.update({
+          where: { userId },
+          data: { usedBytes: actualUsedBytes }
+        });
+      }
+
+      const usedBytes = Number(quota.usedBytes);
+      const limitBytes = Number(quota.limitBytes);
+      const usedGB = usedBytes / (1024 * 1024 * 1024);
+      const limitGB = limitBytes / (1024 * 1024 * 1024);
+      const percentage = limitGB > 0 ? (usedGB / limitGB) * 100 : 0;
+
+      return reply.send({
+        success: true,
+        storage: {
+          usedBytes,
+          limitBytes,
+          usedGB: Number(usedGB.toFixed(2)),
+          limitGB: Number(limitGB.toFixed(2)),
+          percentage: Number(percentage.toFixed(2))
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error fetching storage quota:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch storage quota',
+        message: error.message || 'An error occurred while fetching quota'
+      });
+    }
+  });
+
+  // ===== PUBLIC SHARE LINK ENDPOINTS =====
+
+  // Get shared file by token (public access)
+  fastify.get('/shared/:token', async (request, reply) => {
+    try {
+      const token = request.params.token;
+      const password = request.query.password;
+
+      // Find share link
+      const shareLink = await prisma.shareLink.findUnique({
+        where: { token },
+        include: {
+          file: {
+            include: {
+              user: {
+                select: {
+                  name: true,
+                  email: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!shareLink) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Share link not found or has expired'
+        });
+      }
+
+      // Check if link has expired
+      if (shareLink.expiresAt && new Date(shareLink.expiresAt) < new Date()) {
+        return reply.status(403).send({
+          error: 'Expired',
+          message: 'This share link has expired'
+        });
+      }
+
+      // Check if password is required
+      if (shareLink.password && shareLink.password !== password) {
+        return reply.status(403).send({
+          error: 'Password Required',
+          message: 'This file is password-protected',
+          passwordRequired: true
+        });
+      }
+
+      // Check max downloads
+      if (shareLink.maxDownloads && shareLink.downloadCount >= shareLink.maxDownloads) {
+        return reply.status(403).send({
+          error: 'Download Limit Reached',
+          message: 'This share link has reached its maximum download limit'
+        });
+      }
+
+      // Return file info
+      return reply.send({
+        success: true,
+        file: {
+          id: shareLink.file.id,
+          name: shareLink.file.name,
+          fileName: shareLink.file.fileName,
+          type: shareLink.file.type,
+          contentType: shareLink.file.contentType,
+          size: Number(shareLink.file.size),
+          publicUrl: shareLink.file.publicUrl,
+          createdAt: shareLink.file.createdAt.toISOString()
+        },
+        share: {
+          permission: shareLink.permission,
+          expiresAt: shareLink.expiresAt?.toISOString() || null,
+          sharedBy: shareLink.file.user.name || shareLink.file.user.email
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error accessing shared file:', error);
+      return reply.status(500).send({
+        error: 'Failed to access shared file',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Download shared file by token
+  fastify.get('/shared/:token/download', async (request, reply) => {
+    try {
+      const token = request.params.token;
+      const password = request.query.password;
+
+      // Find share link
+      const shareLink = await prisma.shareLink.findUnique({
+        where: { token },
+        include: { file: true }
+      });
+
+      if (!shareLink) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Share link not found or has expired'
+        });
+      }
+
+      // Check if link has expired
+      if (shareLink.expiresAt && new Date(shareLink.expiresAt) < new Date()) {
+        return reply.status(403).send({
+          error: 'Expired',
+          message: 'This share link has expired'
+        });
+      }
+
+      // Check password
+      if (shareLink.password && shareLink.password !== password) {
+        return reply.status(403).send({
+          error: 'Password Required',
+          message: 'Incorrect password'
+        });
+      }
+
+      // Check max downloads
+      if (shareLink.maxDownloads && shareLink.downloadCount >= shareLink.maxDownloads) {
+        return reply.status(403).send({
+          error: 'Download Limit Reached',
+          message: 'This share link has reached its maximum download limit'
+        });
+      }
+
+      // Increment download count
+      await prisma.shareLink.update({
+        where: { id: shareLink.id },
+        data: {
+          downloadCount: {
+            increment: 1
+          }
+        }
+      });
+
+      // Get file from storage
+      const fileBuffer = await storageHandler.download(shareLink.file.storagePath);
+      
+      if (!fileBuffer) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'File not found in storage'
+        });
+      }
+
+      // Set headers and send file
+      reply.header('Content-Type', shareLink.file.contentType || 'application/octet-stream');
+      reply.header('Content-Disposition', `attachment; filename="${shareLink.file.fileName}"`);
+      reply.header('Content-Length', shareLink.file.size.toString());
+      
+      return reply.send(fileBuffer);
+
+    } catch (error) {
+      logger.error('Error downloading shared file:', error);
+      return reply.status(500).send({
+        error: 'Failed to download shared file',
+        message: error.message || 'An error occurred'
       });
     }
   });

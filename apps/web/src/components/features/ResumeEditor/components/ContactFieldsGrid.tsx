@@ -56,7 +56,7 @@ export default function ContactFieldsGrid({
                 color: colors.primaryText,
               }}
               value={resumeData[field] || ''} 
-              onChange={(e) => setResumeData({...resumeData, [field]: e.target.value})}
+              onChange={(e) => setResumeData((prev: any) => ({...prev, [field]: e.target.value}))}
               placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
               onFocus={(e) => {
                 e.target.style.borderColor = colors.accentCyan;

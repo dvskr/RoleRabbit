@@ -66,8 +66,9 @@ export default function BillingTab({
   const loadBillingData = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API calls
-      // Mock data for now
+      // Note: Billing API integration pending - using placeholder data
+      // TODO: Integrate with billing API when available
+      // API endpoint: GET /api/billing/plan
       setCurrentPlan({
         id: 'free',
         name: 'Free',
@@ -113,18 +114,33 @@ export default function BillingTab({
   };
 
   const handleAddPaymentMethod = () => {
-    // TODO: Implement payment method addition
-    logger.info('Add payment method clicked');
+    // Note: Payment method addition pending API integration
+    // TODO: Integrate with payment API when available
+    // API endpoint: POST /api/billing/payment-methods
+    alert('Payment method addition is coming soon. This feature will be available in a future update.');
+    logger.info('Add payment method clicked - feature pending');
   };
 
   const handleUpgradePlan = (planId: string, frequency: BillingFrequency) => {
-    // TODO: Implement plan upgrade
-    logger.info(`Upgrade plan clicked: ${planId} (${frequency})`);
+    // Note: Plan upgrade pending API integration
+    // TODO: Integrate with subscription API when available
+    // API endpoint: POST /api/billing/subscription/upgrade
+    alert(`Plan upgrade to ${planId} (${frequency}) is coming soon. This feature will be available in a future update.`);
+    logger.info(`Upgrade plan clicked: ${planId} (${frequency}) - feature pending`);
   };
 
-  const handleDownloadInvoice = (invoiceId: string) => {
-    // TODO: Implement invoice download
-    logger.info('Download invoice clicked:', invoiceId);
+  const handleDownloadInvoice = async (invoiceId: string) => {
+    // Note: Invoice download pending API integration
+    // TODO: Integrate with billing API when available
+    // API endpoint: GET /api/billing/invoices/:invoiceId/download
+    try {
+      // Placeholder implementation - will be replaced with actual API call
+      alert(`Invoice download for ${invoiceId} is coming soon. This feature will be available in a future update.`);
+      logger.info(`Download invoice clicked: ${invoiceId} - feature pending`);
+    } catch (error) {
+      logger.error('Failed to download invoice:', error);
+      alert('Unable to download invoice. Please try again later.');
+    }
   };
 
   const formatCurrency = (amount: number) => {

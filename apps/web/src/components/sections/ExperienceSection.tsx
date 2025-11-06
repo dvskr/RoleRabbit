@@ -42,15 +42,19 @@ export default function ExperienceSection({
   };
 
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
-    const updatedExperience = experience.map((item) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-    setResumeData({...resumeData, experience: updatedExperience});
+    setResumeData((prev: any) => {
+      const updatedExperience = (prev.experience || []).map((item: any) => 
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return {...prev, experience: updatedExperience};
+    });
   };
 
   const deleteExperience = (id: number) => {
-    const updatedExperience = experience.filter(item => item.id !== id);
-    setResumeData({...resumeData, experience: updatedExperience});
+    setResumeData((prev: any) => {
+      const updatedExperience = (prev.experience || []).filter((item: any) => item.id !== id);
+      return {...prev, experience: updatedExperience};
+    });
   };
 
   const addBullet = (expId: number) => {
@@ -442,7 +446,7 @@ export default function ExperienceSection({
             </div>
             {exp.bullets.map((bullet, bulletIndex) => (
               <div key={bulletIndex} className="flex items-start gap-2">
-                <span className="mt-1 flex-shrink-0 text-xs" style={{ color: colors.tertiaryText }}>•</span>
+                <span className="mt-1 flex-shrink-0 text-xs resume-bullet" data-bullet style={{ color: colors.tertiaryText }}>•</span>
                 <input
                   className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
                   style={{

@@ -2,15 +2,18 @@
 export const MODAL_BACKDROP_STYLE = 'rgba(0, 0, 0, 0.5)';
 export const MODAL_MAX_WIDTH = 'max-w-md';
 
+// API base URL from environment variable
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
 // API endpoints
 export const API_ENDPOINTS = {
-  TWO_FA_SETUP: 'http://localhost:3001/api/auth/2fa/setup',
-  TWO_FA_DISABLE: 'http://localhost:3001/api/auth/2fa/disable',
-  TWO_FA_VERIFY: 'http://localhost:3001/api/auth/2fa/verify',
-  TWO_FA_ENABLE: 'http://localhost:3001/api/auth/2fa/enable',
-  TWO_FA_STATUS: 'http://localhost:3001/api/auth/2fa/status',
-  PASSWORD_CHANGE: 'http://localhost:3001/api/auth/password',
-  SESSIONS: 'http://localhost:3001/api/users/sessions',
+  TWO_FA_SETUP: `${API_BASE_URL}/api/auth/2fa/setup`,
+  TWO_FA_DISABLE: `${API_BASE_URL}/api/auth/2fa/disable`,
+  TWO_FA_VERIFY: `${API_BASE_URL}/api/auth/2fa/verify`,
+  TWO_FA_ENABLE: `${API_BASE_URL}/api/auth/2fa/enable`,
+  TWO_FA_STATUS: `${API_BASE_URL}/api/auth/2fa/status`,
+  PASSWORD_CHANGE: `${API_BASE_URL}/api/auth/password`,
+  SESSIONS: `${API_BASE_URL}/api/users/sessions`,
 } as const;
 
 // Password requirements

@@ -182,9 +182,16 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [setFiles]);
 
+  /**
+   * Legacy share handler - not used in current implementation
+   * Sharing is handled through ShareModal component which calls handleShareWithUser
+   * from useSharingOperations hook. This function is kept for backwards compatibility
+   * but can be safely removed.
+   */
   const handleShareFile = useCallback((file: ResumeFile) => {
-    logger.debug('Sharing file:', file.name);
-    // TODO: Implement actual share logic
+    logger.debug('handleShareFile called for:', file.name);
+    logger.info('Note: Actual sharing is handled through ShareModal -> handleShareWithUser');
+    // No-op: ShareModal handles all sharing functionality
   }, []);
 
   const handleUploadFile = useCallback(async (payload: UploadPayload, onComplete?: () => void) => {
@@ -260,11 +267,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       
       // Reload files from API to ensure we have the latest data from database
       logger.info('🔄 Reloading files from API after upload...');
-      setTimeout(() => {
-        loadFilesFromAPI(false).catch(err => {
+      try {
+        await loadFilesFromAPI(false);
+      } catch (err) {
           logger.error('Failed to reload files after upload:', err);
-        });
-      }, 500);
+      }
     } catch (error) {
       logger.error('Failed to save file to API:', error);
       if ((error as any)?.storage && onStorageUpdate) {
@@ -342,32 +349,37 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [loadFilesFromAPI]);
 
-  const handleRefresh = useCallback(async () => {
-    logger.debug('Refreshing files...');
-    await loadFilesFromAPI();
+  const handleRefresh = useCallback(async (includeDeleted: boolean = false) => {
+    logger.debug('Refreshing files...', { includeDeleted });
+    await loadFilesFromAPI(includeDeleted);
   }, [loadFilesFromAPI]);
 
   const handleStarFile = useCallback(async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
     
+    const newStarredState = !file.isStarred;
+    
+    // Optimistic update - update UI immediately
+    setFiles(prev => prev.map(f => 
+      f.id === fileId 
+        ? { ...f, isStarred: newStarredState }
+        : f
+    ));
+    
     try {
-      await apiService.updateCloudFile(fileId, { isStarred: !file.isStarred });
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, isStarred: !file.isStarred }
-          : file
-      ));
+      await apiService.updateCloudFile(fileId, { isStarred: newStarredState });
+      // Success - optimistic update was correct
     } catch (error) {
       logger.error('Failed to toggle star status:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, isStarred: !file.isStarred }
-          : file
+      // Revert optimistic update on error
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, isStarred: !newStarredState }
+          : f
       ));
     }
-  }, [files]);
+  }, [files, setFiles]);
 
   const handleArchiveFile = useCallback(async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
@@ -408,11 +420,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       ));
       
       // Reload files from API to ensure consistency - respect showDeleted state
-      setTimeout(() => {
-        loadFilesFromAPI(showDeleted).catch(err => {
+      try {
+        await loadFilesFromAPI(showDeleted);
+      } catch (err) {
           logger.error('Failed to reload files after delete:', err);
-        });
-      }, 500);
+      }
     } catch (error: any) {
       logger.error('Failed to delete file:', error);
       // Revert optimistic update
@@ -435,11 +447,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       ));
       
       // Reload files from API to ensure consistency
-      setTimeout(() => {
-        loadFilesFromAPI(false).catch(err => {
+      try {
+        await loadFilesFromAPI(false);
+      } catch (err) {
           logger.error('Failed to reload files after restore:', err);
-        });
-      }, 500);
+      }
     } catch (error) {
       logger.error('Failed to restore file:', error);
       throw error; // Re-throw so UI can show error message
@@ -461,11 +473,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
       
       // Reload files from API to ensure consistency (use showDeleted from closure or default to true since we're in recycle bin)
-      setTimeout(() => {
-        loadFilesFromAPI(true).catch(err => {
+      try {
+        await loadFilesFromAPI(true);
+      } catch (err) {
           logger.error('Failed to reload files after permanent delete:', err);
-        });
-      }, 500);
+      }
     } catch (error) {
       logger.error('Failed to permanently delete file:', error);
       // Fallback to local state update
@@ -498,51 +510,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   };
 };
 
-// Copy and Move handlers
-export const useCopyMoveOperations = (setFiles: React.Dispatch<React.SetStateAction<ResumeFile[]>>) => {
-  const handleCopyFile = useCallback(async (fileId: string, newName?: string, folderId?: string | null) => {
-    try {
-      logger.info('📋 Copying file:', fileId);
-      const response = await apiService.copyCloudFile(fileId, newName, folderId);
-      
-      if (response && response.success && response.file) {
-        const copiedFile: ResumeFile = {
-          ...response.file,
-          sharedWith: [],
-          comments: [],
-          downloadCount: 0,
-          viewCount: 0,
-          isStarred: false,
-          isArchived: false,
-          version: 1,
-          owner: response.file.userId || '',
-          lastModified: response.file.createdAt || new Date().toISOString(),
-          size: typeof response.file.size === 'number' 
-            ? formatBytes(response.file.size) 
-            : (response.file.size || '0 B'),
-          sizeBytes: typeof response.file.size === 'number' ? response.file.size : 0,
-        };
-        
-        // Add to local state (real-time events will also handle this)
-        setFiles(prev => {
-          const exists = prev.find(f => f.id === copiedFile.id);
-          if (exists) {
-            return prev.map(f => f.id === copiedFile.id ? copiedFile : f);
-          }
-          return [copiedFile, ...prev];
-        });
-        
-        logger.info('✅ File copied successfully:', copiedFile.id);
-        return copiedFile;
-      } else {
-        throw new Error(response?.error || 'Failed to copy file');
-      }
-    } catch (error: any) {
-      logger.error('Failed to copy file:', error);
-      throw error;
-    }
-  }, [setFiles]);
-
+// Move handler helper
+export const useCopyMoveOperations = (
+  setFiles: React.Dispatch<React.SetStateAction<ResumeFile[]>>,
+  refreshFiles?: (includeDeleted?: boolean) => Promise<void>
+) => {
   const handleMoveFile = useCallback(async (fileId: string, folderId: string | null) => {
     try {
       logger.info('📦 Moving file:', fileId, 'to folder:', folderId);
@@ -557,6 +529,15 @@ export const useCopyMoveOperations = (setFiles: React.Dispatch<React.SetStateAct
         ));
         
         logger.info('✅ File moved successfully:', fileId);
+
+        if (refreshFiles) {
+          try {
+            await refreshFiles(false);
+          } catch (refreshError) {
+            logger.warn('Failed to refresh files after move:', refreshError);
+          }
+        }
+
         return response;
       } else {
         throw new Error(response?.error || 'Failed to move file');
@@ -565,10 +546,9 @@ export const useCopyMoveOperations = (setFiles: React.Dispatch<React.SetStateAct
       logger.error('Failed to move file:', error);
       throw error;
     }
-  }, [setFiles]);
+  }, [setFiles, refreshFiles]);
 
   return {
-    handleCopyFile,
     handleMoveFile
   };
 };

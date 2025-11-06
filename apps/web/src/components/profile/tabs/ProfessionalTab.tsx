@@ -205,14 +205,7 @@ export default function ProfessionalTab({
     media: []
   });
   
-  // Debug logging
-  // eslint-disable-next-line no-console
-  console.log('ProfessionalTab - workExperiences:', {
-    raw: userData.workExperiences,
-    normalized: workExperiences,
-    count: workExperiences.length,
-    userDataKeys: Object.keys(userData)
-  });
+  // Work experiences normalized and ready for use
   const [editingExpId, setEditingExpId] = useState<string | null>(null);
   const [editingExp, setEditingExp] = useState<WorkExperience | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
@@ -225,11 +218,6 @@ export default function ProfessionalTab({
     // When user stops editing (clicks outside, tabs away, etc.), sync editingExp to parent
     // But only if we're not currently editing and editingExp exists
     if (!isEditing && editingExpId && editingExp) {
-      console.log('Syncing editingExp before save:', {
-        editingExpId,
-        editingExp,
-        technologies: editingExp.technologies
-      });
       const updatedList = workExperiences.map(exp => 
         exp.id === editingExpId ? editingExp : exp
       );
@@ -285,33 +273,12 @@ export default function ProfessionalTab({
         exp.id === id ? updated : exp
       );
       
-      console.log('updateWorkExperience - technologies update:', {
-        id,
-        updates,
-        updatedTechnologies: updated.technologies,
-        updatedList: updatedList.map(e => ({ 
-          id: e.id, 
-          company: e.company,
-          role: e.role,
-          technologies: e.technologies,
-          technologiesType: typeof e.technologies,
-          technologiesIsArray: Array.isArray(e.technologies),
-          technologiesLength: Array.isArray(e.technologies) ? e.technologies.length : 0
-        }))
-      });
-      
       onUserDataChange({ workExperiences: updatedList });
     } else {
       // Fallback for non-editing updates
       const updated = workExperiences.map(exp => 
         exp.id === id ? { ...exp, ...updates } : exp
       );
-      
-      console.log('updateWorkExperience - fallback update:', {
-        id,
-        updates,
-        updatedTechnologies: updated.find(e => e.id === id)?.technologies
-      });
       
       onUserDataChange({ workExperiences: updated });
     }
@@ -785,11 +752,6 @@ export default function ProfessionalTab({
                       }));
                       // Parse and update work experience - pass the raw string, let normalizeTechnologiesField handle splitting
                       const technologies = normalizeTechnologiesField(value);
-                      console.log('Technologies onChange:', {
-                        value,
-                        technologies,
-                        technologiesLength: technologies.length
-                      });
                       updateWorkExperience(displayExp.id || stableId, { technologies });
                     }}
                     disabled={false}

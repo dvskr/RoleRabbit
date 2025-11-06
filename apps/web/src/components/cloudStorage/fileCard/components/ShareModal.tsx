@@ -118,14 +118,12 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               type="email"
               value={fileSharing.shareEmail}
               onChange={(e) => fileSharing.setShareEmail(e.target.value)}
-              onKeyDown={async (e) => {
+              onKeyDown={(e) => {
                 if (e.key === 'Enter' && fileSharing.shareEmail.trim() && !fileSharing.isSharing && !fileSharing.shareSuccess && fileSharing.handleShareSubmit) {
                   e.preventDefault();
-                  try {
-                    await fileSharing.handleShareSubmit();
-                  } catch (error) {
-                    console.error('Error in handleShareSubmit (Enter key):', error);
-                  }
+                  fileSharing.handleShareSubmit().catch((error) => {
+                    console.error('Share error:', error);
+                  });
                 }
               }}
               placeholder={SHARE_MODAL.EMAIL_PLACEHOLDER}
@@ -443,21 +441,36 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 email: fileSharing.shareEmail,
                 isSharing: fileSharing.isSharing,
                 shareSuccess: fileSharing.shareSuccess,
-                handleShareSubmit: typeof fileSharing.handleShareSubmit
+                hasHandler: !!fileSharing.handleShareSubmit
               });
-              if (fileSharing.shareEmail.trim() && !fileSharing.isSharing && !fileSharing.shareSuccess && fileSharing.handleShareSubmit) {
-                try {
-                  await fileSharing.handleShareSubmit();
-                } catch (error) {
-                  console.error('Error in handleShareSubmit:', error);
-                }
-              } else {
-                console.warn('Cannot share:', {
-                  hasEmail: !!fileSharing.shareEmail.trim(),
-                  isSharing: fileSharing.isSharing,
-                  shareSuccess: fileSharing.shareSuccess,
-                  hasHandler: !!fileSharing.handleShareSubmit
-                });
+              
+              if (!fileSharing.shareEmail.trim()) {
+                console.warn('Cannot share: email is empty');
+                return;
+              }
+              
+              if (fileSharing.isSharing) {
+                console.warn('Cannot share: already in progress');
+                return;
+              }
+              
+              if (fileSharing.shareSuccess) {
+                console.warn('Cannot share: success state active');
+                return;
+              }
+              
+              if (!fileSharing.handleShareSubmit) {
+                console.error('Cannot share: handleShareSubmit is not defined');
+                return;
+              }
+              
+              try {
+                // handleShareSubmit calls onShareWithUser which is wrapped in CloudStorage with error handling
+                await fileSharing.handleShareSubmit();
+              } catch (error: any) {
+                // Error is already handled by parent component (CloudStorage) via onShareWithUser wrapper
+                // This catch prevents unhandled promise rejection
+                console.error('Share error in button (handled by parent):', error);
               }
             }}
             disabled={!fileSharing.shareEmail?.trim() || fileSharing.isSharing || fileSharing.shareSuccess || !fileSharing.handleShareSubmit}

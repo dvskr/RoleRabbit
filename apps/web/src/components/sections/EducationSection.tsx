@@ -33,15 +33,19 @@ export default function EducationSection({
   };
 
   const updateEducation = (id: number, updates: Partial<EducationItem>) => {
-    const updatedEducation = resumeData.education.map((item) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-    setResumeData({...resumeData, education: updatedEducation});
+    setResumeData((prev: any) => {
+      const updatedEducation = (prev.education || []).map((item: any) => 
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return {...prev, education: updatedEducation};
+    });
   };
 
   const deleteEducation = (id: number) => {
-    const updatedEducation = resumeData.education.filter(item => item.id !== id);
-    setResumeData({...resumeData, education: updatedEducation});
+    setResumeData((prev: any) => {
+      const updatedEducation = (prev.education || []).filter((item: any) => item.id !== id);
+      return {...prev, education: updatedEducation};
+    });
   };
 
   const addCustomFieldToEducation = (eduId: number, field: CustomField) => {

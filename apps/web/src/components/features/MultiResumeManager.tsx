@@ -16,7 +16,6 @@ interface MultiResumeManagerProps {
   resumes?: ResumeListItem[];
   activeResumeId?: string | null;
   onSwitchResume?: (resumeId: string) => void | Promise<void>;
-  onCreateResume?: () => void | Promise<void>;
   onDeleteResume?: (resumeId: string) => void | Promise<void>;
   maxResumes?: number;
   isLoadingResumes?: boolean;
@@ -33,7 +32,6 @@ export default function MultiResumeManager({
   resumes = [],
   activeResumeId,
   onSwitchResume,
-  onCreateResume,
   onDeleteResume,
   maxResumes = 10,
   isLoadingResumes = false,
@@ -172,16 +170,12 @@ export default function MultiResumeManager({
     );
   }
 
-  const canCreateMore = (resumes?.length ?? 0) < maxResumes;
   const canDelete = (resumes?.length ?? 0) > 1;
-  const createDisabled = !canCreateMore || isLoadingResumes;
   const deleteDisabled = !canDelete || isLoadingResumes;
 
   return (
     <div className="flex items-center gap-2 border-b border-gray-200 bg-white/80 backdrop-blur-xl px-4 py-2 overflow-x-auto">
-      {isLoadingResumes ? (
-        <div className="text-xs text-gray-500">Loading resumes...</div>
-      ) : resumes && resumes.length > 0 ? (
+      {resumes && resumes.length > 0 ? (
         resumes.map((resume) => (
           <button
             key={resume.id}
@@ -220,21 +214,6 @@ export default function MultiResumeManager({
         <div className="text-xs text-gray-500">No resumes yet</div>
       )}
 
-      {onCreateResume && (
-        <button
-          onClick={onCreateResume}
-          disabled={createDisabled}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-            !createDisabled
-              ? 'text-blue-600 hover:bg-blue-50'
-              : 'text-gray-400 cursor-not-allowed'
-          }`}
-          title={createDisabled ? (isLoadingResumes ? 'Please wait…' : 'Resume limit reached') : 'Create new resume'}
-        >
-          <Plus size={16} />
-          New Resume
-        </button>
-      )}
 
       {onNavigateToTemplates && (
         <button

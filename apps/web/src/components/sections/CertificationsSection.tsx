@@ -34,15 +34,19 @@ export default function CertificationsSection({
   };
 
   const updateCertification = (id: number, updates: Partial<CertificationItem>) => {
-    const updatedCertifications = resumeData.certifications.map((item) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-    setResumeData({...resumeData, certifications: updatedCertifications});
+    setResumeData((prev: any) => {
+      const updatedCertifications = (prev.certifications || []).map((item: any) => 
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return {...prev, certifications: updatedCertifications};
+    });
   };
 
   const deleteCertification = (id: number) => {
-    const updatedCertifications = resumeData.certifications.filter(item => item.id !== id);
-    setResumeData({...resumeData, certifications: updatedCertifications});
+    setResumeData((prev: any) => {
+      const updatedCertifications = (prev.certifications || []).filter((item: any) => item.id !== id);
+      return {...prev, certifications: updatedCertifications};
+    });
   };
 
   const addCustomFieldToCertification = (certId: number, field: CustomField) => {

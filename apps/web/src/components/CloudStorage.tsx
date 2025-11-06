@@ -70,7 +70,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleAddComment,
     handleStarFile,
     handleArchiveFile,
-    handleCopyFile,
     handleMoveFile,
     handleAddCredential,
     handleUpdateCredential,
@@ -210,6 +209,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           onDeleteFolder={handleDeleteFolder}
           setQuickFilters={setQuickFilters}
           colors={colors}
+          totalFilesCount={activeFiles.length}
         />
 
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-2xl"
@@ -252,7 +252,15 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               onFileSelect={handleFileSelect}
               onDownload={handleDownloadFileWrapper}
               onShare={handleShareFile}
-              onDelete={handleDeleteFile}
+              onDelete={async (fileId) => {
+                try {
+                  await handleDeleteFile(fileId, showDeleted);
+                  success('File moved to recycle bin');
+                } catch (err: any) {
+                  error(`Failed to delete file: ${err.message || 'Unknown error'}`);
+                  console.error('Delete error:', err);
+                }
+              }}
               onRestore={handleRestoreFile}
               onPermanentlyDelete={handlePermanentlyDeleteFile}
               onTogglePublic={handleTogglePublic}
@@ -269,8 +277,18 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               }}
               onShareWithUser={async (fileId, email, permission, expiresAt?, maxDownloads?) => {
                 try {
-                  await handleShareWithUser(fileId, email, permission, expiresAt, maxDownloads);
+                  const response = await handleShareWithUser(fileId, email, permission, expiresAt, maxDownloads);
+                  
+                  // Check if email was sent successfully
+                  if (response?.emailSent) {
                   success(`File shared successfully with ${email}. Email notification sent!`);
+                  } else if (response?.warning) {
+                    // Email failed but share was created
+                    error(`⚠️ ${response.warning}`);
+                  } else {
+                    // Success but no email status
+                    success(`File shared successfully with ${email}.`);
+                  }
                   // Clear the email field after successful share so user can add another
                   // The modal will stay open for adding more shares
                 } catch (err: any) {
@@ -287,14 +305,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   error(`Failed to remove share: ${err.message || 'Unknown error'}`);
                 }
               }}
-              onCopy={async (fileId, newName?, folderId?) => {
-                try {
-                  await handleCopyFile(fileId, newName, folderId);
-                  success('File copied successfully');
-                } catch (err: any) {
-                  error(`Failed to copy file: ${err.message || 'Unknown error'}`);
-                }
-              }}
               onMove={async (fileId, folderId) => {
                 try {
                   await handleMoveFile(fileId, folderId);
@@ -303,6 +313,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   error(`Failed to move file: ${err.message || 'Unknown error'}`);
                 }
               }}
+              folders={folders}
               showDeleted={showDeleted}
               colors={colors}
               onUpload={showDeleted ? () => {} : () => setShowUploadModal(true)}

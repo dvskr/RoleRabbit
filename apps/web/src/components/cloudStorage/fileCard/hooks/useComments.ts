@@ -120,20 +120,38 @@ export const useComments = ({ fileId, onAddComment, onCommentsLoaded, initialCom
       setSubmitSuccess(true);
       logger.debug('Comment submitted successfully for file:', fileId);
       
-      // Don't reload comments - real-time WebSocket events will update the UI automatically
-      // This prevents flashing and unnecessary API calls
+      // Wait for WebSocket update, but reload as fallback after 1 second if no update
+      const reloadTimeoutId = setTimeout(async () => {
+        logger.warn('WebSocket update not received, reloading comments from API as fallback');
+        try {
+          const response = await apiService.getFileComments(fileId);
+          if (response && response.comments) {
+            const comments: FileComment[] = response.comments.map((c: any) => ({
+              id: c.id,
+              userId: c.userId,
+              userName: c.userName,
+              userAvatar: c.userAvatar,
+              content: c.content,
+              timestamp: c.timestamp,
+              isResolved: c.isResolved || false,
+              replies: c.replies || []
+            }));
+            onCommentsLoaded?.(comments);
+          }
+        } catch (reloadError) {
+          logger.error('Failed to reload comments:', reloadError);
+        }
+      }, 1000);
 
-      // Show success confirmation for 2 seconds, then close comments section
-      // This gives time for the comment to be saved and real-time event to update UI
+      // Keep comments open so user can see their comment
+      // Clear reload timeout if component unmounts
+      setSubmitSuccess(true);
+      setIsSubmitting(false);
+      
+      // Clear success state after 2 seconds
       setTimeout(() => {
         setSubmitSuccess(false);
-        setIsSubmitting(false);
-        // Don't close immediately - let user see the comment was saved
-        // Close after a brief delay so they can see the success state
-        setTimeout(() => {
-          setShowComments(false);
-          setNewComment('');
-        }, 500);
+        clearTimeout(reloadTimeoutId);
       }, 2000);
     } catch (error: any) {
       clearTimeout(timeoutId);

@@ -21,8 +21,8 @@ export interface FileCardProps {
   onAddComment: (fileId: string, content: string) => void | Promise<void>;
   onShareWithUser: (fileId: string, userEmail: string, permission: 'view' | 'comment' | 'edit' | 'admin', expiresAt?: string, maxDownloads?: number) => void | Promise<void>;
   onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
-  onCopy?: (fileId: string, newName?: string, folderId?: string | null) => void | Promise<void>;
   onMove?: (fileId: string, folderId: string | null) => void | Promise<void>;
+  folders?: Array<{ id: string; name: string; color?: string }>;
 }
 
 export type SharePermission = 'view' | 'comment' | 'edit' | 'admin';

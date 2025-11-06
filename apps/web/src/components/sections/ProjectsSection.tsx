@@ -37,15 +37,19 @@ export default function ProjectsSection({
   };
 
   const updateProject = (id: number, updates: Partial<ProjectItem>) => {
-    const updatedProjects = resumeData.projects.map((item) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-    setResumeData({...resumeData, projects: updatedProjects});
+    setResumeData((prev: any) => {
+      const updatedProjects = (prev.projects || []).map((item: any) => 
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return {...prev, projects: updatedProjects};
+    });
   };
 
   const deleteProject = (id: number) => {
-    const updatedProjects = resumeData.projects.filter(item => item.id !== id);
-    setResumeData({...resumeData, projects: updatedProjects});
+    setResumeData((prev: any) => {
+      const updatedProjects = (prev.projects || []).filter((item: any) => item.id !== id);
+      return {...prev, projects: updatedProjects};
+    });
   };
 
   const addBullet = (projectId: number) => {
@@ -386,7 +390,7 @@ export default function ProjectsSection({
             </div>
             {project.bullets.map((bullet, bulletIndex) => (
               <div key={bulletIndex} className="flex items-start gap-2">
-                <span className="mt-1 text-xs" style={{ color: colors.tertiaryText }}>•</span>
+                <span className="mt-1 text-xs resume-bullet" data-bullet style={{ color: colors.tertiaryText }}>•</span>
                 <input
                   className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
                   style={{

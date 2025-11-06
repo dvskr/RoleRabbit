@@ -75,8 +75,8 @@ export const useCloudStorage = () => {
   const { files, setFiles, isLoading, selectedFiles, setSelectedFiles } = fileOps;
   
   // Copy and Move operations
-  const copyMoveOps = useCopyMoveOperations(setFiles);
-  const { handleCopyFile, handleMoveFile } = copyMoveOps;
+  const copyMoveOps = useCopyMoveOperations(setFiles, fileOps.loadFilesFromAPI);
+  const { handleMoveFile } = copyMoveOps;
 
   // UI state
   const [showDeleted, setShowDeleted] = useState(false); // Recycle bin toggle
@@ -270,7 +270,7 @@ export const useCloudStorage = () => {
 
   // Folder management
   const folderOps = useFolderOperations(files, setFiles);
-  const { folders, selectedFolderId, setSelectedFolderId } = folderOps;
+  const { folders, selectedFolderId, setSelectedFolderId, loadFolders } = folderOps;
 
   // Credential management
   const [credentials, setCredentials] = useState<CredentialInfo[]>([]);
@@ -439,15 +439,44 @@ export const useCloudStorage = () => {
     handleEditFile: (fileId: string, updates: any) => fileOps.handleEditFile(fileId, updates, showDeleted),
     handleRefresh: async () => {
       try {
-        await fileOps.handleRefresh();
+        // Refresh files (respect current showDeleted state)
+        await fileOps.handleRefresh(showDeleted);
+        // Refresh folders
+        await loadFolders();
+        // Refresh storage info
         await refreshStorageInfo();
+        // Refresh credentials
+        try {
+          const [credentialsRes, remindersRes] = await Promise.all([
+            apiService.getCredentials(),
+            apiService.getExpiringCredentials(90)
+          ]);
+          
+          if (credentialsRes && credentialsRes.credentials) {
+            setCredentials(credentialsRes.credentials);
+          }
+          
+          if (remindersRes && remindersRes.reminders) {
+            const reminders: CredentialReminder[] = remindersRes.reminders.map((cred: any) => ({
+              id: cred.id,
+              credentialId: cred.credentialId,
+              credentialName: cred.name,
+              expirationDate: cred.expirationDate,
+              reminderDate: new Date().toISOString(),
+              isSent: false,
+              priority: cred.priority || 'medium' as 'high' | 'medium' | 'low'
+            }));
+            setCredentialReminders(reminders);
+          }
+        } catch (credError) {
+          logger.warn('Failed to refresh credentials:', credError);
+        }
       } catch (error) {
         logger.error('Failed to refresh storage data:', error);
       }
     },
     handleStarFile: fileOps.handleStarFile,
     handleArchiveFile: fileOps.handleArchiveFile,
-    handleCopyFile,
     handleMoveFile,
     
     // Sharing and Access Management

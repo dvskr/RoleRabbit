@@ -40,6 +40,7 @@ import {
   CustomField
 } from '../../types/resume';
 import { useResumeData } from '../../hooks/useResumeData';
+import { useResumeList } from '../../hooks/useResumeList';
 import { useModals } from '../../hooks/useModals';
 import { useAI } from '../../hooks/useAI';
 // Keep utils lazy - import only when actually needed
@@ -184,6 +185,20 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   const resumeDataHook = useResumeData({ onResumeLoaded: handleResumeLoaded });
 
+  // Resume list management
+  const resumeListHook = useResumeList({
+    onResumeSwitched: async (resumeId: string) => {
+      // When switching resumes, load the new resume
+      if (resumeDataHook.loadResumeById) {
+        try {
+          await resumeDataHook.loadResumeById(resumeId);
+        } catch (error) {
+          logger.error('Failed to load resume:', error);
+        }
+      }
+    }
+  });
+
   const dashboardCloudStorage = useDashboardCloudStorage();
   const {
     showSaveToCloudModal,
@@ -236,6 +251,13 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     history, setHistory,
     historyIndex, setHistoryIndex
   } = resumeDataHook;
+
+  // Sync activeResumeId when currentResumeId changes
+  useEffect(() => {
+    if (currentResumeId && currentResumeId !== resumeListHook.activeResumeId) {
+      resumeListHook.setActiveResumeId(currentResumeId);
+    }
+  }, [currentResumeId, resumeListHook]);
 
   const setCustomFieldsTracked = useCallback((value: SetStateAction<CustomField[]>) => {
     setCustomFieldsBase((prev) => {
@@ -688,6 +710,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               isSaving={isSaving}
               canUndo={historyIndex > 0}
               canRedo={historyIndex < history.length - 1}
+              lastSavedAt={lastSavedAt}
+              hasChanges={hasChanges}
               onExport={() => setShowExportModal(true)}
               onUndo={undo}
               onRedo={redo}

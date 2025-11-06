@@ -463,6 +463,7 @@ model User {
   fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")
   credentials         Credential[]         @relation("Credentials")
   storageQuota        StorageQuota?
+  resumes             Resume[]             @relation("Resumes")
 
   @@index([email])
   @@index([provider, providerId])
@@ -491,4 +492,42 @@ model WorkExperience {
   @@index([profileId])
   @@index([company])
   @@map("work_experiences")
+}
+
+model Resume {
+  id     String @id @default(cuid())
+  userId String
+
+  // Basic Info
+  fileName  String
+  templateId String? // Selected template ID
+
+  // Resume Data (stored as JSON)
+  // Contains: name, title, email, phone, location, summary, skills, experience, education, projects, certifications
+  data Json // Complete resume data structure
+
+  // Section Configuration
+  sectionOrder     String[] @default([]) // Order of sections
+  sectionVisibility Json   @default("{}") // Which sections are visible
+  customSections   Json    @default("[]") // Custom sections added by user
+  customFields     Json    @default("[]") // Custom contact fields
+
+  // Formatting Options
+  formatting Json @default("{}") // fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle
+
+  // Metadata
+  isStarred  Boolean  @default(false)
+  isArchived Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("Resumes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fileName])
+  @@index([isStarred])
+  @@index([isArchived])
+  @@index([createdAt])
+  @@map("resumes")
 }

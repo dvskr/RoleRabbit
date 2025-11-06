@@ -404,8 +404,17 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     try {
       const response = currentResumeId
         ? await apiService.updateResume(currentResumeId, payload)
-        : await apiService.saveResume(payload);
+        : await apiService.createResume({
+          fileName: sanitizedName,
+          templateId: selectedTemplateId || null,
+          data: payload.data
+        });
 
+      // Handle response - check both success flag and resume object
+      if (response?.success === false) {
+        throw new Error(response?.error || 'Failed to save resume');
+      }
+      
       const savedResume = response?.resume;
       if (savedResume) {
         if (!currentResumeId) {
@@ -415,15 +424,16 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           setResumeFileName(savedResume.name);
         }
         setLastServerUpdatedAt(savedResume.lastUpdated || null);
-        if (savedResume.lastUpdated) {
-          setLastSavedAt(new Date(savedResume.lastUpdated));
-        } else {
-          setLastSavedAt(new Date());
-        }
+        // Always set lastSavedAt on successful save
+        setLastSavedAt(new Date(savedResume.lastUpdated || new Date()));
+        // Clear hasChanges after successful save
+        setHasChanges(false);
       } else {
+        // If no resume in response but no error, still mark as saved
+        logger.warn('Save response missing resume object:', response);
         setLastSavedAt(new Date());
+        setHasChanges(false);
       }
-      setHasChanges(false);
     } catch (error: any) {
       logger.error('Failed to save resume:', error);
       if (error?.statusCode === 409) {

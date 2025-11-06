@@ -68,7 +68,7 @@ export default function SummarySection({
             className="w-full text-sm rounded-xl p-2 sm:p-4 outline-none resize-none break-words overflow-wrap-anywhere transition-all"
             rows={4}
             value={resumeData.summary}
-            onChange={(e) => setResumeData({...resumeData, summary: (e.target as HTMLTextAreaElement).value})}
+            onChange={(e) => setResumeData((prev: any) => ({...prev, summary: (e.target as HTMLTextAreaElement).value}))}
             placeholder="Write a compelling professional summary..."
             style={{
               background: colors.inputBackground,

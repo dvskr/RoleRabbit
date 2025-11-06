@@ -240,7 +240,6 @@ describe('useUserProfile', () => {
         website: 'https://janedoe.dev',
         bio: 'Updated bio',
         skills: ['Vue', 'Angular'],
-        experience: '10+ years',
         education: 'MS Computer Science',
         createdAt: '2023-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z'
@@ -398,7 +397,6 @@ describe('useUserProfile', () => {
         website: 'https://updated.dev',
         bio: 'Updated bio',
         skills: ['New Skill'],
-        experience: '2+ years',
         education: 'Updated Education',
         createdAt: '2023-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z'

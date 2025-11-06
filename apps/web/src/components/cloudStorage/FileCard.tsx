@@ -15,8 +15,7 @@ import {
   Users,
   Calendar,
   Check,
-  Copy,
-  FolderMove
+  Folder
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
@@ -49,6 +48,7 @@ import {
   CommentsModal,
   FilePreviewModal,
 } from './fileCard/components';
+import { MoveFileModal } from './MoveFileModal';
 
 const FILE_TYPE_OPTIONS: ResumeFile['type'][] = [
   'resume',
@@ -86,12 +86,13 @@ const FileCard = React.memo(function FileCard({
   onAddComment,
   onShareWithUser,
   onRemoveShare,
-  onCopy,
-  onMove
+  onMove,
+  folders = []
 }: FileCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingName, setEditingName] = useState(file.name);
   const [editingType, setEditingType] = useState<ResumeFile['type']>(file.type as ResumeFile['type']);
@@ -116,6 +117,18 @@ const FileCard = React.memo(function FileCard({
 
   const { showDownloadFormat, setShowDownloadFormat } = useFileActions();
   
+  // Close all other open states to prevent multiple actions at once
+  const closeAllStates = (except?: string) => {
+    if (except !== 'preview') setShowPreviewModal(false);
+    if (except !== 'move') setShowMoveModal(false);
+    if (except !== 'download') setShowDownloadFormat(false);
+    if (except !== 'share') fileSharing.setShowShareModal(false);
+    if (except !== 'comments') comments.setShowComments(false);
+    if (except !== 'edit' && isEditing) {
+      handleCancelEdit();
+    }
+  };
+  
   // Sync editing state with file changes (only when not editing)
   useEffect(() => {
     if (!isEditing) {
@@ -130,6 +143,8 @@ const FileCard = React.memo(function FileCard({
       // Toggle off edit mode if already editing
       handleCancelEdit();
     } else {
+      // Close all other states first, keep edit open
+      closeAllStates('edit');
       // Start edit mode
       setEditingName(file.name);
       setEditingType(file.type as ResumeFile['type']);
@@ -152,11 +167,8 @@ const FileCard = React.memo(function FileCard({
     setIsSaving(true);
     try {
       await onEdit(file.id, { name: trimmedName, type: editingType });
-      // After successful save, the file prop will be updated by the parent
-      // Wait a bit for the update to propagate, then exit edit mode
-      setTimeout(() => {
-        setIsEditing(false);
-      }, 100);
+      // Exit edit mode immediately - parent will update file prop via API refresh
+      setIsEditing(false);
     } catch (error) {
       logger.error('Failed to save edit:', error);
       // Keep editing mode on error so user can retry
@@ -437,7 +449,7 @@ const FileCard = React.memo(function FileCard({
                 style={{ color: colors.secondaryText }}
               >
                 <div className="flex items-center gap-1.5">
-                  <Calendar size={13} />
+                  <Calendar size={12} />
                   <span className="font-medium">{formattedDateTime}</span>
                   <span className="text-[10px]" style={{ color: colors.tertiaryText }}>
                     ({relativeUpdated})
@@ -445,6 +457,15 @@ const FileCard = React.memo(function FileCard({
                 </div>
                 <span className="text-[10px]" style={{ color: colors.tertiaryText }}>•</span>
                 <span className="font-medium">{formattedSize}</span>
+                {file.comments && file.comments.length > 0 && (
+                  <>
+                    <span className="text-[10px]" style={{ color: colors.tertiaryText }}>•</span>
+                    <div className="flex items-center gap-1">
+                      <MessageCircle size={12} style={{ color: colors.tertiaryText }} />
+                      <span className="font-medium">{file.comments.length} {file.comments.length === 1 ? 'comment' : 'comments'}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {isEditing && (
@@ -489,21 +510,6 @@ const FileCard = React.memo(function FileCard({
 
               {/* Shared Users */}
               <SharedUsers sharedWith={file.sharedWith} colors={colors} />
-
-              {/* Comments */}
-              {file.comments && file.comments.length > 0 && (
-                <div className="mt-2">
-                  <div className="flex items-center space-x-1.5">
-                    <MessageCircle size={12} style={{ color: colors.tertiaryText }} />
-                    <span 
-                      className="text-xs"
-                      style={{ color: colors.secondaryText }}
-                    >
-                      {file.comments.length} comment{file.comments.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
             </div>
             {renderHeaderControls()}
@@ -516,84 +522,112 @@ const FileCard = React.memo(function FileCard({
           style={{ borderTop: `1.5px solid ${colors.border}` }}
         >
           <div className="flex items-center justify-center flex-wrap gap-2.5 max-w-full">
-            <button
-              onClick={() => setShowPreviewModal(true)}
-              className="shadow-sm"
-              style={{
-                ...actionButtonBaseStyle,
-                color: colors.primaryBlue,
-                background: colors.badgeInfoBg,
-                borderColor: colors.primaryBlue,
-              }}
-              onMouseEnter={(e) =>
-                applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
-              }
-              onMouseLeave={(e) =>
-                resetHoverStyles(e, colors.primaryBlue, colors.badgeInfoBg, colors.primaryBlue)
-              }
-              title="Preview file"
-              aria-label="Preview file"
-            >
-              <Eye size={18} />
-            </button>
+            {/* Preview, Download, and Share only available for non-deleted files */}
+            {!showDeleted && (
+              <>
+                <button
+                  onClick={() => {
+                    closeAllStates('preview');
+                    setShowPreviewModal(true);
+                  }}
+                  className="shadow-sm"
+                  style={{
+                    ...actionButtonBaseStyle,
+                    color: showPreviewModal ? colors.primaryBlue : colors.secondaryText,
+                    background: showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
+                    borderColor: showPreviewModal ? colors.primaryBlue : colors.border,
+                  }}
+                  onMouseEnter={(e) =>
+                    applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
+                  }
+                  onMouseLeave={(e) =>
+                    resetHoverStyles(
+                      e,
+                      showPreviewModal ? colors.primaryBlue : colors.secondaryText,
+                      showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
+                      showPreviewModal ? colors.primaryBlue : colors.border
+                    )
+                  }
+                  title="Preview file"
+                  aria-label="Preview file"
+                >
+                  <Eye size={18} />
+                </button>
 
-            <div className="relative">
-              <button
-                onClick={() => setShowDownloadFormat(!showDownloadFormat)}
-                style={{
-                  ...actionButtonBaseStyle,
-                  color: showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
-                  background: showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
-                  borderColor: showDownloadFormat ? colors.primaryBlue : colors.border,
-                }}
-                onMouseEnter={(e) =>
-                  applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
-                }
-                onMouseLeave={(e) =>
-                  resetHoverStyles(
-                    e,
-                    showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
-                    showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
-                    showDownloadFormat ? colors.primaryBlue : colors.border
-                  )
-                }
-                title="Download"
-                aria-label="Download file"
-              >
-                <Download size={18} />
-              </button>
-              {showDownloadFormat && (
-                <DownloadFormatMenu
-                  colors={colors}
-                  onDownload={(format) => onDownload(file, format)}
-                  onClose={() => setShowDownloadFormat(false)}
-                />
-              )}
-            </div>
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      if (showDownloadFormat) {
+                        setShowDownloadFormat(false);
+                      } else {
+                        closeAllStates('download');
+                        setShowDownloadFormat(true);
+                      }
+                    }}
+                    style={{
+                      ...actionButtonBaseStyle,
+                      color: showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
+                      background: showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
+                      borderColor: showDownloadFormat ? colors.primaryBlue : colors.border,
+                    }}
+                    onMouseEnter={(e) =>
+                      applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
+                    }
+                    onMouseLeave={(e) =>
+                      resetHoverStyles(
+                        e,
+                        showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
+                        showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
+                        showDownloadFormat ? colors.primaryBlue : colors.border
+                      )
+                    }
+                    title="Download"
+                    aria-label="Download file"
+                  >
+                    <Download size={18} />
+                  </button>
+                  {showDownloadFormat && (
+                    <DownloadFormatMenu
+                      colors={colors}
+                      onDownload={(format) => onDownload(file, format)}
+                      onClose={() => setShowDownloadFormat(false)}
+                    />
+                  )}
+                </div>
 
-            <button
-              onClick={() => fileSharing.setShowShareModal(true)}
-              style={{
-                ...actionButtonBaseStyle,
-                color: colors.secondaryText,
-              }}
-              onMouseEnter={(e) =>
-                applyHoverStyles(e, colors.successGreen, colors.badgeSuccessBg, colors.successGreen)
-              }
-              onMouseLeave={(e) =>
-                resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
-              }
-              title="Share"
-              aria-label="Share file"
-            >
-              <Share2 size={18} />
-            </button>
+                <button
+                  onClick={() => {
+                    closeAllStates('share');
+                    fileSharing.setShowShareModal(true);
+                  }}
+                  style={{
+                    ...actionButtonBaseStyle,
+                    color: colors.secondaryText,
+                  }}
+                  onMouseEnter={(e) =>
+                    applyHoverStyles(e, colors.successGreen, colors.badgeSuccessBg, colors.successGreen)
+                  }
+                  onMouseLeave={(e) =>
+                    resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
+                  }
+                  title="Share"
+                  aria-label="Share file"
+                >
+                  <Share2 size={18} />
+                </button>
+              </>
+            )}
 
             {!showDeleted && (
               <button
                 onClick={() => {
                   logger.debug('Comment button clicked! Current state:', comments.showComments);
-                  comments.setShowComments(!comments.showComments);
+                  if (comments.showComments) {
+                    comments.setShowComments(false);
+                  } else {
+                    closeAllStates('comments');
+                    comments.setShowComments(true);
+                  }
                 }}
                 style={{
                   ...actionButtonBaseStyle,
@@ -650,29 +684,12 @@ const FileCard = React.memo(function FileCard({
                   <Edit size={18} />
                 </button>
 
-                {onCopy && (
-                  <button
-                    onClick={() => onCopy(file.id)}
-                    style={{
-                      ...actionButtonBaseStyle,
-                      color: colors.secondaryText,
-                    }}
-                    onMouseEnter={(e) =>
-                      applyHoverStyles(e, colors.badgePurpleText, colors.badgePurpleBg, colors.badgePurpleText)
-                    }
-                    onMouseLeave={(e) =>
-                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
-                    }
-                    title="Copy file"
-                    aria-label="Copy file"
-                  >
-                    <Copy size={18} />
-                  </button>
-                )}
-
                 {onMove && (
                   <button
-                    onClick={() => onMove(file.id, file.folderId || null)}
+                    onClick={() => {
+                      closeAllStates('move');
+                      setShowMoveModal(true);
+                    }}
                     style={{
                       ...actionButtonBaseStyle,
                       color: colors.secondaryText,
@@ -686,7 +703,7 @@ const FileCard = React.memo(function FileCard({
                     title="Move file"
                     aria-label="Move file"
                   >
-                    <FolderMove size={18} />
+                    <Folder size={18} />
                   </button>
                 )}
               </>
@@ -694,7 +711,12 @@ const FileCard = React.memo(function FileCard({
 
           {!showDeleted && (
               <button
-                onClick={() => onDelete(file.id)}
+                onClick={async () => {
+                  if (onDelete) {
+                    await onDelete(file.id);
+                  }
+                  // Let errors propagate to parent component for toast notification
+                }}
                 style={{
                   ...actionButtonBaseStyle,
                   color: colors.errorRed,
@@ -731,6 +753,22 @@ const FileCard = React.memo(function FileCard({
           fileSharing={fileSharing}
           onRemoveShare={onRemoveShare}
         />
+
+        {/* Move File Modal */}
+        {onMove && (
+          <MoveFileModal
+            isOpen={showMoveModal}
+            onClose={() => setShowMoveModal(false)}
+            onConfirm={(folderId) => {
+              onMove(file.id, folderId);
+              setShowMoveModal(false);
+            }}
+            folders={folders}
+            currentFolderId={file.folderId || null}
+            fileName={file.name}
+            colors={colors}
+          />
+        )}
       </div>
     );
   };
@@ -749,8 +787,19 @@ const FileCard = React.memo(function FileCard({
     </>
   );
 }, (prevProps, nextProps) => {
+  // Check if any relevant properties changed
   return prevProps.file.id === nextProps.file.id &&
-         prevProps.isSelected === nextProps.isSelected;
+         prevProps.file.name === nextProps.file.name &&
+         prevProps.file.type === nextProps.file.type &&
+         prevProps.file.isStarred === nextProps.file.isStarred &&
+         prevProps.file.isArchived === nextProps.file.isArchived &&
+         prevProps.file.deletedAt === nextProps.file.deletedAt &&
+         prevProps.file.folderId === nextProps.file.folderId &&
+         prevProps.isSelected === nextProps.isSelected &&
+         prevProps.showDeleted === nextProps.showDeleted &&
+         (prevProps.file.comments?.length || 0) === (nextProps.file.comments?.length || 0) &&
+         (prevProps.file.sharedWith?.length || 0) === (nextProps.file.sharedWith?.length || 0) &&
+         prevProps.folders.length === nextProps.folders.length; // Check if folders list changed
 });
 
 export default FileCard;

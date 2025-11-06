@@ -69,7 +69,8 @@ export default function ProfilePictureEditor({
       
       await onSave(blob);
     } catch (error) {
-      console.error('Error cropping image:', error);
+      // Error is handled by parent component
+      throw error;
     } finally {
       setIsSaving(false);
     }
@@ -91,8 +92,9 @@ export default function ProfilePictureEditor({
       await onRemove();
       // onRemove should handle closing the editor
     } catch (error) {
-      console.error('Error removing profile picture:', error);
+      // Error is handled by parent component
       setIsRemoving(false);
+      throw error;
     }
   };
 

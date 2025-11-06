@@ -45,6 +45,7 @@ interface RedesignedFolderSidebarProps {
   onDeleteFolder: (folderId: string) => void;
   setQuickFilters: (filters: QuickFilters) => void;
   colors?: any;
+  totalFilesCount?: number; // Total count of active files
 }
 
 const QUICK_FILTERS = [
@@ -68,21 +69,25 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
   onDeleteFolder,
   setQuickFilters,
   colors,
+  totalFilesCount: passedFilesCount,
 }) => {
   const { theme } = useTheme();
   const palette = colors || theme.colors;
 
-  const totalFilesCount = useMemo(
-    () => folders.reduce((sum, folder) => sum + (folder.fileCount || 0), 0),
-    [folders]
-  );
+  // Use passed totalFilesCount if available, otherwise calculate from folders
+  const totalFilesCount = passedFilesCount !== undefined 
+    ? passedFilesCount 
+    : folders.reduce((sum, folder) => sum + (folder.fileCount || 0), 0);
 
   const toggleFilter = useCallback(
     (key: keyof QuickFilters) => {
-      setQuickFilters({
-        ...quickFilters,
-        [key]: quickFilters[key] ? undefined : true,
-      });
+      // If clicking the same filter that's already active, turn it off
+      if (quickFilters[key]) {
+        setQuickFilters({});
+      } else {
+        // Otherwise, clear all filters and activate only this one
+        setQuickFilters({ [key]: true });
+      }
     },
     [quickFilters, setQuickFilters]
   );

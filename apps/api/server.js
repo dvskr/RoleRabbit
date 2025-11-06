@@ -291,6 +291,7 @@ fastify.get('/api/status', async (request) => ({
 fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
+fastify.register(require('./routes/resume.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -355,13 +356,14 @@ fastify.setNotFoundHandler(async (request, reply) => {
       success: false,
     error: 'Not Found',
     message: `API endpoint not found: ${request.method} ${request.url}`,
-    availableEndpoints: {
-      health: 'GET /health',
-      status: 'GET /api/status',
-      auth: '/api/auth/*',
-      users: '/api/users/*',
-      storage: '/api/storage/*'
-    }
+      availableEndpoints: {
+        health: 'GET /health',
+        status: 'GET /api/status',
+        auth: '/api/auth/*',
+        users: '/api/users/*',
+        storage: '/api/storage/*',
+        resumes: '/api/resumes/*'
+      }
   });
 });
 

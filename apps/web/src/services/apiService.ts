@@ -31,9 +31,13 @@ class ApiService {
   ): Promise<T> {
     try {
       const headers: HeadersInit = {
-        'Content-Type': 'application/json',
         ...options.headers,
       };
+      
+      // Only add Content-Type header if there's a body
+      if (options.body && typeof options.body === 'string') {
+        headers['Content-Type'] = 'application/json';
+      }
       
       // httpOnly cookie is automatically sent by browser
       // No need to manually add Authorization header
@@ -65,12 +69,10 @@ class ApiService {
 
       if (!response.ok) {
         // Try to get error details from response
-        let errorMessage = `API error (${response.status})`;
+        const statusCode = typeof response.status === 'number' ? response.status : 500;
+        const statusText = (response.statusText && typeof response.statusText === 'string') ? response.statusText : 'Unknown error';
+        let errorMessage: string = `API error (${statusCode}): ${statusText}`;
         let errorDetails: any = undefined;
-        
-        // Build base error message
-        const statusText = response.statusText || 'Unknown error';
-        errorMessage = `API error (${response.status}): ${statusText}`;
         
         try {
           // Try to read response body for error details
@@ -81,53 +83,114 @@ class ApiService {
             text = await clonedResponse.text();
           } catch (cloneError) {
             // If cloning fails, try reading directly (will consume response)
-            text = await response.text();
+            try {
+              text = await response.text();
+            } catch (textError) {
+              // If we can't read text, use default message
+              text = '';
+            }
           }
           
-          if (text && text.trim()) {
+          if (text && typeof text === 'string' && text.trim()) {
             try {
               const errorData = JSON.parse(text);
               const parsedMessage = errorData.error || errorData.message;
               if (parsedMessage && typeof parsedMessage === 'string') {
                 errorMessage = parsedMessage;
               } else if (parsedMessage && typeof parsedMessage === 'object') {
-                errorMessage = `API error (${response.status}): ${JSON.stringify(parsedMessage).substring(0, 100)}`;
+                try {
+                  const jsonStr = JSON.stringify(parsedMessage);
+                  errorMessage = `API error (${statusCode}): ${jsonStr.substring(0, 100)}`;
+                } catch (stringifyError) {
+                  errorMessage = `API error (${statusCode}): Invalid error format`;
+                }
               }
               if (errorData.details) {
                 errorDetails = errorData.details;
-                if (typeof errorData.details === 'string' && !errorMessage.includes(errorData.details)) {
+                if (typeof errorData.details === 'string' && errorMessage && !errorMessage.includes(errorData.details)) {
                   errorMessage += ` - ${errorData.details}`;
                 }
               }
             } catch (jsonError) {
               // If not JSON, use the text as error message if it's meaningful
               if (text.length < 500 && text.trim()) {
-                errorMessage = `API error (${response.status}): ${text.substring(0, 200).trim()}`;
+                errorMessage = `API error (${statusCode}): ${text.substring(0, 200).trim()}`;
               }
             }
           }
         } catch (readError: any) {
           // If we can't read response, use status-based message
-          const errorMsg = readError?.message || 'Could not read error response';
-          errorMessage = `API request failed with status ${response.status}: ${statusText}. ${errorMsg}`;
+          const errorMsg = (readError?.message && typeof readError.message === 'string') 
+            ? readError.message 
+            : 'Could not read error response';
+          errorMessage = `API request failed with status ${statusCode}: ${statusText}. ${errorMsg}`;
         }
 
-        // Final safety check: Ensure errorMessage is never empty, undefined, or invalid
-        if (!errorMessage || typeof errorMessage !== 'string' || errorMessage.trim() === '') {
-          errorMessage = `An unexpected error occurred (HTTP ${response.status})`;
+        // Final safety check: Ensure errorMessage is always a valid string
+        if (!errorMessage || typeof errorMessage !== 'string') {
+          errorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
+        }
+        
+        // Ensure errorMessage is not empty and is a valid string
+        if (typeof errorMessage !== 'string' || errorMessage.trim() === '') {
+          errorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
         }
 
-        // Create error object
-        const errorObj: any = new Error(String(errorMessage));
-        errorObj.statusCode = response.status;
-        errorObj.originalResponse = statusText;
-        if (errorDetails !== undefined) {
-          errorObj.details = errorDetails;
+        // Create error object with guaranteed valid error message
+        // Use try-catch as final safety net
+        let finalErrorMessage: string;
+        try {
+          finalErrorMessage = String(errorMessage);
+          if (!finalErrorMessage || finalErrorMessage.trim() === '') {
+            finalErrorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
+          }
+        } catch (stringError) {
+          finalErrorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
         }
-        throw errorObj;
+
+        try {
+          const errorObj: any = new Error(finalErrorMessage);
+          errorObj.statusCode = statusCode;
+          errorObj.originalResponse = statusText;
+          if (errorDetails !== undefined) {
+            errorObj.details = errorDetails;
+          }
+          throw errorObj;
+        } catch (errorCreationError) {
+          // If Error constructor fails, create a plain object
+          const fallbackError: any = {
+            message: finalErrorMessage,
+            statusCode: statusCode,
+            originalResponse: statusText,
+            name: 'APIError'
+          };
+          if (errorDetails !== undefined) {
+            fallbackError.details = errorDetails;
+          }
+          throw fallbackError;
+        }
       }
 
-      return await response.json();
+      const contentType = response.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        try {
+          return await response.json();
+        } catch (parseError) {
+          console.warn('Response JSON parse failed, returning empty object', parseError);
+          return {} as T;
+        }
+      }
+
+      if (response.status === 204 || response.status === 205) {
+        return undefined as T;
+      }
+
+      const textResponse = await response.text();
+      if (!textResponse) {
+        return undefined as T;
+      }
+      return (textResponse as unknown) as T;
     } catch (error: any) {
       console.error('API request failed:', error);
       // Provide more helpful error messages
@@ -326,17 +389,6 @@ class ApiService {
   }
 
   /**
-   * Copy cloud file (duplicate)
-   */
-  async copyCloudFile(fileId: string, newName?: string, folderId?: string | null): Promise<any> {
-    return this.request(`/api/storage/files/${fileId}/copy`, {
-      method: 'POST',
-      body: JSON.stringify({ newName, folderId }),
-      credentials: 'include',
-    });
-  }
-
-  /**
    * Move cloud file to folder
    */
   async moveCloudFile(fileId: string, folderId: string | null): Promise<any> {
@@ -407,6 +459,41 @@ class ApiService {
       method: 'DELETE',
       credentials: 'include',
     });
+  }
+
+  /**
+   * Get shared file by token
+   */
+  async getSharedFile(token: string, password?: string): Promise<any> {
+    const endpoint = password 
+      ? `/api/storage/shared/${token}?password=${encodeURIComponent(password)}`
+      : `/api/storage/shared/${token}`;
+    
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Download shared file
+   */
+  async downloadSharedFile(token: string, password?: string): Promise<Blob> {
+    const endpoint = password
+      ? `/api/storage/shared/${token}/download?password=${encodeURIComponent(password)}`
+      : `/api/storage/shared/${token}/download`;
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to download file');
+    }
+
+    return await response.blob();
   }
 
   /**
@@ -563,6 +650,94 @@ class ApiService {
   async getStorageStats(): Promise<any> {
     return this.request('/api/storage/stats', {
       method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  // ===== RESUME ENDPOINTS =====
+
+  /**
+   * Get all resumes for the current user
+   */
+  async getResumes(): Promise<any> {
+    return this.request('/api/resumes', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get a single resume by ID
+   */
+  async getResume(id: string): Promise<any> {
+    return this.request(`/api/resumes/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create a new resume
+   */
+  async createResume(data: {
+    fileName: string;
+    templateId?: string;
+    data: any;
+  }): Promise<any> {
+    return this.request('/api/resumes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update an existing resume
+   */
+  async updateResume(id: string, data: {
+    fileName?: string;
+    templateId?: string;
+    data?: any;
+    lastKnownServerUpdatedAt?: string;
+  }): Promise<any> {
+    return this.request(`/api/resumes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Auto-save resume (optimistic update with conflict detection)
+   */
+  async autoSaveResume(id: string, data: {
+    data: any;
+    lastKnownServerUpdatedAt?: string;
+  }): Promise<any> {
+    return this.request(`/api/resumes/${id}/autosave`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete a resume
+   */
+  async deleteResume(id: string): Promise<any> {
+    return this.request(`/api/resumes/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Duplicate/Copy a resume
+   */
+  async duplicateResume(id: string, fileName?: string): Promise<any> {
+    return this.request(`/api/resumes/${id}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ fileName }),
       credentials: 'include',
     });
   }

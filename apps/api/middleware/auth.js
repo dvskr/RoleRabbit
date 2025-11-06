@@ -17,14 +17,19 @@ async function authenticate(request, reply) {
     await request.jwtVerify();
     // Authentication successful - jwtVerify sets request.user automatically
   } catch (err) {
-    // Debug logging
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Auth] Authentication failed for ${request.method} ${request.url}:`, {
-        hasCookie: !!request.cookies?.auth_token,
-        hasAuthHeader: !!request.headers.authorization,
-        error: err.message
-      });
-    }
+    // Debug logging - always log in development
+    const authDebug = {
+      method: request.method,
+      url: request.url,
+      hasCookie: !!request.cookies?.auth_token,
+      cookieValue: request.cookies?.auth_token ? `${request.cookies.auth_token.substring(0, 20)}...` : 'none',
+      hasAuthHeader: !!request.headers.authorization,
+      authHeaderValue: request.headers.authorization ? `${request.headers.authorization.substring(0, 20)}...` : 'none',
+      error: err.message,
+      errorCode: err.code
+    };
+    
+    console.log(`[Auth] Authentication failed:`, authDebug);
     
     // Authentication failed, send 401 response
     let errorMessage = 'Unauthorized';
@@ -33,6 +38,8 @@ async function authenticate(request, reply) {
         errorMessage = 'Session expired. Please log in again.';
       } else if (err.message.includes('No authorization') || err.message.includes('missing or malformed')) {
         errorMessage = 'No authentication token provided. Please log in.';
+      } else if (err.message.includes('invalid') || err.message.includes('malformed')) {
+        errorMessage = 'Invalid authentication token. Please log in again.';
       }
     }
     reply.status(401).send({ error: errorMessage });

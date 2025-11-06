@@ -28,57 +28,17 @@ const DEFAULT_FORMATTING = {
 const AUTOSAVE_DEBOUNCE_MS = 5000;
 
 const createDefaultResumeData = (): ResumeData => ({
-  name: 'John Doe',
-  title: 'Software Engineer',
-  email: 'john.doe@example.com',
-  phone: '(555) 123-4567',
-  location: 'San Francisco, CA',
-  summary: 'Experienced software engineer with 5+ years of experience...',
-  skills: ['Python', 'PySpark', 'SQL', 'Kafka', 'Schema Registry', 'Airflow'],
-  experience: [
-    {
-      id: 1,
-      company: 'Tech Corp',
-      position: 'Senior Software Engineer',
-      period: '2020',
-      endPeriod: 'Present',
-      location: 'San Francisco, CA',
-      bullets: ['Led development of microservices architecture', 'Improved system performance by 40%', 'Mentored junior developers'],
-      environment: ['Python', 'Docker', 'Kubernetes'],
-      customFields: [],
-    },
-  ],
-  education: [
-    {
-      id: 1,
-      school: 'University of California',
-      degree: 'Bachelor of Science in Computer Science',
-      startDate: '2016',
-      endDate: '2020',
-      customFields: [],
-    },
-  ],
-  projects: [
-    {
-      id: 1,
-      name: 'E-commerce Platform',
-      description: 'Full-stack e-commerce solution',
-      link: 'https://github.com/johndoe/ecommerce',
-      bullets: ['Built with React and Node.js', 'Integrated payment processing', 'Implemented real-time notifications'],
-      skills: ['React', 'Node.js', 'MongoDB'],
-      customFields: [],
-    },
-  ],
-  certifications: [
-    {
-      id: 1,
-      name: 'AWS Certified Solutions Architect',
-      issuer: 'Amazon Web Services',
-      link: 'https://aws.amazon.com/certification/',
-      skills: ['AWS', 'Cloud Architecture'],
-      customFields: [],
-    },
-  ],
+  name: '',
+  title: '',
+  email: '',
+  phone: '',
+  location: '',
+  summary: '',
+  skills: [],
+  experience: [],
+  education: [],
+  projects: [],
+  certifications: [],
 });
 
 const cloneResumeData = (data: ResumeData): ResumeData => JSON.parse(JSON.stringify(data));
@@ -103,7 +63,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialResumeData = useRef(createDefaultResumeData()).current;
 
-  const [resumeFileNameState, _setResumeFileName] = useState('My_Resume');
+  const [resumeFileNameState, _setResumeFileName] = useState('');
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasChanges, setHasChanges] = useState(false);
@@ -124,6 +84,62 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   const [sectionOrderState, _setSectionOrder] = useState<string[]>(() => [...DEFAULT_SECTION_ORDER]);
   const [sectionVisibilityState, _setSectionVisibility] = useState<SectionVisibility>(() => ({ ...DEFAULT_SECTION_VISIBILITY }));
   const [customSectionsState, _setCustomSections] = useState<CustomSection[]>([]);
+  
+  // Refs to store latest state values for auto-save (to avoid dependency issues)
+  const resumeDataRef = useRef(resumeDataState);
+  const sectionOrderRef = useRef(sectionOrderState);
+  const sectionVisibilityRef = useRef(sectionVisibilityState);
+  const customSectionsRef = useRef(customSectionsState);
+  const fontFamilyRef = useRef(fontFamilyState);
+  const fontSizeRef = useRef(fontSizeState);
+  const lineSpacingRef = useRef(lineSpacingState);
+  const sectionSpacingRef = useRef(sectionSpacingState);
+  const marginsRef = useRef(marginsState);
+  const headingStyleRef = useRef(headingStyleState);
+  const bulletStyleRef = useRef(bulletStyleState);
+  const resumeFileNameRef = useRef(resumeFileNameState);
+  const lastServerUpdatedAtRef = useRef(lastServerUpdatedAt);
+  
+  // Update refs when state changes
+  useEffect(() => {
+    resumeDataRef.current = resumeDataState;
+  }, [resumeDataState]);
+  useEffect(() => {
+    sectionOrderRef.current = sectionOrderState;
+  }, [sectionOrderState]);
+  useEffect(() => {
+    sectionVisibilityRef.current = sectionVisibilityState;
+  }, [sectionVisibilityState]);
+  useEffect(() => {
+    customSectionsRef.current = customSectionsState;
+  }, [customSectionsState]);
+  useEffect(() => {
+    fontFamilyRef.current = fontFamilyState;
+  }, [fontFamilyState]);
+  useEffect(() => {
+    fontSizeRef.current = fontSizeState;
+  }, [fontSizeState]);
+  useEffect(() => {
+    lineSpacingRef.current = lineSpacingState;
+  }, [lineSpacingState]);
+  useEffect(() => {
+    sectionSpacingRef.current = sectionSpacingState;
+  }, [sectionSpacingState]);
+  useEffect(() => {
+    marginsRef.current = marginsState;
+  }, [marginsState]);
+  useEffect(() => {
+    headingStyleRef.current = headingStyleState;
+  }, [headingStyleState]);
+  useEffect(() => {
+    bulletStyleRef.current = bulletStyleState;
+  }, [bulletStyleState]);
+  useEffect(() => {
+    resumeFileNameRef.current = resumeFileNameState;
+  }, [resumeFileNameState]);
+  useEffect(() => {
+    lastServerUpdatedAtRef.current = lastServerUpdatedAt;
+  }, [lastServerUpdatedAt]);
 
   const [history, setHistory] = useState<ResumeData[]>(() => [cloneResumeData(initialResumeData)]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -226,11 +242,31 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   }, [setHasChanges, setSaveError]);
 
   const setResumeData = useCallback((value: SetStateAction<ResumeData>) => {
+    console.log('[setResumeData] Called with:', value);
     _setResumeData((prev) => {
       const next = typeof value === 'function' ? (value as (prev: ResumeData) => ResumeData)(prev) : value;
+      console.log('[setResumeData] Change detection:', {
+        isDifferent: next !== prev,
+        suppressTracking: suppressTrackingRef.current,
+        prevKeys: prev ? Object.keys(prev) : [],
+        nextKeys: next ? Object.keys(next) : [],
+        prevPhone: prev?.phone,
+        nextPhone: next?.phone,
+      });
       if (!suppressTrackingRef.current && next !== prev) {
+        logger.info('Resume data changed, setting hasChanges=true', { 
+          prevName: prev?.name, 
+          nextName: next?.name,
+          suppressTracking: suppressTrackingRef.current 
+        });
+        console.log('[setResumeData] Setting hasChanges=true');
         setHasChanges(true);
         setSaveError(null);
+      } else {
+        console.log('[setResumeData] NOT setting hasChanges', {
+          suppressTracking: suppressTrackingRef.current,
+          objectsEqual: next === prev
+        });
       }
       return next;
     });
@@ -427,10 +463,11 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
             onResumeLoaded?.(applied);
           }
         } else {
+          // No resumes exist - show empty state
           const snapshot = buildSnapshotFromStoredData({});
           applySnapshot(snapshot);
           runWithoutTracking(() => {
-            _setResumeFileName('My_Resume');
+            _setResumeFileName('');
           });
           setCurrentResumeId(null);
           setLastServerUpdatedAt(null);
@@ -445,10 +482,13 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     };
 
     loadResume();
-  }, [applySnapshot, applyResumeRecord, buildSnapshotFromStoredData, runWithoutTracking, onResumeLoaded]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount to prevent infinite loop
 
   useEffect(() => {
-    if (!hasChanges || !currentResumeId || isSaving) {
+    logger.debug('Auto-save effect triggered', { hasChanges, isSaving, currentResumeId });
+    
+    if (!hasChanges || isSaving) {
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
         autosaveTimerRef.current = null;
@@ -456,43 +496,110 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
       return undefined;
     }
 
+    logger.info('Starting auto-save timer (5 seconds)', { hasChanges, isSaving, currentResumeId });
+
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
     }
 
     autosaveTimerRef.current = setTimeout(async () => {
+      logger.info('Auto-save timer fired, executing save...');
       autosaveTimerRef.current = null;
       try {
         setIsSaving(true);
         setSaveError(null);
 
+        // Use refs to get latest values without adding them to dependency array
         const payload = {
           data: {
-            resumeData: resumeDataState,
-            sectionOrder: sectionOrderState,
-            sectionVisibility: sectionVisibilityState,
-            customSections: customSectionsState,
+            resumeData: resumeDataRef.current,
+            sectionOrder: sectionOrderRef.current,
+            sectionVisibility: sectionVisibilityRef.current,
+            customSections: customSectionsRef.current,
             formatting: {
-              fontFamily: fontFamilyState,
-              fontSize: fontSizeState,
-              lineSpacing: lineSpacingState,
-              sectionSpacing: sectionSpacingState,
-              margins: marginsState,
-              headingStyle: headingStyleState,
-              bulletStyle: bulletStyleState,
+              fontFamily: fontFamilyRef.current,
+              fontSize: fontSizeRef.current,
+              lineSpacing: lineSpacingRef.current,
+              sectionSpacing: sectionSpacingRef.current,
+              margins: marginsRef.current,
+              headingStyle: headingStyleRef.current,
+              bulletStyle: bulletStyleRef.current,
             },
           },
-          lastKnownServerUpdatedAt: lastServerUpdatedAt,
+          lastKnownServerUpdatedAt: lastServerUpdatedAtRef.current,
         };
 
-        const response = await apiService.autoSaveResume(currentResumeId, payload);
-        const savedResume = response?.resume;
-        if (savedResume) {
-          setLastServerUpdatedAt(savedResume.lastUpdated || null);
-          if (savedResume.lastUpdated) {
-            setLastSavedAt(new Date(savedResume.lastUpdated));
+        // DEBUG: Log payload details
+        console.log('[AUTO-SAVE] Payload being sent:', {
+          hasResumeData: !!payload.data.resumeData,
+          resumeDataKeys: payload.data.resumeData ? Object.keys(payload.data.resumeData) : [],
+          name: payload.data.resumeData?.name,
+          email: payload.data.resumeData?.email,
+          phone: payload.data.resumeData?.phone,
+          location: payload.data.resumeData?.location,
+          summary: payload.data.resumeData?.summary ? `${payload.data.resumeData.summary.substring(0, 50)}...` : '(empty)',
+          skillsType: Array.isArray(payload.data.resumeData?.skills) ? 'array' : typeof payload.data.resumeData?.skills,
+          skillsCount: Array.isArray(payload.data.resumeData?.skills) ? payload.data.resumeData.skills.length : 0,
+          skills: payload.data.resumeData?.skills
+        });
+
+        // Auto-save: create resume if it doesn't exist, otherwise update
+        const currentId = currentResumeId; // Capture current value
+        if (currentId) {
+          // Update existing resume
+          logger.info('Auto-saving existing resume:', { resumeId: currentId });
+          const response = await apiService.autoSaveResume(currentId, payload);
+          const savedResume = response?.resume;
+          if (savedResume) {
+            logger.info('Resume auto-saved successfully:', { id: savedResume.id, lastUpdated: savedResume.lastUpdated });
+            setLastServerUpdatedAt(savedResume.lastUpdated || null);
+            if (savedResume.lastUpdated) {
+              setLastSavedAt(new Date(savedResume.lastUpdated));
+            }
+            setHasChanges(false);
+          } else {
+            logger.warn('Auto-save response missing resume data:', response);
           }
-          setHasChanges(false);
+        } else {
+          // Create new resume if it doesn't exist yet
+          const fileName = resumeFileNameRef.current && resumeFileNameRef.current.trim().length > 0
+            ? resumeFileNameRef.current.trim()
+            : 'Untitled Resume';
+          
+          logger.info('Creating new resume during auto-save:', { fileName, hasData: !!payload.data });
+          
+          try {
+            const response = await apiService.createResume({
+              fileName,
+              templateId: null,
+              data: payload.data
+            });
+            
+            logger.info('Create resume response:', { success: response?.success, hasResume: !!response?.resume });
+            
+            const savedResume = response?.resume;
+            if (savedResume) {
+              logger.info('Resume created successfully:', { id: savedResume.id, fileName: savedResume.fileName });
+              setCurrentResumeId(savedResume.id);
+              setLastServerUpdatedAt(savedResume.lastUpdated || null);
+              if (savedResume.lastUpdated) {
+                setLastSavedAt(new Date(savedResume.lastUpdated));
+              }
+              if (savedResume.fileName && savedResume.fileName !== resumeFileNameRef.current) {
+                runWithoutTracking(() => {
+                  _setResumeFileName(savedResume.fileName);
+                });
+              }
+              setHasChanges(false);
+            } else {
+              logger.error('Create resume response missing resume data:', response);
+              setSaveError('Failed to create resume: No resume data in response');
+            }
+          } catch (createError: any) {
+            logger.error('Failed to create resume during auto-save:', createError);
+            setSaveError(createError?.message || 'Failed to create resume');
+            // Don't throw - let user continue editing
+          }
         }
       } catch (error: any) {
         logger.error('Auto-save failed:', error);
@@ -516,18 +623,8 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     hasChanges,
     currentResumeId,
     isSaving,
-    resumeDataState,
-    sectionOrderState,
-    sectionVisibilityState,
-    customSectionsState,
-    fontFamilyState,
-    fontSizeState,
-    lineSpacingState,
-    sectionSpacingState,
-    marginsState,
-    headingStyleState,
-    bulletStyleState,
-    lastServerUpdatedAt,
+    runWithoutTracking,
+    setCurrentResumeId,
     setHasChanges,
     setIsSaving,
     setSaveError,
