@@ -1,5 +1,6 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
+import React from 'react'
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {

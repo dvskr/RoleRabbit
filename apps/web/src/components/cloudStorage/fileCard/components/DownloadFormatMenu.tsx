@@ -30,7 +30,7 @@ export const DownloadFormatMenu: React.FC<DownloadFormatMenuProps> = ({
           onDownload('pdf');
           onClose();
         }}
-        className="w-full px-3 py-2 text-left text-sm transition-colors rounded-t-lg"
+        className="w-full px-3 py-2 text-left text-sm transition-colors rounded-lg"
         style={{
           color: colors.primaryText,
         }}
@@ -43,27 +43,7 @@ export const DownloadFormatMenu: React.FC<DownloadFormatMenuProps> = ({
           e.currentTarget.style.color = colors.primaryText;
         }}
       >
-        {DOWNLOAD_FORMATS.PDF}
-      </button>
-      <button
-        onClick={() => {
-          onDownload('doc');
-          onClose();
-        }}
-        className="w-full px-3 py-2 text-left text-sm transition-colors rounded-b-lg"
-        style={{
-          color: colors.primaryText,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = colors.hoverBackground;
-          e.currentTarget.style.color = colors.primaryBlue;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = colors.primaryText;
-        }}
-      >
-        {DOWNLOAD_FORMATS.DOC}
+        Download File
       </button>
     </div>
   );

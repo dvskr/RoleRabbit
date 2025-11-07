@@ -24,6 +24,7 @@ export default function ProfileHeader({
 
   return (
     <div 
+      data-testid="profile-header"
       className="backdrop-blur-sm px-6 py-3 flex-shrink-0 shadow-sm"
       style={{
         background: colors.headerBackground,

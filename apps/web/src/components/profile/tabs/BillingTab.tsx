@@ -32,13 +32,16 @@ interface BillingHistory {
   invoiceUrl?: string;
 }
 
+type BillingFrequency = 'monthly' | 'annual';
+
 interface SubscriptionPlan {
   id: string;
   name: string;
-  price: number;
-  interval: 'month' | 'year';
+  monthlyPrice: number;
   features: string[];
-  isCurrent: boolean;
+  badge?: string;
+  isCurrent?: boolean;
+  billingFrequency?: BillingFrequency;
 }
 
 export default function BillingTab({
@@ -52,6 +55,7 @@ export default function BillingTab({
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [billingHistory, setBillingHistory] = useState<BillingHistory[]>([]);
   const [currentPlan, setCurrentPlan] = useState<SubscriptionPlan | null>(null);
+  const [billingFrequency, setBillingFrequency] = useState<BillingFrequency>('monthly');
 
   // Mock data - replace with actual API calls
   useEffect(() => {
@@ -62,19 +66,22 @@ export default function BillingTab({
   const loadBillingData = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API calls
-      // Mock data for now
+      // Note: Billing API integration pending - using placeholder data
+      // TODO: Integrate with billing API when available
+      // API endpoint: GET /api/billing/plan
       setCurrentPlan({
         id: 'free',
-        name: 'Free Plan',
-        price: 0,
-        interval: 'month',
+        name: 'Free',
+        monthlyPrice: 0,
         features: [
-          'Ads included',
-          'Limited AI features',
-          'Basic resume templates',
-          'Basic profile features'
+          'Basic resume builder',
+          '1 portfolio',
+          'Track up to 10 jobs',
+          'Basic templates',
+          'Community access',
+          'Ads included'
         ],
+        billingFrequency: 'monthly',
         isCurrent: true
       });
 
@@ -107,18 +114,33 @@ export default function BillingTab({
   };
 
   const handleAddPaymentMethod = () => {
-    // TODO: Implement payment method addition
-    logger.info('Add payment method clicked');
+    // Note: Payment method addition pending API integration
+    // TODO: Integrate with payment API when available
+    // API endpoint: POST /api/billing/payment-methods
+    alert('Payment method addition is coming soon. This feature will be available in a future update.');
+    logger.info('Add payment method clicked - feature pending');
   };
 
-  const handleUpgradePlan = (planId: string) => {
-    // TODO: Implement plan upgrade
-    logger.info('Upgrade plan clicked:', planId);
+  const handleUpgradePlan = (planId: string, frequency: BillingFrequency) => {
+    // Note: Plan upgrade pending API integration
+    // TODO: Integrate with subscription API when available
+    // API endpoint: POST /api/billing/subscription/upgrade
+    alert(`Plan upgrade to ${planId} (${frequency}) is coming soon. This feature will be available in a future update.`);
+    logger.info(`Upgrade plan clicked: ${planId} (${frequency}) - feature pending`);
   };
 
-  const handleDownloadInvoice = (invoiceId: string) => {
-    // TODO: Implement invoice download
-    logger.info('Download invoice clicked:', invoiceId);
+  const handleDownloadInvoice = async (invoiceId: string) => {
+    // Note: Invoice download pending API integration
+    // TODO: Integrate with billing API when available
+    // API endpoint: GET /api/billing/invoices/:invoiceId/download
+    try {
+      // Placeholder implementation - will be replaced with actual API call
+      alert(`Invoice download for ${invoiceId} is coming soon. This feature will be available in a future update.`);
+      logger.info(`Download invoice clicked: ${invoiceId} - feature pending`);
+    } catch (error) {
+      logger.error('Failed to download invoice:', error);
+      alert('Unable to download invoice. Please try again later.');
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -162,52 +184,69 @@ export default function BillingTab({
     }
   };
 
-  const availablePlans: SubscriptionPlan[] = [
+  const roundToCents = (value: number) => Math.round(value * 100) / 100;
+
+  const getPlanPrice = (plan: SubscriptionPlan, frequency: BillingFrequency) => {
+    if (plan.monthlyPrice === 0) return 0;
+
+    return frequency === 'monthly'
+      ? roundToCents(plan.monthlyPrice)
+      : roundToCents(plan.monthlyPrice * 12 * 0.8);
+  };
+
+  const getAnnualMonthlyEquivalent = (plan: SubscriptionPlan) => {
+    if (plan.monthlyPrice === 0) return 0;
+    return roundToCents(plan.monthlyPrice * 0.8);
+  };
+
+  const planOptions: SubscriptionPlan[] = [
     {
       id: 'free',
       name: 'Free',
-      price: 0,
-      interval: 'month',
+      monthlyPrice: 0,
       features: [
-        'Ads included',
-        'Limited AI features',
-        'Basic resume templates',
-        'Basic profile features'
-      ],
-      isCurrent: currentPlan?.id === 'free'
+        'Basic resume builder',
+        '1 portfolio',
+        'Track up to 10 jobs',
+        'Basic templates',
+        'Community access',
+        'Ads included'
+      ]
     },
     {
       id: 'pro',
       name: 'Pro',
-      price: 14.99,
-      interval: 'month',
+      monthlyPrice: 14.99,
       features: [
+        'Everything in Free',
         'No ads',
         'Full AI features',
-        'Unlimited resume templates',
-        'Advanced analytics',
+        'Unlimited resumes',
+        'Unlimited portfolios',
+        'Unlimited job tracking',
         'Priority support',
-        'Custom branding',
-        'All features except AI auto apply'
+        'Advanced analytics'
       ],
-      isCurrent: currentPlan?.id === 'pro'
+      badge: 'Most Popular'
     },
     {
       id: 'premium',
       name: 'Premium',
-      price: 19.99,
-      interval: 'month',
+      monthlyPrice: 19.99,
       features: [
-        'All Pro features',
-        'AI auto apply',
-        'Unlimited everything',
+        'Everything in Pro',
+        'AI auto-apply',
+        'Personal career coach',
+        'Custom integrations',
         'Dedicated support',
-        'Early access to new features',
-        'Custom integrations'
-      ],
-      isCurrent: currentPlan?.id === 'premium'
+        'Early access to features',
+        'Priority job matching'
+      ]
     }
   ];
+
+  const currentPlanFrequency: BillingFrequency = currentPlan?.billingFrequency ?? 'monthly';
+  const currentPlanPrice = currentPlan ? getPlanPrice(currentPlan, currentPlanFrequency) : 0;
 
   return (
     <div className="max-w-4xl">
@@ -239,20 +278,28 @@ export default function BillingTab({
                       className="text-2xl font-bold"
                       style={{ color: colors.primaryBlue }}
                     >
-                      {currentPlan.price === 0 ? 'Free' : formatCurrency(currentPlan.price)}
-                      {currentPlan.price > 0 && (
+                      {currentPlan.monthlyPrice === 0 ? 'Free' : formatCurrency(currentPlanPrice)}
+                      {currentPlan.monthlyPrice > 0 && (
                         <span 
                           className="text-sm font-normal ml-2"
                           style={{ color: colors.secondaryText }}
                         >
-                          /{currentPlan.interval}
+                          /{currentPlanFrequency === 'annual' ? 'year' : 'month'}
                         </span>
                       )}
                     </p>
+                    {currentPlanFrequency === 'annual' && currentPlan.monthlyPrice > 0 && (
+                      <p
+                        className="text-sm font-medium mt-1"
+                        style={{ color: colors.secondaryText }}
+                      >
+                        Equivalent to {formatCurrency(getAnnualMonthlyEquivalent(currentPlan))}/month (20% savings)
+                      </p>
+                    )}
                   </div>
-                  {currentPlan.price === 0 && (
+                  {currentPlan.monthlyPrice === 0 && (
                     <button
-                      onClick={() => handleUpgradePlan('pro')}
+                      onClick={() => handleUpgradePlan('pro', billingFrequency)}
                       className="px-4 py-2 rounded-lg font-medium transition-all"
                       style={{
                         background: colors.primaryBlue,
@@ -270,7 +317,7 @@ export default function BillingTab({
                   )}
                   {currentPlan.id === 'pro' && (
                     <button
-                      onClick={() => handleUpgradePlan('premium')}
+                      onClick={() => handleUpgradePlan('premium', billingFrequency)}
                       className="px-4 py-2 rounded-lg font-medium transition-all"
                       style={{
                         background: colors.primaryBlue,
@@ -307,24 +354,87 @@ export default function BillingTab({
         {/* Available Plans */}
         {currentPlan && (
           <SecurityCard colors={colors} title="Available Plans">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {availablePlans.filter(plan => plan.id !== currentPlan.id).map((plan) => (
+            <div className="flex justify-center mb-6">
+              <div
+                className="inline-flex rounded-full p-1"
+                style={{
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`
+                }}
+              >
+                <button
+                  className="px-5 py-2 rounded-full text-sm font-medium transition-all"
+                  style={{
+                    background: billingFrequency === 'monthly' ? colors.primaryBlue : 'transparent',
+                    color: billingFrequency === 'monthly' ? '#ffffff' : colors.secondaryText
+                  }}
+                  onClick={() => setBillingFrequency('monthly')}
+                >
+                  Monthly
+                </button>
+                <button
+                  className="px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2"
+                  style={{
+                    background: billingFrequency === 'annual' ? colors.primaryBlue : 'transparent',
+                    color: billingFrequency === 'annual' ? '#ffffff' : colors.secondaryText
+                  }}
+                  onClick={() => setBillingFrequency('annual')}
+                >
+                  <span>Annual</span>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full"
+                    style={{
+                      background: billingFrequency === 'annual' ? 'rgba(255,255,255,0.2)' : colors.badgeInfoBg,
+                      color: billingFrequency === 'annual' ? '#ffffff' : colors.primaryBlue
+                    }}
+                  >
+                    Save 20%
+                  </span>
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {planOptions.map((plan) => {
+                const planPrice = getPlanPrice(plan, billingFrequency);
+                const isAnnual = billingFrequency === 'annual';
+                const isCurrentPlan = currentPlan.id === plan.id;
+
+                return (
+                <div key={plan.id} className="relative pt-4">
+                  {plan.badge && (
+                    <span
+                      className="absolute -top-2 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full tracking-wide"
+                      style={{
+                        background: colors.inputBackground,
+                        color: colors.primaryBlue,
+                        border: `1px solid ${colors.primaryBlue}`
+                      }}
+                    >
+                      {plan.badge}
+                    </span>
+                  )}
                 <div
-                  key={plan.id}
-                  className="p-6 rounded-xl transition-all cursor-pointer"
+                      className="p-6 rounded-xl transition-all flex flex-col h-full"
                   style={{
                     background: colors.inputBackground,
-                    border: `2px solid ${colors.border}`
+                        border: `2px solid ${isCurrentPlan ? colors.borderFocused : colors.border}`,
+                        cursor: isCurrentPlan ? 'default' : 'pointer',
+                        opacity: isCurrentPlan ? 0.95 : 1
                   }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.primaryBlue;
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                  onClick={() => handleUpgradePlan(plan.id)}
+                      onMouseEnter={(e) => {
+                        if (isCurrentPlan) return;
+                        e.currentTarget.style.borderColor = colors.primaryBlue;
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isCurrentPlan) return;
+                        e.currentTarget.style.borderColor = colors.border;
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
+                      onClick={() => {
+                        if (isCurrentPlan) return;
+                        handleUpgradePlan(plan.id, billingFrequency);
+                      }}
                 >
                   <h4 
                     className="text-lg font-semibold mb-2"
@@ -332,18 +442,39 @@ export default function BillingTab({
                   >
                     {plan.name}
                   </h4>
+                  {isCurrentPlan && (
+                    <span
+                      className="text-xs font-semibold px-2 py-1 rounded-full mb-3 inline-flex"
+                      style={{
+                        background: colors.badgeInfoBg,
+                        color: colors.secondaryText
+                      }}
+                    >
+                      Current Plan
+                    </span>
+                  )}
                   <p 
                     className="text-2xl font-bold mb-4"
                     style={{ color: colors.primaryBlue }}
                   >
-                    {formatCurrency(plan.price)}
-                    <span 
-                      className="text-sm font-normal ml-1"
+                    {plan.monthlyPrice === 0 ? 'Free' : formatCurrency(planPrice)}
+                    {plan.monthlyPrice > 0 && (
+                      <span 
+                        className="text-sm font-normal ml-1"
+                        style={{ color: colors.secondaryText }}
+                      >
+                        {isAnnual ? '/year' : '/month'}
+                      </span>
+                    )}
+                  </p>
+                  {isAnnual && plan.monthlyPrice > 0 && (
+                    <p
+                      className="text-xs font-medium uppercase tracking-wide mb-4"
                       style={{ color: colors.secondaryText }}
                     >
-                      /{plan.interval}
-                    </span>
-                  </p>
+                      Equivalent to {formatCurrency(getAnnualMonthlyEquivalent(plan))}/month
+                    </p>
+                  )}
                   <ul className="space-y-2 mb-4">
                     {plan.features.map((feature, index) => (
                       <li 
@@ -357,22 +488,38 @@ export default function BillingTab({
                     ))}
                   </ul>
                   <button
-                    className="w-full py-2 rounded-lg font-medium transition-all"
+                    className="w-full py-2 rounded-lg font-medium transition-all mt-auto"
                     style={{
-                      background: colors.primaryBlue,
-                      color: '#ffffff'
+                          background: isCurrentPlan ? colors.inputBackground : colors.primaryBlue,
+                          color: isCurrentPlan ? colors.secondaryText : '#ffffff',
+                          border: isCurrentPlan ? `1px solid ${colors.border}` : 'none',
+                          cursor: isCurrentPlan ? 'default' : 'pointer'
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (isCurrentPlan) {
+                        event.preventDefault();
+                        return;
+                      }
+
+                      handleUpgradePlan(plan.id, billingFrequency);
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '0.9';
+                          if (isCurrentPlan) return;
+                          e.currentTarget.style.opacity = '0.9';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '1';
+                          if (isCurrentPlan) return;
+                          e.currentTarget.style.opacity = '1';
                     }}
+                        disabled={isCurrentPlan}
                   >
-                    Upgrade to {plan.name}
+                        {isCurrentPlan ? 'Current Plan' : `Upgrade to ${plan.name}`}
                   </button>
                 </div>
-              ))}
+                </div>
+                );
+              })}
             </div>
           </SecurityCard>
         )}

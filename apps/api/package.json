@@ -14,6 +14,7 @@
     "db:migrate": "npx prisma migrate dev",
     "migrate:profile-pictures": "node scripts/migrate-profile-pictures.js",
     "test:security": "node test-security-endpoints.js",
+    "test:migrations": "node prisma/migrations/test-migrations.js",
     "check:otp": "node scripts/check-otp-tokens.js"
   },
   "dependencies": {

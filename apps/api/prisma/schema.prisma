@@ -253,6 +253,7 @@ model ShareLink {
 
   token         String    @unique
   password      String? // Hashed password if protected
+  permission    String    @default("view") // view, comment, edit, admin
   expiresAt     DateTime?
   maxDownloads  Int?
   downloadCount Int       @default(0)
@@ -296,7 +297,6 @@ model StorageFile {
   publicUrl   String? // Public URL if bucket is public
 
   // Metadata
-  tags        String[] // Tags for organization
   description String? // File description
   isPublic    Boolean  @default(false)
   isStarred   Boolean  @default(false)
@@ -392,7 +392,6 @@ model UserProfile {
   professionalBio String? @map("professionalBio")
 
   // Profile Analytics & Metrics
-  profileViews        Int @default(0)
   profileCompleteness Int @default(0) // Percentage (0-100)
 
   createdAt DateTime @default(now())
@@ -446,9 +445,6 @@ model User {
 
   // Preferences (frequently accessed)
   emailNotifications Boolean @default(true)
-  smsNotifications   Boolean @default(false)
-  privacyLevel       String? @default("Professional")
-  profileVisibility  String? @default("Public")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -467,6 +463,7 @@ model User {
   fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")
   credentials         Credential[]         @relation("Credentials")
   storageQuota        StorageQuota?
+  resumes             Resume[]             @relation("Resumes")
 
   @@index([email])
   @@index([provider, providerId])
@@ -484,6 +481,7 @@ model WorkExperience {
   endDate     String?
   isCurrent   Boolean @default(false)
   description String?
+  technologies String[] @default([]) // Technologies/tools used in this role
   projectType String? @default("Full-time") // Full-time, Part-time, Contract, etc.
 
   createdAt DateTime @default(now())
@@ -494,4 +492,42 @@ model WorkExperience {
   @@index([profileId])
   @@index([company])
   @@map("work_experiences")
+}
+
+model Resume {
+  id     String @id @default(cuid())
+  userId String
+
+  // Basic Info
+  fileName  String
+  templateId String? // Selected template ID
+
+  // Resume Data (stored as JSON)
+  // Contains: name, title, email, phone, location, summary, skills, experience, education, projects, certifications
+  data Json // Complete resume data structure
+
+  // Section Configuration
+  sectionOrder     String[] @default([]) // Order of sections
+  sectionVisibility Json   @default("{}") // Which sections are visible
+  customSections   Json    @default("[]") // Custom sections added by user
+  customFields     Json    @default("[]") // Custom contact fields
+
+  // Formatting Options
+  formatting Json @default("{}") // fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle
+
+  // Metadata
+  isStarred  Boolean  @default(false)
+  isArchived Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("Resumes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fileName])
+  @@index([isStarred])
+  @@index([isArchived])
+  @@index([createdAt])
+  @@map("resumes")
 }

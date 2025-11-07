@@ -12,6 +12,8 @@ interface HeaderProps {
   previousSidebarState: boolean;
   sidebarCollapsed: boolean; // Resume Editor panel state
   isPreviewMode?: boolean;
+  lastSavedAt?: Date | null; // Last manual save time
+  hasChanges?: boolean; // Whether there are unsaved changes
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -41,6 +43,8 @@ export default function Header({
   previousSidebarState,
   sidebarCollapsed,
   isPreviewMode,
+  lastSavedAt,
+  hasChanges,
   onExport,
   onUndo,
   onRedo,
@@ -59,6 +63,23 @@ export default function Header({
   previousMainSidebarState,
   setPreviousMainSidebarState
 }: HeaderProps) {
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Update save status based on isSaving and lastSavedAt
+  useEffect(() => {
+    if (isSaving) {
+      setSaveStatus('saving');
+    } else if (lastSavedAt && !hasChanges) {
+      setSaveStatus('saved');
+      // Reset to idle after 2 seconds
+      const timer = setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else {
+      setSaveStatus('idle');
+    }
+  }, [isSaving, lastSavedAt, hasChanges]);
   const handleToggleAIPanel = () => {
     if (!showRightPanel) {
       // Opening AI panel - save current MAIN sidebar state and collapse it
@@ -87,10 +108,23 @@ export default function Header({
             <Menu size={20} />
           </button>
         )}
+        {/* Auto-save feedback indicator */}
+        {hasChanges && !isSaving && (
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            <span>Unsaved changes</span>
+          </div>
+        )}
         {isSaving && (
-          <div className="flex items-center gap-2 text-xs text-gray-600">
+          <div className="flex items-center gap-2 text-xs text-blue-600">
             <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            Saving...
+            <span>Auto-saving...</span>
+          </div>
+        )}
+        {!hasChanges && !isSaving && lastSavedAt && (
+          <div className="flex items-center gap-2 text-xs text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>All changes saved</span>
           </div>
         )}
         {onToggleSidebar && (
@@ -178,11 +212,39 @@ export default function Header({
         </button>
         <button 
           onClick={onSave}
-          className="px-3 py-1.5 bg-white border-2 border-gray-200 rounded-lg text-xs font-semibold text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 shadow-sm flex items-center gap-1.5 group"
-          title="Save Resume"
+          disabled={isSaving || saveStatus === 'saving'}
+          className={`px-3 py-1.5 border-2 rounded-lg text-xs font-semibold transition-all duration-200 shadow-sm flex items-center gap-1.5 group ${
+            saveStatus === 'saving'
+              ? 'bg-blue-100 border-blue-300 text-blue-700 cursor-wait' 
+              : saveStatus === 'saved'
+              ? 'bg-green-50 border-green-300 text-green-700'
+              : 'bg-white border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:shadow-lg'
+          }`}
+          title={
+            saveStatus === 'saving' 
+              ? "Saving..." 
+              : saveStatus === 'saved'
+              ? "Saved!"
+              : "Save Resume"
+          }
         >
-          <Save size={16} className="text-gray-700 group-hover:text-blue-600" />
-          <span className="font-medium">Save</span>
+          <Save 
+            size={16} 
+            className={
+              saveStatus === 'saving' 
+                ? "text-blue-600 animate-pulse" 
+                : saveStatus === 'saved'
+                ? "text-green-600"
+                : "text-gray-700 group-hover:text-blue-600"
+            } 
+          />
+          <span className="font-medium">
+            {saveStatus === 'saving' 
+              ? 'Saving...' 
+              : saveStatus === 'saved'
+              ? 'Saved'
+              : 'Save'}
+          </span>
         </button>
       </div>
     </div>

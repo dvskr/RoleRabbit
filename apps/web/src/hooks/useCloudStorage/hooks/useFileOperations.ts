@@ -17,7 +17,6 @@ type UploadPayload = {
   displayName?: string;
   type?: ResumeFile['type'] | string;
   description?: string;
-  isPublic?: boolean;
   folderId?: string | null;
 };
 
@@ -124,31 +123,23 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [selectedFiles]);
 
-  const handleTogglePublic = useCallback(async (fileId: string) => {
-    const file = files.find(f => f.id === fileId);
-    if (!file) return;
-    
-    try {
-      await apiService.updateCloudFile(fileId, { isPublic: !file.isPublic });
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, isPublic: !file.isPublic } : file
-      ));
-    } catch (error) {
-      logger.error('Failed to toggle public status:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, isPublic: !file.isPublic } : file
-      ));
-    }
-  }, [files]);
-
   const handleDownloadFile = useCallback(async (file: ResumeFile, format?: 'pdf' | 'doc') => {
     try {
       if (format && file.fileName && !file.fileName.toLowerCase().endsWith(`.${format}`)) {
         logger.debug(`Requested ${format.toUpperCase()} download for ${file.name}, delivering original file format.`);
       }
 
+      // Validate file before download
+      if (!file.id) {
+        throw new Error('Invalid file: missing file ID');
+      }
+
       const blob = await apiService.downloadCloudFile(file.id);
+      
+      if (!blob || blob.size === 0) {
+        throw new Error('File is empty or corrupted');
+      }
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       const fallbackExtension = file.contentType?.split('/').pop() || 'bin';
@@ -166,14 +157,22 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
           ? { ...existing, downloadCount: (existing.downloadCount || 0) + 1 }
           : existing
       ));
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Failed to download file:', error);
+      throw error; // Re-throw so parent can show toast
     }
   }, [setFiles]);
 
+  /**
+   * Legacy share handler - not used in current implementation
+   * Sharing is handled through ShareModal component which calls handleShareWithUser
+   * from useSharingOperations hook. This function is kept for backwards compatibility
+   * but can be safely removed.
+   */
   const handleShareFile = useCallback((file: ResumeFile) => {
-    logger.debug('Sharing file:', file.name);
-    // TODO: Implement actual share logic
+    logger.debug('handleShareFile called for:', file.name);
+    logger.info('Note: Actual sharing is handled through ShareModal -> handleShareWithUser');
+    // No-op: ShareModal handles all sharing functionality
   }, []);
 
   const handleUploadFile = useCallback(async (payload: UploadPayload, onComplete?: () => void) => {
@@ -192,9 +191,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
       if (payload.description) {
         formData.append('description', payload.description);
-      }
-      if (typeof payload.isPublic === 'boolean') {
-        formData.append('isPublic', String(payload.isPublic));
       }
 
       logger.info('📤 Uploading file to API...');
@@ -249,11 +245,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       
       // Reload files from API to ensure we have the latest data from database
       logger.info('🔄 Reloading files from API after upload...');
-      setTimeout(() => {
-        loadFilesFromAPI(false).catch(err => {
+      try {
+        await loadFilesFromAPI(false);
+      } catch (err) {
           logger.error('Failed to reload files after upload:', err);
-        });
-      }, 500);
+      }
     } catch (error) {
       logger.error('Failed to save file to API:', error);
       if ((error as any)?.storage && onStorageUpdate) {
@@ -263,7 +259,7 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
-  const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isPublic' | 'isStarred' | 'isArchived' | 'folderId'>>) => {
+  const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isStarred' | 'isArchived' | 'folderId'>>, showDeleted: boolean = false) => {
     try {
       const updatePayload: Record<string, any> = {};
 
@@ -277,10 +273,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
 
       if (updates.description !== undefined) {
         updatePayload.description = updates.description;
-      }
-
-      if (updates.isPublic !== undefined) {
-        updatePayload.isPublic = updates.isPublic;
       }
 
       if (updates.isStarred !== undefined) {
@@ -310,12 +302,12 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       
       logger.info(`✅ File updated locally: ${fileId}`, updatePayload);
 
-      // Refresh from API to ensure consistency with server
+      // Refresh from API to ensure consistency with server - respect showDeleted state
       setTimeout(() => {
-        loadFilesFromAPI(false).catch(error => {
+        loadFilesFromAPI(showDeleted).catch(error => {
           logger.warn('Failed to refresh files after edit:', error);
         });
-      }, 300);
+      }, 100); // Reduced delay for faster feedback
     } catch (error) {
       logger.error('Failed to update file:', error);
       // Fallback to local state update
@@ -331,32 +323,37 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [loadFilesFromAPI]);
 
-  const handleRefresh = useCallback(async () => {
-    logger.debug('Refreshing files...');
-    await loadFilesFromAPI();
+  const handleRefresh = useCallback(async (includeDeleted: boolean = false) => {
+    logger.debug('Refreshing files...', { includeDeleted });
+    await loadFilesFromAPI(includeDeleted);
   }, [loadFilesFromAPI]);
 
   const handleStarFile = useCallback(async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
     
+    const newStarredState = !file.isStarred;
+    
+    // Optimistic update - update UI immediately
+    setFiles(prev => prev.map(f => 
+      f.id === fileId 
+        ? { ...f, isStarred: newStarredState }
+        : f
+    ));
+    
     try {
-      await apiService.updateCloudFile(fileId, { isStarred: !file.isStarred });
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, isStarred: !file.isStarred }
-          : file
-      ));
+      await apiService.updateCloudFile(fileId, { isStarred: newStarredState });
+      // Success - optimistic update was correct
     } catch (error) {
       logger.error('Failed to toggle star status:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, isStarred: !file.isStarred }
-          : file
+      // Revert optimistic update on error
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, isStarred: !newStarredState }
+          : f
       ));
     }
-  }, [files]);
+  }, [files, setFiles]);
 
   const handleArchiveFile = useCallback(async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
@@ -381,24 +378,33 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   }, [files]);
 
   // Single file delete handler (soft delete - moves to recycle bin)
-  const handleDeleteFile = useCallback(async (fileId: string) => {
+  const handleDeleteFile = useCallback(async (fileId: string, showDeleted: boolean = false) => {
+    // Validate input
+    if (!fileId) {
+      throw new Error('Invalid file ID');
+    }
+
     try {
       await apiService.deleteCloudFile(fileId);
       logger.info(`✅ File moved to recycle bin: ${fileId}`);
       
-      // Update local state to set deletedAt
+      // Update local state optimistically
       setFiles(prev => prev.map(file => 
         file.id === fileId ? { ...file, deletedAt: new Date().toISOString() } : file
       ));
       
-      // Reload files from API to ensure consistency
-      setTimeout(() => {
-        loadFilesFromAPI(false).catch(err => {
+      // Reload files from API to ensure consistency - respect showDeleted state
+      try {
+        await loadFilesFromAPI(showDeleted);
+      } catch (err) {
           logger.error('Failed to reload files after delete:', err);
-        });
-      }, 500);
-    } catch (error) {
+      }
+    } catch (error: any) {
       logger.error('Failed to delete file:', error);
+      // Revert optimistic update
+      setFiles(prev => prev.map(file => 
+        file.id === fileId && file.deletedAt ? { ...file, deletedAt: null } : file
+      ));
       throw error; // Re-throw so UI can show error message
     }
   }, [loadFilesFromAPI]);
@@ -415,11 +421,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       ));
       
       // Reload files from API to ensure consistency
-      setTimeout(() => {
-        loadFilesFromAPI(false).catch(err => {
+      try {
+        await loadFilesFromAPI(false);
+      } catch (err) {
           logger.error('Failed to reload files after restore:', err);
-        });
-      }, 500);
+      }
     } catch (error) {
       logger.error('Failed to restore file:', error);
       throw error; // Re-throw so UI can show error message
@@ -441,11 +447,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
       
       // Reload files from API to ensure consistency (use showDeleted from closure or default to true since we're in recycle bin)
-      setTimeout(() => {
-        loadFilesFromAPI(true).catch(err => {
+      try {
+        await loadFilesFromAPI(true);
+      } catch (err) {
           logger.error('Failed to reload files after permanent delete:', err);
-        });
-      }, 500);
+      }
     } catch (error) {
       logger.error('Failed to permanently delete file:', error);
       // Fallback to local state update
@@ -467,7 +473,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     handleDeleteFile,
     handleRestoreFile,
     handlePermanentlyDeleteFile,
-    handleTogglePublic,
     handleDownloadFile,
     handleShareFile,
     handleUploadFile,
@@ -475,6 +480,67 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     handleRefresh,
     handleStarFile,
     handleArchiveFile
+  };
+};
+
+// Move handler helper
+export const useCopyMoveOperations = (
+  setFiles: React.Dispatch<React.SetStateAction<ResumeFile[]>>,
+  refreshFiles?: (includeDeleted?: boolean) => Promise<void>,
+  refreshFolders?: () => Promise<void> | void,
+  afterMove?: (fileId: string, folderId: string | null) => void
+) => {
+  const handleMoveFile = useCallback(async (fileId: string, folderId: string | null) => {
+    try {
+      logger.info('📦 Moving file:', fileId, 'to folder:', folderId);
+      const response = await apiService.moveCloudFile(fileId, folderId);
+      
+      if (response && response.success) {
+        // Update local state (real-time events will also handle this)
+        setFiles(prev => prev.map(file => 
+          file.id === fileId 
+            ? { ...file, folderId: folderId || null }
+            : file
+        ));
+        
+        logger.info('✅ File moved successfully:', fileId);
+
+        if (refreshFiles) {
+          try {
+            await refreshFiles(false);
+          } catch (refreshError) {
+            logger.warn('Failed to refresh files after move:', refreshError);
+          }
+        }
+
+        if (refreshFolders) {
+          try {
+            await refreshFolders();
+          } catch (folderError) {
+            logger.warn('Failed to refresh folders after move:', folderError);
+          }
+        }
+
+        if (afterMove) {
+          try {
+            afterMove(fileId, folderId || null);
+          } catch (callbackError) {
+            logger.warn('Post-move callback threw an error:', callbackError);
+          }
+        }
+
+        return response;
+      } else {
+        throw new Error(response?.error || 'Failed to move file');
+      }
+    } catch (error: any) {
+      logger.error('Failed to move file:', error);
+      throw error;
+    }
+  }, [setFiles, refreshFiles]);
+
+  return {
+    handleMoveFile
   };
 };
 

@@ -5,6 +5,9 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+import { logger } from '../utils/logger';
+import { retryWithBackoff, isOnline, waitForOnline } from '../utils/retryHandler';
+
 class ApiService {
   private baseUrl: string;
 
@@ -22,18 +25,66 @@ class ApiService {
   }
 
   /**
-   * Generic fetch wrapper with error handling
+   * Generic fetch wrapper with error handling and retry logic
    */
   private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    retryCount = 0,
+    skipRetry = false
+  ): Promise<T> {
+    // If retry is skipped (e.g., token refresh), use direct request
+    if (skipRetry) {
+      return this.directRequest<T>(endpoint, options, retryCount);
+    }
+
+    // Use retry handler with exponential backoff
+    const result = await retryWithBackoff(
+      () => this.directRequest<T>(endpoint, options, 0),
+      {
+        maxRetries: 3,
+        initialDelay: 1000,
+        maxDelay: 30000,
+        backoffMultiplier: 2,
+        retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+        retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout'],
+      }
+    );
+
+    if (result.success && result.data !== undefined) {
+      return result.data;
+    }
+
+    // If retry failed and we're offline, wait for online status
+    if (!isOnline()) {
+      logger.info('Device is offline, waiting for connection...');
+      const cameOnline = await waitForOnline(5000);
+      if (cameOnline) {
+        // Try once more after coming online
+        return this.directRequest<T>(endpoint, options, 0);
+      }
+    }
+
+    throw result.error || new Error('Request failed after retries');
+  }
+
+  /**
+   * Direct request without retry (used internally)
+   */
+  private async directRequest<T>(
     endpoint: string,
     options: RequestInit = {},
     retryCount = 0
   ): Promise<T> {
     try {
       const headers: HeadersInit = {
-        'Content-Type': 'application/json',
         ...options.headers,
       };
+      
+      // Only add Content-Type header if there's a body
+      if (options.body && typeof options.body === 'string') {
+        headers['Content-Type'] = 'application/json';
+      }
       
       // httpOnly cookie is automatically sent by browser
       // No need to manually add Authorization header
@@ -53,48 +104,151 @@ class ApiService {
             credentials: 'include',
           });
 
-          // If refresh successful, retry original request
+          // If refresh successful, retry original request (skip retry wrapper to avoid double retry)
           if (refreshResponse.ok) {
-            return this.request<T>(endpoint, options, retryCount + 1);
+            return this.directRequest<T>(endpoint, options, retryCount + 1);
           }
         } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
+          logger.error('Token refresh failed:', refreshError);
           // Token refresh failed, let it fall through to error handling
         }
       }
 
       if (!response.ok) {
         // Try to get error details from response
-        let errorMessage = `API error: ${response.statusText}`;
+        const statusCode = typeof response.status === 'number' ? response.status : 500;
+        const statusText = (response.statusText && typeof response.statusText === 'string') ? response.statusText : 'Unknown error';
+        let errorMessage: string = `API error (${statusCode}): ${statusText}`;
         let errorDetails: any = undefined;
+        
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorData.message || errorMessage;
-          if (errorData.details) {
-            errorDetails = errorData.details;
-            if (typeof errorData.details === 'string' && !errorMessage.includes(errorData.details)) {
-              errorMessage += ` - ${errorData.details}`;
+          // Try to read response body for error details
+          let text = '';
+          try {
+            // Try cloning first (works for most responses)
+            const clonedResponse = response.clone();
+            text = await clonedResponse.text();
+          } catch (cloneError) {
+            // If cloning fails, try reading directly (will consume response)
+            try {
+              text = await response.text();
+            } catch (textError) {
+              // If we can't read text, use default message
+              text = '';
             }
           }
-        } catch (e) {
-          // If response isn't JSON, use status text
+          
+          if (text && typeof text === 'string' && text.trim()) {
+            try {
+              const errorData = JSON.parse(text);
+              const parsedMessage = errorData.error || errorData.message;
+              if (parsedMessage && typeof parsedMessage === 'string') {
+                errorMessage = parsedMessage;
+              } else if (parsedMessage && typeof parsedMessage === 'object') {
+                try {
+                  const jsonStr = JSON.stringify(parsedMessage);
+                  errorMessage = `API error (${statusCode}): ${jsonStr.substring(0, 100)}`;
+                } catch (stringifyError) {
+                  errorMessage = `API error (${statusCode}): Invalid error format`;
+                }
+              }
+              if (errorData.details) {
+                errorDetails = errorData.details;
+                if (typeof errorData.details === 'string' && errorMessage && !errorMessage.includes(errorData.details)) {
+                  errorMessage += ` - ${errorData.details}`;
+                }
+              }
+            } catch (jsonError) {
+              // If not JSON, use the text as error message if it's meaningful
+              if (text.length < 500 && text.trim()) {
+                errorMessage = `API error (${statusCode}): ${text.substring(0, 200).trim()}`;
+              }
+            }
+          }
+        } catch (readError: any) {
+          // If we can't read response, use status-based message
+          const errorMsg = (readError?.message && typeof readError.message === 'string') 
+            ? readError.message 
+            : 'Could not read error response';
+          errorMessage = `API request failed with status ${statusCode}: ${statusText}. ${errorMsg}`;
         }
 
-        const error: any = new Error(errorMessage);
-        error.statusCode = response.status;
-        if (errorDetails !== undefined) {
-          error.details = errorDetails;
+        // Final safety check: Ensure errorMessage is always a valid string
+        if (!errorMessage || typeof errorMessage !== 'string') {
+          errorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
         }
-        throw error;
+        
+        // Ensure errorMessage is not empty and is a valid string
+        if (typeof errorMessage !== 'string' || errorMessage.trim() === '') {
+          errorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
+        }
+
+        // Create error object with guaranteed valid error message
+        // Use try-catch as final safety net
+        let finalErrorMessage: string;
+        try {
+          finalErrorMessage = String(errorMessage);
+          if (!finalErrorMessage || finalErrorMessage.trim() === '') {
+            finalErrorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
+          }
+        } catch (stringError) {
+          finalErrorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
+        }
+
+        try {
+          const errorObj: any = new Error(finalErrorMessage);
+          errorObj.statusCode = statusCode;
+          errorObj.originalResponse = statusText;
+          if (errorDetails !== undefined) {
+            errorObj.details = errorDetails;
+          }
+          throw errorObj;
+        } catch (errorCreationError) {
+          // If Error constructor fails, create a plain object
+          const fallbackError: any = {
+            message: finalErrorMessage,
+            statusCode: statusCode,
+            originalResponse: statusText,
+            name: 'APIError'
+          };
+          if (errorDetails !== undefined) {
+            fallbackError.details = errorDetails;
+          }
+          throw fallbackError;
+        }
       }
 
-      return await response.json();
+      const contentType = response.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        try {
+          return await response.json();
+        } catch (parseError) {
+          logger.warn('Response JSON parse failed, returning empty object', parseError);
+          return {} as T;
+        }
+      }
+
+      if (response.status === 204 || response.status === 205) {
+        return undefined as T;
+      }
+
+      const textResponse = await response.text();
+      if (!textResponse) {
+        return undefined as T;
+      }
+      return (textResponse as unknown) as T;
     } catch (error: any) {
-      console.error('API request failed:', error);
-      // Provide more helpful error messages
+      logger.error('API request failed:', error);
+      
+      // Provide more helpful error messages for common issues
       if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-        throw new Error('Failed to connect to server. Please check if the API server is running on http://localhost:3001');
+        const friendlyError: any = new Error('Unable to connect to the server. Please check your internet connection and ensure the API server is running.');
+        friendlyError.statusCode = 0;
+        friendlyError.originalError = error;
+        throw friendlyError;
       }
+      
       throw error;
     }
   }
@@ -287,6 +441,17 @@ class ApiService {
   }
 
   /**
+   * Move cloud file to folder
+   */
+  async moveCloudFile(fileId: string, folderId: string | null): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/move`, {
+      method: 'POST',
+      body: JSON.stringify({ folderId }),
+      credentials: 'include',
+    });
+  }
+
+  /**
    * Restore cloud file from trash
    */
   async restoreCloudFile(fileId: string): Promise<any> {
@@ -349,12 +514,48 @@ class ApiService {
   }
 
   /**
+   * Get shared file by token
+   */
+  async getSharedFile(token: string, password?: string): Promise<any> {
+    const endpoint = password 
+      ? `/api/storage/shared/${token}?password=${encodeURIComponent(password)}`
+      : `/api/storage/shared/${token}`;
+    
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Download shared file
+   */
+  async downloadSharedFile(token: string, password?: string): Promise<Blob> {
+    const endpoint = password
+      ? `/api/storage/shared/${token}/download?password=${encodeURIComponent(password)}`
+      : `/api/storage/shared/${token}/download`;
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to download file');
+    }
+
+    return await response.blob();
+  }
+
+  /**
    * Share file with user
    */
   async shareFile(fileId: string, data: {
-    userId: string;
+    userEmail: string;
     permission: string;
     expiresAt?: string;
+    maxDownloads?: number;
   }): Promise<any> {
     return this.request(`/api/storage/files/${fileId}/share`, {
       method: 'POST',
@@ -395,6 +596,30 @@ class ApiService {
     return this.request(`/api/storage/files/${fileId}/share-link`, {
       method: 'POST',
       body: JSON.stringify(options || {}),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get file comments
+   */
+  async getFileComments(fileId: string): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/comments`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add file comment
+   */
+  async addFileComment(fileId: string, data: {
+    content: string;
+    parentId?: string;
+  }): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
       credentials: 'include',
     });
   }
@@ -477,6 +702,94 @@ class ApiService {
   async getStorageStats(): Promise<any> {
     return this.request('/api/storage/stats', {
       method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  // ===== RESUME ENDPOINTS =====
+
+  /**
+   * Get all resumes for the current user
+   */
+  async getResumes(): Promise<any> {
+    return this.request('/api/resumes', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get a single resume by ID
+   */
+  async getResume(id: string): Promise<any> {
+    return this.request(`/api/resumes/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create a new resume
+   */
+  async createResume(data: {
+    fileName: string;
+    templateId?: string;
+    data: any;
+  }): Promise<any> {
+    return this.request('/api/resumes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update an existing resume
+   */
+  async updateResume(id: string, data: {
+    fileName?: string;
+    templateId?: string;
+    data?: any;
+    lastKnownServerUpdatedAt?: string;
+  }): Promise<any> {
+    return this.request(`/api/resumes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Auto-save resume (optimistic update with conflict detection)
+   */
+  async autoSaveResume(id: string, data: {
+    data: any;
+    lastKnownServerUpdatedAt?: string;
+  }): Promise<any> {
+    return this.request(`/api/resumes/${id}/autosave`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete a resume
+   */
+  async deleteResume(id: string): Promise<any> {
+    return this.request(`/api/resumes/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Duplicate/Copy a resume
+   */
+  async duplicateResume(id: string, fileName?: string): Promise<any> {
+    return this.request(`/api/resumes/${id}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ fileName }),
       credentials: 'include',
     });
   }

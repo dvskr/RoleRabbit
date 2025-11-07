@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Eye, Sparkles, GripVertical } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Eye, Sparkles, GripVertical, AlertCircle } from 'lucide-react';
 import { ResumeData } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
+import { MAX_LENGTHS, validateMaxLength } from '../../utils/validation';
 
 interface SummarySectionProps {
   resumeData: ResumeData;
@@ -13,7 +14,7 @@ interface SummarySectionProps {
   onOpenAIGenerateModal: (section: string) => void;
 }
 
-export default function SummarySection({
+const SummarySection = React.memo(function SummarySection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -22,6 +23,19 @@ export default function SummarySection({
 }: SummarySectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+
+  // Memoize character count calculations
+  const characterInfo = useMemo(() => {
+    const length = resumeData.summary?.length || 0;
+    const isNearLimit = length > MAX_LENGTHS.SUMMARY * 0.9;
+    const isOverLimit = length > MAX_LENGTHS.SUMMARY;
+    const color = isOverLimit 
+      ? colors.errorRed 
+      : isNearLimit 
+        ? colors.warningYellow || '#f59e0b'
+        : colors.tertiaryText;
+    return { length, isNearLimit, isOverLimit, color };
+  }, [resumeData.summary, colors]);
 
   return (
     <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
@@ -64,27 +78,55 @@ export default function SummarySection({
           </div>
         </div>
         <div className="space-y-3">
-          <textarea
-            className="w-full text-sm rounded-xl p-2 sm:p-4 outline-none resize-none break-words overflow-wrap-anywhere transition-all"
-            rows={4}
-            value={resumeData.summary}
-            onChange={(e) => setResumeData({...resumeData, summary: (e.target as HTMLTextAreaElement).value})}
-            placeholder="Write a compelling professional summary..."
-            style={{
-              background: colors.inputBackground,
-              border: `2px solid ${colors.border}`,
-              color: colors.primaryText,
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = colors.primaryBlue;
-              e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = colors.border;
-              e.target.style.outline = 'none';
-            }}
-          />
-          <div className="flex justify-end">
+          <div className="relative">
+              <textarea
+              className="w-full text-sm rounded-xl p-2 sm:p-4 outline-none resize-none break-words overflow-wrap-anywhere transition-all"
+              rows={4}
+              value={resumeData.summary}
+              maxLength={MAX_LENGTHS.SUMMARY}
+              aria-label="Professional summary"
+              aria-describedby="summary-character-count"
+              onChange={(e) => {
+                const value = e.target.value;
+                // Enforce max length
+                if (value.length <= MAX_LENGTHS.SUMMARY) {
+                  setResumeData((prev: any) => ({...prev, summary: value}));
+                }
+              }}
+              placeholder="Write a compelling professional summary..."
+              style={{
+                background: colors.inputBackground,
+                border: `2px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = colors.primaryBlue;
+                e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+              }}
+              onBlur={(e) => {
+                const validation = validateMaxLength(e.target.value, MAX_LENGTHS.SUMMARY);
+                e.target.style.borderColor = !validation.isValid ? colors.errorRed : colors.border;
+                e.target.style.outline = 'none';
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span 
+                id="summary-character-count"
+                className="text-xs"
+                style={{ color: characterInfo.color }}
+                aria-live="polite"
+              >
+                {characterInfo.length} / {MAX_LENGTHS.SUMMARY} characters
+              </span>
+              {resumeData.summary && characterInfo.isOverLimit && (
+                <div className="flex items-center gap-1 text-xs" style={{ color: colors.tertiaryText }}>
+                  <AlertCircle size={12} />
+                  <span>Character limit reached</span>
+                </div>
+              )}
+            </div>
             <button 
               onClick={() => onOpenAIGenerateModal('summary')}
               className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
@@ -108,4 +150,6 @@ export default function SummarySection({
       </div>
     </div>
   );
-}
+});
+
+export default SummarySection;

@@ -1,0 +1,56 @@
+{
+  "status": 500,
+  "response": {
+    "success": false,
+    "error": "Failed to create resume",
+    "message": "Cannot read properties of undefined (reading 'kind')"
+  },
+  "payload": {
+    "fileName": "Error Test",
+    "data": {
+      "resumeData": {
+        "name": "Test",
+        "email": "test@example.com",
+        "skills": [
+          "JS"
+        ],
+        "experience": [
+          {
+            "id": "1",
+            "company": "Test",
+            "position": "Eng",
+            "period": "2020-01",
+            "endPeriod": "2024-12",
+            "location": "SF",
+            "bullets": [
+              "Did stuff"
+            ]
+          }
+        ],
+        "education": [
+          {
+            "id": "1",
+            "degree": "BS",
+            "school": "Uni",
+            "startDate": "2016-09",
+            "endDate": "2020-05",
+            "field": "CS"
+          }
+        ]
+      },
+      "sectionOrder": [
+        "summary",
+        "skills"
+      ],
+      "sectionVisibility": {
+        "summary": true
+      },
+      "customSections": [],
+      "customFields": [],
+      "formatting": {
+        "fontFamily": "arial",
+        "fontSize": "ats11pt"
+      }
+    }
+  }
+}

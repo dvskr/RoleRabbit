@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, Archive, Award, UserCheck, Briefcase, FileCode } from 'lucide-react';
 
 export const formatFilesize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
@@ -14,15 +14,29 @@ export const formatFilesize = (bytes: number): string => {
 };
 
 export const getFileIcon = (type: string, colors: any): React.ReactElement => {
+  const size = 28;
   switch (type) {
     case 'resume':
-      return React.createElement(FileText, { size: 20, style: { color: colors.primaryBlue } });
+      return React.createElement(FileText, { size, style: { color: colors.primaryBlue } });
     case 'template':
-      return React.createElement(FileText, { size: 20, style: { color: colors.successGreen } });
+      return React.createElement(FileText, { size, style: { color: colors.badgePurpleText } });
     case 'backup':
-      return React.createElement(FileText, { size: 20, style: { color: colors.badgeWarningText } });
+      return React.createElement(Archive, { size, style: { color: colors.secondaryText } });
+    case 'cover_letter':
+      return React.createElement(FileText, { size, style: { color: colors.successGreen } });
+    case 'transcript':
+      return React.createElement(FileText, { size, style: { color: colors.badgeInfoText } });
+    case 'certification':
+      return React.createElement(Award, { size, style: { color: colors.badgeWarningText } });
+    case 'reference':
+      return React.createElement(UserCheck, { size, style: { color: colors.badgePurpleText } });
+    case 'portfolio':
+      return React.createElement(Briefcase, { size, style: { color: colors.primaryBlue } });
+    case 'work_sample':
+      return React.createElement(FileCode, { size, style: { color: colors.successGreen } });
+    case 'document':
     default:
-      return React.createElement(FileText, { size: 20, style: { color: colors.tertiaryText } });
+      return React.createElement(FileText, { size, style: { color: colors.secondaryText } });
   }
 };
 

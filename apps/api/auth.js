@@ -59,9 +59,6 @@ async function authenticateUser(email, password) {
       providerId: true,
       twoFactorEnabled: true,
       emailNotifications: true,
-      smsNotifications: true,
-      privacyLevel: true,
-      profileVisibility: true,
       createdAt: true,
       updatedAt: true
     }
@@ -95,9 +92,6 @@ async function getUserById(userId) {
       providerId: true,
       twoFactorEnabled: true,
       emailNotifications: true,
-      smsNotifications: true,
-      privacyLevel: true,
-      profileVisibility: true,
       createdAt: true,
       updatedAt: true
     }

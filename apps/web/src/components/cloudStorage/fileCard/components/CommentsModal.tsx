@@ -3,9 +3,10 @@
  */
 
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { FileComment } from '../../../types/cloudStorage';
 import { COMMENTS } from '../constants';
+import { formatRelativeTime } from '../../../../utils/formatters';
 
 interface CommentsModalProps {
   comments: FileComment[];
@@ -14,17 +15,28 @@ interface CommentsModalProps {
     showComments: boolean;
     newComment: string;
     setNewComment: (comment: string) => void;
-    handleCommentSubmit: () => void;
+    handleCommentSubmit: () => void | Promise<void>;
     closeComments: () => void;
+    isLoadingComments?: boolean;
+    isSubmitting?: boolean;
+    submitSuccess?: boolean;
+    error?: string | null;
   };
 }
 
-export const CommentsModal: React.FC<CommentsModalProps> = ({
+const CommentsModalComponent: React.FC<CommentsModalProps> = ({
   comments: fileComments,
   colors,
   commentsState,
 }) => {
   if (!commentsState.showComments) return null;
+
+  // Always show comments if they exist, regardless of loading state
+  // This ensures instant display without flashing
+  // Use fileComments directly - they're already loaded from API
+  const hasComments = Array.isArray(fileComments) && fileComments.length > 0;
+  // Only show loading if we truly don't have comments AND are loading
+  const showLoading = commentsState.isLoadingComments && !hasComments;
 
   return (
     <div 
@@ -32,10 +44,35 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       style={{ borderTop: `1px solid ${colors.border}` }}
     >
       <div className="space-y-3 max-w-full">
-        {/* Existing Comments */}
-        {fileComments && fileComments.length > 0 ? (
+        {/* Error Message */}
+        {commentsState.error && (
+          <div 
+            className="px-3 py-2 rounded-lg text-sm mb-2"
+            style={{
+              background: colors.badgeErrorBg,
+              color: colors.errorRed,
+              border: `1px solid ${colors.errorRed}`
+            }}
+          >
+            {commentsState.error}
+          </div>
+        )}
+
+        {/* Loading State - Only show if no comments exist yet */}
+        {showLoading && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: colors.secondaryText }} />
+            <span className="ml-2 text-sm" style={{ color: colors.secondaryText }}>Loading comments...</span>
+          </div>
+        )}
+
+        {/* Existing Comments - Show immediately, no delay */}
+        {hasComments ? (
           fileComments.map((comment) => (
-            <div key={comment.id} className="flex space-x-3 max-w-full">
+            <div 
+              key={comment.id} 
+              className="flex space-x-3 max-w-full"
+            >
               <div 
                 className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
@@ -57,8 +94,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                   <span 
                     className="text-xs"
                     style={{ color: colors.secondaryText }}
+                    title={new Date(comment.timestamp).toLocaleString()}
                   >
-                    {new Date(comment.timestamp).toLocaleDateString()}
+                    {formatRelativeTime(new Date(comment.timestamp))}
                   </span>
                 </div>
                 <p 
@@ -70,7 +108,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               </div>
             </div>
           ))
-        ) : (
+        ) : !showLoading && (
           <div 
             className="text-center py-4 text-sm"
             style={{ color: colors.secondaryText }}
@@ -116,40 +154,61 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             <div className="flex justify-end mt-2 space-x-2">
               <button
                 onClick={commentsState.handleCommentSubmit}
-                disabled={!commentsState.newComment.trim()}
-                className="px-3 py-1 text-white text-sm rounded-lg transition-colors whitespace-nowrap"
+                disabled={!commentsState.newComment.trim() || commentsState.isSubmitting || commentsState.submitSuccess}
+                className="px-3 py-1 text-white text-sm rounded-lg transition-all whitespace-nowrap flex items-center space-x-2"
                 style={{
-                  background: !commentsState.newComment.trim() ? colors.inputBackground : colors.primaryBlue,
-                  color: !commentsState.newComment.trim() ? colors.tertiaryText : 'white',
-                  opacity: !commentsState.newComment.trim() ? 0.5 : 1,
-                  cursor: !commentsState.newComment.trim() ? 'not-allowed' : 'pointer',
+                  background: commentsState.submitSuccess 
+                    ? colors.successGreen 
+                    : !commentsState.newComment.trim() || commentsState.isSubmitting 
+                    ? colors.inputBackground 
+                    : colors.primaryBlue,
+                  color: commentsState.submitSuccess || (!commentsState.newComment.trim() && !commentsState.isSubmitting) 
+                    ? 'white' 
+                    : commentsState.isSubmitting 
+                    ? colors.tertiaryText 
+                    : 'white',
+                  opacity: (!commentsState.newComment.trim() && !commentsState.submitSuccess && !commentsState.isSubmitting) ? 0.5 : 1,
+                  cursor: (!commentsState.newComment.trim() && !commentsState.submitSuccess) || commentsState.isSubmitting ? 'not-allowed' : 'pointer',
+                  transform: commentsState.submitSuccess ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'all 0.2s ease',
                 }}
-                onMouseEnter={(e) => {
-                  if (commentsState.newComment.trim()) {
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (commentsState.newComment.trim()) {
-                    e.currentTarget.style.opacity = '1';
-                  }
-                }}
+                aria-label={commentsState.submitSuccess ? "Comment saved" : "Submit comment"}
+                aria-busy={commentsState.isSubmitting || commentsState.submitSuccess}
               >
-                {COMMENTS.SUBMIT_BUTTON}
+                {commentsState.submitSuccess ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Saved!</span>
+                  </>
+                ) : commentsState.isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <span>{COMMENTS.SUBMIT_BUTTON}</span>
+                )}
               </button>
               <button
                 onClick={commentsState.closeComments}
                 className="px-3 py-1 text-sm rounded-lg transition-colors whitespace-nowrap"
+                disabled={commentsState.isSubmitting || commentsState.submitSuccess}
                 style={{
                   background: colors.inputBackground,
                   color: colors.secondaryText,
                   border: `1px solid ${colors.border}`,
+                  opacity: (commentsState.isSubmitting || commentsState.submitSuccess) ? 0.5 : 1,
+                  cursor: (commentsState.isSubmitting || commentsState.submitSuccess) ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                  if (!commentsState.isSubmitting && !commentsState.submitSuccess) {
+                    e.currentTarget.style.background = colors.hoverBackgroundStrong;
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.inputBackground;
+                  if (!commentsState.isSubmitting && !commentsState.submitSuccess) {
+                    e.currentTarget.style.background = colors.inputBackground;
+                  }
                 }}
               >
                 {COMMENTS.CANCEL_BUTTON}
@@ -161,4 +220,22 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     </div>
   );
 };
+
+// Memoize to prevent unnecessary re-renders
+export const CommentsModal = React.memo(CommentsModalComponent, (prevProps, nextProps) => {
+  // Only re-render if comments actually changed or modal state changed
+  const commentsChanged = 
+    prevProps.comments?.length !== nextProps.comments?.length ||
+    JSON.stringify(prevProps.comments?.map(c => c.id)) !== JSON.stringify(nextProps.comments?.map(c => c.id));
+  
+  const stateChanged = 
+    prevProps.commentsState.showComments !== nextProps.commentsState.showComments ||
+    prevProps.commentsState.isLoadingComments !== nextProps.commentsState.isLoadingComments ||
+    prevProps.commentsState.isSubmitting !== nextProps.commentsState.isSubmitting ||
+    prevProps.commentsState.submitSuccess !== nextProps.commentsState.submitSuccess ||
+    prevProps.commentsState.newComment !== nextProps.commentsState.newComment;
+  
+  // Re-render only if something actually changed
+  return !commentsChanged && !stateChanged;
+});
 

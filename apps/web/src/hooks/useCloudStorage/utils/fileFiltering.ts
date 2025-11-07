@@ -11,7 +11,6 @@ export interface FilterOptions {
     archived?: boolean;
     shared?: boolean;
     recent?: boolean;
-    public?: boolean;
   };
 }
 
@@ -21,7 +20,6 @@ export const filterAndSortFiles = (
 ): ResumeFile[] => {
   // Early return if no files
   if (files.length === 0) {
-    console.log('🔍 filterAndSortFiles: No files to filter');
     return [];
   }
 
@@ -29,27 +27,16 @@ export const filterAndSortFiles = (
   const searchLower = searchTerm.toLowerCase();
   const hasSearch = searchLower.length > 0;
   
-  console.log('🔍 filterAndSortFiles:', {
-    totalFiles: files.length,
-    searchTerm,
-    filterType,
-    selectedFolderId,
-    showDeleted,
-    hasQuickFilters: !!quickFilters
-  });
-  
   // Filter files
   let filtered = files.filter(file => {
     // Recycle bin filter - show only deleted files when showDeleted is true
     if (showDeleted) {
       if (!file.deletedAt) {
-        console.log('🔍 File filtered out (not deleted):', file.name);
         return false;
       }
     } else {
       // Normal view - hide deleted files
       if (file.deletedAt) {
-        console.log('🔍 File filtered out (deleted):', file.name);
         return false;
       }
     }
@@ -57,16 +44,19 @@ export const filterAndSortFiles = (
     // Early exit conditions for performance
     const matchesFilter = filterType === 'all' || file.type === filterType;
     if (!matchesFilter) {
-      console.log('🔍 File filtered out (type mismatch):', file.name, 'file.type:', file.type, 'filterType:', filterType);
       return false;
     }
 
-    // Folder filter: null/undefined means root folder (no folder)
+    // Folder filter: 
+    // - selectedFolderId === null → Show ALL files (no folder filtering)
+    // - selectedFolderId === 'root' → Show only root files (folderId is null)
+    // - selectedFolderId === specific ID → Show files in that folder only
     const matchesFolder = selectedFolderId === null 
-      ? (file.folderId === null || file.folderId === undefined || file.folderId === '') // Root folder - files with no folder
-      : file.folderId === selectedFolderId; // Specific folder - files in that folder
+      ? true // Show all files regardless of folder
+      : selectedFolderId === 'root'
+        ? (file.folderId === null || file.folderId === undefined || file.folderId === '')
+        : file.folderId === selectedFolderId;
     if (!matchesFolder) {
-      console.log('🔍 File filtered out (folder mismatch):', file.name, 'file.folderId:', file.folderId, 'selectedFolderId:', selectedFolderId);
       return false;
     }
 
@@ -75,7 +65,6 @@ export const filterAndSortFiles = (
       if (quickFilters.starred !== undefined && file.isStarred !== quickFilters.starred) return false;
       if (quickFilters.archived !== undefined && file.isArchived !== quickFilters.archived) return false;
       if (quickFilters.shared !== undefined && (file.sharedWith?.length || 0) > 0 !== quickFilters.shared) return false;
-      if (quickFilters.public !== undefined && file.isPublic !== quickFilters.public) return false;
       
       // Recent filter: files modified in last 7 days
       if (quickFilters.recent === true) {
@@ -115,11 +104,6 @@ export const filterAndSortFiles = (
     }
 
     return true;
-  });
-
-  console.log('🔍 filterAndSortFiles result:', {
-    filteredCount: filtered.length,
-    totalFiles: files.length
   });
   
   // Create a copy before sorting to avoid mutation

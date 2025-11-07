@@ -1,9 +1,11 @@
 'use client';
 
-import React from 'react';
-import { X, FileText, Download, ExternalLink, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, FileText, Download, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import { ResumeFile } from '../../../../types/cloudStorage';
 import { useTheme } from '../../../../contexts/ThemeContext';
+import apiService from '../../../../services/apiService';
+import { logger } from '../../../../utils/logger';
 
 interface FilePreviewModalProps {
   isOpen: boolean;
@@ -29,12 +31,54 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [isLoadingBlob, setIsLoadingBlob] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Fetch file content and create blob URL if publicUrl is missing or doesn't work
+  useEffect(() => {
+    if (!isOpen) {
+      // Cleanup blob URL when modal closes
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      return;
+    }
+
+    const fetchFileContent = async () => {
+      // Always download file via API and create blob URL for preview
+      // This ensures authentication works properly (iframes can't send cookies)
+      setIsLoadingBlob(true);
+      setLoadError(null);
+
+      try {
+        const blob = await apiService.downloadCloudFile(file.id);
+        
+        if (blob && blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          setBlobUrl(url);
+          logger.debug('Created blob URL for preview:', file.id);
+        } else {
+          throw new Error('Downloaded file is empty');
+        }
+      } catch (error: any) {
+        logger.error('Failed to fetch file for preview:', error);
+        setLoadError(error?.message || 'Failed to load file preview');
+      } finally {
+        setIsLoadingBlob(false);
+      }
+    };
+
+    fetchFileContent();
+  }, [isOpen, file.id]);
 
   if (!isOpen) return null;
 
-  const publicUrl = file.publicUrl;
+  // Use blobUrl if available, otherwise fall back to publicUrl
+  const previewUrl = blobUrl || file.publicUrl;
   const canInlinePreview = Boolean(
-    publicUrl && (isPreviewableImage(file.contentType) || isPreviewablePdf(file.contentType) || isPreviewableText(file.contentType))
+    previewUrl && (isPreviewableImage(file.contentType) || isPreviewablePdf(file.contentType) || isPreviewableText(file.contentType))
   );
 
   return (
@@ -95,9 +139,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
               Download
             </button>
 
-            {publicUrl && (
+            {previewUrl && (
               <a
-                href={publicUrl}
+                href={previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
@@ -125,25 +169,56 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
 
         {/* Preview Content */}
         <div className="flex-1 overflow-hidden bg-black/5 relative">
-          {canInlinePreview ? (
+          {isLoadingBlob ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+              <Loader2 className="w-12 h-12 animate-spin" style={{ color: colors.primaryBlue }} />
+              <p className="text-sm" style={{ color: colors.secondaryText }}>
+                Loading preview...
+              </p>
+            </div>
+          ) : loadError ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+              <div
+                className="w-14 h-14 rounded-xl flex items-center justify-center"
+                style={{ background: colors.badgeErrorBg }}
+              >
+                <AlertTriangle size={28} style={{ color: colors.errorRed }} />
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold mb-2" style={{ color: colors.primaryText }}>
+                  Failed to load preview
+                </h4>
+                <p className="text-sm" style={{ color: colors.secondaryText }}>
+                  {loadError}
+                </p>
+              </div>
+              <button
+                onClick={onDownload}
+                className="px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: colors.primaryBlue, color: '#ffffff' }}
+              >
+                Download file
+              </button>
+            </div>
+          ) : canInlinePreview ? (
             <div className="w-full h-full">
-              {isPreviewableImage(file.contentType) && publicUrl && (
+              {isPreviewableImage(file.contentType) && previewUrl && (
                 <img
-                  src={publicUrl}
+                  src={previewUrl}
                   alt={file.name}
                   className="w-full h-full object-contain bg-black"
                 />
               )}
-              {isPreviewablePdf(file.contentType) && publicUrl && (
+              {isPreviewablePdf(file.contentType) && previewUrl && (
                 <iframe
-                  src={`${publicUrl}#toolbar=0&navpanes=0`}
+                  src={`${previewUrl}#toolbar=0&navpanes=0`}
                   title={`Preview ${file.name}`}
                   className="w-full h-full"
                 />
               )}
-              {isPreviewableText(file.contentType) && publicUrl && (
+              {isPreviewableText(file.contentType) && previewUrl && (
                 <iframe
-                  src={publicUrl}
+                  src={previewUrl}
                   title={`Preview ${file.name}`}
                   className="w-full h-full bg-white"
                 />
@@ -162,8 +237,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                   Preview not available
                 </h4>
                 <p className="text-sm" style={{ color: colors.secondaryText }}>
-                  We couldn't generate an inline preview for this file type. You can download it or
-                  open it in a new tab instead.
+                  This file type cannot be previewed inline. You can download it instead.
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -174,9 +248,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                 >
                   Download file
                 </button>
-                {publicUrl && (
+                {previewUrl && (
                   <a
-                    href={publicUrl}
+                    href={previewUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 rounded-lg text-sm font-medium"

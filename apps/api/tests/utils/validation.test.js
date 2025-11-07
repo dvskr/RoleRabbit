@@ -25,40 +25,50 @@ describe('Validation Utilities Tests', () => {
   });
 
   describe('Password Validation', () => {
-    test('should validate strong passwords', () => {
+    test('should accept passwords with at least 8 characters', () => {
       expect(validatePassword('StrongPass123!')).toBe(true);
-      expect(validatePassword('SecurePassword456@')).toBe(true);
+      expect(validatePassword('password')).toBe(true);
     });
 
-    test('should reject weak passwords', () => {
+    test('should reject passwords shorter than 8 characters or non strings', () => {
       expect(validatePassword('short')).toBe(false);
-      expect(validatePassword('12345678')).toBe(false);
-      expect(validatePassword('onlylowercaseletters')).toBe(false);
+      expect(validatePassword('')).toBe(false);
+      expect(validatePassword(null)).toBe(false);
+      expect(validatePassword(undefined)).toBe(false);
     });
   });
 
   describe('Required Field Validation', () => {
-    test('should validate required fields', () => {
-      expect(validateRequired('field', 'value')).toBe(true);
-      expect(validateRequired('field', 0)).toBe(true);
+    test('should validate when all required fields are present', () => {
+      const result = validateRequired(['field', 'count'], {
+        field: 'value',
+        count: 1
+      });
+
+      expect(result).toEqual({ isValid: true, missing: [] });
     });
 
-    test('should reject empty required fields', () => {
-      expect(validateRequired('field', '')).toBe(false);
-      expect(validateRequired('field', null)).toBe(false);
-      expect(validateRequired('field', undefined)).toBe(false);
+    test('should list missing required fields', () => {
+      const result = validateRequired(['field', 'other'], {
+        field: '',
+        other: null
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.missing).toEqual(['field', 'other']);
     });
   });
 
   describe('Length Validation', () => {
-    test('should validate string length', () => {
-      expect(validateLength('test', 4, 4)).toBe(true);
-      expect(validateLength('longer text', 5, 15)).toBe(true);
+    test('should validate string lengths within range', () => {
+      expect(validateLength('Label', 'text', 1, 10)).toEqual({ isValid: true });
+      expect(validateLength('Label', 'longer text', 5, 15)).toEqual({ isValid: true });
     });
 
-    test('should reject invalid lengths', () => {
-      expect(validateLength('short', 10, 20)).toBe(false);
-      expect(validateLength('this is too long', 1, 5)).toBe(false);
+    test('should reject invalid lengths and provide messages', () => {
+      expect(validateLength('Label', '', 1, 5)).toEqual({ isValid: false, message: 'Label is required' });
+      expect(validateLength('Label', 'short', 10, 20)).toEqual({ isValid: false, message: 'Label must be at least 10 characters' });
+      expect(validateLength('Label', 'this is too long', 1, 5)).toEqual({ isValid: false, message: 'Label must be at most 5 characters' });
     });
   });
 

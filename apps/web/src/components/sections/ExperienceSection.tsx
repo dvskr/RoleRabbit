@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, ExperienceItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,7 +13,7 @@ interface ExperienceSectionProps {
   onOpenAIGenerateModal: (section: string) => void;
 }
 
-export default function ExperienceSection({
+const ExperienceSection = React.memo(function ExperienceSection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -22,9 +22,11 @@ export default function ExperienceSection({
 }: ExperienceSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-
-  // Ensure experience is always an array
-  const experience = Array.isArray(resumeData.experience) ? resumeData.experience : [];
+  
+  // Memoize experience array
+  const experience = useMemo(() => {
+    return Array.isArray(resumeData.experience) ? resumeData.experience : [];
+  }, [resumeData.experience]);
 
   const addExperience = () => {
     const newExperience: ExperienceItem = {
@@ -42,15 +44,19 @@ export default function ExperienceSection({
   };
 
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
-    const updatedExperience = experience.map((item) => 
+    setResumeData((prev: any) => {
+      const updatedExperience = (prev.experience || []).map((item: any) => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setResumeData({...resumeData, experience: updatedExperience});
+      return {...prev, experience: updatedExperience};
+    });
   };
 
   const deleteExperience = (id: number) => {
-    const updatedExperience = experience.filter(item => item.id !== id);
-    setResumeData({...resumeData, experience: updatedExperience});
+    setResumeData((prev: any) => {
+      const updatedExperience = (prev.experience || []).filter((item: any) => item.id !== id);
+      return {...prev, experience: updatedExperience};
+    });
   };
 
   const addBullet = (expId: number) => {
@@ -442,7 +448,7 @@ export default function ExperienceSection({
             </div>
             {exp.bullets.map((bullet, bulletIndex) => (
               <div key={bulletIndex} className="flex items-start gap-2">
-                <span className="mt-1 flex-shrink-0 text-xs" style={{ color: colors.tertiaryText }}>•</span>
+                <span className="mt-1 flex-shrink-0 text-xs resume-bullet" data-bullet style={{ color: colors.tertiaryText }}>•</span>
                 <input
                   className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
                   style={{
@@ -580,4 +586,6 @@ export default function ExperienceSection({
       </div>
     </div>
   );
-}
+});
+
+export default ExperienceSection;

@@ -1,54 +1,22 @@
-# Documentation Index
+# Documentation
 
-This directory contains all project documentation organized by category.
+This directory contains development and feature documentation. For production-related documentation, see [`../prod-docs/`](../prod-docs/).
 
-## 📁 Directory Structure
+## Structure
 
-### `/api/`
-API-related documentation including:
-- Email service setup and configuration
-- DNS setup guides
-- Domain configuration
-- API validation reports
-- Security testing documentation
+- **api/** - API setup and configuration guides
+- **storage/** - Storage implementation and setup
+- **features/** - Feature documentation
+- **components/** - Component documentation
+- **bug-fixes/** - Bug fix documentation
+- **root/** - Database and schema documentation
 
-### `/browser-extension/`
-Browser extension documentation:
-- Installation instructions
-- Usage guides
+## Production Documentation
 
-### `/root/`
-Root-level project documentation:
-- Database schemas and migrations
-- Schema validation reports
-- Migration instructions
-- Profile fields documentation
+All production-ready documentation, checklists, and implementation guides are in [`../prod-docs/`](../prod-docs/).
 
-### `/components/`
-Component-specific documentation:
-- Profile component implementation guides
-- Testing guides
-- Data flow documentation
+## Quick Links
 
-### `/features/`
-Feature documentation:
-- Resume parsing guides
-- UI field preparation
-- Implementation guides
-
-### `/storage/`
-Storage-related documentation:
-- Supabase setup guides
-- File upload guides
-- API endpoints reference
-- Troubleshooting guides
-
-### `/test-results/`
-Test result documentation and error contexts
-
-### `/critical_bug_fixes/`
-Documentation for critical bug fixes
-
-## 📝 Note
-
-README.md files remain in their original locations as they serve as project entry points for their respective directories.
+- [Production Documentation](../prod-docs/)
+- [Profile Tab Assessment](../prod-docs/checklist/profile-tab-assessment.md)
+- [Implementation Plan](../prod-docs/IMPLEMENTATION_PLAN.md)

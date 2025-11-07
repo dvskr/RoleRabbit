@@ -26,7 +26,7 @@ async function checkUsersTable() {
     const expectedColumns = [
       'id', 'email', 'name', 'password', 'provider', 'providerId',
       'twoFactorEnabled', 'twoFactorSecret', 'twoFactorBackupCodes',
-      'emailNotifications', 'smsNotifications', 'privacyLevel', 'profileVisibility',
+      'emailNotifications',
       'createdAt', 'updatedAt'
     ];
     

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, ProjectItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,7 +13,7 @@ interface ProjectsSectionProps {
   onOpenAIGenerateModal: (section: string) => void;
 }
 
-export default function ProjectsSection({
+const ProjectsSection = React.memo(function ProjectsSection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -22,6 +22,11 @@ export default function ProjectsSection({
 }: ProjectsSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Memoize projects array
+  const projects = useMemo(() => {
+    return Array.isArray(resumeData.projects) ? resumeData.projects : [];
+  }, [resumeData.projects]);
 
   const addProject = () => {
     const newProject: ProjectItem = {
@@ -37,15 +42,19 @@ export default function ProjectsSection({
   };
 
   const updateProject = (id: number, updates: Partial<ProjectItem>) => {
-    const updatedProjects = resumeData.projects.map((item) => 
+    setResumeData((prev: any) => {
+      const updatedProjects = (prev.projects || []).map((item: any) => 
       item.id === id ? { ...item, ...updates } : item
     );
-    setResumeData({...resumeData, projects: updatedProjects});
+      return {...prev, projects: updatedProjects};
+    });
   };
 
   const deleteProject = (id: number) => {
-    const updatedProjects = resumeData.projects.filter(item => item.id !== id);
-    setResumeData({...resumeData, projects: updatedProjects});
+    setResumeData((prev: any) => {
+      const updatedProjects = (prev.projects || []).filter((item: any) => item.id !== id);
+      return {...prev, projects: updatedProjects};
+    });
   };
 
   const addBullet = (projectId: number) => {
@@ -160,7 +169,7 @@ export default function ProjectsSection({
         </div>
       </div>
 
-      {resumeData.projects.length === 0 && (
+      {projects.length === 0 && (
         <div 
           className="text-center py-12 border-2 border-dashed rounded-2xl transition-all"
           style={{
@@ -205,7 +214,7 @@ export default function ProjectsSection({
         </div>
       )}
 
-      {resumeData.projects.map((project) => (
+      {projects.map((project) => (
         <div 
           key={project.id} 
           className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
@@ -386,7 +395,7 @@ export default function ProjectsSection({
             </div>
             {project.bullets.map((bullet, bulletIndex) => (
               <div key={bulletIndex} className="flex items-start gap-2">
-                <span className="mt-1 text-xs" style={{ color: colors.tertiaryText }}>•</span>
+                <span className="mt-1 text-xs resume-bullet" data-bullet style={{ color: colors.tertiaryText }}>•</span>
                 <input
                   className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
                   style={{
@@ -522,4 +531,6 @@ export default function ProjectsSection({
       </div>
     </div>
   );
-}
+});
+
+export default ProjectsSection;

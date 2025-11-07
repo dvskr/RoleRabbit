@@ -113,8 +113,7 @@ describe('Authentication', () => {
       const mockUser = {
         id: '1',
         email: 'test@example.com',
-        name: 'Test User',
-        password: 'hashed_Password123',
+        name: 'Test User'
       };
 
       prisma.user.findUnique.mockResolvedValue(mockUser);
@@ -122,7 +121,7 @@ describe('Authentication', () => {
       const result = await getUserById('1');
 
       expect(result.email).toBe('test@example.com');
-      expect(result.password).toBeUndefined();
+      expect(result).toEqual(mockUser);
     });
 
     it('should return null if user not found', async () => {

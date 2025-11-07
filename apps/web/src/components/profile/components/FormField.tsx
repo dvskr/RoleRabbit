@@ -179,17 +179,18 @@ export default function FormField({
             maxLength={maxLength}
             className={`w-full px-4 py-3 rounded-xl transition-all duration-200 ${
               autoResize ? '' : 'resize-none'
-            } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text'}`}
+            } ${disabled ? 'cursor-not-allowed' : 'cursor-text'}`}
             style={{
               background: disabled ? colors.inputBackground : colors.inputBackground,
               border: `1px solid ${isOverLimit ? colors.errorRed : colors.border}`,
-              color: colors.primaryText,
+              color: disabled ? '#ffffff' : colors.primaryText,
+              opacity: 1,
               minHeight: autoResize ? '40px' : undefined,
               maxHeight: autoResize ? '500px' : undefined,
               overflowY: autoResize ? 'auto' : undefined,
               resize: autoResize ? 'none' : undefined,
               whiteSpace: 'pre-wrap', // Preserve line breaks and spaces
-            }}
+            } as React.CSSProperties}
             onFocus={(e) => {
               if (!disabled) {
                 e.currentTarget.style.borderColor = colors.accentCyan;
@@ -231,12 +232,13 @@ export default function FormField({
             onChange={(e) => handleChange(e.target.value)}
             disabled={disabled}
             maxLength={maxLength}
-            className={`w-full px-4 py-3 rounded-xl transition-all duration-200 ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-text'}`}
+            className={`w-full px-4 py-3 rounded-xl transition-all duration-200 ${disabled ? 'cursor-not-allowed' : 'cursor-text'}`}
             style={{
               background: colors.inputBackground,
               border: `1px solid ${isOverLimit ? colors.errorRed : colors.border}`,
-              color: colors.primaryText,
-            }}
+              color: disabled ? '#ffffff' : colors.primaryText,
+              opacity: 1,
+            } as React.CSSProperties}
             onFocus={(e) => {
               if (!disabled) {
                 e.currentTarget.style.borderColor = colors.accentCyan;

@@ -1,7 +1,8 @@
 -- Note: cloud_files table removed, storageLimit and storageTier fields removed from users
+-- This migration creates billing-related tables and handles missing users table gracefully
 
--- CreateTable
-CREATE TABLE "subscriptions" (
+-- Create subscriptions table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "subscriptions" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "plan" TEXT NOT NULL,
@@ -19,8 +20,8 @@ CREATE TABLE "subscriptions" (
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "invoices" (
+-- Create invoices table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "invoices" (
     "id" TEXT NOT NULL,
     "subscriptionId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -38,8 +39,8 @@ CREATE TABLE "invoices" (
     CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "payment_methods" (
+-- Create payment_methods table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "payment_methods" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -53,29 +54,65 @@ CREATE TABLE "payment_methods" (
     CONSTRAINT "payment_methods_pkey" PRIMARY KEY ("id")
 );
 
--- CreateIndex
-CREATE INDEX "subscriptions_userId_idx" ON "subscriptions"("userId");
+-- Create indexes if they don't exist
+CREATE INDEX IF NOT EXISTS "subscriptions_userId_idx" ON "subscriptions"("userId");
+CREATE INDEX IF NOT EXISTS "subscriptions_status_idx" ON "subscriptions"("status");
+CREATE INDEX IF NOT EXISTS "invoices_subscriptionId_idx" ON "invoices"("subscriptionId");
+CREATE INDEX IF NOT EXISTS "invoices_userId_idx" ON "invoices"("userId");
+CREATE INDEX IF NOT EXISTS "payment_methods_userId_idx" ON "payment_methods"("userId");
 
--- CreateIndex
-CREATE INDEX "subscriptions_status_idx" ON "subscriptions"("status");
+-- Add foreign keys only if users table exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = 'users'
+  ) THEN
+    -- Add subscription foreign key if it doesn't exist
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_name = 'subscriptions_userId_fkey'
+    ) THEN
+      ALTER TABLE "subscriptions" 
+      ADD CONSTRAINT "subscriptions_userId_fkey" 
+      FOREIGN KEY ("userId") 
+      REFERENCES "users"("id") 
+      ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 
--- CreateIndex
-CREATE INDEX "invoices_subscriptionId_idx" ON "invoices"("subscriptionId");
+    -- Add invoice foreign keys if they don't exist
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_name = 'invoices_subscriptionId_fkey'
+    ) THEN
+      ALTER TABLE "invoices" 
+      ADD CONSTRAINT "invoices_subscriptionId_fkey" 
+      FOREIGN KEY ("subscriptionId") 
+      REFERENCES "subscriptions"("id") 
+      ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 
--- CreateIndex
-CREATE INDEX "invoices_userId_idx" ON "invoices"("userId");
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_name = 'invoices_userId_fkey'
+    ) THEN
+      ALTER TABLE "invoices" 
+      ADD CONSTRAINT "invoices_userId_fkey" 
+      FOREIGN KEY ("userId") 
+      REFERENCES "users"("id") 
+      ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
 
--- CreateIndex
-CREATE INDEX "payment_methods_userId_idx" ON "payment_methods"("userId");
-
--- AddForeignKey
-ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "subscriptions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "invoices" ADD CONSTRAINT "invoices_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "payment_methods" ADD CONSTRAINT "payment_methods_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    -- Add payment_methods foreign key if it doesn't exist
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_name = 'payment_methods_userId_fkey'
+    ) THEN
+      ALTER TABLE "payment_methods" 
+      ADD CONSTRAINT "payment_methods_userId_fkey" 
+      FOREIGN KEY ("userId") 
+      REFERENCES "users"("id") 
+      ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+  END IF;
+END $$;

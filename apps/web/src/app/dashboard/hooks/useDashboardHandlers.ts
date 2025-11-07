@@ -18,6 +18,8 @@ import {
 } from '../utils/resumeDataHelpers';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
+import { validateResumeData, sanitizeResumeData } from '../../../utils/validation';
+import { formatErrorForDisplay } from '../../../utils/errorMessages';
 
 export interface UseDashboardHandlersParams {
   // Resume data
@@ -368,6 +370,16 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       return;
     }
 
+    // Pre-save validation
+    const validation = validateResumeData(resumeData);
+    if (!validation.isValid) {
+      const errorMessages = Object.values(validation.errors).join(', ');
+      setSaveError(`Validation failed: ${errorMessages}. Please fix these errors before saving.`);
+      setIsSaving(false);
+      logger.warn('Resume save validation failed:', validation.errors);
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
@@ -375,7 +387,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       ? resumeFileName.trim()
       : 'Untitled Resume';
 
-    const payload: any = {
+    // Prepare payload and sanitize data
+    const rawPayload: any = {
       name: sanitizedName,
       fileName: sanitizedName,
       templateId: selectedTemplateId || null,
@@ -401,11 +414,23 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       lastKnownServerUpdatedAt: lastServerUpdatedAt,
     };
 
+    // Sanitize all data before sending to backend to prevent XSS
+    const payload = sanitizeResumeData(rawPayload);
+
     try {
       const response = currentResumeId
         ? await apiService.updateResume(currentResumeId, payload)
-        : await apiService.saveResume(payload);
+        : await apiService.createResume({
+          fileName: sanitizedName,
+          templateId: selectedTemplateId || null,
+          data: payload.data
+        });
 
+      // Handle response - check both success flag and resume object
+      if (response?.success === false) {
+        throw new Error(response?.error || 'Failed to save resume');
+      }
+      
       const savedResume = response?.resume;
       if (savedResume) {
         if (!currentResumeId) {
@@ -415,22 +440,23 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           setResumeFileName(savedResume.name);
         }
         setLastServerUpdatedAt(savedResume.lastUpdated || null);
-        if (savedResume.lastUpdated) {
-          setLastSavedAt(new Date(savedResume.lastUpdated));
-        } else {
-          setLastSavedAt(new Date());
-        }
+        // Always set lastSavedAt on successful save
+        setLastSavedAt(new Date(savedResume.lastUpdated || new Date()));
+        // Clear hasChanges after successful save
+        setHasChanges(false);
       } else {
+        // If no resume in response but no error, still mark as saved
+        logger.warn('Save response missing resume object:', response);
         setLastSavedAt(new Date());
+        setHasChanges(false);
       }
-      setHasChanges(false);
     } catch (error: any) {
       logger.error('Failed to save resume:', error);
-      if (error?.statusCode === 409) {
-        setSaveError('Resume has been updated elsewhere. Please reload to sync changes.');
-      } else {
-        setSaveError(error?.message || 'Failed to save resume');
-      }
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'saving resume',
+        feature: 'resume builder',
+      });
+      setSaveError(friendlyError);
     } finally {
       setIsSaving(false);
     }

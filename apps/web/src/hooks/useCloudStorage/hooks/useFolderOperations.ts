@@ -11,23 +11,24 @@ export const useFolderOperations = (
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
-  // Load folders from API on mount
-  useEffect(() => {
-    const loadFolders = async () => {
-      try {
-        const response = await apiService.getFolders();
-        if (response && response.folders) {
-          setFolders(response.folders);
-        } else {
-          setFolders([]);
-        }
-      } catch (error) {
-        logger.error('Failed to load folders from API:', error);
+  const loadFolders = useCallback(async () => {
+    try {
+      const response = await apiService.getFolders();
+      if (response && response.folders) {
+        setFolders(response.folders);
+      } else {
         setFolders([]);
       }
-    };
-    loadFolders();
+    } catch (error) {
+      logger.error('Failed to load folders from API:', error);
+      setFolders([]);
+    }
   }, []);
+
+  // Load folders from API on mount
+  useEffect(() => {
+    loadFolders();
+  }, [loadFolders]);
 
   const handleCreateFolder = useCallback(async (name: string, color?: string) => {
     try {
@@ -108,6 +109,7 @@ export const useFolderOperations = (
     setFolders,
     selectedFolderId,
     setSelectedFolderId,
+    loadFolders,
     handleCreateFolder,
     handleRenameFolder,
     handleDeleteFolder,

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -13,6 +13,8 @@ interface HeaderProps {
   previousSidebarState: boolean;
   sidebarCollapsed: boolean;
   isPreviewMode?: boolean;
+  lastSavedAt?: Date | null; // Last manual save time
+  hasChanges?: boolean; // Whether there are unsaved changes
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -41,6 +43,8 @@ export default function HeaderNew({
   previousSidebarState,
   sidebarCollapsed,
   isPreviewMode,
+  lastSavedAt,
+  hasChanges,
   onExport,
   onUndo,
   onRedo,
@@ -62,6 +66,25 @@ export default function HeaderNew({
   const { theme } = useTheme();
   const colors = theme.colors;
   const isLightMode = theme.mode === 'light';
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Update save status based on isSaving and lastSavedAt
+  useEffect(() => {
+    if (isSaving) {
+      setSaveStatus('saving');
+    } else if (lastSavedAt && !hasChanges) {
+      // Show "Saved" state after save completes
+      setSaveStatus('saved');
+      // Reset to idle after 2 seconds
+      const timer = setTimeout(() => {
+        setSaveStatus('idle');
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (!isSaving && hasChanges) {
+      // If there are changes and not saving, reset to idle
+      setSaveStatus('idle');
+    }
+  }, [isSaving, lastSavedAt, hasChanges]);
   
   const handleToggleAIPanel = () => {
     if (!showRightPanel) {
@@ -127,13 +150,26 @@ export default function HeaderNew({
           </button>
         )}
         
+        {/* Auto-save feedback indicator */}
+        {hasChanges && !isSaving && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: colors.badgeWarningText }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: colors.badgeWarningText }}></div>
+            <span>Unsaved changes</span>
+          </div>
+        )}
         {isSaving && (
-          <div className="flex items-center gap-2 text-sm" style={{ color: colors.successGreen }}>
+          <div className="flex items-center gap-2 text-xs" style={{ color: colors.primaryBlue }}>
             <div 
               className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: colors.successGreen }}
+              style={{ borderColor: colors.primaryBlue }}
             ></div>
-            Saving...
+            <span>Auto-saving...</span>
+          </div>
+        )}
+        {!hasChanges && !isSaving && lastSavedAt && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: colors.successGreen }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
+            <span>All changes saved</span>
           </div>
         )}
         
@@ -209,24 +245,60 @@ export default function HeaderNew({
         {/* Save */}
         <button 
           onClick={onSave}
+          disabled={isSaving || saveStatus === 'saving'}
           className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
           style={{
-            background: isLightMode ? '#ffffff' : colors.inputBackground,
-            border: `1px solid ${colors.border}`,
-            color: colors.secondaryText,
+            background: saveStatus === 'saving'
+              ? (isLightMode ? '#DBEAFE' : '#1E3A5F')
+              : saveStatus === 'saved'
+              ? (isLightMode ? '#D1FAE5' : '#1E3A5F')
+              : (isLightMode ? '#ffffff' : colors.inputBackground),
+            border: `1px solid ${
+              saveStatus === 'saving'
+                ? colors.primaryBlue
+                : saveStatus === 'saved'
+                ? colors.successGreen
+                : colors.border
+            }`,
+            color: saveStatus === 'saving'
+              ? colors.primaryBlue
+              : saveStatus === 'saved'
+              ? colors.successGreen
+              : colors.secondaryText,
+            cursor: (isSaving || saveStatus === 'saving') ? 'wait' : 'pointer',
+            opacity: (isSaving || saveStatus === 'saving') ? 0.7 : 1,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
-            e.currentTarget.style.borderColor = colors.successGreen;
+            if (!isSaving && saveStatus !== 'saving') {
+              e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
+              e.currentTarget.style.borderColor = colors.successGreen;
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = colors.secondaryText;
-            e.currentTarget.style.borderColor = colors.border;
+            if (!isSaving && saveStatus !== 'saving') {
+              e.currentTarget.style.color = saveStatus === 'saved' ? colors.successGreen : colors.secondaryText;
+              e.currentTarget.style.borderColor = saveStatus === 'saved' ? colors.successGreen : colors.border;
+            }
           }}
-          title="Save Resume"
+          title={
+            saveStatus === 'saving' 
+              ? "Saving..." 
+              : saveStatus === 'saved'
+              ? "Saved!"
+              : "Save Resume"
+          }
         >
-          <Save size={16} />
-          <span>Save</span>
+          <Save 
+            size={16} 
+            className={saveStatus === 'saving' ? 'animate-pulse' : ''}
+          />
+          <span>
+            {saveStatus === 'saving' 
+              ? 'Saving...' 
+              : saveStatus === 'saved'
+              ? 'Saved'
+              : 'Save'}
+          </span>
         </button>
       </div>
     </header>

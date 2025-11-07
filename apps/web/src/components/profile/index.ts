@@ -6,8 +6,6 @@ export { default as ProfileSidebar } from './ProfileSidebar';
 export { default as ProfileTab } from './tabs/ProfileTab';
 export { default as ProfessionalTab } from './tabs/ProfessionalTab';
 export { default as SkillsTab } from './tabs/SkillsTab';
-export { default as CareerTab } from './tabs/CareerTab';
-export { default as PortfolioTab } from './tabs/PortfolioTab';
 export { default as AnalyticsTab } from './tabs/AnalyticsTab';
 export { default as PreferencesTab } from './tabs/PreferencesTab';
 export { default as BillingTab } from './tabs/BillingTab';
@@ -17,6 +15,13 @@ export { default as SupportTab } from './tabs/SupportTab';
 export { default as FormField } from './components/FormField';
 export { default as ProfilePicture } from './components/ProfilePicture';
 export { default as BulletListEditor } from './components/BulletListEditor';
+
+// Error Boundary
+export { default as ProfileErrorBoundary } from './ProfileErrorBoundary';
+
+// Container
+export { ProfileContainer } from './ProfileContainer';
+export type { ProfileContainerRenderProps } from './ProfileContainer';
 
 // Types
 export type { UserData, ProfileTabConfig, ProfileHeaderProps, ProfileSidebarProps, FormFieldProps } from './types/profile';

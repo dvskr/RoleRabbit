@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, CertificationItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -12,7 +12,7 @@ interface CertificationsSectionProps {
   onHideSection: (section: string) => void;
 }
 
-export default function CertificationsSection({
+const CertificationsSection = React.memo(function CertificationsSection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -20,6 +20,11 @@ export default function CertificationsSection({
 }: CertificationsSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Memoize certifications array
+  const certifications = useMemo(() => {
+    return Array.isArray(resumeData.certifications) ? resumeData.certifications : [];
+  }, [resumeData.certifications]);
 
   const addCertification = () => {
     const newCertification: CertificationItem = {
@@ -34,15 +39,19 @@ export default function CertificationsSection({
   };
 
   const updateCertification = (id: number, updates: Partial<CertificationItem>) => {
-    const updatedCertifications = resumeData.certifications.map((item) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-    setResumeData({...resumeData, certifications: updatedCertifications});
+    setResumeData((prev: any) => {
+      const updatedCertifications = (prev.certifications || []).map((item: any) => 
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return {...prev, certifications: updatedCertifications};
+    });
   };
 
   const deleteCertification = (id: number) => {
-    const updatedCertifications = resumeData.certifications.filter(item => item.id !== id);
-    setResumeData({...resumeData, certifications: updatedCertifications});
+    setResumeData((prev: any) => {
+      const updatedCertifications = (prev.certifications || []).filter((item: any) => item.id !== id);
+      return {...prev, certifications: updatedCertifications};
+    });
   };
 
   const addCustomFieldToCertification = (certId: number, field: CustomField) => {
@@ -139,7 +148,7 @@ export default function CertificationsSection({
         </div>
       </div>
 
-      {resumeData.certifications.length === 0 && (
+      {certifications.length === 0 && (
         <div 
           className="text-center py-12 border-2 border-dashed rounded-2xl transition-all"
           style={{
@@ -184,7 +193,7 @@ export default function CertificationsSection({
         </div>
       )}
 
-      {resumeData.certifications.map((cert) => (
+      {certifications.map((cert) => (
         <div 
           key={cert.id} 
           className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
@@ -409,4 +418,6 @@ export default function CertificationsSection({
       </div>
     </div>
   );
-}
+});
+
+export default CertificationsSection;

@@ -105,6 +105,9 @@ const { sendEmail, sendWelcomeEmail, sendPasswordResetEmail } = require('./utils
 // WebSocket Server
 const WebSocketServer = require('./utils/websocketServer');
 
+// Socket.IO Server
+const socketIOServer = require('./utils/socketIOServer');
+
 // Health Check utilities
 const {
   getHealthStatus,
@@ -150,9 +153,16 @@ fastify.register(require('@fastify/cors'), {
 
 // Register rate limiting globally
 fastify.register(require('@fastify/rate-limit'), {
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || (process.env.NODE_ENV === 'production' ? 100 : 10000), // Much higher limit for development
+  timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || (process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 60 * 1000), // 1 minute window for dev
   skip: (request) => {
+    // Skip rate limiting for localhost in development
+    if (process.env.NODE_ENV !== 'production') {
+      const isLocalhost = request.ip === '127.0.0.1' || request.ip === '::1' || request.ip === '::ffff:127.0.0.1' || request.hostname === 'localhost';
+      if (isLocalhost) {
+        return true; // Skip rate limiting for localhost in development
+      }
+    }
     // Skip rate limiting for long-running operations if needed
     return false;
   },
@@ -281,6 +291,7 @@ fastify.get('/api/status', async (request) => ({
 fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
+fastify.register(require('./routes/resume.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -345,13 +356,14 @@ fastify.setNotFoundHandler(async (request, reply) => {
       success: false,
     error: 'Not Found',
     message: `API endpoint not found: ${request.method} ${request.url}`,
-    availableEndpoints: {
-      health: 'GET /health',
-      status: 'GET /api/status',
-      auth: '/api/auth/*',
-      users: '/api/users/*',
-      storage: '/api/storage/*'
-    }
+      availableEndpoints: {
+        health: 'GET /health',
+        status: 'GET /api/status',
+        auth: '/api/auth/*',
+        users: '/api/users/*',
+        storage: '/api/storage/*',
+        resumes: '/api/resumes/*'
+      }
   });
 });
 
@@ -381,7 +393,22 @@ const start = async () => {
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || 'localhost';
     
+    // Start listening first
     await fastify.listen({ port, host });
+    
+    // Initialize Socket.IO server after HTTP server starts
+    // Use fastify.server which is the underlying Node.js HTTP server
+    try {
+      if (fastify.server) {
+        socketIOServer.initialize(fastify.server);
+        logger.info('✅ Socket.IO server initialized');
+      } else {
+        logger.warn('⚠️ Fastify server instance not available, skipping Socket.IO initialization');
+      }
+    } catch (socketError) {
+      logger.error('⚠️ Failed to initialize Socket.IO (server will continue without real-time features):', socketError.message);
+      // Don't fail server startup if Socket.IO fails
+    }
     
     logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
     logger.info(`📊 Health check: http://${host}:${port}/health`);

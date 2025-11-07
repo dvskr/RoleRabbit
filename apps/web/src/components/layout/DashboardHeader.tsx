@@ -142,6 +142,29 @@ export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
         {/* Theme Toggle */}
         <ThemeToggle />
 
+        {/* Quick Logout */}
+        {isAuthenticated && (
+          <button
+            onClick={handleLogout}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded transition-all text-sm font-medium"
+            style={{
+              background: colors.badgeErrorBg,
+              color: colors.errorRed,
+              border: `1px solid ${colors.errorRed}33`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.85';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            title="Log out"
+          >
+            <LogOut size={14} />
+            <span>Logout</span>
+          </button>
+        )}
+
         {/* Notifications */}
         <button 
           className="relative p-1.5 rounded transition-all"

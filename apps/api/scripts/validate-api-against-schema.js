@@ -27,7 +27,6 @@ const checks = [
   { name: 'Education', api: 'prisma.education', model: 'education' },
   { name: 'Certification', api: 'prisma.certification', model: 'certifications' },
   { name: 'Project', api: 'prisma.project', model: 'projects' },
-  { name: 'Achievement', api: 'prisma.achievement', model: 'achievements' },
   { name: 'SocialLink', api: 'prisma.socialLink', model: 'social_links' },
   { name: 'UserSkill', api: 'prisma.userSkill', model: 'user_skills' },
   { name: 'Skill', api: 'prisma.skill', model: 'skills' }
@@ -60,22 +59,10 @@ const projectFields = {
   apiCreate: ['title', 'description', 'link', 'github', 'date', 'technologies'] // Need to verify
 };
 
-// Achievements: API expects type, title, description, date, link
-const achievementFields = {
-  schema: ['id', 'profileId', 'type', 'title', 'description', 'date', 'link', 'createdAt', 'updatedAt'],
-  apiSelect: ['id', 'type', 'title', 'description', 'date', 'link'],
-  apiCreate: ['type', 'title', 'description', 'date', 'link'] // Need to verify
-};
-
 console.log('Projects fields:');
 console.log('  Schema:', projectFields.schema.join(', '));
 console.log('  API Select:', projectFields.apiSelect.join(', '));
 console.log('  ✅ Match:', JSON.stringify(projectFields.schema.filter(f => projectFields.apiSelect.includes(f)).sort()) === JSON.stringify(projectFields.apiSelect.sort()));
-
-console.log('\nAchievements fields:');
-console.log('  Schema:', achievementFields.schema.join(', '));
-console.log('  API Select:', achievementFields.apiSelect.join(', '));
-console.log('  ✅ Match:', JSON.stringify(achievementFields.schema.filter(f => achievementFields.apiSelect.includes(f)).sort()) === JSON.stringify(achievementFields.apiSelect.sort()));
 
 if (errors.length > 0) {
   console.log('\n❌ ERRORS FOUND:');

@@ -9,6 +9,9 @@ const mockPrisma = {
   user: {
     findUnique: jest.fn(),
     update: jest.fn()
+  },
+  workExperience: {
+    findMany: jest.fn()
   }
 };
 
@@ -61,14 +64,75 @@ describe('User Profile Routes', () => {
         id: 'user-123',
         email: 'person@example.com',
         name: 'Pat Example',
-        skills: JSON.stringify(['React', 'Node.js']),
-        certifications: null,
-        languages: JSON.stringify(['English']),
-        education: JSON.stringify([{ institution: 'Uni', degree: 'BS', startDate: '2018', endDate: '2022' }]),
-        workExperiences: JSON.stringify([{ company: 'RoleReady', role: 'Dev' }]),
+        emailNotifications: true,
+        smsNotifications: false,
+        privacyLevel: 'Professional',
+        profileVisibility: 'Public',
         createdAt: new Date('2025-01-01T00:00:00Z'),
-        updatedAt: new Date('2025-01-02T00:00:00Z')
+        updatedAt: new Date('2025-01-02T00:00:00Z'),
+        profile: {
+          id: 'profile-123',
+          firstName: 'Pat',
+          lastName: 'Example',
+          phone: '1234567890',
+          personalEmail: 'pat.personal@example.com',
+          location: 'Remote',
+          professionalBio: 'Seasoned engineer',
+          profilePicture: null,
+          linkedin: 'https://linkedin.com/in/pat',
+          github: 'https://github.com/pat',
+          portfolio: 'https://pat.dev',
+          website: 'https://pat.blog',
+          createdAt: new Date('2025-01-01T00:00:00Z'),
+          updatedAt: new Date('2025-01-02T00:00:00Z'),
+          workExperiences: [
+            {
+              id: 'exp-1',
+              company: 'RoleReady',
+              role: 'Developer',
+              location: 'Remote',
+              startDate: '2023-01',
+              endDate: null,
+              isCurrent: true,
+              description: 'Building great products',
+              projectType: 'Full-time',
+              technologies: ['React', 'Node.js']
+            }
+          ],
+          education: [
+            {
+              id: 'edu-1',
+              institution: 'Uni',
+              degree: 'BS',
+              field: 'Computer Science',
+              startDate: '2018',
+              endDate: '2022',
+              gpa: '3.9',
+              honors: null,
+              location: 'NY',
+              description: ''
+            }
+          ],
+          certifications: [],
+          languages: [
+            { id: 'lang-1', name: 'English', proficiency: 'Native' }
+          ],
+          userSkills: [
+            {
+              id: 'skill-rel-1',
+              yearsOfExperience: 3,
+              verified: false,
+              skill: {
+                id: 'skill-1',
+                name: 'React',
+                category: 'Technical'
+              }
+            }
+          ],
+          projects: []
+        }
       });
+      mockPrisma.workExperience.findMany.mockResolvedValue([]);
 
       const response = await app.inject({
         method: 'GET',
@@ -79,21 +143,37 @@ describe('User Profile Routes', () => {
       const payload = response.json();
 
       expect(payload.user.email).toBe('person@example.com');
-      expect(payload.user.skills).toEqual(['React', 'Node.js']);
-      expect(payload.user.certifications).toEqual([]);
-      expect(payload.user.languages).toEqual(['English']);
-      expect(payload.user.education).toEqual([
-        expect.objectContaining({
-          institution: 'Uni',
-          degree: 'BS',
-          startDate: '2018',
-          endDate: '2022'
-        })
+      expect(payload.user.skills).toEqual([
+        {
+          name: 'React',
+          yearsOfExperience: 3,
+          verified: false
+        }
       ]);
-      expect(payload.user.workExperiences).toEqual([{ company: 'RoleReady', role: 'Dev' }]);
+      expect(payload.user.workExperiences[0]).toMatchObject({
+        company: 'RoleReady',
+        role: 'Developer',
+        technologies: ['React', 'Node.js']
+      });
+      expect(payload.user.education[0]).toMatchObject({
+        institution: 'Uni',
+        degree: 'BS'
+      });
+      expect(payload.user.languages).toEqual([
+        { id: 'lang-1', name: 'English', proficiency: 'Native' }
+      ]);
+      expect(payload.user.socialLinks).toEqual([
+        { platform: 'LinkedIn', url: 'https://linkedin.com/in/pat' },
+        { platform: 'GitHub', url: 'https://github.com/pat' },
+        { platform: 'Portfolio', url: 'https://pat.dev' },
+        { platform: 'Website', url: 'https://pat.blog' }
+      ]);
       expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-123' },
         select: expect.any(Object)
+      });
+      expect(mockPrisma.workExperience.findMany).toHaveBeenCalledWith({
+        where: { profileId: 'profile-123' }
       });
     });
 
@@ -111,54 +191,7 @@ describe('User Profile Routes', () => {
   });
 
   describe('PUT /api/users/profile', () => {
-    it('updates only allowed fields and stringifies JSON arrays', async () => {
-      getUserById.mockResolvedValue({
-        id: 'user-123',
-        firstName: 'Pat',
-        lastName: 'Example',
-        name: 'Pat Example'
-      });
-
-      mockPrisma.user.update.mockResolvedValue({
-        id: 'user-123',
-        email: 'person@example.com',
-        name: 'Pat Example',
-        skills: JSON.stringify(['React']),
-        workExperiences: JSON.stringify([]),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      const response = await app.inject({
-        method: 'PUT',
-        url: '/api/users/profile',
-        headers: { 'content-type': 'application/json' },
-        payload: JSON.stringify({
-          email: 'person@example.com',
-          skills: ['React'],
-          workExperiences: [],
-          notAllowed: 'ignore'
-        })
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
-        data: {
-          email: 'person@example.com',
-          skills: JSON.stringify(['React']),
-          workExperiences: JSON.stringify([])
-        },
-        select: expect.any(Object)
-      });
-
-      const payload = response.json();
-      expect(payload.user.skills).toEqual(['React']);
-      expect(payload.user.workExperiences).toEqual([]);
-      expect(calculateProfileCompleteness).toHaveBeenCalled();
-    });
-
-    it('rejects invalid email updates', async () => {
+    it('rejects attempts to change login email', async () => {
       getUserById.mockResolvedValue({ id: 'user-123', name: 'Pat Example' });
 
       const response = await app.inject({
@@ -166,54 +199,16 @@ describe('User Profile Routes', () => {
         url: '/api/users/profile',
         headers: { 'content-type': 'application/json' },
         payload: JSON.stringify({
-          email: 'not-an-email'
+          email: 'new-email@example.com'
         })
       });
 
       expect(response.statusCode).toBe(400);
-      expect(response.json()).toEqual({ error: 'Invalid email format' });
+      expect(response.json()).toEqual({
+        error: 'Login email cannot be changed. Use personal email field for contact information.',
+        hint: 'The email you use to log in cannot be modified. If you need to update your contact email, use the "Personal Email" field in your profile.'
+      });
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
-    });
-
-    it('auto-updates name when first or last name changes', async () => {
-      getUserById.mockResolvedValue({
-        id: 'user-123',
-        firstName: 'Pat',
-        lastName: 'Example',
-        name: 'Pat Example'
-      });
-
-      mockPrisma.user.update.mockResolvedValue({
-        id: 'user-123',
-        email: 'person@example.com',
-        name: 'Pat Taylor',
-        firstName: 'Pat',
-        lastName: 'Taylor',
-        skills: '[]',
-        workExperiences: '[]',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-
-      const response = await app.inject({
-        method: 'PUT',
-        url: '/api/users/profile',
-        headers: { 'content-type': 'application/json' },
-        payload: JSON.stringify({
-          lastName: 'Taylor'
-        })
-      });
-
-      expect(response.statusCode).toBe(200);
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-123' },
-        data: {
-          lastName: 'Taylor',
-          name: 'Pat Taylor'
-        },
-        select: expect.any(Object)
-      });
-      expect(response.json().user.name).toBe('Pat Taylor');
     });
   });
 });

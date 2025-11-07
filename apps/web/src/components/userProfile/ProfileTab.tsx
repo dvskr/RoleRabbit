@@ -110,71 +110,82 @@ export default function ProfileTab({
           </h3>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
             <input
+              id="profile-name"
               type="text"
               value={profileForm.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               disabled={!isEditing}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              aria-label="Full Name"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Login Email (Username)</label>
+            <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-2">Login Email (Username)</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
               <input
+                id="profile-email"
                 type="email"
                 value={profileForm.email}
                 onChange={() => {}} // Read-only, cannot be changed
                 disabled={true}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+                aria-label="Login Email (Username)"
+                readOnly
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">This is your login email and cannot be changed</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Personal Email</label>
+            <label htmlFor="profile-personal-email" className="block text-sm font-medium text-gray-700 mb-2">Personal Email</label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-3 text-gray-400" />
               <input
+                id="profile-personal-email"
                 type="email"
                 value={(profileForm as any).personalEmail || ''}
                 onChange={(e) => handleInputChange('personalEmail' as any, e.target.value)}
                 disabled={!isEditing}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
                 placeholder="Enter your personal/contact email"
+                aria-label="Personal Email"
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">Optional: Your personal or contact email (different from login email)</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+            <label htmlFor="profile-phone" className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
             <div className="relative">
               <Phone size={16} className="absolute left-3 top-3 text-gray-400" />
               <input
+                id="profile-phone"
                 type="tel"
                 value={profileForm.phone || ''}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 disabled={!isEditing}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+                aria-label="Phone"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+            <label htmlFor="profile-website" className="block text-sm font-medium text-gray-700 mb-2">Website</label>
             <div className="relative">
               <Globe size={16} className="absolute left-3 top-3 text-gray-400" />
               <input
+                id="profile-website"
                 type="url"
                 value={profileForm.website || ''}
                 onChange={(e) => handleInputChange('website', e.target.value)}
                 disabled={!isEditing}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+                aria-label="Website"
               />
             </div>
           </div>
@@ -188,60 +199,57 @@ export default function ProfileTab({
           </h3>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
+            <label htmlFor="profile-title" className="block text-sm font-medium text-gray-700 mb-2">Job Title</label>
             <input
+              id="profile-title"
               type="text"
               value={profileForm.title || ''}
               onChange={(e) => handleInputChange('title', e.target.value)}
               disabled={!isEditing}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              aria-label="Job Title"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+            <label htmlFor="profile-company" className="block text-sm font-medium text-gray-700 mb-2">Company</label>
             <input
+              id="profile-company"
               type="text"
               value={profileForm.company || ''}
               onChange={(e) => handleInputChange('company', e.target.value)}
               disabled={!isEditing}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              aria-label="Company"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+            <label htmlFor="profile-location" className="block text-sm font-medium text-gray-700 mb-2">Location</label>
             <div className="relative">
               <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
               <input
+                id="profile-location"
                 type="text"
                 value={profileForm.location || ''}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 disabled={!isEditing}
                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+                aria-label="Location"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
+            <label htmlFor="profile-education" className="block text-sm font-medium text-gray-700 mb-2">Education</label>
             <input
-              type="text"
-              value={profileForm.experience || ''}
-              onChange={(e) => handleInputChange('experience', e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Education</label>
-            <input
+              id="profile-education"
               type="text"
               value={profileForm.education || ''}
               onChange={(e) => handleInputChange('education', e.target.value)}
               disabled={!isEditing}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:bg-gray-100"
+              aria-label="Education"
             />
           </div>
         </div>

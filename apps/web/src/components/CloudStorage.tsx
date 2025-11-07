@@ -16,10 +16,14 @@ import { RenameFolderModal } from './cloudStorage/RenameFolderModal';
 import { RedesignedStorageHeader } from './cloudStorage/RedesignedStorageHeader';
 import { RedesignedFolderSidebar } from './cloudStorage/RedesignedFolderSidebar';
 import { RedesignedFileList, FilesTabsBar } from './cloudStorage/RedesignedFileList';
+import { useToast } from '../hooks/useToast';
+import { ToastContainer } from './common/Toast';
+import { logger } from '../utils/logger';
 
 export default function CloudStorage({ onClose }: CloudStorageProps) {
   const { theme } = useTheme();
   const colors = theme?.colors;
+  const { toasts, removeToast, success, error } = useToast();
 
   if (!colors) {
     return <LoadingState colors={{}} message="Loading theme" />;
@@ -57,7 +61,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleDeleteFile,
     handleRestoreFile,
     handlePermanentlyDeleteFile,
-    handleTogglePublic,
     handleDownloadFile,
     handleShareFile,
     handleUploadFile,
@@ -67,6 +70,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleAddComment,
     handleStarFile,
     handleArchiveFile,
+    handleMoveFile,
     handleAddCredential,
     handleUpdateCredential,
     handleDeleteCredential,
@@ -89,24 +93,37 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
 
   const handleEditFileWrapper = useCallback(
     async (fileId: string, updates?: { name?: string; type?: ResumeFile['type']; description?: string }) => {
-      if (updates) {
-        // Direct update with provided fields
-        await handleEditFile(fileId, updates);
-      } else {
-        // Legacy behavior - open edit dialog (for backward compatibility)
-        const file = files.find((f) => f.id === fileId);
-        if (!file) return;
-        editFileName(file, handleEditFile);
+      try {
+        if (updates) {
+          // Direct update with provided fields - pass showDeleted state
+          await handleEditFile(fileId, updates, showDeleted);
+          success('File updated successfully');
+        } else {
+          // Legacy behavior - open edit dialog (for backward compatibility)
+          const file = files.find((f) => f.id === fileId);
+          if (!file) return;
+          editFileName(file, async (fileId, updates) => {
+            await handleEditFile(fileId, updates, showDeleted);
+            success('File updated successfully');
+          });
+        }
+      } catch (err: any) {
+        error(`Failed to update file: ${err.message || 'Unknown error'}`);
       }
     },
-    [files, handleEditFile]
+    [files, handleEditFile, showDeleted, success, error]
   );
 
   const handleDownloadFileWrapper = useCallback(
-    (file: ResumeFile, format: 'pdf' | 'doc' = 'pdf') => {
-      handleDownloadFile(file, format);
+    async (file: ResumeFile, format: 'pdf' | 'doc' = 'pdf') => {
+      try {
+        await handleDownloadFile(file, format);
+        success(`Downloaded ${file.name}`);
+      } catch (err: any) {
+        error(`Failed to download ${file.name}: ${err.message || 'Unknown error'}`);
+      }
     },
-    [handleDownloadFile]
+    [handleDownloadFile, success, error]
   );
 
   const handleSelectAllWrapper = useCallback(() => {
@@ -138,11 +155,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   const activeFiles = useMemo(
     () => files.filter((file) => !file.deletedAt),
     [files]
-  );
-
-  const publicFilesCount = useMemo(
-    () => activeFiles.filter((file) => file.isPublic).length,
-    [activeFiles]
   );
 
   const starredFilesCount = useMemo(
@@ -192,6 +204,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           onDeleteFolder={handleDeleteFolder}
           setQuickFilters={setQuickFilters}
           colors={colors}
+          totalFilesCount={activeFiles.length}
         />
 
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-2xl"
@@ -234,15 +247,67 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               onFileSelect={handleFileSelect}
               onDownload={handleDownloadFileWrapper}
               onShare={handleShareFile}
-              onDelete={handleDeleteFile}
+              onDelete={async (fileId) => {
+                try {
+                  await handleDeleteFile(fileId, showDeleted);
+                  success('File moved to recycle bin');
+                } catch (err: any) {
+                  error(`Failed to delete file: ${err.message || 'Unknown error'}`);
+                  logger.error('Failed to delete file:', err);
+                }
+              }}
               onRestore={handleRestoreFile}
               onPermanentlyDelete={handlePermanentlyDeleteFile}
-              onTogglePublic={handleTogglePublic}
               onEdit={handleEditFileWrapper}
               onStar={handleStarFile}
               onArchive={handleArchiveFile}
-              onAddComment={handleAddComment}
-              onShareWithUser={handleShareWithUser}
+              onAddComment={async (fileId, content) => {
+                try {
+                  await handleAddComment(fileId, content);
+                  success('Comment added successfully');
+                } catch (err: any) {
+                  error(`Failed to add comment: ${err.message || 'Unknown error'}`);
+                }
+              }}
+              onShareWithUser={async (fileId, email, permission, expiresAt?, maxDownloads?) => {
+                try {
+                  const response = await handleShareWithUser(fileId, email, permission, expiresAt, maxDownloads);
+                  
+                  // Check if email was sent successfully
+                  if (response?.emailSent) {
+                  success(`File shared successfully with ${email}. Email notification sent!`);
+                  } else if (response?.warning) {
+                    // Email failed but share was created
+                    error(`⚠️ ${response.warning}`);
+                  } else {
+                    // Success but no email status
+                    success(`File shared successfully with ${email}.`);
+                  }
+                  // Clear the email field after successful share so user can add another
+                  // The modal will stay open for adding more shares
+                } catch (err: any) {
+                  const errorMsg = err?.message || err?.error || 'Unknown error';
+                  error(`Failed to share file: ${errorMsg}`);
+                  logger.error('Failed to share file:', err);
+                }
+              }}
+              onRemoveShare={async (fileId, shareId) => {
+                try {
+                  await handleRemoveShare(fileId, shareId);
+                  success('Share access removed');
+                } catch (err: any) {
+                  error(`Failed to remove share: ${err.message || 'Unknown error'}`);
+                }
+              }}
+              onMove={async (fileId, folderId) => {
+                try {
+                  await handleMoveFile(fileId, folderId);
+                  success('File moved successfully');
+                } catch (err: any) {
+                  error(`Failed to move file: ${err.message || 'Unknown error'}`);
+                }
+              }}
+              folders={folders}
               showDeleted={showDeleted}
               colors={colors}
               onUpload={showDeleted ? () => {} : () => setShowUploadModal(true)}
@@ -254,6 +319,9 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           )}
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onClose={removeToast} position="top-right" />
 
       <CreateFolderModal
         isOpen={showCreateFolderModal}

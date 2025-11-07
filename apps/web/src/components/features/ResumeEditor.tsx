@@ -13,6 +13,7 @@ import SectionsList from './ResumeEditor/components/SectionsList';
 import NameInput from './ResumeEditor/components/NameInput';
 import ContactFieldsGrid from './ResumeEditor/components/ContactFieldsGrid';
 import FormattingPanel from './ResumeEditor/components/FormattingPanel';
+import { getTemplateClasses } from '../../app/dashboard/utils/templateClassesHelper';
 
 export default function ResumeEditor({
   resumeFileName,
@@ -60,7 +61,7 @@ export default function ResumeEditor({
   onAddTemplates,
   onNavigateToTemplates,
   isSidebarCollapsed = false,
-  onToggleSidebar
+  onToggleSidebar,
 }: ResumeEditorProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -69,6 +70,11 @@ export default function ResumeEditor({
   const selectedTemplate = selectedTemplateId 
     ? resumeTemplates.find(t => t.id === selectedTemplateId) 
     : null;
+
+  // Get template classes for styling
+  const templateClasses = useMemo(() => {
+    return getTemplateClasses(selectedTemplateId || null);
+  }, [selectedTemplateId]);
 
   // Apply template when selectedTemplateId changes
   useTemplateApplication(selectedTemplateId, onTemplateApply);
@@ -92,6 +98,64 @@ export default function ResumeEditor({
 
   // Calculate sidebar width and padding based on collapse state - responsive
   const { width: sidebarWidth, padding: sidebarPadding } = useSidebarDimensions(isSidebarCollapsed ?? false);
+
+  // Convert formatting values to CSS styles
+  const getFormattingStyles = useMemo(() => {
+    const fontMap: Record<string, string> = {
+      arial: 'Arial, sans-serif',
+      times: 'Times New Roman, serif',
+      verdana: 'Verdana, sans-serif',
+    };
+    
+    const fontSizeMap: Record<string, string> = {
+      ats10pt: '10pt',
+      ats11pt: '11pt',
+      ats12pt: '12pt',
+    };
+    
+    const lineSpacingMap: Record<string, string> = {
+      tight: '1.2',
+      normal: '1.5',
+      loose: '1.8',
+    };
+    
+    const sectionSpacingMap: Record<string, string> = {
+      tight: '0.5rem',
+      medium: '1rem',
+      loose: '1.5rem',
+    };
+    
+    const marginsMap: Record<string, string> = {
+      narrow: '0.5in',
+      normal: '1in',
+      wide: '1.5in',
+    };
+
+    const headingStyleMap: Record<string, string> = {
+      bold: 'bold',
+      normal: 'normal',
+      semibold: '600',
+    };
+
+    const bulletStyleMap: Record<string, string> = {
+      disc: '•',
+      circle: '○',
+      square: '▪',
+      arrow: '→',
+      check: '✓',
+      dash: '—',
+    };
+
+    return {
+      fontFamily: fontMap[fontFamily] || 'Arial, sans-serif',
+      fontSize: fontSizeMap[fontSize] || '11pt',
+      lineHeight: lineSpacingMap[lineSpacing] || '1.5',
+      sectionSpacing: sectionSpacingMap[sectionSpacing] || '1rem',
+      padding: marginsMap[margins] || '1in',
+      headingWeight: headingStyleMap[headingStyle] || 'bold',
+      bulletChar: bulletStyleMap[bulletStyle] || '•',
+    };
+  }, [fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle]);
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden" style={{ height: '100%', width: '100%', maxHeight: '100%', background: colors.background }}>
@@ -177,7 +241,7 @@ export default function ResumeEditor({
 
       {/* Main Resume Editing Area */}
       <div 
-        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10"
+        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 resume-editor-content"
         style={{ 
           height: '100%', 
           maxHeight: '100%',
@@ -190,8 +254,31 @@ export default function ResumeEditor({
           position: 'relative',
         }}
       >
+        {/* Dynamic styles for heading, bullet, and template formatting */}
+        <style>{`
+          .resume-editor-content h3 {
+            font-weight: ${getFormattingStyles.headingWeight} !important;
+          }
+          .resume-editor-content .resume-bullet[data-bullet] {
+            font-size: 0;
+            width: 0.5rem;
+            text-align: center;
+            position: relative;
+          }
+          .resume-editor-content .resume-bullet[data-bullet]::before {
+            content: '${getFormattingStyles.bulletChar}';
+            display: inline-block;
+            font-size: 1rem;
+            line-height: 1;
+          }
+          ${templateClasses.sectionColor.includes('blue') ? '.resume-editor-content h3 { color: #2563eb !important; }' : ''}
+          ${templateClasses.sectionColor.includes('green') ? '.resume-editor-content h3 { color: #16a34a !important; }' : ''}
+          ${templateClasses.sectionColor.includes('purple') ? '.resume-editor-content h3 { color: #9333ea !important; }' : ''}
+          ${templateClasses.sectionColor.includes('red') ? '.resume-editor-content h3 { color: #dc2626 !important; }' : ''}
+          ${templateClasses.sectionColor.includes('orange') ? '.resume-editor-content h3 { color: #ea580c !important; }' : ''}
+        `}</style>
         <div 
-          className="w-full rounded-2xl shadow-lg border p-2 sm:p-4 lg:p-6 xl:p-8 transition-all box-border"
+          className={`w-full rounded-2xl shadow-lg border transition-all box-border ${templateClasses.container}`}
           style={{
             background: colors.cardBackground,
             border: `1px solid ${colors.border}`,
@@ -199,28 +286,43 @@ export default function ResumeEditor({
             width: '100%',
             maxWidth: '100%',
             minHeight: '100%',
+            fontFamily: getFormattingStyles.fontFamily,
+            fontSize: getFormattingStyles.fontSize,
+            lineHeight: getFormattingStyles.lineHeight,
+            padding: getFormattingStyles.padding,
           }}
         >
+          {/* Template Header Styling */}
+          <div className={`mb-6 pb-4 ${templateClasses.header}`}>
+            {/* Name Input */}
+            <NameInput
+              name={resumeData.name || ''}
+              onChange={(name) => setResumeData((prev: any) => ({...prev, name}))}
+              colors={colors}
+              nameColorClass={templateClasses.nameColor}
+              titleColorClass={templateClasses.titleColor}
+            />
+            
+            {/* Title Display */}
+            {resumeData.title && (
+              <p className={`text-lg font-medium px-3 ${templateClasses.titleColor}`}>
+                {resumeData.title}
+              </p>
+            )}
           
-          {/* Name Input */}
-          <NameInput
-            name={resumeData.name || ''}
-            onChange={(name) => setResumeData({...resumeData, name})}
-            colors={colors}
-          />
-          
-          {/* Contact Fields Grid */}
-          <ContactFieldsGrid
-            resumeData={resumeData}
-            setResumeData={setResumeData}
-            customFields={customFields}
-            setCustomFields={setCustomFields}
-            setShowAddFieldModal={setShowAddFieldModal}
-            colors={colors}
-          />
+            {/* Contact Fields Grid */}
+            <ContactFieldsGrid
+              resumeData={resumeData}
+              setResumeData={setResumeData}
+              customFields={customFields}
+              setCustomFields={setCustomFields}
+              setShowAddFieldModal={setShowAddFieldModal}
+              colors={colors}
+            />
+          </div>
 
           {/* Render All Sections */}
-          <div className="w-full">
+          <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
             {renderedSections}
           </div>
           

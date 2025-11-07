@@ -107,17 +107,6 @@ const mockRequest = {
         link: 'https://example.com/project',
         github: 'https://github.com/test/project'
       }
-    ],
-    
-    // Achievements
-    achievements: [
-      {
-        type: 'Award',
-        title: 'Best Developer',
-        description: 'Recognized for excellence',
-        date: '2023-12-01',
-        link: 'https://example.com/award'
-      }
     ]
   }
 };
@@ -148,7 +137,7 @@ async function validateProfileAPI() {
     console.log('\n2️⃣ Validating request body structure...');
     const updates = mockRequest.body;
     
-    const requiredArrays = ['workExperiences', 'education', 'certifications', 'skills', 'socialLinks', 'projects', 'achievements'];
+    const requiredArrays = ['workExperiences', 'education', 'certifications', 'skills', 'socialLinks', 'projects'];
     const missingArrays = requiredArrays.filter(key => !(key in updates));
     
     if (missingArrays.length > 0) {
@@ -214,9 +203,7 @@ async function validateProfileAPI() {
         education: await prisma.education.count({ where: { profileId } }),
         certifications: await prisma.certification.count({ where: { profileId } }),
         userSkills: await prisma.userSkill.count({ where: { profileId } }),
-        socialLinks: await prisma.socialLink.count({ where: { profileId } }),
-        projects: await prisma.project.count({ where: { profileId } }),
-        achievements: await prisma.achievement.count({ where: { profileId } })
+        projects: await prisma.project.count({ where: { profileId } })
       };
       
       console.log('\n   Current database counts:');

@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Share2, X, UserPlus, Trash2 } from 'lucide-react';
+import { Share2, X, UserPlus, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
 import { ResumeFile } from '../../../types/cloudStorage';
 import { SharePermission } from '../types';
 import { MODAL_OVERLAY_STYLE, SHARE_MODAL, SHARE_PERMISSIONS } from '../constants';
@@ -28,8 +28,11 @@ interface ShareModalProps {
     setRequirePassword: (require: boolean) => void;
     sharePassword: string;
     setSharePassword: (password: string) => void;
-    handleShareSubmit: () => void;
+    handleShareSubmit: () => void | Promise<void>;
+    isSharing?: boolean;
+    shareSuccess?: boolean;
   };
+  onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
 }
 
 export const ShareModal: React.FC<ShareModalProps> = ({
@@ -37,6 +40,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   colors,
   theme,
   fileSharing,
+  onRemoveShare,
 }) => {
   if (!fileSharing.showShareModal) return null;
 
@@ -110,51 +114,52 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             >
               {SHARE_MODAL.SHARE_WITH_LABEL}
             </label>
-            <div className="flex space-x-2">
-              <input
-                type="email"
-                value={fileSharing.shareEmail}
-                onChange={(e) => fileSharing.setShareEmail(e.target.value)}
-                placeholder={SHARE_MODAL.EMAIL_PLACEHOLDER}
-                className="flex-1 px-3 py-2 rounded-lg focus:outline-none transition-all"
+            <input
+              type="email"
+              value={fileSharing.shareEmail}
+              onChange={(e) => fileSharing.setShareEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && fileSharing.shareEmail.trim() && !fileSharing.isSharing && !fileSharing.shareSuccess && fileSharing.handleShareSubmit) {
+                  e.preventDefault();
+                  fileSharing.handleShareSubmit().catch((error) => {
+                    console.error('Share error:', error);
+                  });
+                }
+              }}
+              placeholder={SHARE_MODAL.EMAIL_PLACEHOLDER}
+              className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
+              style={{
+                background: colors.inputBackground,
+                border: `1px solid ${colors.border}`,
+                color: colors.primaryText,
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = colors.border;
+              }}
+            />
+            {fileSharing.shareSuccess && (
+              <div 
+                className="mt-2 px-3 py-2 rounded-lg flex items-center space-x-2"
                 style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-              />
-              <button
-                onClick={fileSharing.handleShareSubmit}
-                disabled={!fileSharing.shareEmail.trim()}
-                aria-label="Add user to share"
-                title="Add user to share"
-                className="px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: !fileSharing.shareEmail.trim() ? colors.inputBackground : colors.primaryBlue,
-                  color: !fileSharing.shareEmail.trim() ? colors.tertiaryText : 'white',
-                  opacity: !fileSharing.shareEmail.trim() ? 0.5 : 1,
-                  cursor: !fileSharing.shareEmail.trim() ? 'not-allowed' : 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  if (fileSharing.shareEmail.trim()) {
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (fileSharing.shareEmail.trim()) {
-                    e.currentTarget.style.opacity = '1';
-                  }
+                  background: colors.badgeSuccessBg,
+                  color: colors.successGreen,
                 }}
               >
-                <UserPlus size={16} />
-              </button>
-            </div>
+                <CheckCircle2 size={14} />
+                <span className="text-xs font-medium">File shared successfully! Email sent.</span>
+              </div>
+            )}
+            {!fileSharing.shareSuccess && (
+              <p 
+                className="text-xs mt-1.5"
+                style={{ color: colors.tertiaryText }}
+              >
+                Enter email address and click "Share File" button below
+              </p>
+            )}
           </div>
 
           <div>
@@ -379,6 +384,16 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                           className="p-1 transition-colors"
                           title="Remove share access"
                           style={{ color: colors.tertiaryText }}
+                          onClick={async () => {
+                            // Call onRemoveShare if provided
+                            if (onRemoveShare) {
+                              try {
+                                await onRemoveShare(file.id, share.id);
+                              } catch (err) {
+                                console.error('Failed to remove share:', err);
+                              }
+                            }
+                          }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.color = colors.errorRed;
                             e.currentTarget.style.background = colors.badgeErrorBg;
@@ -387,6 +402,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                             e.currentTarget.style.color = colors.tertiaryText;
                             e.currentTarget.style.background = 'transparent';
                           }}
+                          aria-label={`Remove share access for ${share.userName}`}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -399,7 +415,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
           )}
         </div>
 
-        <div className="flex justify-end space-x-3 mt-6">
+        <div className="flex justify-end space-x-3 mt-6 pt-4 border-t" style={{ borderColor: colors.border }}>
           <button
             onClick={() => fileSharing.setShowShareModal(false)}
             className="px-4 py-2 rounded-lg transition-colors"
@@ -416,6 +432,96 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             }}
           >
             {SHARE_MODAL.CLOSE_BUTTON}
+          </button>
+          <button
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Share button clicked', {
+                email: fileSharing.shareEmail,
+                isSharing: fileSharing.isSharing,
+                shareSuccess: fileSharing.shareSuccess,
+                hasHandler: !!fileSharing.handleShareSubmit
+              });
+              
+              if (!fileSharing.shareEmail.trim()) {
+                console.warn('Cannot share: email is empty');
+                return;
+              }
+              
+              if (fileSharing.isSharing) {
+                console.warn('Cannot share: already in progress');
+                return;
+              }
+              
+              if (fileSharing.shareSuccess) {
+                console.warn('Cannot share: success state active');
+                return;
+              }
+              
+              if (!fileSharing.handleShareSubmit) {
+                console.error('Cannot share: handleShareSubmit is not defined');
+                return;
+              }
+              
+              try {
+                // handleShareSubmit calls onShareWithUser which is wrapped in CloudStorage with error handling
+                await fileSharing.handleShareSubmit();
+              } catch (error: any) {
+                // Error is already handled by parent component (CloudStorage) via onShareWithUser wrapper
+                // This catch prevents unhandled promise rejection
+                console.error('Share error in button (handled by parent):', error);
+              }
+            }}
+            disabled={!fileSharing.shareEmail?.trim() || fileSharing.isSharing || fileSharing.shareSuccess || !fileSharing.handleShareSubmit}
+            className="px-6 py-2 rounded-lg transition-all flex items-center space-x-2 font-medium"
+            style={{
+              background: fileSharing.shareSuccess 
+                ? colors.successGreen 
+                : !fileSharing.shareEmail.trim() || fileSharing.isSharing 
+                ? colors.inputBackground 
+                : colors.primaryBlue,
+              color: fileSharing.shareSuccess || (!fileSharing.shareEmail.trim() && !fileSharing.isSharing) 
+                ? 'white' 
+                : fileSharing.isSharing 
+                ? colors.tertiaryText 
+                : 'white',
+              opacity: (!fileSharing.shareEmail.trim() && !fileSharing.shareSuccess && !fileSharing.isSharing) ? 0.5 : 1,
+              cursor: (!fileSharing.shareEmail.trim() && !fileSharing.shareSuccess) || fileSharing.isSharing ? 'not-allowed' : 'pointer',
+              border: (!fileSharing.shareEmail.trim() && !fileSharing.shareSuccess) ? `1px solid ${colors.border}` : 'none',
+              transform: fileSharing.shareSuccess ? 'scale(1.05)' : 'scale(1)',
+            }}
+            onMouseEnter={(e) => {
+              if (fileSharing.shareEmail.trim() && !fileSharing.isSharing && !fileSharing.shareSuccess) {
+                e.currentTarget.style.opacity = '0.9';
+                e.currentTarget.style.transform = 'scale(1.02)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (fileSharing.shareEmail.trim() && !fileSharing.isSharing) {
+                e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.transform = fileSharing.shareSuccess ? 'scale(1.05)' : 'scale(1)';
+              }
+            }}
+            aria-label={fileSharing.shareSuccess ? "File shared successfully" : fileSharing.isSharing ? "Sharing file..." : "Share file"}
+            aria-busy={fileSharing.isSharing || fileSharing.shareSuccess}
+          >
+            {fileSharing.shareSuccess ? (
+              <>
+                <CheckCircle2 size={18} />
+                <span>Shared!</span>
+              </>
+            ) : fileSharing.isSharing ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                <span>Sharing...</span>
+              </>
+            ) : (
+              <>
+                <Share2 size={18} />
+                <span>Share File</span>
+              </>
+            )}
           </button>
         </div>
       </div>

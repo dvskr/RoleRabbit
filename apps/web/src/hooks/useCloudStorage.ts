@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { FileType, SortBy, ViewMode, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
 import { filterAndSortFiles } from './useCloudStorage/utils/fileFiltering';
-import { useFileOperations } from './useCloudStorage/hooks/useFileOperations';
+import { useFileOperations, useCopyMoveOperations } from './useCloudStorage/hooks/useFileOperations';
 import { useSharingOperations } from './useCloudStorage/hooks/useSharingOperations';
 import { useCredentialOperations } from './useCloudStorage/hooks/useCredentialOperations';
 import { useFolderOperations } from './useCloudStorage/hooks/useFolderOperations';
@@ -11,6 +11,8 @@ import { useCloudIntegration } from './useCloudStorage/hooks/useCloudIntegration
 import { useAccessTracking } from './useCloudStorage/hooks/useAccessTracking';
 import { logger } from '../utils/logger';
 import apiService from '../services/apiService';
+import { webSocketService } from '../services/webSocketService';
+import { useAuth } from '../contexts/AuthContext';
 
 export const BYTES_IN_GB = 1024 ** 3;
 
@@ -59,6 +61,9 @@ export const normalizeStorageInfo = (storage?: any): StorageInfo => {
 };
 
 export const useCloudStorage = () => {
+  // Get current user for WebSocket authentication
+  const { user } = useAuth();
+
   // File operations hook
   const [storageInfoState, setStorageInfoState] = useState<StorageInfo>(EMPTY_STORAGE_INFO);
 
@@ -69,6 +74,18 @@ export const useCloudStorage = () => {
   const fileOps = useFileOperations({ onStorageUpdate: handleStorageUpdate });
   const { files, setFiles, isLoading, selectedFiles, setSelectedFiles } = fileOps;
 
+  // Folder management (needs to be defined before copy/move operations)
+  const folderOps = useFolderOperations(files, setFiles);
+  const { folders, selectedFolderId, setSelectedFolderId, loadFolders } = folderOps;
+
+  // Copy and Move operations
+  const copyMoveOps = useCopyMoveOperations(
+    setFiles,
+    fileOps.loadFilesFromAPI,
+    loadFolders
+  );
+  const { handleMoveFile } = copyMoveOps;
+
   // UI state
   const [showDeleted, setShowDeleted] = useState(false); // Recycle bin toggle
 
@@ -77,6 +94,171 @@ export const useCloudStorage = () => {
     fileOps.loadFilesFromAPI(showDeleted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
+
+  // Real-time WebSocket listeners for file updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Authenticate WebSocket connection
+    if (webSocketService.isConnected()) {
+      webSocketService.emit('authenticate', { userId: user.id });
+    }
+
+    // Set up real-time event listeners
+    const unsubscribeFileCreated = webSocketService.on('file_created', (data) => {
+      if (!showDeleted && data.file) {
+        // Add new file to the list
+        setFiles((prevFiles) => {
+          // Check if file already exists to avoid duplicates
+          if (prevFiles.some(f => f.id === data.file.id)) {
+            return prevFiles;
+          }
+          return [...prevFiles, { ...data.file, sharedWith: [], comments: [] }];
+        });
+        logger.info('Real-time: File created', data.file.id);
+      }
+    });
+
+    const unsubscribeFileUpdated = webSocketService.on('file_updated', (data) => {
+      if (data.fileId && data.file) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) =>
+            file.id === data.fileId
+              ? { ...file, ...data.file, updatedAt: new Date().toISOString() }
+              : file
+          )
+        );
+        logger.info('Real-time: File updated', data.fileId);
+      }
+    });
+
+    const unsubscribeFileDeleted = webSocketService.on('file_deleted', (data) => {
+      if (data.fileId) {
+        if (showDeleted) {
+          // If viewing recycle bin, update deletedAt timestamp
+          setFiles((prevFiles) =>
+            prevFiles.map((file) =>
+              file.id === data.fileId
+                ? { ...file, deletedAt: new Date().toISOString() }
+                : file
+            )
+          );
+        } else {
+          // Remove from active files list
+          setFiles((prevFiles) => prevFiles.filter((file) => file.id !== data.fileId));
+        }
+        logger.info('Real-time: File deleted', data.fileId);
+      }
+    });
+
+    const unsubscribeFileRestored = webSocketService.on('file_restored', (data) => {
+      if (data.file && !showDeleted) {
+        // Add restored file back to active list
+        setFiles((prevFiles) => {
+          const exists = prevFiles.some(f => f.id === data.file.id);
+          if (exists) {
+            // Update existing file
+            return prevFiles.map((file) =>
+              file.id === data.file.id
+                ? { ...file, ...data.file, deletedAt: null }
+                : file
+            );
+          }
+          return [...prevFiles, { ...data.file, deletedAt: null, sharedWith: [], comments: [] }];
+        });
+        logger.info('Real-time: File restored', data.file.id);
+      }
+    });
+
+    const unsubscribeFileShared = webSocketService.on('file_shared', (data) => {
+      if (data.fileId && data.share) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) => {
+            if (file.id === data.fileId) {
+              const updatedShares = file.sharedWith || [];
+              const shareExists = updatedShares.some((s: any) => s.id === data.share.id);
+              return {
+                ...file,
+                sharedWith: shareExists
+                  ? updatedShares.map((s: any) => s.id === data.share.id ? {
+                      ...s,
+                      permission: data.share.permission,
+                      userId: data.share.sharedWith,
+                      userEmail: data.share.sharedWithEmail || s.userEmail,
+                      userName: data.share.sharedWithName || s.userName
+                    } : s)
+                  : [...updatedShares, {
+                      id: data.share.id,
+                      userId: data.share.sharedWith,
+                      userEmail: data.share.sharedWithEmail || '',
+                      userName: data.share.sharedWithName || 'Unknown User',
+                      permission: data.share.permission,
+                      grantedBy: data.share.userId,
+                      grantedAt: data.share.createdAt,
+                      expiresAt: data.share.expiresAt
+                    }]
+              };
+            }
+            return file;
+          })
+        );
+        logger.info('Real-time: File shared/permission updated', data.fileId);
+      }
+    });
+
+    const unsubscribeShareRemoved = webSocketService.on('share_removed', (data) => {
+      if (data.fileId && data.shareId) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) =>
+            file.id === data.fileId
+              ? {
+                  ...file,
+                  sharedWith: (file.sharedWith || []).filter((s: any) => s.id !== data.shareId)
+                }
+              : file
+          )
+        );
+        logger.info('Real-time: Share removed', data.fileId, data.shareId);
+      }
+    });
+
+    const unsubscribeCommentAdded = webSocketService.on('comment_added', (data) => {
+      if (data.fileId && data.comment) {
+        setFiles((prevFiles) =>
+          prevFiles.map((file) => {
+            if (file.id === data.fileId) {
+              const updatedComments = file.comments || [];
+              const commentExists = updatedComments.some((c: any) => c.id === data.comment.id);
+              
+              // If comment exists, update it; otherwise add it to the beginning
+              const newComments = commentExists
+                ? updatedComments.map((c: any) => c.id === data.comment.id ? data.comment : c)
+                : [data.comment, ...updatedComments]; // Add new comment at the beginning
+              
+              logger.info('Real-time: Comment added', data.fileId, data.comment.id, 'Total comments:', newComments.length);
+              
+              return {
+                ...file,
+                comments: newComments
+              };
+            }
+            return file;
+          })
+        );
+      }
+    });
+
+    // Cleanup listeners on unmount
+    return () => {
+      unsubscribeFileCreated();
+      unsubscribeFileUpdated();
+      unsubscribeFileDeleted();
+      unsubscribeFileRestored();
+      unsubscribeFileShared();
+      unsubscribeShareRemoved();
+      unsubscribeCommentAdded();
+    };
+  }, [user?.id, showDeleted, setFiles]);
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,10 +291,6 @@ export const useCloudStorage = () => {
     }
   }, []);
 
-  // Folder management
-  const folderOps = useFolderOperations(files, setFiles);
-  const { folders, selectedFolderId, setSelectedFolderId } = folderOps;
-
   // Credential management
   const [credentials, setCredentials] = useState<CredentialInfo[]>([]);
   const [credentialReminders, setCredentialReminders] = useState<CredentialReminder[]>([]);
@@ -132,18 +310,18 @@ export const useCloudStorage = () => {
           setCredentials([]);
         }
         
-        if (remindersRes && remindersRes.credentials) {
+        if (remindersRes && remindersRes.reminders) {
           // Transform expiring credentials to reminders
-          const reminders: CredentialReminder[] = remindersRes.credentials.map((cred: any) => ({
+          const reminders: CredentialReminder[] = remindersRes.reminders.map((cred: any) => ({
             id: cred.id,
-            credentialId: cred.id,
+            credentialId: cred.credentialId,
             credentialName: cred.name,
             expirationDate: cred.expirationDate,
             reminderDate: new Date().toISOString(),
             isSent: false,
-            priority: cred.expirationDate ? 
+            priority: cred.priority || (cred.expirationDate ? 
               (new Date(cred.expirationDate).getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000 ? 'high' : 'medium') 
-              : 'low' as 'high' | 'medium' | 'low'
+              : 'low') as 'high' | 'medium' | 'low'
           }));
           setCredentialReminders(reminders);
         } else {
@@ -175,7 +353,7 @@ export const useCloudStorage = () => {
 
   // Computed values
   const filteredFiles = useMemo(() => {
-    console.log('🔍 useCloudStorage - filtering files:', {
+    logger.debug('Filtering cloud storage files', {
       totalFiles: files.length,
       searchTerm,
       filterType,
@@ -184,19 +362,6 @@ export const useCloudStorage = () => {
       showDeleted,
       quickFilters
     });
-    
-    // Log file details for debugging
-    if (files.length > 0) {
-      console.log('📁 Files in array:', files.map(f => ({
-        id: f.id,
-        name: f.name,
-        type: f.type,
-        folderId: f.folderId,
-        deletedAt: f.deletedAt,
-        isStarred: f.isStarred,
-        isArchived: f.isArchived
-      })));
-    }
     
     const result = filterAndSortFiles(files, {
       searchTerm,
@@ -207,7 +372,7 @@ export const useCloudStorage = () => {
       quickFilters
     });
     
-    console.log('🔍 useCloudStorage - filtered result:', {
+    logger.debug('Filtered cloud storage files result', {
       filteredCount: result.length,
       totalFiles: files.length
     });
@@ -270,24 +435,54 @@ export const useCloudStorage = () => {
     handleFileSelect: fileOps.handleFileSelect,
     handleSelectAll,
     handleDeleteFiles: fileOps.handleDeleteFiles,
-    handleDeleteFile: fileOps.handleDeleteFile,
+    handleDeleteFile: (fileId: string) => fileOps.handleDeleteFile(fileId, showDeleted),
     handleRestoreFile: fileOps.handleRestoreFile,
     handlePermanentlyDeleteFile: fileOps.handlePermanentlyDeleteFile,
-    handleTogglePublic: fileOps.handleTogglePublic,
     handleDownloadFile: fileOps.handleDownloadFile,
     handleShareFile: fileOps.handleShareFile,
     handleUploadFile,
-    handleEditFile: fileOps.handleEditFile,
+    handleEditFile: (fileId: string, updates: any) => fileOps.handleEditFile(fileId, updates, showDeleted),
     handleRefresh: async () => {
       try {
-        await fileOps.handleRefresh();
+        // Refresh files (respect current showDeleted state)
+        await fileOps.handleRefresh(showDeleted);
+        // Refresh folders
+        await loadFolders();
+        // Refresh storage info
         await refreshStorageInfo();
+        // Refresh credentials
+        try {
+          const [credentialsRes, remindersRes] = await Promise.all([
+            apiService.getCredentials(),
+            apiService.getExpiringCredentials(90)
+          ]);
+          
+          if (credentialsRes && credentialsRes.credentials) {
+            setCredentials(credentialsRes.credentials);
+          }
+          
+          if (remindersRes && remindersRes.reminders) {
+            const reminders: CredentialReminder[] = remindersRes.reminders.map((cred: any) => ({
+              id: cred.id,
+              credentialId: cred.credentialId,
+              credentialName: cred.name,
+              expirationDate: cred.expirationDate,
+              reminderDate: new Date().toISOString(),
+              isSent: false,
+              priority: cred.priority || 'medium' as 'high' | 'medium' | 'low'
+            }));
+            setCredentialReminders(reminders);
+          }
+        } catch (credError) {
+          logger.warn('Failed to refresh credentials:', credError);
+        }
       } catch (error) {
         logger.error('Failed to refresh storage data:', error);
       }
     },
     handleStarFile: fileOps.handleStarFile,
     handleArchiveFile: fileOps.handleArchiveFile,
+    handleMoveFile,
     
     // Sharing and Access Management
     handleShareWithUser: sharingOps.handleShareWithUser,
