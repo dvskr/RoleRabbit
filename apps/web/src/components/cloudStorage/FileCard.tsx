@@ -276,37 +276,37 @@ const FileCard = React.memo(function FileCard({
               {/* File Name Row */}
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex-1 min-w-0">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={(e) => setEditingName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                          e.preventDefault();
-                          handleSaveEdit();
-                        } else if (e.key === 'Escape') {
-                          handleCancelEdit();
-                        }
-                      }}
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      handleSaveEdit();
+                    } else if (e.key === 'Escape') {
+                      handleCancelEdit();
+                    }
+                  }}
                       className="font-bold text-lg w-full px-2 py-1 rounded-lg focus:outline-none"
-                      style={{
+                  style={{
                         color: lightText,
                         background: '#2D3748',
                         border: `2px solid ${blueAccent}`,
-                      }}
-                      autoFocus
-                      disabled={isSaving}
-                    />
-                  ) : (
-                    <h3 
+                  }}
+                  autoFocus
+                  disabled={isSaving}
+                />
+              ) : (
+                <h3 
                       className="font-bold text-lg break-words"
                       style={{ color: lightText }}
                       title={file.name}
-                    >
-                      {file.name}
-                    </h3>
-                  )}
+                >
+                  {file.name}
+                </h3>
+              )}
                 </div>
 
                 {/* Top Right Icons - Star and Square */}
@@ -428,60 +428,60 @@ const FileCard = React.memo(function FileCard({
 
                 {isEditing && (
                   <div className="flex items-center gap-2">
-                    <select
-                      value={editingType}
-                      onChange={(e) => setEditingType(e.target.value as ResumeFile['type'])}
-                      className="text-xs px-2 py-1 rounded focus:outline-none"
-                      style={{
+                  <select
+                    value={editingType}
+                    onChange={(e) => setEditingType(e.target.value as ResumeFile['type'])}
+                    className="text-xs px-2 py-1 rounded focus:outline-none"
+                    style={{
                         background: '#2D3748',
                         color: lightText,
                         border: `1px solid ${blueAccent}`,
-                      }}
-                    >
-                      {FILE_TYPE_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {formatTypeLabel(option)}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleSaveEdit}
-                      disabled={isSaving || !editingName.trim()}
-                      className="p-1.5 rounded transition-colors"
-                      style={{
+                    }}
+                  >
+                    {FILE_TYPE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {formatTypeLabel(option)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isSaving || !editingName.trim()}
+                    className="p-1.5 rounded transition-colors"
+                    style={{
                         color: isSaving || !editingName.trim() ? '#718096' : '#48BB78',
                         background: isSaving || !editingName.trim() ? 'transparent' : '#22543D',
-                      }}
-                      title="Save (Ctrl/Cmd + Enter)"
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      disabled={isSaving}
-                      className="p-1.5 rounded transition-colors"
-                      style={{
+                    }}
+                    title="Save (Ctrl/Cmd + Enter)"
+                  >
+                    <Check size={14} />
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    className="p-1.5 rounded transition-colors"
+                    style={{
                         color: secondaryText,
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSaving) {
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSaving) {
                           e.currentTarget.style.color = '#F56565';
                           e.currentTarget.style.background = '#742A2A';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSaving) {
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSaving) {
                           e.currentTarget.style.color = secondaryText;
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                      title="Cancel (Esc)"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                    title="Cancel (Esc)"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
             </div>
           </div>
         </div>
@@ -513,7 +513,7 @@ const FileCard = React.memo(function FileCard({
         </div>
 
         {/* Bottom Section - Actions Grid */}
-        {!showDeleted && (
+            {!showDeleted && (
           <div 
             className="pt-4 mt-4"
             style={{ borderTop: `1px solid #2D3748` }}
@@ -610,25 +610,25 @@ const FileCard = React.memo(function FileCard({
                     <Share2 size={20} />
                     <span className="text-xs">Share</span>
                   </button>
-                )}
+            )}
 
                 {/* Comment */}
                 {canComment(userPermission) && (
-                  <button
-                    onClick={() => {
-                      logger.debug('Comment button clicked! Current state:', comments.showComments);
-                      if (comments.showComments) {
-                        comments.setShowComments(false);
-                      } else {
-                        closeAllStates('comments');
-                        comments.setShowComments(true);
-                      }
-                    }}
+              <button
+                onClick={() => {
+                  logger.debug('Comment button clicked! Current state:', comments.showComments);
+                  if (comments.showComments) {
+                    comments.setShowComments(false);
+                  } else {
+                    closeAllStates('comments');
+                    comments.setShowComments(true);
+                  }
+                }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
-                    style={{
+                style={{
                       color: comments.showComments ? blueAccent : secondaryText,
                       background: comments.showComments ? '#2D3748' : 'transparent',
-                    }}
+                }}
                     onMouseEnter={(e) => {
                       if (!comments.showComments) {
                         e.currentTarget.style.background = '#2D3748';
@@ -640,41 +640,41 @@ const FileCard = React.memo(function FileCard({
                       }
                     }}
                     title="Comment"
-                    aria-label="Toggle comments"
-                  >
+                aria-label="Toggle comments"
+              >
                     <MessageCircle size={20} />
                     <span className="text-xs">Comment</span>
-                  </button>
-                )}
+              </button>
+            )}
               </div>
 
               {/* Row 2: Edit, Move, Delete */}
               <div className="grid grid-cols-3 gap-3">
                 {/* Edit */}
                 {canEdit(userPermission) && (
-                  <button
-                    onClick={handleStartEdit}
+                <button
+                  onClick={handleStartEdit}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
-                    style={{
+                  style={{
                       color: isEditing ? blueAccent : secondaryText,
                       background: isEditing ? '#2D3748' : 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isEditing) {
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isEditing) {
                         e.currentTarget.style.background = '#2D3748';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isEditing) {
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isEditing) {
                         e.currentTarget.style.background = 'transparent';
-                      }
-                    }}
+                    }
+                  }}
                     title="Edit"
-                    disabled={isSaving}
-                  >
+                  disabled={isSaving}
+                >
                     <Edit size={20} />
                     <span className="text-xs">Edit</span>
-                  </button>
+                </button>
                 )}
 
                 {/* Move */}
@@ -701,36 +701,36 @@ const FileCard = React.memo(function FileCard({
                     <Folder size={20} />
                     <span className="text-xs">Move</span>
                   </button>
-                )}
+            )}
 
                 {/* Delete */}
                 {canDelete(userPermission) && (
-                  <button
-                    onClick={async () => {
-                      if (onDelete) {
-                        await onDelete(file.id);
-                      }
-                    }}
+              <button
+                onClick={async () => {
+                  if (onDelete) {
+                    await onDelete(file.id);
+                  }
+                }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
-                    style={{
+                style={{
                       color: '#F56565',
                       background: 'transparent',
-                    }}
+                }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = '#742A2A';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';
                     }}
-                    title="Delete"
-                    aria-label="Delete file"
-                  >
+                title="Delete"
+                aria-label="Delete file"
+              >
                     <Trash2 size={20} />
                     <span className="text-xs">Delete</span>
-                  </button>
-                )}
-              </div>
-            </div>
+              </button>
+            )}
+          </div>
+        </div>
           </div>
         )}
 

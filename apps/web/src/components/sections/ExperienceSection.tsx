@@ -128,7 +128,7 @@ const ExperienceSection = React.memo(function ExperienceSection({
 
   return (
     <div className="mb-4 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
-      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
           <h3 className="text-lg font-bold uppercase tracking-wide" style={{ color: colors.primaryText }}>
@@ -568,7 +568,7 @@ const ExperienceSection = React.memo(function ExperienceSection({
             <Sparkles size={16} />
             AI Generate
           </button>
-        </div>
+      </div>
     </div>
   );
 });

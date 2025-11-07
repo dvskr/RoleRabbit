@@ -513,7 +513,7 @@ const ProjectsSection = React.memo(function ProjectsSection({
             <Sparkles size={16} />
             AI Generate
           </button>
-        </div>
+      </div>
     </div>
   );
 });

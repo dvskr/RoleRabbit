@@ -285,17 +285,17 @@ export default function ResumeEditor({
           ${templateClasses.sectionColor.includes('orange') ? '.resume-editor-content h3 { color: #ea580c !important; }' : ''}
         `}</style>
         
-        {/* Template Header Styling */}
+          {/* Template Header Styling */}
         <div className={`mb-4 pb-3 ${templateClasses.header}`}>
-          {/* Name Input */}
-          <NameInput
-            name={resumeData.name || ''}
-            onChange={(name) => setResumeData((prev: any) => ({...prev, name}))}
-            colors={colors}
-            nameColorClass={templateClasses.nameColor}
-            titleColorClass={templateClasses.titleColor}
-          />
-          
+            {/* Name Input */}
+            <NameInput
+              name={resumeData.name || ''}
+              onChange={(name) => setResumeData((prev: any) => ({...prev, name}))}
+              colors={colors}
+              nameColorClass={templateClasses.nameColor}
+              titleColorClass={templateClasses.titleColor}
+            />
+            
           {/* Title Input Field */}
           <div className="mb-4">
             <input 
@@ -315,21 +315,21 @@ export default function ResumeEditor({
               }}
             />
           </div>
-        
-          {/* Contact Fields Grid */}
-          <ContactFieldsGrid
-            resumeData={resumeData}
-            setResumeData={setResumeData}
-            customFields={customFields}
-            setCustomFields={setCustomFields}
-            setShowAddFieldModal={setShowAddFieldModal}
-            colors={colors}
-          />
-        </div>
+          
+            {/* Contact Fields Grid */}
+            <ContactFieldsGrid
+              resumeData={resumeData}
+              setResumeData={setResumeData}
+              customFields={customFields}
+              setCustomFields={setCustomFields}
+              setShowAddFieldModal={setShowAddFieldModal}
+              colors={colors}
+            />
+          </div>
 
-        {/* Render All Sections */}
-        <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
-          {renderedSections}
+          {/* Render All Sections */}
+          <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
+            {renderedSections}
         </div>
       </div>
     </div>
