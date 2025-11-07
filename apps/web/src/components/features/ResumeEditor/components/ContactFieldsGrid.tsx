@@ -36,11 +36,8 @@ export default function ContactFieldsGrid({
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Use accentCyan for icons that should have the accent color
-  const getIconColor = (index: number) => {
-    // Email, Location use gray (tertiaryText)
-    if (index === 0 || index === 2) return colors.tertiaryText;
-    // Phone, LinkedIn, Github, Website use accent color
+  // Use accentCyan for all icons
+  const getIconColor = () => {
     return colors.accentCyan;
   };
 
@@ -140,7 +137,7 @@ export default function ContactFieldsGrid({
               {IconComponent && (
                 <IconComponent 
                   size={16} 
-                  style={{ color: getIconColor(idx) }}
+                  style={{ color: getIconColor() }}
                   aria-label={`${field} icon`}
                   role="img"
                 />
@@ -214,7 +211,7 @@ export default function ContactFieldsGrid({
       
       {/* Add Custom Field Button */}
       <div className="flex items-center gap-2 group">
-        <Plus size={16} style={{ color: colors.tertiaryText }} />
+        <Plus size={16} style={{ color: colors.accentCyan }} />
         <button
           onClick={() => setShowAddFieldModal(true)}
           className="flex-1 border-2 border-dashed rounded-lg px-2 sm:px-3 py-2 text-left min-w-0 max-w-full transition-all"

@@ -52,7 +52,6 @@ import { ConflictIndicator } from '../../components/ConflictIndicator';
 import { useToasts, ToastContainer } from '../../components/Toast';
 import apiService from '../../services/apiService';
 // Lazy load heavy analytics and modal components
-const ResumeSharing = dynamic(() => import('../../components/features/ResumeSharing'), { ssr: false });
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
 const EmailAnalytics = dynamic(() => import('../../components/email/EmailAnalytics'), { ssr: false });
 const ApplicationAnalytics = dynamic(() => import('../../components/ApplicationAnalytics'), { ssr: false });
@@ -216,8 +215,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   const dashboardAnalytics = useDashboardAnalytics();
   const {
-    showResumeSharing,
-    setShowResumeSharing,
     showCoverLetterAnalytics,
     setShowCoverLetterAnalytics,
     showEmailAnalytics,
@@ -717,19 +714,60 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             <Header
               isMobile={false}
               isSaving={isSaving}
-              canUndo={historyIndex > 0}
-              canRedo={historyIndex < history.length - 1}
               lastSavedAt={lastSavedAt}
               hasChanges={hasChanges}
               onExport={() => setShowExportModal(true)}
-              onUndo={undo}
-              onRedo={redo}
+              onClear={() => {
+                if (confirm('Are you sure you want to clear all resume data? This action cannot be undone.')) {
+                  // Clear all resume data
+                  setResumeData({
+                    name: '',
+                    title: '',
+                    email: '',
+                    phone: '',
+                    location: '',
+                    summary: '',
+                    skills: [],
+                    experience: [],
+                    education: [],
+                    projects: [],
+                    certifications: [],
+                  });
+                  // Clear custom sections
+                  setCustomSections([]);
+                  // Reset section order to default
+                  setSectionOrder(['summary', 'skills', 'experience', 'education', 'projects', 'certifications']);
+                  // Reset section visibility to default (all visible)
+                  setSectionVisibility({
+                    summary: true,
+                    skills: true,
+                    experience: true,
+                    education: true,
+                    projects: true,
+                    certifications: true,
+                  });
+                  // Clear history
+                  setHistory([{
+                    name: '',
+                    title: '',
+                    email: '',
+                    phone: '',
+                    location: '',
+                    summary: '',
+                    skills: [],
+                    experience: [],
+                    education: [],
+                    projects: [],
+                    certifications: [],
+                  }]);
+                  setHistoryIndex(0);
+                }
+              }}
               onImport={() => setShowImportModal(true)}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
               onShowMobileMenu={() => setShowMobileMenu(true)}
-              onShowResumeSharing={() => setShowResumeSharing(true)}
               showRightPanel={showRightPanel}
               previousSidebarState={previousSidebarState}
               sidebarCollapsed={resumePanelCollapsed}
@@ -963,8 +1001,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         setShowSaveToCloudModal={setShowSaveToCloudModal}
         showImportFromCloudModal={showImportFromCloudModal}
         setShowImportFromCloudModal={setShowImportFromCloudModal}
-        showResumeSharing={showResumeSharing}
-        setShowResumeSharing={setShowResumeSharing}
         showCoverLetterAnalytics={showCoverLetterAnalytics}
         setShowCoverLetterAnalytics={setShowCoverLetterAnalytics}
         showEmailAnalytics={showEmailAnalytics}

@@ -15,7 +15,9 @@ import {
   Users,
   Calendar,
   Check,
-  Folder
+  Folder,
+  MoreVertical,
+  FileText
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
@@ -33,11 +35,6 @@ import {
   MORE_MENU_OPTIONS,
   FILE_ACTIONS,
 } from './fileCard/constants';
-import {
-  getFileIcon,
-  getTypeColor,
-  getPermissionColor,
-} from './fileCard/fileCardHelpers';
 import {
   useFileSharing,
   useComments,
@@ -242,331 +239,315 @@ const FileCard = React.memo(function FileCard({
     event.currentTarget.style.transform = 'translateY(0)';
   };
 
-  const renderHeaderControls = () => (
-    <div className="flex items-center gap-2 flex-shrink-0">
-      <input
-        type="checkbox"
-        checked={isSelected}
-        onChange={() => onSelect(file.id)}
-        aria-label={`Select ${file.name}`}
-        title={`Select ${file.name}`}
-        className="w-4 h-4 rounded border flex-shrink-0 cursor-pointer"
-        style={{
-          accentColor: colors.primaryBlue,
-          borderColor: colors.border,
-          marginTop: '2px', // Align with content
-        }}
-      />
-      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {showDeleted && file.deletedAt ? (
-          <>
-            <button
-              onClick={() => onRestore?.(file.id)}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: colors.successGreen }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = colors.badgeSuccessBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Restore"
-            >
-              <RotateCcw size={14} />
-            </button>
-            <button
-              onClick={() => onPermanentlyDelete?.(file.id)}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: colors.errorRed }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = colors.badgeErrorBg;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Permanently Delete"
-            >
-              <Trash size={14} />
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => onStar(file.id)}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{
-              color: file.isStarred ? colors.badgeWarningText : colors.tertiaryText,
-              background: file.isStarred ? colors.badgeWarningBg : 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              if (!file.isStarred) {
-                e.currentTarget.style.color = colors.badgeWarningText;
-                e.currentTarget.style.background = colors.badgeWarningBg;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!file.isStarred) {
-                e.currentTarget.style.color = colors.tertiaryText;
-                e.currentTarget.style.background = 'transparent';
-              }
-            }}
-            title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
-          >
-            <Star size={14} className={file.isStarred ? 'fill-current' : ''} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
 
   const renderGridView = () => {
-    const typeColorStyle = getTypeColor(file.type, colors);
+    // Dark theme colors matching the design
+    const darkBg = '#1A202C';
+    const blueAccent = '#4285F4';
+    const lightText = '#FFFFFF';
+    const secondaryText = '#E2E8F0';
+    
     return (
       <div 
-        className="group rounded-xl p-4 hover:shadow-xl transition-all duration-300 cursor-pointer"
+        className="group rounded-xl p-5 transition-all duration-300 w-full"
         style={{
-          border: `1.5px solid ${isSelected ? colors.primaryBlue : colors.border}`,
-          background: isSelected ? colors.badgeInfoBg : colors.cardBackground,
-          boxShadow: isSelected ? `0 4px 12px ${colors.primaryBlue}20` : 'none',
-        }}
-        onMouseEnter={(e) => {
-          if (!isSelected) {
-            e.currentTarget.style.borderColor = colors.borderFocused;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSelected) {
-            e.currentTarget.style.borderColor = colors.border;
-          }
+          background: darkBg,
+          border: `1px solid ${isSelected ? blueAccent : '#2D3748'}`,
+          boxShadow: isSelected ? `0 0 0 2px ${blueAccent}40` : 'none',
+          maxWidth: '340px',
+          minWidth: '280px',
         }}
       >
-        {/* File Info */}
-        <div className="mb-3">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-4 flex-1 min-w-0">
+        {/* Top Section - Header */}
+        <div className="mb-4">
+          <div className="flex items-start gap-4">
+            {/* Blue Square Icon */}
             <div 
-              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+              className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{
-                background: `linear-gradient(135deg, ${colors.inputBackground} 0%, ${colors.hoverBackground} 100%)`,
+                background: blueAccent,
               }}
             >
-              {getFileIcon(file.type, colors)}
+              <FileText size={24} color={lightText} />
             </div>
 
-            <div className="flex-1 min-w-0 space-y-1.5">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      handleSaveEdit();
-                    } else if (e.key === 'Escape') {
-                      handleCancelEdit();
-                    }
-                  }}
-                  className="font-semibold text-base w-full px-2 py-1 rounded-lg focus:outline-none"
-                  style={{
-                    color: colors.primaryText,
-                    background: colors.inputBackground,
-                    border: `2px solid ${colors.primaryBlue}`,
-                  }}
-                  autoFocus
-                  disabled={isSaving}
-                />
-              ) : (
-                <h3 
-                  className="font-semibold text-base truncate transition-colors leading-tight"
-                  style={{ color: colors.primaryText }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = colors.primaryBlue;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = colors.primaryText;
-                  }}
-                >
-                  {file.name}
-                </h3>
-              )}
-              {file.description && (
-                <p 
-                  className="text-xs line-clamp-2 leading-relaxed"
-                  style={{ color: colors.secondaryText }}
-                >
-                  {file.description}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                {isEditing ? (
-                  <select
-                    value={editingType}
-                    onChange={(e) => setEditingType(e.target.value as ResumeFile['type'])}
-                    className="text-xs px-2 py-1 rounded focus:outline-none"
-                    style={{
-                      background: colors.inputBackground,
-                      color: colors.primaryText,
-                      border: `1px solid ${colors.primaryBlue}`,
-                    }}
-                  >
-                    {FILE_TYPE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {formatTypeLabel(option)}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span 
-                    className="px-2 py-1 rounded-full text-xs font-medium"
-                    style={{
-                      background: typeColorStyle.bg,
-                      color: typeColorStyle.text,
-                    }}
-                  >
-                    {formatTypeLabel(file.type as ResumeFile['type'])}
-                  </span>
-                )}
-                {/* Version badge removed per design update */}
-                {file.isArchived && (
-                  <span 
-                    className="text-xs px-2 py-1 rounded-full"
-                    style={{
-                      background: colors.badgeWarningBg,
-                      color: colors.badgeWarningText,
-                    }}
-                  >
-                    Archived
-                  </span>
-                )}
-                {file.deletedAt && (
-                  <span 
-                    className="text-xs px-2 py-1 rounded-full flex items-center gap-1"
-                    style={{
-                      background: colors.badgeErrorBg,
-                      color: colors.errorRed,
-                    }}
-                  >
-                    <Trash2 size={10} />
-                    Deleted
-                  </span>
-                )}
-              </div>
-
-              <div 
-                className="flex items-center flex-wrap gap-2 text-xs pt-0.5"
-                style={{ color: colors.secondaryText }}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Calendar size={12} />
-                  <span className="font-medium">{formattedDateTime}</span>
-                  <span className="text-[10px]" style={{ color: colors.tertiaryText }}>
-                    ({relativeUpdated})
-                  </span>
+            {/* File Name and Resume Button Section */}
+            <div className="flex-1 min-w-0">
+              {/* File Name Row */}
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault();
+                          handleSaveEdit();
+                        } else if (e.key === 'Escape') {
+                          handleCancelEdit();
+                        }
+                      }}
+                      className="font-bold text-lg w-full px-2 py-1 rounded-lg focus:outline-none"
+                      style={{
+                        color: lightText,
+                        background: '#2D3748',
+                        border: `2px solid ${blueAccent}`,
+                      }}
+                      autoFocus
+                      disabled={isSaving}
+                    />
+                  ) : (
+                    <h3 
+                      className="font-bold text-lg break-words"
+                      style={{ color: lightText }}
+                      title={file.name}
+                    >
+                      {file.name}
+                    </h3>
+                  )}
                 </div>
-                <span className="text-[10px]" style={{ color: colors.tertiaryText }}>•</span>
-                <span className="font-medium">{formattedSize}</span>
-                {file.comments && file.comments.length > 0 && (
-                  <>
-                    <span className="text-[10px]" style={{ color: colors.tertiaryText }}>•</span>
-                    <div className="flex items-center gap-1">
-                      <MessageCircle size={12} style={{ color: colors.tertiaryText }} />
-                      <span className="font-medium">{file.comments.length} {file.comments.length === 1 ? 'comment' : 'comments'}</span>
-                    </div>
-                  </>
-                )}
+
+                {/* Top Right Icons - Star and Square */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {showDeleted && file.deletedAt ? (
+                    <>
+                      <button
+                        onClick={() => onRestore?.(file.id)}
+                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
+                        style={{
+                          color: '#48BB78',
+                          background: '#2D3748',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#22543D';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#2D3748';
+                        }}
+                        title="Restore"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                      <button
+                        onClick={() => onPermanentlyDelete?.(file.id)}
+                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
+                        style={{
+                          color: '#F56565',
+                          background: '#2D3748',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#742A2A';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#2D3748';
+                        }}
+                        title="Permanently Delete"
+                      >
+                        <Trash size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Star Icon */}
+                      <button
+                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
+                        style={{
+                          color: file.isStarred ? '#F6AD55' : secondaryText,
+                          background: '#2D3748',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#4A5568';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#2D3748';
+                        }}
+                        onClick={() => {
+                          if (onStar) {
+                            onStar(file.id);
+                          }
+                        }}
+                        title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
+                      >
+                        <Star size={14} className={file.isStarred ? 'fill-current' : ''} />
+                      </button>
+                      {/* Square Icon (Checkbox/Menu) */}
+                      <button
+                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
+                        style={{
+                          color: secondaryText,
+                          background: '#2D3748',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#4A5568';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#2D3748';
+                        }}
+                        onClick={() => onSelect(file.id)}
+                        title="Select file"
+                      >
+                        <div 
+                          className="w-4 h-4 rounded border"
+                          style={{
+                            borderColor: isSelected ? blueAccent : '#4A5568',
+                            background: isSelected ? blueAccent : 'transparent',
+                          }}
+                        />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {isEditing && (
-                <div className="flex items-center gap-2 mb-2">
+              {/* Resume Button and Edit Controls - Directly below file name */}
+              <div className="flex items-center gap-2">
+                {!isEditing && (
                   <button
-                    onClick={handleSaveEdit}
-                    disabled={isSaving || !editingName.trim()}
-                    className="p-1.5 rounded transition-colors"
+                    className="px-3 py-1 rounded text-sm font-medium transition-colors"
                     style={{
-                      color: isSaving || !editingName.trim() ? colors.tertiaryText : colors.successGreen,
-                      background: isSaving || !editingName.trim() ? 'transparent' : colors.badgeSuccessBg,
-                    }}
-                    title="Save (Ctrl/Cmd + Enter)"
-                  >
-                    <Check size={14} />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="p-1.5 rounded transition-colors"
-                    style={{
-                      color: colors.secondaryText,
+                      background: blueAccent,
+                      color: lightText,
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSaving) {
-                        e.currentTarget.style.color = colors.errorRed;
-                        e.currentTarget.style.background = colors.badgeErrorBg;
-                      }
+                      e.currentTarget.style.opacity = '0.9';
                     }}
                     onMouseLeave={(e) => {
-                      if (!isSaving) {
-                        e.currentTarget.style.color = colors.secondaryText;
-                        e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    onClick={() => {
+                      if (onEdit && file.type === 'resume') {
+                        // Navigate to resume editor or handle resume action
                       }
                     }}
-                    title="Cancel (Esc)"
                   >
-                    <X size={14} />
+                    Resume
                   </button>
-                </div>
-              )}
+                )}
 
-              {/* Shared Users */}
-              <SharedUsers sharedWith={file.sharedWith} colors={colors} />
+                {isEditing && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={editingType}
+                      onChange={(e) => setEditingType(e.target.value as ResumeFile['type'])}
+                      className="text-xs px-2 py-1 rounded focus:outline-none"
+                      style={{
+                        background: '#2D3748',
+                        color: lightText,
+                        border: `1px solid ${blueAccent}`,
+                      }}
+                    >
+                      {FILE_TYPE_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {formatTypeLabel(option)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={isSaving || !editingName.trim()}
+                      className="p-1.5 rounded transition-colors"
+                      style={{
+                        color: isSaving || !editingName.trim() ? '#718096' : '#48BB78',
+                        background: isSaving || !editingName.trim() ? 'transparent' : '#22543D',
+                      }}
+                      title="Save (Ctrl/Cmd + Enter)"
+                    >
+                      <Check size={14} />
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      disabled={isSaving}
+                      className="p-1.5 rounded transition-colors"
+                      style={{
+                        color: secondaryText,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSaving) {
+                          e.currentTarget.style.color = '#F56565';
+                          e.currentTarget.style.background = '#742A2A';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSaving) {
+                          e.currentTarget.style.color = secondaryText;
+                          e.currentTarget.style.background = 'transparent';
+                        }
+                      }}
+                      title="Cancel (Esc)"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            </div>
-            {renderHeaderControls()}
           </div>
         </div>
 
-        {/* Actions */}
-        <div 
-          className="pt-3 mt-3"
-          style={{ borderTop: `1.5px solid ${colors.border}` }}
-        >
-          <div className="flex items-center justify-center flex-wrap gap-2.5 max-w-full">
-            {/* Preview, Download, and Share only available for non-deleted files */}
-            {!showDeleted && (
+        {/* Middle Section - Metadata */}
+        <div className="mb-4 space-y-1">
+          <div 
+            className="flex items-center gap-2 text-sm"
+            style={{ color: secondaryText }}
+          >
+            <span>{formattedDateTime}</span>
+            <span style={{ color: '#718096' }}>({relativeUpdated})</span>
+          </div>
+          <div 
+            className="flex items-center gap-2 text-sm"
+            style={{ color: secondaryText }}
+          >
+            <span>{formattedSize}</span>
+            {file.comments && file.comments.length > 0 && (
               <>
-                {/* Preview - requires view permission */}
+                <span style={{ color: '#718096' }}>•</span>
+                <div className="flex items-center gap-1">
+                  <MessageCircle size={14} style={{ color: secondaryText }} />
+                  <span>{file.comments.length} {file.comments.length === 1 ? 'comment' : 'comments'}</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Section - Actions Grid */}
+        {!showDeleted && (
+          <div 
+            className="pt-4 mt-4"
+            style={{ borderTop: `1px solid #2D3748` }}
+          >
+            <div className="flex flex-col gap-3">
+              {/* Row 1: View, Download, Share, Comment */}
+              <div className="grid grid-cols-4 gap-3">
+                {/* View */}
                 {canView(userPermission) && (
                   <button
                     onClick={() => {
                       closeAllStates('preview');
                       setShowPreviewModal(true);
                     }}
-                    className="shadow-sm"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                     style={{
-                      ...actionButtonBaseStyle,
-                      color: showPreviewModal ? colors.primaryBlue : colors.secondaryText,
-                      background: showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
-                      borderColor: showPreviewModal ? colors.primaryBlue : colors.border,
+                      color: secondaryText,
+                      background: 'transparent',
                     }}
-                    onMouseEnter={(e) =>
-                      applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
-                    }
-                    onMouseLeave={(e) =>
-                      resetHoverStyles(
-                        e,
-                        showPreviewModal ? colors.primaryBlue : colors.secondaryText,
-                        showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
-                        showPreviewModal ? colors.primaryBlue : colors.border
-                      )
-                    }
-                    title="Preview file"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#2D3748';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                    title="View"
                     aria-label="Preview file"
                   >
-                    <Eye size={18} />
+                    <Eye size={20} />
+                    <span className="text-xs">View</span>
                   </button>
                 )}
 
-                {/* Download - requires view permission */}
+                {/* Download */}
                 {canView(userPermission) && (
                   <div className="relative">
                     <button
@@ -578,27 +559,22 @@ const FileCard = React.memo(function FileCard({
                           setShowDownloadFormat(true);
                         }
                       }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors w-full"
                       style={{
-                        ...actionButtonBaseStyle,
-                        color: showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
-                        background: showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
-                        borderColor: showDownloadFormat ? colors.primaryBlue : colors.border,
+                        color: secondaryText,
+                        background: 'transparent',
                       }}
-                      onMouseEnter={(e) =>
-                        applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
-                      }
-                      onMouseLeave={(e) =>
-                        resetHoverStyles(
-                          e,
-                          showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
-                          showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
-                          showDownloadFormat ? colors.primaryBlue : colors.border
-                        )
-                      }
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#2D3748';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                       title="Download"
                       aria-label="Download file"
                     >
-                      <Download size={18} />
+                      <Download size={20} />
+                      <span className="text-xs">Download</span>
                     </button>
                     {showDownloadFormat && (
                       <DownloadFormatMenu
@@ -610,154 +586,153 @@ const FileCard = React.memo(function FileCard({
                   </div>
                 )}
 
-                {/* Share - only owner can share */}
+                {/* Share */}
                 {canManageShares(userPermission) && (
                   <button
                     onClick={() => {
                       closeAllStates('share');
                       fileSharing.setShowShareModal(true);
                     }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                     style={{
-                      ...actionButtonBaseStyle,
-                      color: colors.secondaryText,
+                      color: secondaryText,
+                      background: 'transparent',
                     }}
-                    onMouseEnter={(e) =>
-                      applyHoverStyles(e, colors.successGreen, colors.badgeSuccessBg, colors.successGreen)
-                    }
-                    onMouseLeave={(e) =>
-                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
-                    }
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#2D3748';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                     title="Share"
                     aria-label="Share file"
                   >
-                    <Share2 size={18} />
+                    <Share2 size={20} />
+                    <span className="text-xs">Share</span>
                   </button>
                 )}
-              </>
-            )}
 
-            {/* Comments - requires comment permission */}
-            {!showDeleted && canComment(userPermission) && (
-              <button
-                onClick={() => {
-                  logger.debug('Comment button clicked! Current state:', comments.showComments);
-                  if (comments.showComments) {
-                    comments.setShowComments(false);
-                  } else {
-                    closeAllStates('comments');
-                    comments.setShowComments(true);
-                  }
-                }}
-                style={{
-                  ...actionButtonBaseStyle,
-                  color: comments.showComments ? colors.badgePurpleText : colors.secondaryText,
-                  background: comments.showComments ? colors.badgePurpleBg : colors.inputBackground,
-                  borderColor: comments.showComments ? colors.badgePurpleText : colors.border,
-                }}
-                onMouseEnter={(e) =>
-                  applyHoverStyles(e, colors.badgePurpleText, colors.badgePurpleBg, colors.badgePurpleText)
-                }
-                onMouseLeave={(e) =>
-                  resetHoverStyles(
-                    e,
-                    comments.showComments ? colors.badgePurpleText : colors.secondaryText,
-                    comments.showComments ? colors.badgePurpleBg : colors.inputBackground,
-                    comments.showComments ? colors.badgePurpleText : colors.border
-                  )
-                }
-                title="Comments"
-                aria-label="Toggle comments"
-              >
-                <MessageCircle size={18} />
-              </button>
-            )}
+                {/* Comment */}
+                {canComment(userPermission) && (
+                  <button
+                    onClick={() => {
+                      logger.debug('Comment button clicked! Current state:', comments.showComments);
+                      if (comments.showComments) {
+                        comments.setShowComments(false);
+                      } else {
+                        closeAllStates('comments');
+                        comments.setShowComments(true);
+                      }
+                    }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    style={{
+                      color: comments.showComments ? blueAccent : secondaryText,
+                      background: comments.showComments ? '#2D3748' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!comments.showComments) {
+                        e.currentTarget.style.background = '#2D3748';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!comments.showComments) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                    title="Comment"
+                    aria-label="Toggle comments"
+                  >
+                    <MessageCircle size={20} />
+                    <span className="text-xs">Comment</span>
+                  </button>
+                )}
+              </div>
 
-            {/* Edit and Move - requires edit permission */}
-            {!showDeleted && canEdit(userPermission) && (
-              <>
-                <button
-                  onClick={handleStartEdit}
-                  style={{
-                    ...actionButtonBaseStyle,
-                    color: isEditing ? colors.primaryBlue : colors.secondaryText,
-                    background: isEditing ? colors.hoverBackground : colors.inputBackground,
-                    borderColor: isEditing ? colors.primaryBlue : colors.border,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isEditing) {
-                      applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue);
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isEditing) {
-                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground, colors.border);
-                    } else {
-                      // Keep the active state when editing
-                      e.currentTarget.style.color = colors.primaryBlue;
-                      e.currentTarget.style.background = colors.hoverBackground;
-                      e.currentTarget.style.borderColor = colors.primaryBlue;
-                    }
-                  }}
-                  title={isEditing ? "Click again to cancel editing" : "Edit file details"}
-                  disabled={isSaving}
-                >
-                  <Edit size={18} />
-                </button>
+              {/* Row 2: Edit, Move, Delete */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Edit */}
+                {canEdit(userPermission) && (
+                  <button
+                    onClick={handleStartEdit}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    style={{
+                      color: isEditing ? blueAccent : secondaryText,
+                      background: isEditing ? '#2D3748' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isEditing) {
+                        e.currentTarget.style.background = '#2D3748';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isEditing) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                    title="Edit"
+                    disabled={isSaving}
+                  >
+                    <Edit size={20} />
+                    <span className="text-xs">Edit</span>
+                  </button>
+                )}
 
-                {onMove && (
+                {/* Move */}
+                {canEdit(userPermission) && onMove && (
                   <button
                     onClick={() => {
                       closeAllStates('move');
                       setShowMoveModal(true);
                     }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                     style={{
-                      ...actionButtonBaseStyle,
-                      color: colors.secondaryText,
+                      color: secondaryText,
+                      background: 'transparent',
                     }}
-                    onMouseEnter={(e) =>
-                      applyHoverStyles(e, colors.badgeWarningText, colors.badgeWarningBg, colors.badgeWarningText)
-                    }
-                    onMouseLeave={(e) =>
-                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
-                    }
-                    title="Move file"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#2D3748';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                    title="Move"
                     aria-label="Move file"
                   >
-                    <Folder size={18} />
+                    <Folder size={20} />
+                    <span className="text-xs">Move</span>
                   </button>
                 )}
-              </>
-            )}
 
-            {/* Delete - only owner can delete */}
-            {!showDeleted && canDelete(userPermission) && (
-              <button
-                onClick={async () => {
-                  if (onDelete) {
-                    await onDelete(file.id);
-                  }
-                  // Let errors propagate to parent component for toast notification
-                }}
-                style={{
-                  ...actionButtonBaseStyle,
-                  color: colors.errorRed,
-                  background: colors.badgeErrorBg,
-                  borderColor: colors.errorRed,
-                }}
-                onMouseEnter={(e) =>
-                  applyHoverStyles(e, '#ffffff', colors.errorRed, colors.errorRed)
-                }
-                onMouseLeave={(e) =>
-                  resetHoverStyles(e, colors.errorRed, colors.badgeErrorBg, colors.errorRed)
-                }
-                title="Delete"
-                aria-label="Delete file"
-              >
-                <Trash2 size={18} />
-              </button>
-            )}
+                {/* Delete */}
+                {canDelete(userPermission) && (
+                  <button
+                    onClick={async () => {
+                      if (onDelete) {
+                        await onDelete(file.id);
+                      }
+                    }}
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    style={{
+                      color: '#F56565',
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#742A2A';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                    title="Delete"
+                    aria-label="Delete file"
+                  >
+                    <Trash2 size={20} />
+                    <span className="text-xs">Delete</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Comments Section */}
         <CommentsModal

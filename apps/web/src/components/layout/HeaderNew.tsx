@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Download, Upload, Save, Sparkles, Menu, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
   isMobile: boolean;
   isSaving: boolean;
-  canUndo: boolean;
-  canRedo: boolean;
   showRightPanel: boolean;
   previousSidebarState: boolean;
   sidebarCollapsed: boolean;
@@ -16,14 +14,12 @@ interface HeaderProps {
   lastSavedAt?: Date | null; // Last manual save time
   hasChanges?: boolean; // Whether there are unsaved changes
   onExport: () => void;
-  onUndo: () => void;
-  onRedo: () => void;
+  onClear: () => void;
   onImport: () => void;
   onSave: () => void;
   onToggleAIPanel: () => void;
   onTogglePreview?: () => void;
   onShowMobileMenu: () => void;
-  onShowResumeSharing?: () => void;
   setPreviousSidebarState: (state: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
   setShowRightPanel: (show: boolean) => void;
@@ -37,8 +33,6 @@ interface HeaderProps {
 export default function HeaderNew({
   isMobile,
   isSaving,
-  canUndo,
-  canRedo,
   showRightPanel,
   previousSidebarState,
   sidebarCollapsed,
@@ -46,14 +40,12 @@ export default function HeaderNew({
   lastSavedAt,
   hasChanges,
   onExport,
-  onUndo,
-  onRedo,
+  onClear,
   onImport,
   onSave,
   onToggleAIPanel,
   onTogglePreview,
   onShowMobileMenu,
-  onShowResumeSharing,
   setPreviousSidebarState,
   setSidebarCollapsed,
   setShowRightPanel,
@@ -101,15 +93,9 @@ export default function HeaderNew({
   };
 
   const actionButtons = [
-    { icon: Undo, label: 'Undo', onClick: onUndo, disabled: !canUndo, title: 'Undo (Ctrl+Z)' },
-    { icon: Redo, label: 'Redo', onClick: onRedo, disabled: !canRedo, title: 'Redo (Ctrl+Y)' },
     { icon: Upload, label: 'Import', onClick: onImport, title: 'Import Resume' },
     { icon: Download, label: 'Export', onClick: onExport, title: 'Export Resume' },
   ];
-
-  if (onShowResumeSharing) {
-    actionButtons.push({ icon: Share2, label: 'Share', onClick: onShowResumeSharing, title: 'Share Resume' });
-  }
 
   if (onTogglePreview) {
     actionButtons.push({
@@ -150,29 +136,6 @@ export default function HeaderNew({
           </button>
         )}
         
-        {/* Auto-save feedback indicator */}
-        {hasChanges && !isSaving && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: colors.badgeWarningText }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: colors.badgeWarningText }}></div>
-            <span>Unsaved changes</span>
-          </div>
-        )}
-        {isSaving && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: colors.primaryBlue }}>
-            <div 
-              className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: colors.primaryBlue }}
-            ></div>
-            <span>Auto-saving...</span>
-          </div>
-        )}
-        {!hasChanges && !isSaving && lastSavedAt && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: colors.successGreen }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
-            <span>All changes saved</span>
-          </div>
-        )}
-        
         {onToggleSidebar && (
           <button 
             onClick={onToggleSidebar}
@@ -196,11 +159,58 @@ export default function HeaderNew({
             <span>{sidebarCollapsed ? 'Expand' : 'Collapse'}</span>
           </button>
         )}
+        
+        {/* Auto-save feedback indicator */}
+        {hasChanges && !isSaving && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: colors.badgeWarningText }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: colors.badgeWarningText }}></div>
+            <span>Unsaved changes</span>
+          </div>
+        )}
+        {isSaving && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: colors.primaryBlue }}>
+            <div 
+              className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: colors.primaryBlue }}
+            ></div>
+            <span>Auto-saving...</span>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
-        {actionButtons.map((btn, index) => (
+        {/* All changes saved status */}
+        {!hasChanges && !isSaving && lastSavedAt && (
+          <div className="flex items-center gap-2 text-xs" style={{ color: colors.successGreen }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
+            <span>All changes saved</span>
+          </div>
+        )}
+        
+        {/* Clear Button - Destructive action */}
+        <button
+          onClick={onClear}
+          className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
+          style={{
+            background: isLightMode ? '#ffffff' : colors.inputBackground,
+            border: `1px solid ${colors.errorRed}`,
+            color: colors.errorRed,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = colors.badgeErrorBg;
+            e.currentTarget.style.borderColor = colors.errorRed;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = isLightMode ? '#ffffff' : colors.inputBackground;
+            e.currentTarget.style.borderColor = colors.errorRed;
+          }}
+          title="Clear Resume"
+        >
+          <span>Clear</span>
+        </button>
+
+        {actionButtons.filter(btn => btn.label !== 'Clear').map((btn, index) => (
           <button
             key={index}
             onClick={btn.onClick}

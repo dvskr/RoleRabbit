@@ -120,9 +120,9 @@ export default function ResumeEditor({
     };
     
     const sectionSpacingMap: Record<string, string> = {
-      tight: '0.5rem',
-      medium: '1rem',
-      loose: '1.5rem',
+      tight: '0.3rem',
+      medium: '0.6rem',
+      loose: '1rem',
     };
     
     const marginsMap: Record<string, string> = {
@@ -241,7 +241,7 @@ export default function ResumeEditor({
 
       {/* Main Resume Editing Area */}
       <div 
-        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 resume-editor-content"
+        className="flex-1 h-full overflow-y-auto resume-editor-content"
         style={{ 
           height: '100%', 
           maxHeight: '100%',
@@ -252,6 +252,13 @@ export default function ResumeEditor({
           overflowY: 'auto',
           overflowX: 'hidden',
           position: 'relative',
+          fontFamily: getFormattingStyles.fontFamily,
+          fontSize: getFormattingStyles.fontSize,
+          lineHeight: getFormattingStyles.lineHeight,
+          paddingTop: '1.5rem',
+          paddingBottom: getFormattingStyles.padding,
+          paddingLeft: getFormattingStyles.padding,
+          paddingRight: getFormattingStyles.padding,
         }}
       >
         {/* Dynamic styles for heading, bullet, and template formatting */}
@@ -277,55 +284,52 @@ export default function ResumeEditor({
           ${templateClasses.sectionColor.includes('red') ? '.resume-editor-content h3 { color: #dc2626 !important; }' : ''}
           ${templateClasses.sectionColor.includes('orange') ? '.resume-editor-content h3 { color: #ea580c !important; }' : ''}
         `}</style>
-        <div 
-          className={`w-full rounded-2xl shadow-lg border transition-all box-border ${templateClasses.container}`}
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-            boxShadow: `0 4px 6px ${colors.border}10`,
-            width: '100%',
-            maxWidth: '100%',
-            minHeight: '100%',
-            fontFamily: getFormattingStyles.fontFamily,
-            fontSize: getFormattingStyles.fontSize,
-            lineHeight: getFormattingStyles.lineHeight,
-            padding: getFormattingStyles.padding,
-          }}
-        >
-          {/* Template Header Styling */}
-          <div className={`mb-6 pb-4 ${templateClasses.header}`}>
-            {/* Name Input */}
-            <NameInput
-              name={resumeData.name || ''}
-              onChange={(name) => setResumeData((prev: any) => ({...prev, name}))}
-              colors={colors}
-              nameColorClass={templateClasses.nameColor}
-              titleColorClass={templateClasses.titleColor}
-            />
-            
-            {/* Title Display */}
-            {resumeData.title && (
-              <p className={`text-lg font-medium px-3 ${templateClasses.titleColor}`}>
-                {resumeData.title}
-              </p>
-            )}
+        
+        {/* Template Header Styling */}
+        <div className={`mb-4 pb-3 ${templateClasses.header}`}>
+          {/* Name Input */}
+          <NameInput
+            name={resumeData.name || ''}
+            onChange={(name) => setResumeData((prev: any) => ({...prev, name}))}
+            colors={colors}
+            nameColorClass={templateClasses.nameColor}
+            titleColorClass={templateClasses.titleColor}
+          />
           
-            {/* Contact Fields Grid */}
-            <ContactFieldsGrid
-              resumeData={resumeData}
-              setResumeData={setResumeData}
-              customFields={customFields}
-              setCustomFields={setCustomFields}
-              setShowAddFieldModal={setShowAddFieldModal}
-              colors={colors}
+          {/* Title Input Field */}
+          <div className="mb-4">
+            <input 
+              className={`text-lg font-medium w-1/2 border-none outline-none rounded-xl px-3 py-2 break-words overflow-wrap-anywhere transition-all ${templateClasses.titleColor || ''}`}
+              style={{
+                background: 'transparent',
+                color: colors.secondaryText || colors.primaryText,
+              }}
+              value={resumeData.title || ''} 
+              onChange={(e) => setResumeData((prev: any) => ({...prev, title: e.target.value}))}
+              placeholder="Your Title / Designation"
+              onFocus={(e) => {
+                e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+              }}
+              onBlur={(e) => {
+                e.target.style.outline = 'none';
+              }}
             />
           </div>
+        
+          {/* Contact Fields Grid */}
+          <ContactFieldsGrid
+            resumeData={resumeData}
+            setResumeData={setResumeData}
+            customFields={customFields}
+            setCustomFields={setCustomFields}
+            setShowAddFieldModal={setShowAddFieldModal}
+            colors={colors}
+          />
+        </div>
 
-          {/* Render All Sections */}
-          <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
-            {renderedSections}
-          </div>
-          
+        {/* Render All Sections */}
+        <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
+          {renderedSections}
         </div>
       </div>
     </div>
