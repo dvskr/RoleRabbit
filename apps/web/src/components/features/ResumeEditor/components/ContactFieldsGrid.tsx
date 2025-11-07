@@ -6,12 +6,13 @@ import { ThemeColors } from '../../../../contexts/ThemeContext';
 import { STANDARD_CONTACT_FIELDS } from '../constants';
 import { getFieldIcon } from '../utils/iconHelpers';
 import { validateEmail, validatePhone, validateURL, normalizeURL } from '../../../../utils/validation';
+import { ResumeData, CustomField } from '../../../../types/resume';
 
 interface ContactFieldsGridProps {
-  resumeData: any;
-  setResumeData: (data: any) => void;
-  customFields: Array<{ id: string; name: string; icon?: string; value?: string }>;
-  setCustomFields: (fields: Array<{ id: string; name: string; icon?: string; value?: string }>) => void;
+  resumeData: ResumeData;
+  setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
+  customFields: CustomField[];
+  setCustomFields: (fields: CustomField[]) => void;
   setShowAddFieldModal: (show: boolean) => void;
   colors: ThemeColors;
 }
@@ -71,7 +72,7 @@ export default function ContactFieldsGrid({
 
   // Handle field change with validation
   const handleFieldChange = useCallback((field: string, value: string) => {
-    setResumeData((prev: any) => ({ ...prev, [field]: value }));
+    setResumeData((prev: ResumeData) => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
     if (validationErrors[field]) {
@@ -90,7 +91,7 @@ export default function ContactFieldsGrid({
     if ((field === 'linkedin' || field === 'github' || field === 'website') && value.trim()) {
       const normalized = normalizeURL(value);
       if (normalized !== value) {
-        setResumeData((prev: any) => ({ ...prev, [field]: normalized }));
+        setResumeData((prev: ResumeData) => ({ ...prev, [field]: normalized }));
         valueToValidate = normalized;
       }
     }

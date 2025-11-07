@@ -11,6 +11,7 @@ import {
   type DashboardTab,
 } from '../constants/dashboard.constants';
 import { mapTabName } from '../utils/dashboardHandlers';
+import { logger } from '../../../utils/logger';
 
 export interface UseDashboardUIReturn {
   activeTab: DashboardTab;
@@ -97,7 +98,7 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
         updateUrlTabParam(savedTab);
       }
     } catch (error) {
-      console.error('Error reading dashboard tab from localStorage:', error);
+      logger.error('Error reading dashboard tab from localStorage:', error);
     }
   }, []);
 
@@ -125,7 +126,7 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
       window.localStorage.setItem('dashboard_activeTab', activeTab);
       document.cookie = `dashboardTab=${activeTab}; path=/; max-age=31536000; SameSite=Lax`;
     } catch (error) {
-      console.error('Error persisting dashboard tab state:', error);
+      logger.error('Error persisting dashboard tab state:', error);
     }
 
     updateUrlTabParam(activeTab);

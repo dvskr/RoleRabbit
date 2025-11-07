@@ -201,14 +201,16 @@ fastify.addHook('preHandler', async (request, reply) => {
   
   if (cookieToken && !authHeader) {
     request.headers.authorization = `Bearer ${cookieToken}`;
-    // Debug log (remove in production)
+    // Debug log (development only)
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
+      const logger = require('./utils/logger');
+      logger.debug(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
     }
   } else if (!cookieToken && !authHeader) {
-    // Debug log
+    // Debug log (development only)
     if (process.env.NODE_ENV !== 'production' && !request.url.includes('/health') && !request.url.includes('/api/status')) {
-      console.log(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
+      const logger = require('./utils/logger');
+      logger.debug(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
     }
   }
 });

@@ -44,8 +44,8 @@ const ExperienceSection = React.memo(function ExperienceSection({
   };
 
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
-    setResumeData((prev: any) => {
-      const updatedExperience = (prev.experience || []).map((item: any) => 
+    setResumeData((prev: ResumeData) => {
+      const updatedExperience = (prev.experience || []).map((item: ExperienceItem) => 
       item.id === id ? { ...item, ...updates } : item
     );
       return {...prev, experience: updatedExperience};
@@ -53,8 +53,8 @@ const ExperienceSection = React.memo(function ExperienceSection({
   };
 
   const deleteExperience = (id: number) => {
-    setResumeData((prev: any) => {
-      const updatedExperience = (prev.experience || []).filter((item: any) => item.id !== id);
+    setResumeData((prev: ResumeData) => {
+      const updatedExperience = (prev.experience || []).filter((item: ExperienceItem) => item.id !== id);
       return {...prev, experience: updatedExperience};
     });
   };

@@ -38,8 +38,8 @@ const EducationSection = React.memo(function EducationSection({
   };
 
   const updateEducation = (id: number, updates: Partial<EducationItem>) => {
-    setResumeData((prev: any) => {
-      const updatedEducation = (prev.education || []).map((item: any) => 
+    setResumeData((prev: ResumeData) => {
+      const updatedEducation = (prev.education || []).map((item: EducationItem) => 
         item.id === id ? { ...item, ...updates } : item
       );
       return {...prev, education: updatedEducation};
@@ -47,8 +47,8 @@ const EducationSection = React.memo(function EducationSection({
   };
 
   const deleteEducation = (id: number) => {
-    setResumeData((prev: any) => {
-      const updatedEducation = (prev.education || []).filter((item: any) => item.id !== id);
+    setResumeData((prev: ResumeData) => {
+      const updatedEducation = (prev.education || []).filter((item: EducationItem) => item.id !== id);
       return {...prev, education: updatedEducation};
     });
   };

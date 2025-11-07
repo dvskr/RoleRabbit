@@ -14,6 +14,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
+const { validateEmail, validatePhone, validateURL } = require('../utils/validation');
 
 /**
  * Ensure value is a proper array (convert object with numeric keys to array)
@@ -31,6 +32,53 @@ const ensureArray = (value) => {
     }
   }
   return [];
+};
+
+const validateResumeContactInfo = (resumeData = {}) => {
+  const errors = {};
+
+  if (resumeData && typeof resumeData === 'object') {
+    if ('email' in resumeData) {
+      const emailCheck = validateEmail(
+        typeof resumeData.email === 'string' ? resumeData.email.trim() : resumeData.email
+      );
+      if (!emailCheck.valid) {
+        errors.email = emailCheck.error || 'Invalid email format';
+      }
+    }
+
+    if ('phone' in resumeData) {
+      const phoneCheck = validatePhone(
+        typeof resumeData.phone === 'string' ? resumeData.phone.trim() : resumeData.phone
+      );
+      if (!phoneCheck.valid) {
+        errors.phone = phoneCheck.error || 'Invalid phone number format';
+      }
+    }
+
+    if ('linkedin' in resumeData) {
+      const linkedinCheck = validateURL(resumeData.linkedin, 'LinkedIn URL');
+      if (!linkedinCheck.valid) {
+        errors.linkedin = linkedinCheck.error || 'Invalid LinkedIn URL';
+      }
+    }
+
+    if ('github' in resumeData) {
+      const githubCheck = validateURL(resumeData.github, 'GitHub URL');
+      if (!githubCheck.valid) {
+        errors.github = githubCheck.error || 'Invalid GitHub URL';
+      }
+    }
+
+    if ('website' in resumeData) {
+      const websiteCheck = validateURL(resumeData.website, 'Website URL');
+      if (!websiteCheck.valid) {
+        errors.website = websiteCheck.error || 'Invalid website URL';
+      }
+    }
+  }
+
+  return errors;
 };
 
 /**
@@ -64,18 +112,91 @@ async function resumeRoutes(fastify, options) {
         }
       });
 
-      return reply.send({
-        success: true,
-        resumes: resumes.map(resume => ({
+      // Normalize arrays in resumeData for all resumes
+      const normalizedResumes = resumes.map(resume => {
+        const normalizedData = resume.data ? { ...resume.data } : {};
+        if (normalizedData.resumeData) {
+          normalizedData.resumeData = { ...normalizedData.resumeData };
+          const arrayFields = ['skills', 'experience', 'education', 'projects', 'certifications'];
+          arrayFields.forEach(field => {
+            if (normalizedData.resumeData[field] !== undefined) {
+              normalizedData.resumeData[field] = ensureArray(normalizedData.resumeData[field]);
+            }
+          });
+          
+          // Normalize nested arrays in experience items
+          if (Array.isArray(normalizedData.resumeData.experience)) {
+            normalizedData.resumeData.experience = normalizedData.resumeData.experience.map(exp => {
+              if (exp && typeof exp === 'object') {
+                return {
+                  ...exp,
+                  bullets: ensureArray(exp.bullets),
+                  environment: ensureArray(exp.environment),
+                  customFields: ensureArray(exp.customFields)
+                };
+              }
+              return exp;
+            });
+          }
+
+          // Normalize nested arrays in education items
+          if (Array.isArray(normalizedData.resumeData.education)) {
+            normalizedData.resumeData.education = normalizedData.resumeData.education.map(edu => {
+              if (edu && typeof edu === 'object') {
+                return {
+                  ...edu,
+                  customFields: ensureArray(edu.customFields)
+                };
+              }
+              return edu;
+            });
+          }
+          
+          // Normalize nested arrays in project items
+          if (Array.isArray(normalizedData.resumeData.projects)) {
+            normalizedData.resumeData.projects = normalizedData.resumeData.projects.map(proj => {
+              if (proj && typeof proj === 'object') {
+                return {
+                  ...proj,
+                  bullets: ensureArray(proj.bullets),
+                  skills: ensureArray(proj.skills),
+                  customFields: ensureArray(proj.customFields)
+                };
+              }
+              return proj;
+            });
+          }
+          
+          // Normalize nested arrays in certification items
+          if (Array.isArray(normalizedData.resumeData.certifications)) {
+            normalizedData.resumeData.certifications = normalizedData.resumeData.certifications.map(cert => {
+              if (cert && typeof cert === 'object') {
+                return {
+                  ...cert,
+                  skills: ensureArray(cert.skills),
+                  customFields: ensureArray(cert.customFields)
+                };
+              }
+              return cert;
+            });
+          }
+        }
+        
+        return {
           id: resume.id,
           name: resume.fileName,
           fileName: resume.fileName,
           templateId: resume.templateId,
-          data: resume.data, // Include full resume data
+          data: normalizedData,
           isStarred: resume.isStarred,
           lastUpdated: resume.updatedAt.toISOString(),
           createdAt: resume.createdAt.toISOString()
-        }))
+        };
+      });
+
+      return reply.send({
+        success: true,
+        resumes: normalizedResumes
       });
     } catch (error) {
       logger.error('Error fetching resumes:', error);
@@ -109,6 +230,75 @@ async function resumeRoutes(fastify, options) {
         });
       }
 
+      // Normalize arrays in resumeData when loading from database
+      const normalizedData = resume.data ? { ...resume.data } : {};
+      if (normalizedData.resumeData) {
+        normalizedData.resumeData = { ...normalizedData.resumeData };
+        const arrayFields = ['skills', 'experience', 'education', 'projects', 'certifications'];
+        arrayFields.forEach(field => {
+          if (normalizedData.resumeData[field] !== undefined) {
+            normalizedData.resumeData[field] = ensureArray(normalizedData.resumeData[field]);
+          }
+        });
+        
+        // Normalize nested arrays in experience items
+        if (Array.isArray(normalizedData.resumeData.experience)) {
+          normalizedData.resumeData.experience = normalizedData.resumeData.experience.map(exp => {
+            if (exp && typeof exp === 'object') {
+              return {
+                ...exp,
+                bullets: ensureArray(exp.bullets),
+                environment: ensureArray(exp.environment),
+                customFields: ensureArray(exp.customFields)
+              };
+            }
+            return exp;
+          });
+        }
+
+        // Normalize nested arrays in education items
+        if (Array.isArray(normalizedData.resumeData.education)) {
+          normalizedData.resumeData.education = normalizedData.resumeData.education.map(edu => {
+            if (edu && typeof edu === 'object') {
+              return {
+                ...edu,
+                customFields: ensureArray(edu.customFields)
+              };
+            }
+            return edu;
+          });
+        }
+        
+        // Normalize nested arrays in project items
+        if (Array.isArray(normalizedData.resumeData.projects)) {
+          normalizedData.resumeData.projects = normalizedData.resumeData.projects.map(proj => {
+            if (proj && typeof proj === 'object') {
+              return {
+                ...proj,
+                bullets: ensureArray(proj.bullets),
+                skills: ensureArray(proj.skills),
+                customFields: ensureArray(proj.customFields)
+              };
+            }
+            return proj;
+          });
+        }
+        
+        // Normalize nested arrays in certification items
+        if (Array.isArray(normalizedData.resumeData.certifications)) {
+          normalizedData.resumeData.certifications = normalizedData.resumeData.certifications.map(cert => {
+            if (cert && typeof cert === 'object') {
+              return {
+                ...cert,
+                skills: ensureArray(cert.skills),
+                customFields: ensureArray(cert.customFields)
+              };
+            }
+            return cert;
+          });
+        }
+      }
+
       return reply.send({
         success: true,
         resume: {
@@ -116,7 +306,7 @@ async function resumeRoutes(fastify, options) {
           name: resume.fileName,
           fileName: resume.fileName,
           templateId: resume.templateId,
-          data: resume.data,
+          data: normalizedData,
           lastUpdated: resume.updatedAt.toISOString(),
           createdAt: resume.createdAt.toISOString()
         }
@@ -184,6 +374,16 @@ async function resumeRoutes(fastify, options) {
       const resumeDataContent = data.resumeData && typeof data.resumeData === 'object' 
         ? data.resumeData 
         : (data && typeof data === 'object' ? data : {});
+
+      const contactValidationErrors = validateResumeContactInfo(resumeDataContent);
+      if (Object.keys(contactValidationErrors).length > 0) {
+        logger.warn('Resume contact validation failed on create', { errors: contactValidationErrors, userId });
+        return reply.status(400).send({
+          success: false,
+          error: 'Resume validation failed',
+          details: contactValidationErrors,
+        });
+      }
 
       // Create resume data structure (JSON fields only - sectionOrder is separate)
       // CRITICAL: Ensure all nested objects are plain objects, not undefined
@@ -265,7 +465,7 @@ async function resumeRoutes(fastify, options) {
       });
 
       // Log the actual structure being sent to Prisma (first level only to avoid huge logs)
-      console.log('[DEBUG] Prisma create data structure:', {
+      logger.debug('Prisma create data structure:', {
         userId: typeof createData.userId,
         fileName: typeof createData.fileName,
         templateId: createData.templateId,
@@ -295,16 +495,18 @@ async function resumeRoutes(fastify, options) {
           createData: createData
         };
         
-        console.error('[PRISMA ERROR] Full error:', errorDetails);
-        console.error('[PRISMA ERROR] CreateData that failed:', JSON.stringify(createData, null, 2));
+        logger.error('[PRISMA ERROR] Full error:', errorDetails);
+        logger.error('[PRISMA ERROR] CreateData that failed:', JSON.stringify(createData, null, 2));
         
-        // Write to file for debugging
-        try {
-          const fs = require('fs');
-          fs.writeFileSync('prisma-error.json', JSON.stringify(errorDetails, null, 2));
-          console.error('[PRISMA ERROR] Error details written to prisma-error.json');
-        } catch (fileError) {
-          // Ignore file write errors
+        // Write to file for debugging (development only)
+        if (process.env.NODE_ENV !== 'production') {
+          try {
+            const fs = require('fs');
+            fs.writeFileSync('prisma-error.json', JSON.stringify(errorDetails, null, 2));
+            logger.error('[PRISMA ERROR] Error details written to prisma-error.json');
+          } catch (fileError) {
+            // Ignore file write errors
+          }
         }
         
         throw prismaError;
@@ -332,7 +534,7 @@ async function resumeRoutes(fastify, options) {
         meta: error.meta,
         name: error.name
       });
-      console.error('Full error object:', error);
+      logger.error('Full error object:', error);
       return reply.status(500).send({
         success: false,
         error: 'Failed to create resume',
@@ -426,6 +628,16 @@ async function resumeRoutes(fastify, options) {
           resumeDataContent = (typeof data.resumeData === 'object' && !Array.isArray(data.resumeData)) 
             ? data.resumeData 
             : {};
+
+          const contactValidationErrors = validateResumeContactInfo(resumeDataContent);
+          if (Object.keys(contactValidationErrors).length > 0) {
+            logger.warn('Resume contact validation failed on update', { errors: contactValidationErrors, userId, resumeId: id });
+            return reply.status(400).send({
+              success: false,
+              error: 'Resume validation failed',
+              details: contactValidationErrors,
+            });
+          }
         } else {
           // Fallback to existing if not provided
           resumeDataContent = existingData.resumeData || {};
@@ -605,16 +817,52 @@ async function resumeRoutes(fastify, options) {
       // Prepare update data
       const existingData = existingResume.data || {};
       
-      // DEBUG: Log what we're receiving
-      console.log('[AUTOSAVE] Received data:', {
+      // Log what we're receiving (debug level)
+      logger.debug('[AUTOSAVE] Received data:', {
         hasResumeData: !!data.resumeData,
         resumeDataKeys: data.resumeData ? Object.keys(data.resumeData) : [],
         phone: data.resumeData?.phone,
         oldPhone: existingData.resumeData?.phone
       });
       
+      // Merge resumeData properly to preserve existing fields when partial updates are sent
+      const existingResumeData = existingData.resumeData || {};
+      const incomingResumeData = data.resumeData || {};
+
+      const autosaveValidationErrors = validateResumeContactInfo(incomingResumeData);
+      if (Object.keys(autosaveValidationErrors).length > 0) {
+        logger.warn('Resume contact validation failed on autosave', { errors: autosaveValidationErrors, userId, resumeId: id });
+        return reply.status(400).send({
+          success: false,
+          error: 'Resume validation failed',
+          details: autosaveValidationErrors,
+        });
+      }
+      
+      // Deep merge for resumeData - handle arrays specially to avoid overwriting with empty arrays
+      const mergedResumeData = { ...existingResumeData };
+      
+      // Merge scalar fields (strings, numbers, booleans)
+      Object.keys(incomingResumeData).forEach(key => {
+        const incomingValue = incomingResumeData[key];
+        const existingValue = existingResumeData[key];
+        
+        // For array fields, only overwrite if incoming is a non-empty array
+        // This prevents empty arrays from overwriting existing data
+        if (Array.isArray(incomingValue)) {
+          if (incomingValue.length > 0 || existingValue === undefined) {
+            mergedResumeData[key] = incomingValue;
+          }
+          // If incoming is empty array and existing has data, keep existing
+        } else if (incomingValue !== undefined && incomingValue !== null && incomingValue !== '') {
+          // For non-array fields, overwrite if incoming value is not empty
+          mergedResumeData[key] = incomingValue;
+        }
+        // If incoming is undefined/null/empty string, keep existing value
+      });
+      
       const mergedData = {
-        resumeData: data.resumeData || existingData.resumeData || data,
+        resumeData: mergedResumeData,
         sectionOrder: data.sectionOrder !== undefined ? data.sectionOrder : existingData.sectionOrder,
         sectionVisibility: data.sectionVisibility !== undefined ? data.sectionVisibility : existingData.sectionVisibility,
         customSections: data.customSections !== undefined ? data.customSections : existingData.customSections,
@@ -622,11 +870,79 @@ async function resumeRoutes(fastify, options) {
         formatting: data.formatting !== undefined ? data.formatting : existingData.formatting
       };
 
-      // DEBUG: Log what we're about to save
-      console.log('[AUTOSAVE] Merged data to save:', {
+      // Normalize arrays inside resumeData to ensure they're proper arrays (not objects with numeric keys)
+      const arrayFields = ['skills', 'experience', 'education', 'projects', 'certifications'];
+      arrayFields.forEach(field => {
+        if (mergedResumeData[field] !== undefined) {
+          mergedResumeData[field] = ensureArray(mergedResumeData[field]);
+        }
+      });
+      
+      // Also normalize nested arrays in experience items (bullets, environment, customFields)
+      if (Array.isArray(mergedResumeData.experience)) {
+        mergedResumeData.experience = mergedResumeData.experience.map(exp => {
+          if (exp && typeof exp === 'object') {
+            return {
+              ...exp,
+              bullets: ensureArray(exp.bullets),
+              environment: ensureArray(exp.environment),
+              customFields: ensureArray(exp.customFields)
+            };
+          }
+          return exp;
+        });
+      }
+
+      // Normalize nested arrays in education items
+      if (Array.isArray(mergedResumeData.education)) {
+        mergedResumeData.education = mergedResumeData.education.map(edu => {
+          if (edu && typeof edu === 'object') {
+            return {
+              ...edu,
+              customFields: ensureArray(edu.customFields)
+            };
+          }
+          return edu;
+        });
+      }
+      
+      // Normalize nested arrays in project items
+      if (Array.isArray(mergedResumeData.projects)) {
+        mergedResumeData.projects = mergedResumeData.projects.map(proj => {
+          if (proj && typeof proj === 'object') {
+            return {
+              ...proj,
+              bullets: ensureArray(proj.bullets),
+              skills: ensureArray(proj.skills),
+              customFields: ensureArray(proj.customFields)
+            };
+          }
+          return proj;
+        });
+      }
+      
+      // Normalize nested arrays in certification items
+      if (Array.isArray(mergedResumeData.certifications)) {
+        mergedResumeData.certifications = mergedResumeData.certifications.map(cert => {
+          if (cert && typeof cert === 'object') {
+            return {
+              ...cert,
+              skills: ensureArray(cert.skills),
+              customFields: ensureArray(cert.customFields)
+            };
+          }
+          return cert;
+        });
+      }
+
+      // Log what we're about to save (debug level)
+      logger.debug('[AUTOSAVE] Merged data to save:', {
         hasResumeData: !!mergedData.resumeData,
         phone: mergedData.resumeData?.phone,
-        skills: mergedData.resumeData?.skills
+        skills: mergedData.resumeData?.skills,
+        experienceCount: Array.isArray(mergedData.resumeData?.experience) ? mergedData.resumeData.experience.length : 0,
+        educationCount: Array.isArray(mergedData.resumeData?.education) ? mergedData.resumeData.education.length : 0,
+        projectsCount: Array.isArray(mergedData.resumeData?.projects) ? mergedData.resumeData.projects.length : 0
       });
 
       // Ensure arrays are proper arrays (not objects with numeric keys)
@@ -647,8 +963,8 @@ async function resumeRoutes(fastify, options) {
         }
       });
       
-      // DEBUG: Log what was actually saved
-      console.log('[AUTOSAVE] Saved to database:', {
+      // Log what was actually saved (debug level)
+      logger.debug('[AUTOSAVE] Saved to database:', {
         id: updatedResume.id,
         phone: updatedResume.data?.resumeData?.phone
       });

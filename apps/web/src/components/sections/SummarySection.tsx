@@ -76,7 +76,7 @@ const SummarySection = React.memo(function SummarySection({
               const value = e.target.value;
               // Enforce max length
               if (value.length <= MAX_LENGTHS.SUMMARY) {
-                setResumeData((prev: any) => ({...prev, summary: value}));
+                setResumeData((prev: ResumeData) => ({...prev, summary: value}));
               }
             }}
             placeholder="Write a compelling professional summary..."

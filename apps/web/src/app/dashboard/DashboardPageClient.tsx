@@ -48,8 +48,10 @@ import { resumeHelpers } from '../../utils/resumeHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
-import { ConflictIndicator } from '../../components/ConflictIndicator';
+import { parseResumeFile } from './utils/cloudStorageHelpers';
+import { Loading } from '../../components/Loading';
 import { useToasts, ToastContainer } from '../../components/Toast';
+import { ConflictIndicator } from '../../components/ConflictIndicator';
 import apiService from '../../services/apiService';
 // Lazy load heavy analytics and modal components
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
@@ -146,7 +148,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   const { theme } = useTheme();
   const colors = theme.colors;
   const initializingCustomFieldsRef = useRef(false);
-  const { toasts, showToast, dismissToast } = useToasts();
   
   // Dashboard-specific state hooks
   const dashboardUI = useDashboardUI(initialTab);
@@ -174,6 +175,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     addedTemplates,
     setAddedTemplates,
   } = dashboardTemplates;
+
+  // Toast notifications
+  const { toasts, showToast, dismissToast } = useToasts();
 
   const handleResumeLoaded = useCallback(({ resume, snapshot }: { resume: any; snapshot: { customFields?: CustomField[] } }) => {
     initializingCustomFieldsRef.current = true;
@@ -253,6 +257,13 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     history, setHistory,
     historyIndex, setHistoryIndex
   } = resumeDataHook;
+
+  // Display saveError via toast notifications
+  useEffect(() => {
+    if (saveError) {
+      showToast(saveError, 'error', 8000); // Show error toast for 8 seconds
+    }
+  }, [saveError, showToast]);
 
   // Sync activeResumeId when currentResumeId changes
   useEffect(() => {
@@ -439,6 +450,95 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setShowImportFromCloudModal,
   });
 
+  // JSON import handler
+  const handleJsonImport = useCallback(() => {
+    if (!importJsonData || !importJsonData.trim()) {
+      logger.debug('No JSON data to import');
+      return;
+    }
+    
+    try {
+      // Parse JSON data
+      const data = JSON.parse(importJsonData);
+      
+      // Use parseResumeFile helper for consistent parsing
+      const parsedData = parseResumeFile(importJsonData);
+      
+      if (parsedData) {
+        // Import resume data using parsed data
+        setResumeData(parsedData.resumeData);
+        if (parsedData.customSections) {
+          setCustomSections(parsedData.customSections);
+        }
+        if (parsedData.resumeFileName) {
+          setResumeFileName(parsedData.resumeFileName);
+        }
+        if (parsedData.fontFamily) {
+          setFontFamily(parsedData.fontFamily);
+        }
+        if (parsedData.fontSize) {
+          setFontSize(parsedData.fontSize);
+        }
+        if (parsedData.lineSpacing) {
+          setLineSpacing(parsedData.lineSpacing);
+        }
+        if (parsedData.sectionSpacing) {
+          setSectionSpacing(parsedData.sectionSpacing);
+        }
+        if (parsedData.margins) {
+          setMargins(parsedData.margins);
+        }
+        if (parsedData.headingStyle) {
+          setHeadingStyle(parsedData.headingStyle);
+        }
+        if (parsedData.bulletStyle) {
+          setBulletStyle(parsedData.bulletStyle);
+        }
+        
+        // Close modal and clear JSON data
+        setShowImportModal(false);
+        setImportJsonData('');
+        setImportMethod('');
+        logger.debug('JSON import successful');
+      } else if (data.resumeData) {
+        // Fallback: if parseResumeFile fails but data has resumeData structure
+        setResumeData(data.resumeData);
+        if (data.customSections) setCustomSections(data.customSections);
+        if (data.resumeFileName) setResumeFileName(data.resumeFileName);
+        setShowImportModal(false);
+        setImportJsonData('');
+        setImportMethod('');
+        logger.debug('JSON import successful (fallback)');
+      } else if (data.name || data.email || Array.isArray(data.experience)) {
+        // Fallback: if it's just resumeData directly
+        setResumeData(data);
+        setShowImportModal(false);
+        setImportJsonData('');
+        setImportMethod('');
+        logger.debug('JSON import successful (direct resumeData)');
+      } else {
+        logger.error('Invalid JSON format for import');
+      }
+    } catch (error) {
+      logger.error('Error parsing JSON import:', error);
+    }
+  }, [
+    importJsonData,
+    setResumeData,
+    setCustomSections,
+    setResumeFileName,
+    setFontFamily,
+    setFontSize,
+    setLineSpacing,
+    setSectionSpacing,
+    setMargins,
+    setHeadingStyle,
+    setBulletStyle,
+    setShowImportModal,
+    setImportJsonData,
+    setImportMethod,
+  ]);
+
   // Memoize renderSection to prevent unnecessary re-renders in ResumeEditor
   const renderSection = useCallback((section: string) => {
     if (!sectionVisibility[section]) return null;
@@ -531,6 +631,11 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       case 'storage':
         return <CloudStorage />;
       case 'editor':
+        // Show loading state while resume is loading
+        if (resumeLoading) {
+          return <Loading message="Loading Resume Editor..." />;
+        }
+        
         return isPreviewMode ? (
           <ResumePreview
             resumeFileName={resumeFileName}
@@ -763,7 +868,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                   setHistoryIndex(0);
                 }
               }}
-              onImport={() => setShowImportModal(true)}
+              onImport={handleJsonImport}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
@@ -1046,6 +1151,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onTabChange={handleTabChange}
         onExport={handleExport}
         onSaveToCloud={handleSaveToCloud}
+        onImport={handleJsonImport}
         onImportFromCloud={handleImportFromCloud}
         onFileSelected={handleFileSelected}
         onAddSection={addCustomSection}

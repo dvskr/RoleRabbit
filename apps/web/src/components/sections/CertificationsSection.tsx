@@ -39,8 +39,8 @@ const CertificationsSection = React.memo(function CertificationsSection({
   };
 
   const updateCertification = (id: number, updates: Partial<CertificationItem>) => {
-    setResumeData((prev: any) => {
-      const updatedCertifications = (prev.certifications || []).map((item: any) => 
+    setResumeData((prev: ResumeData) => {
+      const updatedCertifications = (prev.certifications || []).map((item: CertificationItem) => 
         item.id === id ? { ...item, ...updates } : item
       );
       return {...prev, certifications: updatedCertifications};
@@ -48,8 +48,8 @@ const CertificationsSection = React.memo(function CertificationsSection({
   };
 
   const deleteCertification = (id: number) => {
-    setResumeData((prev: any) => {
-      const updatedCertifications = (prev.certifications || []).filter((item: any) => item.id !== id);
+    setResumeData((prev: ResumeData) => {
+      const updatedCertifications = (prev.certifications || []).filter((item: CertificationItem) => item.id !== id);
       return {...prev, certifications: updatedCertifications};
     });
   };

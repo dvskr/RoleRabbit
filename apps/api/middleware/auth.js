@@ -29,7 +29,9 @@ async function authenticate(request, reply) {
       errorCode: err.code
     };
     
-    console.log(`[Auth] Authentication failed:`, authDebug);
+    // Use logger instead of console.log for production readiness
+    const logger = require('../utils/logger');
+    logger.debug(`[Auth] Authentication failed:`, authDebug);
     
     // Authentication failed, send 401 response
     let errorMessage = 'Unauthorized';

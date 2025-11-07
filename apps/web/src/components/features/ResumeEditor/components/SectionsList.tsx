@@ -3,12 +3,13 @@
 import React from 'react';
 import { Layers, Plus } from 'lucide-react';
 import { ThemeColors } from '../../../contexts/ThemeContext';
+import { CustomSection } from '../../../types/resume';
 import SectionItem from './SectionItem';
 
 interface SectionsListProps {
   sectionOrder: string[];
   sectionVisibility: Record<string, boolean>;
-  customSections: any[];
+  customSections: CustomSection[];
   onToggleSection: (section: string) => void;
   onMoveSection: (index: number, direction: 'up' | 'down') => void;
   onShowAddSectionModal: () => void;
@@ -53,7 +54,7 @@ export default function SectionsList({
       
       <div className="space-y-2">
         {sectionOrder.map((section, index) => {
-          const isCustom = customSections.find((s: any) => s.id === section);
+          const isCustom = customSections.find((s: CustomSection) => s.id === section);
           const displayName = isCustom ? isCustom.name : section;
           
           return (

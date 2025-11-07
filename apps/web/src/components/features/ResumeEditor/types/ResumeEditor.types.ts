@@ -1,13 +1,14 @@
 import React from 'react';
+import { ResumeData, CustomSection, CustomField } from '../../../types/resume';
 
 export interface ResumeEditorProps {
   resumeFileName: string;
   setResumeFileName: (name: string) => void;
   sectionOrder: string[];
   sectionVisibility: Record<string, boolean>;
-  customSections: any[];
-  resumeData: any;
-  setResumeData: (data: any) => void;
+  customSections: CustomSection[];
+  resumeData: ResumeData;
+  setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
   fontFamily: string;
   setFontFamily: (font: string) => void;
   fontSize: string;
@@ -32,8 +33,8 @@ export interface ResumeEditorProps {
   renderSection: (section: string) => React.ReactNode;
   showAddFieldModal: boolean;
   setShowAddFieldModal: (show: boolean) => void;
-  customFields: Array<{ id: string; name: string; icon?: string; value?: string }>;
-  setCustomFields: (fields: Array<{ id: string; name: string; icon?: string; value?: string }>) => void;
+  customFields: CustomField[];
+  setCustomFields: (fields: CustomField[]) => void;
   newFieldName: string;
   setNewFieldName: (name: string) => void;
   newFieldIcon: string;

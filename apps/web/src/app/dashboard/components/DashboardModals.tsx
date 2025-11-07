@@ -94,6 +94,7 @@ interface DashboardModalsProps {
   // Handlers
   onExport: (format: string) => void;
   onSaveToCloud: () => void;
+  onImport: () => void;
   onImportFromCloud: () => void;
   onFileSelected: (file: File) => void;
   onAddSection: () => void;
@@ -170,6 +171,7 @@ export function DashboardModals(props: DashboardModalsProps) {
     onTabChange,
     onExport,
     onSaveToCloud,
+    onImport,
     onImportFromCloud,
     onFileSelected,
     onAddSection,
@@ -210,9 +212,7 @@ export function DashboardModals(props: DashboardModalsProps) {
         setImportMethod={setImportMethod}
         importJsonData={importJsonData}
         setImportJsonData={setImportJsonData}
-        onImport={() => {
-          // TODO: Implement import functionality
-        }}
+        onImport={onImport}
         onImportFromCloud={onImportFromCloud}
         onFileSelected={onFileSelected}
       />

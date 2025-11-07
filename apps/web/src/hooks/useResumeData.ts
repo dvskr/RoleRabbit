@@ -3,7 +3,7 @@ import type { SetStateAction } from 'react';
 import { ResumeData, CustomSection, SectionVisibility, CustomField } from '../types/resume';
 import apiService from '../services/apiService';
 import { logger } from '../utils/logger';
-import { sanitizeResumeData } from '../utils/validation';
+import { sanitizeResumeData, validateResumeData } from '../utils/validation';
 import { formatErrorForDisplay } from '../utils/errorMessages';
 import { offlineQueue } from '../utils/offlineQueue';
 import { isOnline } from '../utils/retryHandler';
@@ -503,6 +503,17 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     autosaveTimerRef.current = setTimeout(async () => {
       logger.info('Auto-save timer fired, executing save...');
       autosaveTimerRef.current = null;
+
+      // Prevent auto-save when validation fails (e.g., invalid email)
+      const validation = validateResumeData(resumeDataRef.current);
+      if (!validation.isValid) {
+        const errorMessages = Object.values(validation.errors).join(', ');
+        logger.warn('Auto-save validation failed', validation.errors);
+        setSaveError(`Auto-save blocked: ${errorMessages}`);
+        setHasChanges(true);
+        return;
+      }
+
       try {
         setIsSaving(true);
         setSaveError(null);
@@ -542,6 +553,10 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           summary: payload.data.resumeData?.summary ? `${payload.data.resumeData.summary.substring(0, 50)}...` : '(empty)',
           skillsType: Array.isArray(payload.data.resumeData?.skills) ? 'array' : typeof payload.data.resumeData?.skills,
           skillsCount: Array.isArray(payload.data.resumeData?.skills) ? payload.data.resumeData.skills.length : 0,
+          experienceType: Array.isArray(payload.data.resumeData?.experience) ? 'array' : typeof payload.data.resumeData?.experience,
+          experienceCount: Array.isArray(payload.data.resumeData?.experience) ? payload.data.resumeData.experience.length : 0,
+          educationCount: Array.isArray(payload.data.resumeData?.education) ? payload.data.resumeData.education.length : 0,
+          projectsCount: Array.isArray(payload.data.resumeData?.projects) ? payload.data.resumeData.projects.length : 0,
         });
 
         // Auto-save: create resume if it doesn't exist, otherwise update

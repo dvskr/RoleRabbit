@@ -42,8 +42,8 @@ const ProjectsSection = React.memo(function ProjectsSection({
   };
 
   const updateProject = (id: number, updates: Partial<ProjectItem>) => {
-    setResumeData((prev: any) => {
-      const updatedProjects = (prev.projects || []).map((item: any) => 
+    setResumeData((prev: ResumeData) => {
+      const updatedProjects = (prev.projects || []).map((item: ProjectItem) => 
       item.id === id ? { ...item, ...updates } : item
     );
       return {...prev, projects: updatedProjects};
@@ -51,8 +51,8 @@ const ProjectsSection = React.memo(function ProjectsSection({
   };
 
   const deleteProject = (id: number) => {
-    setResumeData((prev: any) => {
-      const updatedProjects = (prev.projects || []).filter((item: any) => item.id !== id);
+    setResumeData((prev: ResumeData) => {
+      const updatedProjects = (prev.projects || []).filter((item: ProjectItem) => item.id !== id);
       return {...prev, projects: updatedProjects};
     });
   };
