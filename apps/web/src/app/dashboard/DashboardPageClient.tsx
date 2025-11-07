@@ -48,6 +48,8 @@ import { resumeHelpers } from '../../utils/resumeHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
+import { ConflictIndicator } from '../../components/ConflictIndicator';
+import { useToasts, ToastContainer } from '../../components/Toast';
 import apiService from '../../services/apiService';
 // Lazy load heavy analytics and modal components
 const ResumeSharing = dynamic(() => import('../../components/features/ResumeSharing'), { ssr: false });
@@ -145,6 +147,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   const { theme } = useTheme();
   const colors = theme.colors;
   const initializingCustomFieldsRef = useRef(false);
+  const { toasts, showToast, dismissToast } = useToasts();
   
   // Dashboard-specific state hooks
   const dashboardUI = useDashboardUI(initialTab);
@@ -237,6 +240,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setSaveError,
     lastSavedAt, setLastSavedAt,
     lastServerUpdatedAt, setLastServerUpdatedAt,
+    hasConflict,
+    setHasConflict,
     fontFamily, setFontFamily,
     fontSize, setFontSize,
     lineSpacing, setLineSpacing,
@@ -539,6 +544,10 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             fontFamily={fontFamily}
             fontSize={fontSize}
             lineSpacing={lineSpacing}
+            sectionSpacing={sectionSpacing}
+            margins={margins}
+            headingStyle={headingStyle}
+            bulletStyle={bulletStyle}
             onExitPreview={() => setIsPreviewMode(false)}
           />
         ) : (
@@ -738,7 +747,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             <DashboardHeader
               onSearch={(query) => {
                 // Handle search functionality - filter dashboard content
-                console.log('Search query:', query);
+                logger.debug('Dashboard search query:', { query });
                 // You can add search state here and filter the dashboard content
               }}
             />
@@ -1036,6 +1045,21 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onLoadFromCloud={handleLoadFromCloud}
         DEFAULT_TEMPLATE_ID={DEFAULT_TEMPLATE_ID}
       />
+      {/* Conflict Indicator */}
+      <ConflictIndicator
+        conflictDetected={hasConflict}
+        onRefresh={() => {
+          if (currentResumeId && resumeDataHook.loadResumeById) {
+            resumeDataHook.loadResumeById(currentResumeId).then(() => {
+              setHasConflict(false);
+              showToast('Resume refreshed successfully', 'success');
+            });
+          }
+        }}
+        onDismiss={() => setHasConflict(false)}
+      />
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </>
   );
 }

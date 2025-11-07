@@ -251,3 +251,4 @@ Fixed React.memo comparison to check all relevant file properties. File type (ta
 **All file card functionality is now 100% responsive!** ✅
 
 
+

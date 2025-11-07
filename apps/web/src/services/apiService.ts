@@ -5,6 +5,9 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+import { logger } from '../utils/logger';
+import { retryWithBackoff, isOnline, waitForOnline } from '../utils/retryHandler';
+
 class ApiService {
   private baseUrl: string;
 
@@ -22,9 +25,53 @@ class ApiService {
   }
 
   /**
-   * Generic fetch wrapper with error handling
+   * Generic fetch wrapper with error handling and retry logic
    */
   private async request<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    retryCount = 0,
+    skipRetry = false
+  ): Promise<T> {
+    // If retry is skipped (e.g., token refresh), use direct request
+    if (skipRetry) {
+      return this.directRequest<T>(endpoint, options, retryCount);
+    }
+
+    // Use retry handler with exponential backoff
+    const result = await retryWithBackoff(
+      () => this.directRequest<T>(endpoint, options, 0),
+      {
+        maxRetries: 3,
+        initialDelay: 1000,
+        maxDelay: 30000,
+        backoffMultiplier: 2,
+        retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+        retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout'],
+      }
+    );
+
+    if (result.success && result.data !== undefined) {
+      return result.data;
+    }
+
+    // If retry failed and we're offline, wait for online status
+    if (!isOnline()) {
+      logger.info('Device is offline, waiting for connection...');
+      const cameOnline = await waitForOnline(5000);
+      if (cameOnline) {
+        // Try once more after coming online
+        return this.directRequest<T>(endpoint, options, 0);
+      }
+    }
+
+    throw result.error || new Error('Request failed after retries');
+  }
+
+  /**
+   * Direct request without retry (used internally)
+   */
+  private async directRequest<T>(
     endpoint: string,
     options: RequestInit = {},
     retryCount = 0
@@ -57,12 +104,12 @@ class ApiService {
             credentials: 'include',
           });
 
-          // If refresh successful, retry original request
+          // If refresh successful, retry original request (skip retry wrapper to avoid double retry)
           if (refreshResponse.ok) {
-            return this.request<T>(endpoint, options, retryCount + 1);
+            return this.directRequest<T>(endpoint, options, retryCount + 1);
           }
         } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
+          logger.error('Token refresh failed:', refreshError);
           // Token refresh failed, let it fall through to error handling
         }
       }
@@ -177,7 +224,7 @@ class ApiService {
         try {
           return await response.json();
         } catch (parseError) {
-          console.warn('Response JSON parse failed, returning empty object', parseError);
+          logger.warn('Response JSON parse failed, returning empty object', parseError);
           return {} as T;
         }
       }
@@ -192,11 +239,16 @@ class ApiService {
       }
       return (textResponse as unknown) as T;
     } catch (error: any) {
-      console.error('API request failed:', error);
-      // Provide more helpful error messages
+      logger.error('API request failed:', error);
+      
+      // Provide more helpful error messages for common issues
       if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
-        throw new Error('Failed to connect to server. Please check if the API server is running on http://localhost:3001');
+        const friendlyError: any = new Error('Unable to connect to the server. Please check your internet connection and ensure the API server is running.');
+        friendlyError.statusCode = 0;
+        friendlyError.originalError = error;
+        throw friendlyError;
       }
+      
       throw error;
     }
   }

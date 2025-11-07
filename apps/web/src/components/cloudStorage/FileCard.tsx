@@ -20,7 +20,9 @@ import {
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatRelativeTime, formatFileSize } from '../../utils/formatters';
+import { getUserFilePermission, canView, canComment, canEdit, canDelete, canManageShares } from '../../utils/filePermissions';
 import { FileCardProps, SharePermission, DownloadFormat } from './fileCard/types';
 import {
   MODAL_OVERLAY_STYLE,
@@ -79,7 +81,6 @@ const FileCard = React.memo(function FileCard({
   onDelete,
   onRestore,
   onPermanentlyDelete,
-  onTogglePublic,
   onEdit,
   onStar,
   onArchive,
@@ -91,6 +92,14 @@ const FileCard = React.memo(function FileCard({
 }: FileCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const { user } = useAuth();
+  
+  // Get current user's permission for this file
+  const userPermission = getUserFilePermission(
+    { userId: file.owner || file.userId || '', sharedWith: file.sharedWith || [] },
+    user?.id || ''
+  );
+  
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -525,50 +534,19 @@ const FileCard = React.memo(function FileCard({
             {/* Preview, Download, and Share only available for non-deleted files */}
             {!showDeleted && (
               <>
-                <button
-                  onClick={() => {
-                    closeAllStates('preview');
-                    setShowPreviewModal(true);
-                  }}
-                  className="shadow-sm"
-                  style={{
-                    ...actionButtonBaseStyle,
-                    color: showPreviewModal ? colors.primaryBlue : colors.secondaryText,
-                    background: showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
-                    borderColor: showPreviewModal ? colors.primaryBlue : colors.border,
-                  }}
-                  onMouseEnter={(e) =>
-                    applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
-                  }
-                  onMouseLeave={(e) =>
-                    resetHoverStyles(
-                      e,
-                      showPreviewModal ? colors.primaryBlue : colors.secondaryText,
-                      showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
-                      showPreviewModal ? colors.primaryBlue : colors.border
-                    )
-                  }
-                  title="Preview file"
-                  aria-label="Preview file"
-                >
-                  <Eye size={18} />
-                </button>
-
-                <div className="relative">
+                {/* Preview - requires view permission */}
+                {canView(userPermission) && (
                   <button
                     onClick={() => {
-                      if (showDownloadFormat) {
-                        setShowDownloadFormat(false);
-                      } else {
-                        closeAllStates('download');
-                        setShowDownloadFormat(true);
-                      }
+                      closeAllStates('preview');
+                      setShowPreviewModal(true);
                     }}
+                    className="shadow-sm"
                     style={{
                       ...actionButtonBaseStyle,
-                      color: showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
-                      background: showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
-                      borderColor: showDownloadFormat ? colors.primaryBlue : colors.border,
+                      color: showPreviewModal ? colors.primaryBlue : colors.secondaryText,
+                      background: showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
+                      borderColor: showPreviewModal ? colors.primaryBlue : colors.border,
                     }}
                     onMouseEnter={(e) =>
                       applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
@@ -576,49 +554,90 @@ const FileCard = React.memo(function FileCard({
                     onMouseLeave={(e) =>
                       resetHoverStyles(
                         e,
-                        showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
-                        showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
-                        showDownloadFormat ? colors.primaryBlue : colors.border
+                        showPreviewModal ? colors.primaryBlue : colors.secondaryText,
+                        showPreviewModal ? colors.badgeInfoBg : colors.inputBackground,
+                        showPreviewModal ? colors.primaryBlue : colors.border
                       )
                     }
-                    title="Download"
-                    aria-label="Download file"
+                    title="Preview file"
+                    aria-label="Preview file"
                   >
-                    <Download size={18} />
+                    <Eye size={18} />
                   </button>
-                  {showDownloadFormat && (
-                    <DownloadFormatMenu
-                      colors={colors}
-                      onDownload={(format) => onDownload(file, format)}
-                      onClose={() => setShowDownloadFormat(false)}
-                    />
-                  )}
-                </div>
+                )}
 
-                <button
-                  onClick={() => {
-                    closeAllStates('share');
-                    fileSharing.setShowShareModal(true);
-                  }}
-                  style={{
-                    ...actionButtonBaseStyle,
-                    color: colors.secondaryText,
-                  }}
-                  onMouseEnter={(e) =>
-                    applyHoverStyles(e, colors.successGreen, colors.badgeSuccessBg, colors.successGreen)
-                  }
-                  onMouseLeave={(e) =>
-                    resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
-                  }
-                  title="Share"
-                  aria-label="Share file"
-                >
-                  <Share2 size={18} />
-                </button>
+                {/* Download - requires view permission */}
+                {canView(userPermission) && (
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        if (showDownloadFormat) {
+                          setShowDownloadFormat(false);
+                        } else {
+                          closeAllStates('download');
+                          setShowDownloadFormat(true);
+                        }
+                      }}
+                      style={{
+                        ...actionButtonBaseStyle,
+                        color: showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
+                        background: showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
+                        borderColor: showDownloadFormat ? colors.primaryBlue : colors.border,
+                      }}
+                      onMouseEnter={(e) =>
+                        applyHoverStyles(e, colors.primaryBlue, colors.hoverBackground, colors.primaryBlue)
+                      }
+                      onMouseLeave={(e) =>
+                        resetHoverStyles(
+                          e,
+                          showDownloadFormat ? colors.primaryBlue : colors.secondaryText,
+                          showDownloadFormat ? colors.hoverBackground : colors.inputBackground,
+                          showDownloadFormat ? colors.primaryBlue : colors.border
+                        )
+                      }
+                      title="Download"
+                      aria-label="Download file"
+                    >
+                      <Download size={18} />
+                    </button>
+                    {showDownloadFormat && (
+                      <DownloadFormatMenu
+                        colors={colors}
+                        onDownload={(format) => onDownload(file, format)}
+                        onClose={() => setShowDownloadFormat(false)}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Share - only owner can share */}
+                {canManageShares(userPermission) && (
+                  <button
+                    onClick={() => {
+                      closeAllStates('share');
+                      fileSharing.setShowShareModal(true);
+                    }}
+                    style={{
+                      ...actionButtonBaseStyle,
+                      color: colors.secondaryText,
+                    }}
+                    onMouseEnter={(e) =>
+                      applyHoverStyles(e, colors.successGreen, colors.badgeSuccessBg, colors.successGreen)
+                    }
+                    onMouseLeave={(e) =>
+                      resetHoverStyles(e, colors.secondaryText, colors.inputBackground)
+                    }
+                    title="Share"
+                    aria-label="Share file"
+                  >
+                    <Share2 size={18} />
+                  </button>
+                )}
               </>
             )}
 
-            {!showDeleted && (
+            {/* Comments - requires comment permission */}
+            {!showDeleted && canComment(userPermission) && (
               <button
                 onClick={() => {
                   logger.debug('Comment button clicked! Current state:', comments.showComments);
@@ -653,7 +672,8 @@ const FileCard = React.memo(function FileCard({
               </button>
             )}
 
-            {!showDeleted && (
+            {/* Edit and Move - requires edit permission */}
+            {!showDeleted && canEdit(userPermission) && (
               <>
                 <button
                   onClick={handleStartEdit}
@@ -709,7 +729,8 @@ const FileCard = React.memo(function FileCard({
               </>
             )}
 
-          {!showDeleted && (
+            {/* Delete - only owner can delete */}
+            {!showDeleted && canDelete(userPermission) && (
               <button
                 onClick={async () => {
                   if (onDelete) {

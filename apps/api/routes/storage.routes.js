@@ -7,6 +7,7 @@ const { authenticate } = require('../middleware/auth');
 const { prisma } = require('../utils/db');
 const storageHandler = require('../utils/storageHandler');
 const { validateFileUpload, validateFileType } = require('../utils/storageValidation');
+const { checkFilePermission, getUserFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
 
@@ -29,6 +30,8 @@ async function storageRoutes(fastify, options) {
   logger.info('   → GET    /api/storage/files/:id/comments');
   logger.info('   → POST   /api/storage/files/:id/comments');
   logger.info('   → POST   /api/storage/files/:id/move');
+  logger.info('   → PUT    /api/storage/shares/:id');
+  logger.info('   → DELETE /api/storage/shares/:id');
   
   // Get all files for authenticated user
   fastify.get('/files', {
@@ -384,14 +387,14 @@ async function storageRoutes(fastify, options) {
       let displayName = validation.sanitizedFileName;
       let fileType = 'document';
       let description = null;
-      let isPublic = false;
       let folderId = null;
+      // Always set isPublic to false (public view feature removed)
+      const isPublic = false;
 
       // Process collected form fields
       if (formFields.displayName) displayName = formFields.displayName;
       if (formFields.type) fileType = formFields.type;
       if (formFields.description) description = formFields.description;
-      if (formFields.isPublic) isPublic = formFields.isPublic === 'true';
       if (formFields.folderId) folderId = formFields.folderId === 'null' ? null : formFields.folderId;
 
       // Validate file type
@@ -602,7 +605,7 @@ async function storageRoutes(fastify, options) {
 
       const fileId = request.params.id;
       const body = request.body || {};
-      const { name, type, description, isPublic, isStarred, isArchived, folderId, displayName } = body;
+      const { name, type, description, isStarred, isArchived, folderId, displayName } = body;
 
       const updates = {};
 
@@ -639,9 +642,8 @@ async function storageRoutes(fastify, options) {
         updates.description = description ? String(description).trim() : null;
       }
 
-      if (typeof isPublic === 'boolean') {
-        updates.isPublic = isPublic;
-      }
+      // isPublic is always false (public view feature removed)
+      // Ignore any isPublic input from client
 
       if (typeof isStarred === 'boolean') {
         updates.isStarred = isStarred;
@@ -662,20 +664,16 @@ async function storageRoutes(fastify, options) {
         });
       }
 
-      // Ensure file belongs to user
-      const existingFile = await prisma.storageFile.findFirst({
-        where: {
-          id: fileId,
-          userId
-        }
-      });
-
-      if (!existingFile) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'File not found or you do not have permission to update it'
+      // Check permission to update file
+      const permissionCheck = await checkFilePermission(userId, fileId, 'edit');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'You do not have permission to update this file'
         });
       }
+
+      const existingFile = permissionCheck.file;
 
       const updatedFile = await prisma.storageFile.update({
         where: { id: fileId },
@@ -733,20 +731,16 @@ async function storageRoutes(fastify, options) {
 
       const fileId = request.params.id;
 
-      // Check if file exists and belongs to user
-      const file = await prisma.storageFile.findFirst({
-        where: {
-          id: fileId,
-          userId
-        }
-      });
-
-      if (!file) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'File not found or you do not have permission to delete it'
+      // Check permission to delete file (requires admin permission - only owner can delete)
+      const permissionCheck = await checkFilePermission(userId, fileId, 'delete');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'You do not have permission to delete this file. Only file owners can delete files.'
         });
       }
+
+      const file = permissionCheck.file;
 
       // Soft delete - set deletedAt timestamp
       const updatedFile = await prisma.storageFile.update({
@@ -1086,21 +1080,16 @@ async function storageRoutes(fastify, options) {
 
       const fileId = request.params.id;
 
-      // Check if file exists and belongs to user
-      const file = await prisma.storageFile.findFirst({
-        where: {
-          id: fileId,
-          userId,
-          deletedAt: null // Don't allow downloading deleted files
-        }
-      });
-
-      if (!file) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'File not found or you do not have permission to download it'
+      // Check permission to download file
+      const permissionCheck = await checkFilePermission(userId, fileId, 'view');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'You do not have permission to download this file'
         });
       }
+
+      const file = permissionCheck.file;
 
       // Get file from storage
       let fileBuffer;
@@ -1247,7 +1236,14 @@ async function storageRoutes(fastify, options) {
 
         // Send email notification with share link
         const { sendEmail } = require('../utils/emailService');
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        // Get frontend URL from env or detect from request
+        let frontendUrl = process.env.FRONTEND_URL;
+        if (!frontendUrl) {
+          // Try to detect from request headers
+          const protocol = request.headers['x-forwarded-proto'] || (request.protocol || 'http');
+          const host = request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000';
+          frontendUrl = `${protocol}://${host}`;
+        }
         const shareUrl = `${frontendUrl}/shared/${shareToken}`;
         
         const emailHtml = `
@@ -1331,7 +1327,14 @@ async function storageRoutes(fastify, options) {
       
       if (sharedUser) {
         const { sendEmail } = require('../utils/emailService');
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        // Get frontend URL from env or detect from request
+        let frontendUrl = process.env.FRONTEND_URL;
+        if (!frontendUrl) {
+          // Try to detect from request headers
+          const protocol = request.headers['x-forwarded-proto'] || (request.protocol || 'http');
+          const host = request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000';
+          frontendUrl = `${protocol}://${host}`;
+        }
         const fileUrl = `${frontendUrl}/dashboard?tab=storage&fileId=${fileId}`;
         
         const emailHtml = `
@@ -1480,12 +1483,21 @@ async function storageRoutes(fastify, options) {
 
       logger.info(`✅ Share link created: ${fileId} - token: ${token}`);
 
+      // Get frontend URL from env or detect from request
+      let frontendUrl = process.env.FRONTEND_URL;
+      if (!frontendUrl) {
+        // Try to detect from request headers
+        const protocol = request.headers['x-forwarded-proto'] || (request.protocol || 'http');
+        const host = request.headers['x-forwarded-host'] || request.headers.host || 'localhost:3000';
+        frontendUrl = `${protocol}://${host}`;
+      }
+
       return reply.send({
         success: true,
         shareLink: {
           id: shareLink.id,
           token: shareLink.token,
-          url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/share/${token}`,
+          url: `${frontendUrl}/shared/${token}`,
           expiresAt: shareLink.expiresAt?.toISOString() || null,
           maxDownloads: shareLink.maxDownloads,
           hasPassword: !!shareLink.password
@@ -1628,24 +1640,16 @@ async function storageRoutes(fastify, options) {
         });
       }
 
-      // Check if file exists and user has access
-      const file = await prisma.storageFile.findFirst({
-        where: {
-          id: fileId,
-          OR: [
-            { userId },
-            { shares: { some: { sharedWith: userId } } }
-          ],
-          deletedAt: null
-        }
-      });
-
-      if (!file) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'File not found or you do not have access'
+      // Check permission to comment on file
+      const permissionCheck = await checkFilePermission(userId, fileId, 'comment');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'You do not have permission to comment on this file'
         });
       }
+
+      const file = permissionCheck.file;
 
       // If parentId is provided, verify it exists
       if (parentId) {
@@ -2281,6 +2285,213 @@ async function storageRoutes(fastify, options) {
       return reply.status(500).send({
         error: 'Failed to generate QR code',
         message: error.message
+      });
+    }
+  });
+
+  // Update share permission
+  fastify.put('/shares/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const shareId = request.params.id;
+      const { permission } = request.body || {};
+
+      if (!permission || !['view', 'comment', 'edit', 'admin'].includes(permission)) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Valid permission (view, comment, edit, admin) is required'
+        });
+      }
+
+      // Get share and verify user owns the file
+      const share = await prisma.fileShare.findUnique({
+        where: { id: shareId },
+        include: {
+          file: {
+            select: {
+              id: true,
+              userId: true,
+              name: true
+            }
+          }
+        }
+      });
+
+      if (!share) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Share not found'
+        });
+      }
+
+      // Only file owner can update permissions
+      if (share.file.userId !== userId) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only file owner can update share permissions'
+        });
+      }
+
+      // Update share permission
+      const updatedShare = await prisma.fileShare.update({
+        where: { id: shareId },
+        data: { permission },
+        include: {
+          recipient: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      logger.info(`✅ Share permission updated: ${shareId} -> ${permission}`);
+
+      // Emit real-time event for permission update
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyFileShared(userId, {
+          fileId: share.fileId,
+          share: {
+            id: updatedShare.id,
+            fileId: updatedShare.fileId,
+            sharedWith: updatedShare.sharedWith,
+            permission: updatedShare.permission,
+            expiresAt: updatedShare.expiresAt?.toISOString() || null,
+            createdAt: updatedShare.createdAt.toISOString()
+          }
+        });
+        
+        // Also notify the recipient
+        socketIOServer.notifyFileShared(updatedShare.sharedWith, {
+          fileId: share.fileId,
+          share: {
+            id: updatedShare.id,
+            fileId: updatedShare.fileId,
+            sharedWith: updatedShare.sharedWith,
+            permission: updatedShare.permission,
+            expiresAt: updatedShare.expiresAt?.toISOString() || null,
+            createdAt: updatedShare.createdAt.toISOString()
+          }
+        });
+      }
+
+      return reply.send({
+        success: true,
+        share: {
+          id: updatedShare.id,
+          fileId: updatedShare.fileId,
+          sharedWith: updatedShare.sharedWith,
+          sharedWithEmail: updatedShare.recipient.email,
+          permission: updatedShare.permission,
+          expiresAt: updatedShare.expiresAt?.toISOString() || null,
+          createdAt: updatedShare.createdAt.toISOString()
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error updating share permission:', error);
+      return reply.status(500).send({
+        error: 'Failed to update share permission',
+        message: error.message || 'An error occurred while updating share permission'
+      });
+    }
+  });
+
+  // Delete share
+  fastify.delete('/shares/:id', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      const shareId = request.params.id;
+
+      // Get share and verify user owns the file
+      const share = await prisma.fileShare.findUnique({
+        where: { id: shareId },
+        include: {
+          file: {
+            select: {
+              id: true,
+              userId: true
+            }
+          },
+          recipient: {
+            select: {
+              id: true
+            }
+          }
+        }
+      });
+
+      if (!share) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Share not found'
+        });
+      }
+
+      // Only file owner can remove shares
+      if (share.file.userId !== userId) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'Only file owner can remove shares'
+        });
+      }
+
+      const fileId = share.fileId;
+      const recipientId = share.sharedWith;
+
+      // Delete share
+      await prisma.fileShare.delete({
+        where: { id: shareId }
+      });
+
+      logger.info(`✅ Share removed: ${shareId}`);
+
+      // Emit real-time event for share removal
+      if (socketIOServer.isInitialized()) {
+        socketIOServer.notifyShareRemoved(userId, {
+          fileId,
+          shareId
+        });
+        
+        // Also notify the recipient
+        socketIOServer.notifyShareRemoved(recipientId, {
+          fileId,
+          shareId
+        });
+      }
+
+      return reply.send({
+        success: true,
+        message: 'Share removed successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error removing share:', error);
+      return reply.status(500).send({
+        error: 'Failed to remove share',
+        message: error.message || 'An error occurred while removing share'
       });
     }
   });

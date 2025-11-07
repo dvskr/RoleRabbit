@@ -18,6 +18,8 @@ import {
 } from '../utils/resumeDataHelpers';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
+import { validateResumeData, sanitizeResumeData } from '../../../utils/validation';
+import { formatErrorForDisplay } from '../../../utils/errorMessages';
 
 export interface UseDashboardHandlersParams {
   // Resume data
@@ -368,6 +370,16 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       return;
     }
 
+    // Pre-save validation
+    const validation = validateResumeData(resumeData);
+    if (!validation.isValid) {
+      const errorMessages = Object.values(validation.errors).join(', ');
+      setSaveError(`Validation failed: ${errorMessages}. Please fix these errors before saving.`);
+      setIsSaving(false);
+      logger.warn('Resume save validation failed:', validation.errors);
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
 
@@ -375,7 +387,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       ? resumeFileName.trim()
       : 'Untitled Resume';
 
-    const payload: any = {
+    // Prepare payload and sanitize data
+    const rawPayload: any = {
       name: sanitizedName,
       fileName: sanitizedName,
       templateId: selectedTemplateId || null,
@@ -400,6 +413,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       },
       lastKnownServerUpdatedAt: lastServerUpdatedAt,
     };
+
+    // Sanitize all data before sending to backend to prevent XSS
+    const payload = sanitizeResumeData(rawPayload);
 
     try {
       const response = currentResumeId
@@ -436,11 +452,11 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       }
     } catch (error: any) {
       logger.error('Failed to save resume:', error);
-      if (error?.statusCode === 409) {
-        setSaveError('Resume has been updated elsewhere. Please reload to sync changes.');
-      } else {
-        setSaveError(error?.message || 'Failed to save resume');
-      }
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'saving resume',
+        feature: 'resume builder',
+      });
+      setSaveError(friendlyError);
     } finally {
       setIsSaving(false);
     }

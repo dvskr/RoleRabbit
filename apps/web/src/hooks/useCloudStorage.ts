@@ -73,9 +73,17 @@ export const useCloudStorage = () => {
 
   const fileOps = useFileOperations({ onStorageUpdate: handleStorageUpdate });
   const { files, setFiles, isLoading, selectedFiles, setSelectedFiles } = fileOps;
-  
+
+  // Folder management (needs to be defined before copy/move operations)
+  const folderOps = useFolderOperations(files, setFiles);
+  const { folders, selectedFolderId, setSelectedFolderId, loadFolders } = folderOps;
+
   // Copy and Move operations
-  const copyMoveOps = useCopyMoveOperations(setFiles, fileOps.loadFilesFromAPI);
+  const copyMoveOps = useCopyMoveOperations(
+    setFiles,
+    fileOps.loadFilesFromAPI,
+    loadFolders
+  );
   const { handleMoveFile } = copyMoveOps;
 
   // UI state
@@ -105,7 +113,7 @@ export const useCloudStorage = () => {
           if (prevFiles.some(f => f.id === data.file.id)) {
             return prevFiles;
           }
-          return [...prevFiles, { ...data.file, shares: [], comments: [] }];
+          return [...prevFiles, { ...data.file, sharedWith: [], comments: [] }];
         });
         logger.info('Real-time: File created', data.file.id);
       }
@@ -156,7 +164,7 @@ export const useCloudStorage = () => {
                 : file
             );
           }
-          return [...prevFiles, { ...data.file, deletedAt: null, shares: [], comments: [] }];
+          return [...prevFiles, { ...data.file, deletedAt: null, sharedWith: [], comments: [] }];
         });
         logger.info('Real-time: File restored', data.file.id);
       }
@@ -167,19 +175,34 @@ export const useCloudStorage = () => {
         setFiles((prevFiles) =>
           prevFiles.map((file) => {
             if (file.id === data.fileId) {
-              const updatedShares = file.shares || [];
+              const updatedShares = file.sharedWith || [];
               const shareExists = updatedShares.some((s: any) => s.id === data.share.id);
               return {
                 ...file,
-                shares: shareExists
-                  ? updatedShares.map((s: any) => s.id === data.share.id ? data.share : s)
-                  : [...updatedShares, data.share]
+                sharedWith: shareExists
+                  ? updatedShares.map((s: any) => s.id === data.share.id ? {
+                      ...s,
+                      permission: data.share.permission,
+                      userId: data.share.sharedWith,
+                      userEmail: data.share.sharedWithEmail || s.userEmail,
+                      userName: data.share.sharedWithName || s.userName
+                    } : s)
+                  : [...updatedShares, {
+                      id: data.share.id,
+                      userId: data.share.sharedWith,
+                      userEmail: data.share.sharedWithEmail || '',
+                      userName: data.share.sharedWithName || 'Unknown User',
+                      permission: data.share.permission,
+                      grantedBy: data.share.userId,
+                      grantedAt: data.share.createdAt,
+                      expiresAt: data.share.expiresAt
+                    }]
               };
             }
             return file;
           })
         );
-        logger.info('Real-time: File shared', data.fileId);
+        logger.info('Real-time: File shared/permission updated', data.fileId);
       }
     });
 
@@ -190,7 +213,7 @@ export const useCloudStorage = () => {
             file.id === data.fileId
               ? {
                   ...file,
-                  shares: (file.shares || []).filter((s: any) => s.id !== data.shareId)
+                  sharedWith: (file.sharedWith || []).filter((s: any) => s.id !== data.shareId)
                 }
               : file
           )
@@ -268,10 +291,6 @@ export const useCloudStorage = () => {
     }
   }, []);
 
-  // Folder management
-  const folderOps = useFolderOperations(files, setFiles);
-  const { folders, selectedFolderId, setSelectedFolderId, loadFolders } = folderOps;
-
   // Credential management
   const [credentials, setCredentials] = useState<CredentialInfo[]>([]);
   const [credentialReminders, setCredentialReminders] = useState<CredentialReminder[]>([]);
@@ -291,18 +310,18 @@ export const useCloudStorage = () => {
           setCredentials([]);
         }
         
-        if (remindersRes && remindersRes.credentials) {
+        if (remindersRes && remindersRes.reminders) {
           // Transform expiring credentials to reminders
-          const reminders: CredentialReminder[] = remindersRes.credentials.map((cred: any) => ({
+          const reminders: CredentialReminder[] = remindersRes.reminders.map((cred: any) => ({
             id: cred.id,
-            credentialId: cred.id,
+            credentialId: cred.credentialId,
             credentialName: cred.name,
             expirationDate: cred.expirationDate,
             reminderDate: new Date().toISOString(),
             isSent: false,
-            priority: cred.expirationDate ? 
+            priority: cred.priority || (cred.expirationDate ? 
               (new Date(cred.expirationDate).getTime() - Date.now() < 30 * 24 * 60 * 60 * 1000 ? 'high' : 'medium') 
-              : 'low' as 'high' | 'medium' | 'low'
+              : 'low') as 'high' | 'medium' | 'low'
           }));
           setCredentialReminders(reminders);
         } else {
@@ -334,7 +353,7 @@ export const useCloudStorage = () => {
 
   // Computed values
   const filteredFiles = useMemo(() => {
-    console.log('🔍 useCloudStorage - filtering files:', {
+    logger.debug('Filtering cloud storage files', {
       totalFiles: files.length,
       searchTerm,
       filterType,
@@ -343,19 +362,6 @@ export const useCloudStorage = () => {
       showDeleted,
       quickFilters
     });
-    
-    // Log file details for debugging
-    if (files.length > 0) {
-      console.log('📁 Files in array:', files.map(f => ({
-        id: f.id,
-        name: f.name,
-        type: f.type,
-        folderId: f.folderId,
-        deletedAt: f.deletedAt,
-        isStarred: f.isStarred,
-        isArchived: f.isArchived
-      })));
-    }
     
     const result = filterAndSortFiles(files, {
       searchTerm,
@@ -366,7 +372,7 @@ export const useCloudStorage = () => {
       quickFilters
     });
     
-    console.log('🔍 useCloudStorage - filtered result:', {
+    logger.debug('Filtered cloud storage files result', {
       filteredCount: result.length,
       totalFiles: files.length
     });
@@ -432,7 +438,6 @@ export const useCloudStorage = () => {
     handleDeleteFile: (fileId: string) => fileOps.handleDeleteFile(fileId, showDeleted),
     handleRestoreFile: fileOps.handleRestoreFile,
     handlePermanentlyDeleteFile: fileOps.handlePermanentlyDeleteFile,
-    handleTogglePublic: fileOps.handleTogglePublic,
     handleDownloadFile: fileOps.handleDownloadFile,
     handleShareFile: fileOps.handleShareFile,
     handleUploadFile,

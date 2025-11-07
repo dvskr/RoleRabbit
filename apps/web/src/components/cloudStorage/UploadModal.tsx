@@ -10,7 +10,6 @@ type UploadModalPayload = {
   file: File;
   displayName: string;
   type: ResumeFile['type'];
-  isPublic: boolean;
   folderId?: string | null;
 };
 
@@ -26,7 +25,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
   const colors = theme.colors;
   const [fileName, setFileName] = useState('');
   const [fileType, setFileType] = useState<ResumeFile['type']>('resume');
-  const [isPublic, setIsPublic] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -47,7 +45,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
   const resetForm = () => {
     setFileName('');
     setFileType('resume');
-    setIsPublic(false);
     setSelectedFile(null);
     setErrorMessage(null);
   };
@@ -71,7 +68,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
       file: selectedFile,
       displayName: trimmedName,
       type: fileType,
-      isPublic,
       folderId: activeFolderId ?? null,
     };
 
@@ -300,23 +296,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isPublic"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-3.5 h-3.5 rounded focus:ring-2 transition-all"
-                style={{ accentColor: colors.primaryBlue, borderColor: colors.border }}
-              />
-              <label 
-                htmlFor="isPublic" 
-                className="text-xs"
-                style={{ color: colors.primaryText }}
-              >
-                Make this file public (visible to others)
-              </label>
             </div>
           </div>
         </div>

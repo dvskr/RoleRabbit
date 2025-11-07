@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { EyeOff } from 'lucide-react';
 import { ResumeData, SectionVisibility } from '../../../types/resume';
 import { getTemplateClasses } from '../utils/templateClassesHelper';
@@ -14,6 +14,10 @@ interface ResumePreviewProps {
   fontFamily: string;
   fontSize: string;
   lineSpacing: string;
+  sectionSpacing?: string;
+  margins?: string;
+  headingStyle?: string;
+  bulletStyle?: string;
   onExitPreview: () => void;
 }
 
@@ -26,16 +30,73 @@ export function ResumePreview({
   fontFamily,
   fontSize,
   lineSpacing,
+  sectionSpacing = 'medium',
+  margins = 'normal',
+  headingStyle = 'bold',
+  bulletStyle = 'disc',
   onExitPreview,
 }: ResumePreviewProps) {
   const templateClasses = getTemplateClasses(selectedTemplateId);
 
-  const fontMap: Record<string, string> = {
-    arial: 'Arial',
-    times: 'Times New Roman',
-    verdana: 'Verdana',
-  };
-  const selectedFont = fontMap[fontFamily] || 'Arial';
+  // Convert formatting values to CSS styles (matching ResumeEditor logic)
+  const formattingStyles = useMemo(() => {
+    const fontMap: Record<string, string> = {
+      arial: 'Arial, sans-serif',
+      calibri: 'Calibri, sans-serif',
+      times: 'Times New Roman, serif',
+      helvetica: 'Helvetica, Arial, sans-serif',
+      verdana: 'Verdana, sans-serif',
+    };
+    
+    const fontSizeMap: Record<string, string> = {
+      ats10pt: '10pt',
+      ats11pt: '11pt',
+      ats12pt: '12pt',
+    };
+    
+    const lineSpacingMap: Record<string, string> = {
+      tight: '1.2',
+      normal: '1.5',
+      loose: '1.8',
+    };
+    
+    const sectionSpacingMap: Record<string, string> = {
+      tight: '0.5rem',
+      medium: '1rem',
+      loose: '1.5rem',
+    };
+    
+    const marginsMap: Record<string, string> = {
+      narrow: '0.5in',
+      normal: '1in',
+      wide: '1.5in',
+    };
+
+    const headingStyleMap: Record<string, string> = {
+      bold: '700',
+      semibold: '600',
+      extrabold: '800',
+    };
+
+    const bulletStyleMap: Record<string, { listStyleType: string; bulletChar: string }> = {
+      disc: { listStyleType: 'disc', bulletChar: '•' },
+      circle: { listStyleType: 'circle', bulletChar: '○' },
+      square: { listStyleType: 'square', bulletChar: '▪' },
+      arrow: { listStyleType: 'none', bulletChar: '→' },
+      check: { listStyleType: 'none', bulletChar: '✓' },
+      dash: { listStyleType: 'none', bulletChar: '–' },
+    };
+
+    return {
+      fontFamily: fontMap[fontFamily.toLowerCase()] || 'Arial, sans-serif',
+      fontSize: fontSizeMap[fontSize.toLowerCase()] || '11pt',
+      lineHeight: lineSpacingMap[lineSpacing.toLowerCase()] || '1.5',
+      sectionSpacing: sectionSpacingMap[sectionSpacing.toLowerCase()] || '1rem',
+      padding: marginsMap[margins.toLowerCase()] || '1in',
+      headingWeight: headingStyleMap[headingStyle.toLowerCase()] || '700',
+      bulletStyle: bulletStyleMap[bulletStyle.toLowerCase()] || bulletStyleMap.disc,
+    };
+  }, [fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle]);
 
   return (
     <div className="h-full bg-gray-100 overflow-auto">
@@ -53,19 +114,36 @@ export function ResumePreview({
       
       {/* Document Preview */}
       <div 
-        className={`max-w-[8.5in] mx-auto mt-8 mb-12 shadow-2xl p-[1in] print:p-0 ${templateClasses.container}`} 
-        style={{ minHeight: '11in' }}
+        className={`max-w-[8.5in] mx-auto mt-8 mb-12 shadow-2xl print:p-0 ${templateClasses.container}`} 
+        style={{ 
+          minHeight: '11in',
+          padding: formattingStyles.padding,
+          fontFamily: formattingStyles.fontFamily,
+          fontSize: formattingStyles.fontSize,
+          lineHeight: formattingStyles.lineHeight,
+        }}
       >
         {/* Document Header */}
-        <div className={`mb-6 pb-4 ${templateClasses.header}`}>
+        <div className={`pb-4 ${templateClasses.header}`} style={{ marginBottom: formattingStyles.sectionSpacing }}>
           <h1 
-            className={`text-3xl font-bold mb-1 ${templateClasses.nameColor}`} 
-            style={{ fontFamily: selectedFont }}
+            className={`text-3xl mb-1 ${templateClasses.nameColor}`} 
+            style={{ 
+              fontFamily: formattingStyles.fontFamily,
+              fontWeight: formattingStyles.headingWeight,
+            }}
           >
             {resumeData.name}
           </h1>
-          <p className={`text-lg font-medium ${templateClasses.titleColor}`}>{resumeData.title}</p>
-          <div className="flex gap-3 mt-2 text-sm text-gray-600">
+          <p 
+            className={`text-lg ${templateClasses.titleColor}`}
+            style={{ fontFamily: formattingStyles.fontFamily }}
+          >
+            {resumeData.title}
+          </p>
+          <div 
+            className="flex gap-3 mt-2 text-sm text-gray-600"
+            style={{ fontFamily: formattingStyles.fontFamily }}
+          >
             <span>{resumeData.email}</span>
             <span>•</span>
             <span>{resumeData.phone}</span>
@@ -80,23 +158,48 @@ export function ResumePreview({
           
           const sectionMap: Record<string, React.ReactNode> = {
             summary: (
-              <div className="mb-4">
-                <h2 className={`text-xl font-bold uppercase mb-1 ${templateClasses.sectionColor}`} style={{ fontSize }}>
+              <div style={{ marginBottom: formattingStyles.sectionSpacing }}>
+                <h2 
+                  className={`text-xl uppercase mb-1 ${templateClasses.sectionColor}`} 
+                  style={{ 
+                    fontSize: formattingStyles.fontSize,
+                    fontWeight: formattingStyles.headingWeight,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   {resumeData.summary ? 'Professional Summary' : 'Summary'}
                 </h2>
-                <p className="text-gray-800" style={{ lineHeight: lineSpacing, fontSize }}>
+                <p 
+                  className="text-gray-800" 
+                  style={{ 
+                    lineHeight: formattingStyles.lineHeight, 
+                    fontSize: formattingStyles.fontSize,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   {resumeData.summary}
                 </p>
               </div>
             ),
             skills: (
-              <div className="mb-4">
-                <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize }}>
+              <div style={{ marginBottom: formattingStyles.sectionSpacing }}>
+                <h2 
+                  className={`text-xl uppercase mb-2 ${templateClasses.sectionColor}`} 
+                  style={{ 
+                    fontSize: formattingStyles.fontSize,
+                    fontWeight: formattingStyles.headingWeight,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   Skills
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {resumeData.skills?.map((skill: string, idx: number) => (
-                    <span key={idx} className="px-3 py-1 bg-gray-100 rounded text-sm text-gray-800">
+                    <span 
+                      key={idx} 
+                      className="px-3 py-1 bg-gray-100 rounded text-sm text-gray-800"
+                      style={{ fontFamily: formattingStyles.fontFamily }}
+                    >
                       {skill}
                     </span>
                   ))}
@@ -104,26 +207,63 @@ export function ResumePreview({
               </div>
             ),
             experience: (
-              <div className="mb-4">
-                <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize }}>
+              <div style={{ marginBottom: formattingStyles.sectionSpacing }}>
+                <h2 
+                  className={`text-xl uppercase mb-2 ${templateClasses.sectionColor}`} 
+                  style={{ 
+                    fontSize: formattingStyles.fontSize,
+                    fontWeight: formattingStyles.headingWeight,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   Professional Experience
                 </h2>
                 <div className="space-y-3">
                   {resumeData.experience?.map((exp: any, idx: number) => (
                     <div key={idx} className="mb-3">
                       <div className="flex justify-between items-start mb-1">
-                        <span className="font-semibold text-gray-900" style={{ fontSize }}>
-                          {exp.position}
+                        <span 
+                          className="font-semibold text-gray-900" 
+                          style={{ 
+                            fontSize: formattingStyles.fontSize,
+                            fontFamily: formattingStyles.fontFamily,
+                          }}
+                        >
+                          {exp.position || exp.jobTitle}
                         </span>
-                        <span className="text-sm text-gray-600">{exp.period} - {exp.endPeriod}</span>
+                        <span 
+                          className="text-sm text-gray-600"
+                          style={{ fontFamily: formattingStyles.fontFamily }}
+                        >
+                          {exp.startDate || exp.period} {exp.endDate || exp.endPeriod ? `- ${exp.endDate || exp.endPeriod}` : ''}
+                        </span>
                       </div>
-                      <p className="text-gray-700 mb-1" style={{ fontSize }}>
-                        {exp.company} {exp.location && `• ${exp.location}`}
+                      <p 
+                        className="text-gray-700 mb-1" 
+                        style={{ 
+                          fontSize: formattingStyles.fontSize,
+                          fontFamily: formattingStyles.fontFamily,
+                        }}
+                      >
+                        {exp.company || exp.companyName} {exp.location && `• ${exp.location}`}
                       </p>
-                      {exp.bullets && exp.bullets.length > 0 && (
-                        <ul className="list-disc list-inside ml-2 text-gray-700" style={{ fontSize }}>
-                          {exp.bullets.map((bullet: string, i: number) => (
-                            <li key={i} className="mb-1">{bullet}</li>
+                      {((exp.bullets && exp.bullets.length > 0) || (exp.responsibilities && exp.responsibilities.length > 0)) && (
+                        <ul 
+                          className="ml-2 text-gray-700" 
+                          style={{ 
+                            fontSize: formattingStyles.fontSize,
+                            fontFamily: formattingStyles.fontFamily,
+                            listStyleType: formattingStyles.bulletStyle.listStyleType as any,
+                            paddingLeft: formattingStyles.bulletStyle.listStyleType === 'none' ? '1rem' : undefined,
+                          }}
+                        >
+                          {(exp.bullets || exp.responsibilities || []).map((bullet: string, i: number) => (
+                            <li key={i} className="mb-1">
+                              {formattingStyles.bulletStyle.listStyleType === 'none' && (
+                                <span className="mr-2">{formattingStyles.bulletStyle.bulletChar}</span>
+                              )}
+                              {bullet}
+                            </li>
                           ))}
                         </ul>
                       )}
@@ -133,20 +273,44 @@ export function ResumePreview({
               </div>
             ),
             education: (
-              <div className="mb-4">
-                <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize }}>
+              <div style={{ marginBottom: formattingStyles.sectionSpacing }}>
+                <h2 
+                  className={`text-xl uppercase mb-2 ${templateClasses.sectionColor}`} 
+                  style={{ 
+                    fontSize: formattingStyles.fontSize,
+                    fontWeight: formattingStyles.headingWeight,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   Education
                 </h2>
                 <div className="space-y-2">
                   {resumeData.education?.map((edu: any, idx: number) => (
                     <div key={idx}>
                       <div className="flex justify-between">
-                        <span className="font-semibold text-gray-900" style={{ fontSize }}>
+                        <span 
+                          className="font-semibold text-gray-900" 
+                          style={{ 
+                            fontSize: formattingStyles.fontSize,
+                            fontFamily: formattingStyles.fontFamily,
+                          }}
+                        >
                           {edu.degree}
                         </span>
-                        <span className="text-sm text-gray-600">{edu.startDate} - {edu.endDate}</span>
+                        <span 
+                          className="text-sm text-gray-600"
+                          style={{ fontFamily: formattingStyles.fontFamily }}
+                        >
+                          {edu.startDate} - {edu.endDate}
+                        </span>
                       </div>
-                      <p className="text-gray-700" style={{ fontSize }}>
+                      <p 
+                        className="text-gray-700" 
+                        style={{ 
+                          fontSize: formattingStyles.fontSize,
+                          fontFamily: formattingStyles.fontFamily,
+                        }}
+                      >
                         {edu.school}
                       </p>
                     </div>
@@ -155,30 +319,66 @@ export function ResumePreview({
               </div>
             ),
             projects: (
-              <div className="mb-4">
-                <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize }}>
+              <div style={{ marginBottom: formattingStyles.sectionSpacing }}>
+                <h2 
+                  className={`text-xl uppercase mb-2 ${templateClasses.sectionColor}`} 
+                  style={{ 
+                    fontSize: formattingStyles.fontSize,
+                    fontWeight: formattingStyles.headingWeight,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   Projects
                 </h2>
                 <div className="space-y-3">
                   {resumeData.projects?.map((project: any, idx: number) => (
                     <div key={idx}>
                       <div className="flex justify-between items-start mb-1">
-                        <span className="font-semibold text-gray-900" style={{ fontSize }}>
+                        <span 
+                          className="font-semibold text-gray-900" 
+                          style={{ 
+                            fontSize: formattingStyles.fontSize,
+                            fontFamily: formattingStyles.fontFamily,
+                          }}
+                        >
                           {project.name}
                         </span>
                         {project.link && (
-                          <a href={project.link} className="text-sm text-blue-600 hover:underline">
+                          <a 
+                            href={project.link} 
+                            className="text-sm text-blue-600 hover:underline"
+                            style={{ fontFamily: formattingStyles.fontFamily }}
+                          >
                             View Project
                           </a>
                         )}
                       </div>
-                      <p className="text-gray-700 mb-1" style={{ fontSize }}>
+                      <p 
+                        className="text-gray-700 mb-1" 
+                        style={{ 
+                          fontSize: formattingStyles.fontSize,
+                          fontFamily: formattingStyles.fontFamily,
+                        }}
+                      >
                         {project.description}
                       </p>
                       {project.bullets && project.bullets.length > 0 && (
-                        <ul className="list-disc list-inside ml-2 text-gray-700" style={{ fontSize }}>
+                        <ul 
+                          className="ml-2 text-gray-700" 
+                          style={{ 
+                            fontSize: formattingStyles.fontSize,
+                            fontFamily: formattingStyles.fontFamily,
+                            listStyleType: formattingStyles.bulletStyle.listStyleType as any,
+                            paddingLeft: formattingStyles.bulletStyle.listStyleType === 'none' ? '1rem' : undefined,
+                          }}
+                        >
                           {project.bullets.map((bullet: string, i: number) => (
-                            <li key={i} className="mb-1">{bullet}</li>
+                            <li key={i} className="mb-1">
+                              {formattingStyles.bulletStyle.listStyleType === 'none' && (
+                                <span className="mr-2">{formattingStyles.bulletStyle.bulletChar}</span>
+                              )}
+                              {bullet}
+                            </li>
                           ))}
                         </ul>
                       )}
@@ -188,24 +388,47 @@ export function ResumePreview({
               </div>
             ),
             certifications: (
-              <div className="mb-4">
-                <h2 className={`text-xl font-bold uppercase mb-2 ${templateClasses.sectionColor}`} style={{ fontSize }}>
+              <div style={{ marginBottom: formattingStyles.sectionSpacing }}>
+                <h2 
+                  className={`text-xl uppercase mb-2 ${templateClasses.sectionColor}`} 
+                  style={{ 
+                    fontSize: formattingStyles.fontSize,
+                    fontWeight: formattingStyles.headingWeight,
+                    fontFamily: formattingStyles.fontFamily,
+                  }}
+                >
                   Certifications
                 </h2>
                 <div className="space-y-2">
                   {resumeData.certifications?.map((cert: any, idx: number) => (
                     <div key={idx}>
                       <div className="flex justify-between">
-                        <span className="font-semibold text-gray-900" style={{ fontSize }}>
+                        <span 
+                          className="font-semibold text-gray-900" 
+                          style={{ 
+                            fontSize: formattingStyles.fontSize,
+                            fontFamily: formattingStyles.fontFamily,
+                          }}
+                        >
                           {cert.name}
                         </span>
                         {cert.link && (
-                          <a href={cert.link} className="text-sm text-blue-600 hover:underline">
+                          <a 
+                            href={cert.link} 
+                            className="text-sm text-blue-600 hover:underline"
+                            style={{ fontFamily: formattingStyles.fontFamily }}
+                          >
                             Verify
                           </a>
                         )}
                       </div>
-                      <p className="text-gray-700" style={{ fontSize }}>
+                      <p 
+                        className="text-gray-700" 
+                        style={{ 
+                          fontSize: formattingStyles.fontSize,
+                          fontFamily: formattingStyles.fontFamily,
+                        }}
+                      >
                         {cert.issuer}
                       </p>
                     </div>

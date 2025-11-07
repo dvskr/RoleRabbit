@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { Filter, Upload, Trash2, Search } from 'lucide-react';
 import { ResumeFile, FileType, SortBy } from '../../types/cloudStorage';
 import FileCard from './FileCard';
@@ -120,7 +120,6 @@ interface RedesignedFileListProps {
   onDelete: (fileId: string) => void;
   onRestore: (fileId: string) => void;
   onPermanentlyDelete: (fileId: string) => void;
-  onTogglePublic: (fileId: string) => void;
   onEdit: (fileId: string) => void;
   onStar: (fileId: string) => void;
   onArchive: (fileId: string) => void;
@@ -155,7 +154,6 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   onDelete,
   onRestore,
   onPermanentlyDelete,
-  onTogglePublic,
   onEdit,
   onStar,
   onArchive,
@@ -176,6 +174,17 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   const palette = colors || theme.colors;
 
   const hasSelection = selectedFiles.length > 0;
+  const allSelected = files.length > 0 && selectedFiles.length === files.length;
+  const someSelected = selectedFiles.length > 0 && selectedFiles.length < files.length;
+  const checkboxRef = useRef<HTMLInputElement>(null);
+  
+  // Set indeterminate state when some files are selected
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
+  
   // Removed viewMode - only grid view is used
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,15 +192,7 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   };
 
   const content = useMemo(() => {
-    console.log('📋 RedesignedFileList rendering:', {
-      filesCount: files.length,
-      searchTerm,
-      filterType,
-      showDeleted
-    });
-    
     if (files.length === 0) {
-      console.log('📋 Showing empty state - no files to display');
       return (
         <EmptyFilesState
           searchTerm={searchTerm}
@@ -217,7 +218,6 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
             onDelete={onDelete}
             onRestore={onRestore}
             onPermanentlyDelete={onPermanentlyDelete}
-            onTogglePublic={onTogglePublic}
             onEdit={onEdit}
             onStar={onStar}
             onArchive={onArchive}
@@ -243,7 +243,6 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
     onShare,
     onShareWithUser,
     onStar,
-    onTogglePublic,
     selectedFiles,
     showDeleted,
     palette,
@@ -268,6 +267,32 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
         className="px-6 py-4 border-b flex flex-wrap items-center gap-3"
         style={{ borderBottom: `1px solid ${palette.border}`, background: palette.cardBackground }}
       >
+        {/* Select All Checkbox */}
+        {files.length > 0 && (
+          <div className="flex items-center gap-2">
+            <input
+              ref={checkboxRef}
+              type="checkbox"
+              checked={allSelected}
+              onChange={onSelectAll}
+              className="w-4 h-4 rounded cursor-pointer"
+              style={{
+                accentColor: palette.primaryBlue,
+                cursor: 'pointer',
+              }}
+              title={allSelected ? 'Deselect all' : 'Select all'}
+              aria-label={allSelected ? 'Deselect all files' : 'Select all files'}
+            />
+            <label
+              className="text-sm cursor-pointer select-none"
+              style={{ color: palette.secondaryText }}
+              onClick={onSelectAll}
+            >
+              {allSelected ? 'Deselect All' : 'Select All'}
+            </label>
+          </div>
+        )}
+
         <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search
             size={15}

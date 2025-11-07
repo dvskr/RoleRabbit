@@ -18,6 +18,7 @@ import { RedesignedFolderSidebar } from './cloudStorage/RedesignedFolderSidebar'
 import { RedesignedFileList, FilesTabsBar } from './cloudStorage/RedesignedFileList';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from './common/Toast';
+import { logger } from '../utils/logger';
 
 export default function CloudStorage({ onClose }: CloudStorageProps) {
   const { theme } = useTheme();
@@ -60,7 +61,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleDeleteFile,
     handleRestoreFile,
     handlePermanentlyDeleteFile,
-    handleTogglePublic,
     handleDownloadFile,
     handleShareFile,
     handleUploadFile,
@@ -155,11 +155,6 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   const activeFiles = useMemo(
     () => files.filter((file) => !file.deletedAt),
     [files]
-  );
-
-  const publicFilesCount = useMemo(
-    () => activeFiles.filter((file) => file.isPublic).length,
-    [activeFiles]
   );
 
   const starredFilesCount = useMemo(
@@ -258,12 +253,11 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                   success('File moved to recycle bin');
                 } catch (err: any) {
                   error(`Failed to delete file: ${err.message || 'Unknown error'}`);
-                  console.error('Delete error:', err);
+                  logger.error('Failed to delete file:', err);
                 }
               }}
               onRestore={handleRestoreFile}
               onPermanentlyDelete={handlePermanentlyDeleteFile}
-              onTogglePublic={handleTogglePublic}
               onEdit={handleEditFileWrapper}
               onStar={handleStarFile}
               onArchive={handleArchiveFile}
@@ -294,7 +288,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
                 } catch (err: any) {
                   const errorMsg = err?.message || err?.error || 'Unknown error';
                   error(`Failed to share file: ${errorMsg}`);
-                  console.error('Share error:', err);
+                  logger.error('Failed to share file:', err);
                 }
               }}
               onRemoveShare={async (fileId, shareId) => {

@@ -17,7 +17,6 @@ type UploadPayload = {
   displayName?: string;
   type?: ResumeFile['type'] | string;
   description?: string;
-  isPublic?: boolean;
   folderId?: string | null;
 };
 
@@ -124,24 +123,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [selectedFiles]);
 
-  const handleTogglePublic = useCallback(async (fileId: string) => {
-    const file = files.find(f => f.id === fileId);
-    if (!file) return;
-    
-    try {
-      await apiService.updateCloudFile(fileId, { isPublic: !file.isPublic });
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, isPublic: !file.isPublic } : file
-      ));
-    } catch (error) {
-      logger.error('Failed to toggle public status:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, isPublic: !file.isPublic } : file
-      ));
-    }
-  }, [files]);
-
   const handleDownloadFile = useCallback(async (file: ResumeFile, format?: 'pdf' | 'doc') => {
     try {
       if (format && file.fileName && !file.fileName.toLowerCase().endsWith(`.${format}`)) {
@@ -211,9 +192,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       if (payload.description) {
         formData.append('description', payload.description);
       }
-      if (typeof payload.isPublic === 'boolean') {
-        formData.append('isPublic', String(payload.isPublic));
-      }
 
       logger.info('📤 Uploading file to API...');
       const response = await apiService.uploadStorageFile(formData);
@@ -281,7 +259,7 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
-  const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isPublic' | 'isStarred' | 'isArchived' | 'folderId'>>, showDeleted: boolean = false) => {
+  const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isStarred' | 'isArchived' | 'folderId'>>, showDeleted: boolean = false) => {
     try {
       const updatePayload: Record<string, any> = {};
 
@@ -295,10 +273,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
 
       if (updates.description !== undefined) {
         updatePayload.description = updates.description;
-      }
-
-      if (updates.isPublic !== undefined) {
-        updatePayload.isPublic = updates.isPublic;
       }
 
       if (updates.isStarred !== undefined) {
@@ -499,7 +473,6 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     handleDeleteFile,
     handleRestoreFile,
     handlePermanentlyDeleteFile,
-    handleTogglePublic,
     handleDownloadFile,
     handleShareFile,
     handleUploadFile,
@@ -513,7 +486,9 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
 // Move handler helper
 export const useCopyMoveOperations = (
   setFiles: React.Dispatch<React.SetStateAction<ResumeFile[]>>,
-  refreshFiles?: (includeDeleted?: boolean) => Promise<void>
+  refreshFiles?: (includeDeleted?: boolean) => Promise<void>,
+  refreshFolders?: () => Promise<void> | void,
+  afterMove?: (fileId: string, folderId: string | null) => void
 ) => {
   const handleMoveFile = useCallback(async (fileId: string, folderId: string | null) => {
     try {
@@ -535,6 +510,22 @@ export const useCopyMoveOperations = (
             await refreshFiles(false);
           } catch (refreshError) {
             logger.warn('Failed to refresh files after move:', refreshError);
+          }
+        }
+
+        if (refreshFolders) {
+          try {
+            await refreshFolders();
+          } catch (folderError) {
+            logger.warn('Failed to refresh folders after move:', folderError);
+          }
+        }
+
+        if (afterMove) {
+          try {
+            afterMove(fileId, folderId || null);
+          } catch (callbackError) {
+            logger.warn('Post-move callback threw an error:', callbackError);
           }
         }
 

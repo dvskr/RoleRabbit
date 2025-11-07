@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { ResumeData, EducationItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -12,7 +12,7 @@ interface EducationSectionProps {
   onHideSection: (section: string) => void;
 }
 
-export default function EducationSection({
+const EducationSection = React.memo(function EducationSection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -20,6 +20,11 @@ export default function EducationSection({
 }: EducationSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Memoize education array
+  const education = useMemo(() => {
+    return Array.isArray(resumeData.education) ? resumeData.education : [];
+  }, [resumeData.education]);
   const addEducation = () => {
     const newEducation: EducationItem = {
       id: Date.now(),
@@ -124,7 +129,7 @@ export default function EducationSection({
         </div>
       </div>
 
-      {resumeData.education.length === 0 && (
+      {education.length === 0 && (
         <div 
           className="text-center py-12 border-2 border-dashed rounded-2xl transition-all"
           style={{
@@ -169,7 +174,7 @@ export default function EducationSection({
         </div>
       )}
 
-      {resumeData.education.map((edu) => (
+      {education.map((edu) => (
         <div 
           key={edu.id} 
           className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
@@ -355,4 +360,6 @@ export default function EducationSection({
       </div>
     </div>
   );
-}
+});
+
+export default EducationSection;

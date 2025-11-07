@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
-import { Mail, Phone, MapPin, Linkedin, Github, Globe, Plus } from 'lucide-react';
-import { ThemeColors } from '../../../contexts/ThemeContext';
+import React, { useState, useCallback } from 'react';
+import { Mail, Phone, MapPin, Linkedin, Github, Globe, Plus, AlertCircle } from 'lucide-react';
+import { ThemeColors } from '../../../../contexts/ThemeContext';
 import { STANDARD_CONTACT_FIELDS } from '../constants';
 import { getFieldIcon } from '../utils/iconHelpers';
+import { validateEmail, validatePhone, validateURL, normalizeURL } from '../../../../utils/validation';
 
 interface ContactFieldsGridProps {
   resumeData: any;
@@ -32,6 +33,9 @@ export default function ContactFieldsGrid({
   setShowAddFieldModal,
   colors,
 }: ContactFieldsGridProps) {
+  // Validation errors state
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
   // Use accentCyan for icons that should have the accent color
   const getIconColor = (index: number) => {
     // Email, Location use gray (tertiaryText)
@@ -40,33 +44,139 @@ export default function ContactFieldsGrid({
     return colors.accentCyan;
   };
 
+  // Validate field based on type
+  const validateField = useCallback((field: string, value: string): boolean => {
+    let validation;
+    
+    if (field === 'email') {
+      validation = validateEmail(value);
+    } else if (field === 'phone') {
+      validation = validatePhone(value);
+    } else if (field === 'linkedin' || field === 'github' || field === 'website') {
+      validation = validateURL(value);
+    } else {
+      // No validation for location
+      return true;
+    }
+
+    if (!validation.isValid) {
+      setValidationErrors(prev => ({ ...prev, [field]: validation.error || '' }));
+      return false;
+    } else {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+      return true;
+    }
+  }, []);
+
+  // Handle field change with validation
+  const handleFieldChange = useCallback((field: string, value: string) => {
+    setResumeData((prev: any) => ({ ...prev, [field]: value }));
+    
+    // Clear error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  }, [setResumeData, validationErrors]);
+
+  // Handle field blur with validation and URL normalization
+  const handleFieldBlur = useCallback((field: string, value: string, inputElement: HTMLInputElement) => {
+    // Normalize URLs on blur
+    let valueToValidate = value;
+    if ((field === 'linkedin' || field === 'github' || field === 'website') && value.trim()) {
+      const normalized = normalizeURL(value);
+      if (normalized !== value) {
+        setResumeData((prev: any) => ({ ...prev, [field]: normalized }));
+        valueToValidate = normalized;
+      }
+    }
+
+    // Validate the field and get result immediately
+    let validation;
+    if (field === 'email') {
+      validation = validateEmail(valueToValidate);
+    } else if (field === 'phone') {
+      validation = validatePhone(valueToValidate);
+    } else if (field === 'linkedin' || field === 'github' || field === 'website') {
+      validation = validateURL(valueToValidate);
+    } else {
+      validation = { isValid: true };
+    }
+
+    // Update validation errors state
+    if (!validation.isValid) {
+      setValidationErrors(prev => ({ ...prev, [field]: validation.error || '' }));
+      inputElement.style.borderColor = colors.errorRed;
+    } else {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+      inputElement.style.borderColor = colors.border;
+    }
+    
+    inputElement.style.outline = 'none';
+  }, [setResumeData, colors.errorRed, colors.border]);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 text-sm mb-6 lg:mb-10">
       {/* Standard Contact Fields */}
       {STANDARD_CONTACT_FIELDS.map((field, idx) => {
         const IconComponent = CONTACT_FIELD_ICONS[idx];
+        const hasError = !!validationErrors[field];
+        const fieldValue = resumeData[field] || '';
+
         return (
-          <div key={field} className="flex items-center gap-2 group">
-            {IconComponent && <IconComponent size={16} style={{ color: getIconColor(idx) }} />}
-            <input 
-              className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
-              style={{
-                background: colors.inputBackground,
-                border: `2px solid ${colors.border}`,
-                color: colors.primaryText,
-              }}
-              value={resumeData[field] || ''} 
-              onChange={(e) => setResumeData((prev: any) => ({...prev, [field]: e.target.value}))}
-              placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-              onFocus={(e) => {
-                e.target.style.borderColor = colors.accentCyan;
-                e.target.style.outline = `2px solid ${colors.accentCyan}40`;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = colors.border;
-                e.target.style.outline = 'none';
-              }}
-            />
+          <div key={field} className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 group">
+              {IconComponent && (
+                <IconComponent 
+                  size={16} 
+                  style={{ color: getIconColor(idx) }}
+                  aria-label={`${field} icon`}
+                  role="img"
+                />
+              )}
+              <input
+                aria-label={field.charAt(0).toUpperCase() + field.slice(1)}
+                aria-invalid={hasError}
+                aria-describedby={hasError ? `${field}-error` : undefined} 
+                type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
+                className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
+                style={{
+                  background: colors.inputBackground,
+                  border: `2px solid ${hasError ? colors.errorRed : colors.border}`,
+                  color: colors.primaryText,
+                }}
+                value={fieldValue} 
+                onChange={(e) => handleFieldChange(field, e.target.value)}
+                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                onFocus={(e) => {
+                  e.target.style.borderColor = hasError ? colors.errorRed : colors.accentCyan;
+                  e.target.style.outline = `2px solid ${hasError ? `${colors.errorRed}40` : `${colors.accentCyan}40`}`;
+                }}
+                onBlur={(e) => handleFieldBlur(field, e.target.value, e.target)}
+              />
+            </div>
+            {hasError && (
+              <div 
+                id={`${field}-error`}
+                className="flex items-center gap-1 ml-6 text-xs" 
+                style={{ color: colors.errorRed }}
+                role="alert"
+              >
+                <AlertCircle size={12} aria-hidden="true" />
+                <span>{validationErrors[field]}</span>
+              </div>
+            )}
           </div>
         );
       })}

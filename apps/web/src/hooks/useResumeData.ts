@@ -3,6 +3,10 @@ import type { SetStateAction } from 'react';
 import { ResumeData, CustomSection, SectionVisibility, CustomField } from '../types/resume';
 import apiService from '../services/apiService';
 import { logger } from '../utils/logger';
+import { sanitizeResumeData } from '../utils/validation';
+import { formatErrorForDisplay } from '../utils/errorMessages';
+import { offlineQueue } from '../utils/offlineQueue';
+import { isOnline } from '../utils/retryHandler';
 
 const DEFAULT_SECTION_ORDER = ['summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
 
@@ -71,6 +75,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [lastServerUpdatedAt, setLastServerUpdatedAt] = useState<string | null>(null);
+  const [hasConflict, setHasConflict] = useState(false);
 
   const [fontFamilyState, _setFontFamily] = useState(DEFAULT_FORMATTING.fontFamily);
   const [fontSizeState, _setFontSize] = useState(DEFAULT_FORMATTING.fontSize);
@@ -242,31 +247,16 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   }, [setHasChanges, setSaveError]);
 
   const setResumeData = useCallback((value: SetStateAction<ResumeData>) => {
-    console.log('[setResumeData] Called with:', value);
     _setResumeData((prev) => {
       const next = typeof value === 'function' ? (value as (prev: ResumeData) => ResumeData)(prev) : value;
-      console.log('[setResumeData] Change detection:', {
-        isDifferent: next !== prev,
-        suppressTracking: suppressTrackingRef.current,
-        prevKeys: prev ? Object.keys(prev) : [],
-        nextKeys: next ? Object.keys(next) : [],
-        prevPhone: prev?.phone,
-        nextPhone: next?.phone,
-      });
       if (!suppressTrackingRef.current && next !== prev) {
         logger.info('Resume data changed, setting hasChanges=true', { 
           prevName: prev?.name, 
           nextName: next?.name,
           suppressTracking: suppressTrackingRef.current 
         });
-        console.log('[setResumeData] Setting hasChanges=true');
         setHasChanges(true);
         setSaveError(null);
-      } else {
-        console.log('[setResumeData] NOT setting hasChanges', {
-          suppressTracking: suppressTrackingRef.current,
-          objectsEqual: next === prev
-        });
       }
       return next;
     });
@@ -444,7 +434,11 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
       throw new Error('Resume not found');
     } catch (error: any) {
       logger.error('Failed to load resume by id:', error);
-      setSaveError(error instanceof Error ? error.message : 'Failed to load resume');
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'loading resume',
+        feature: 'resume builder',
+      });
+      setSaveError(friendlyError);
       throw error;
     } finally {
       setIsLoading(false);
@@ -473,9 +467,13 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           setLastServerUpdatedAt(null);
           setLastSavedAt(null);
         }
-      } catch (error) {
+      } catch (error: any) {
         logger.error('Failed to load resume:', error);
-        setSaveError(error instanceof Error ? error.message : 'Failed to load resume');
+        const friendlyError = formatErrorForDisplay(error, {
+          action: 'loading resume',
+          feature: 'resume builder',
+        });
+        setSaveError(friendlyError);
       } finally {
         setIsLoading(false);
       }
@@ -510,7 +508,8 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         setSaveError(null);
 
         // Use refs to get latest values without adding them to dependency array
-        const payload = {
+        // Sanitize data before sending to prevent XSS attacks
+        const rawPayload = {
           data: {
             resumeData: resumeDataRef.current,
             sectionOrder: sectionOrderRef.current,
@@ -528,9 +527,12 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           },
           lastKnownServerUpdatedAt: lastServerUpdatedAtRef.current,
         };
+        
+        // Sanitize all string fields in the payload to prevent XSS
+        const payload = sanitizeResumeData(rawPayload);
 
-        // DEBUG: Log payload details
-        console.log('[AUTO-SAVE] Payload being sent:', {
+        // Log payload details using logger for development debugging
+        logger.debug('Auto-save payload', {
           hasResumeData: !!payload.data.resumeData,
           resumeDataKeys: payload.data.resumeData ? Object.keys(payload.data.resumeData) : [],
           name: payload.data.resumeData?.name,
@@ -540,7 +542,6 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           summary: payload.data.resumeData?.summary ? `${payload.data.resumeData.summary.substring(0, 50)}...` : '(empty)',
           skillsType: Array.isArray(payload.data.resumeData?.skills) ? 'array' : typeof payload.data.resumeData?.skills,
           skillsCount: Array.isArray(payload.data.resumeData?.skills) ? payload.data.resumeData.skills.length : 0,
-          skills: payload.data.resumeData?.skills
         });
 
         // Auto-save: create resume if it doesn't exist, otherwise update
@@ -548,17 +549,29 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         if (currentId) {
           // Update existing resume
           logger.info('Auto-saving existing resume:', { resumeId: currentId });
-          const response = await apiService.autoSaveResume(currentId, payload);
-          const savedResume = response?.resume;
-          if (savedResume) {
-            logger.info('Resume auto-saved successfully:', { id: savedResume.id, lastUpdated: savedResume.lastUpdated });
-            setLastServerUpdatedAt(savedResume.lastUpdated || null);
-            if (savedResume.lastUpdated) {
-              setLastSavedAt(new Date(savedResume.lastUpdated));
+          try {
+            const response = await apiService.autoSaveResume(currentId, payload);
+            const savedResume = response?.resume;
+            if (savedResume) {
+              logger.info('Resume auto-saved successfully:', { id: savedResume.id, lastUpdated: savedResume.lastUpdated });
+              setLastServerUpdatedAt(savedResume.lastUpdated || null);
+              if (savedResume.lastUpdated) {
+                setLastSavedAt(new Date(savedResume.lastUpdated));
+              }
+              setHasChanges(false);
+              setHasConflict(false); // Clear conflict on successful save
+            } else {
+              logger.warn('Auto-save response missing resume data:', response);
             }
-            setHasChanges(false);
-          } else {
-            logger.warn('Auto-save response missing resume data:', response);
+          } catch (conflictError: any) {
+            // Handle 409 Conflict errors
+            if (conflictError?.statusCode === 409) {
+              logger.warn('Conflict detected during auto-save:', conflictError);
+              setHasConflict(true);
+              setSaveError('Resume was updated elsewhere. Please refresh to sync changes.');
+            } else {
+              throw conflictError; // Re-throw non-conflict errors
+            }
           }
         } else {
           // Create new resume if it doesn't exist yet
@@ -603,10 +616,29 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         }
       } catch (error: any) {
         logger.error('Auto-save failed:', error);
-        if (error?.statusCode === 409) {
-          setSaveError('Resume was updated elsewhere. Please reload to sync changes.');
+        
+        // If offline or network error, queue the save operation
+        const isNetworkError = error?.message?.includes('Failed to fetch') || 
+                              error?.message?.includes('NetworkError') ||
+                              error?.statusCode === 0 ||
+                              !isOnline();
+        
+        if (isNetworkError && currentId) {
+          const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+          offlineQueue.add(
+            'save',
+            `${apiBaseUrl}/api/resumes/${currentId}/autosave`,
+            payload,
+            { method: 'PUT' }
+          );
+          logger.info('Queued failed save operation for retry when online');
+          setSaveError('Changes will be saved when connection is restored.');
         } else {
-          setSaveError(error?.message || 'Auto-save failed');
+          const friendlyError = formatErrorForDisplay(error, {
+            action: 'saving resume',
+            feature: 'resume builder',
+          });
+          setSaveError(friendlyError);
         }
       } finally {
         setIsSaving(false);
@@ -655,6 +687,8 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     setLastSavedAt,
     lastServerUpdatedAt,
     setLastServerUpdatedAt,
+    hasConflict,
+    setHasConflict,
     fontFamily: fontFamilyState,
     setFontFamily,
     fontSize: fontSizeState,

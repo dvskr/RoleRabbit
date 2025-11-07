@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Sparkles, GripVertical, X, Plus } from 'lucide-react';
 import { ResumeData } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,7 +13,7 @@ interface SkillsSectionProps {
   onOpenAIGenerateModal: (section: string) => void;
 }
 
-export default function SkillsSection({
+const SkillsSection = React.memo(function SkillsSection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -23,8 +23,10 @@ export default function SkillsSection({
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  // Ensure skills is always an array
-  const skills = Array.isArray(resumeData.skills) ? resumeData.skills : [];
+  // Memoize skills array to prevent unnecessary re-renders
+  const skills = useMemo(() => {
+    return Array.isArray(resumeData.skills) ? resumeData.skills : [];
+  }, [resumeData.skills]);
 
   return (
     <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
@@ -190,4 +192,6 @@ export default function SkillsSection({
       </div>
     </div>
   );
-}
+});
+
+export default SkillsSection;

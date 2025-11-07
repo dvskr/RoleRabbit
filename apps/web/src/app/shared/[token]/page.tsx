@@ -49,7 +49,23 @@ export default function SharedFilePage() {
       setLoading(true);
       setError(null);
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      // Detect API URL from current host or use env variable
+      let API_URL = process.env.NEXT_PUBLIC_API_URL;
+      if (!API_URL && typeof window !== 'undefined') {
+        const currentHost = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        // If on localhost, use port 3001
+        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+          API_URL = `${protocol}//${currentHost}:3001`;
+        } else {
+          // In production, API might be on same domain with /api path or subdomain
+          // Try to use same domain (assuming API is proxied or on same host)
+          API_URL = `${protocol}//${currentHost}${window.location.port ? ':' + window.location.port : ''}`;
+        }
+      }
+      API_URL = API_URL || 'http://localhost:3001';
+      
       const endpoint = pwd 
         ? `${API_URL}/api/storage/shared/${token}?password=${encodeURIComponent(pwd)}`
         : `${API_URL}/api/storage/shared/${token}`;
@@ -99,7 +115,23 @@ export default function SharedFilePage() {
     if (!fileData) return;
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      // Detect API URL from current host or use env variable
+      let API_URL = process.env.NEXT_PUBLIC_API_URL;
+      if (!API_URL && typeof window !== 'undefined') {
+        const currentHost = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        // If on localhost, use port 3001
+        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+          API_URL = `${protocol}//${currentHost}:3001`;
+        } else {
+          // In production, API might be on same domain with /api path or subdomain
+          // Try to use same domain (assuming API is proxied or on same host)
+          API_URL = `${protocol}//${currentHost}${window.location.port ? ':' + window.location.port : ''}`;
+        }
+      }
+      API_URL = API_URL || 'http://localhost:3001';
+      
       const endpoint = password
         ? `${API_URL}/api/storage/shared/${token}/download?password=${encodeURIComponent(password)}`
         : `${API_URL}/api/storage/shared/${token}/download`;

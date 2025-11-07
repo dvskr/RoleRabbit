@@ -28,7 +28,6 @@ interface QuickFilters {
   archived?: boolean;
   shared?: boolean;
   recent?: boolean;
-  public?: boolean;
 }
 
 interface RedesignedFolderSidebarProps {
@@ -54,6 +53,22 @@ const QUICK_FILTERS = [
   { key: 'shared' as const, label: 'Shared', icon: Share2 },
   { key: 'archived' as const, label: 'Archived', icon: Archive },
 ];
+
+const STORAGE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'] as const;
+
+const formatBytes = (bytes?: number): string => {
+  if (!bytes || !Number.isFinite(bytes) || bytes <= 0) {
+    return '0 B';
+  }
+
+  const base = 1024;
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(base)), STORAGE_UNITS.length - 1);
+  const value = bytes / Math.pow(base, index);
+  const hasFraction = value % 1 !== 0;
+  const precision = hasFraction ? (value >= 10 ? 1 : 2) : 0;
+
+  return `${value.toFixed(precision)} ${STORAGE_UNITS[index]}`;
+};
 
 export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = ({
   folders,
@@ -103,6 +118,38 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
   const storagePercentage = Number.isFinite(safeStorageInfo.percentage)
     ? Math.min(Math.max(safeStorageInfo.percentage, 0), 100)
     : 0;
+
+  const storagePercentageDisplay = useMemo(() => {
+    if (storagePercentage >= 1) {
+      return storagePercentage.toFixed(0);
+    }
+    if (storagePercentage > 0) {
+      return storagePercentage.toFixed(2);
+    }
+    return '0';
+  }, [storagePercentage]);
+
+  const progressWidth = storagePercentage > 0 && storagePercentage < 1 ? 1 : storagePercentage;
+
+  const usedStorageLabel = useMemo(() => {
+    if (safeStorageInfo.usedBytes && safeStorageInfo.usedBytes > 0) {
+      return formatBytes(safeStorageInfo.usedBytes);
+    }
+    if (Number.isFinite(safeStorageInfo.used) && safeStorageInfo.used > 0) {
+      return `${safeStorageInfo.used.toFixed(safeStorageInfo.used >= 10 ? 1 : 2)} GB`;
+    }
+    return '0 B';
+  }, [safeStorageInfo]);
+
+  const limitStorageLabel = useMemo(() => {
+    if (safeStorageInfo.limitBytes && safeStorageInfo.limitBytes > 0) {
+      return formatBytes(safeStorageInfo.limitBytes);
+    }
+    if (Number.isFinite(safeStorageInfo.limit) && safeStorageInfo.limit > 0) {
+      return `${safeStorageInfo.limit.toFixed(safeStorageInfo.limit >= 10 ? 1 : 2)} GB`;
+    }
+    return 'Unlimited';
+  }, [safeStorageInfo]);
 
   return (
     <aside
@@ -271,7 +318,7 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
         >
           <div className="flex items-center justify-between text-xs font-semibold">
             <span style={{ color: palette.secondaryText }}>Storage</span>
-            <span style={{ color: palette.successGreen }}>{storagePercentage.toFixed(0)}%</span>
+            <span style={{ color: palette.successGreen }}>{storagePercentageDisplay}%</span>
           </div>
           <div className="w-full h-2 rounded-full overflow-hidden"
             style={{ background: palette.cardBackground }}
@@ -279,7 +326,7 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
             <div
               className="h-full rounded-full"
               style={{
-                width: `${storagePercentage}%`,
+                width: `${progressWidth}%`,
                 background: palette.successGreen,
               }}
             />
@@ -287,13 +334,8 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
           <div className="flex items-center justify-between text-xs"
             style={{ color: palette.secondaryText }}
           >
-            <span>
-              {Number.isFinite(safeStorageInfo.used) ? safeStorageInfo.used.toFixed(1) : '0.0'} GB
-            </span>
-            <span>
-              /
-              {Number.isFinite(safeStorageInfo.limit) ? ` ${safeStorageInfo.limit.toFixed(1)} GB` : ' —'}
-            </span>
+            <span>{usedStorageLabel}</span>
+            <span> / {limitStorageLabel}</span>
           </div>
         </div>
 

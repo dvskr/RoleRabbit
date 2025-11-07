@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, ExperienceItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,7 +13,7 @@ interface ExperienceSectionProps {
   onOpenAIGenerateModal: (section: string) => void;
 }
 
-export default function ExperienceSection({
+const ExperienceSection = React.memo(function ExperienceSection({
   resumeData,
   setResumeData,
   sectionVisibility,
@@ -22,9 +22,11 @@ export default function ExperienceSection({
 }: ExperienceSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-
-  // Ensure experience is always an array
-  const experience = Array.isArray(resumeData.experience) ? resumeData.experience : [];
+  
+  // Memoize experience array
+  const experience = useMemo(() => {
+    return Array.isArray(resumeData.experience) ? resumeData.experience : [];
+  }, [resumeData.experience]);
 
   const addExperience = () => {
     const newExperience: ExperienceItem = {
@@ -44,8 +46,8 @@ export default function ExperienceSection({
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
     setResumeData((prev: any) => {
       const updatedExperience = (prev.experience || []).map((item: any) => 
-        item.id === id ? { ...item, ...updates } : item
-      );
+      item.id === id ? { ...item, ...updates } : item
+    );
       return {...prev, experience: updatedExperience};
     });
   };
@@ -584,4 +586,6 @@ export default function ExperienceSection({
       </div>
     </div>
   );
-}
+});
+
+export default ExperienceSection;
