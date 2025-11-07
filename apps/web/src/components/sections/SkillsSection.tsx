@@ -108,6 +108,8 @@ const SkillsSection = React.memo(function SkillsSection({
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = colors.errorRed;
                   }}
+                  aria-label={`Remove skill ${skill}`}
+                  title={`Remove skill ${skill}`}
                 >
                   <X size={12} />
                 </button>
@@ -158,6 +160,8 @@ const SkillsSection = React.memo(function SkillsSection({
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = colors.primaryText;
                 }}
+                aria-label="Add skill"
+                title="Add skill"
               >
                 <Plus size={12} />
               </button>
