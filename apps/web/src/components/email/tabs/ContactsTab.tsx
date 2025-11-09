@@ -7,6 +7,7 @@ import AddContactModal from '../components/AddContactModal';
 import ContactDetailsModal from '../components/ContactDetailsModal';
 import { Contact } from '../types';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { logger } from '../../../utils/logger';
 
 export default function ContactsTab() {
   const { theme } = useTheme();
@@ -111,7 +112,7 @@ export default function ContactsTab() {
         <AddContactModal
           onClose={() => setShowAddModal(false)}
           onAdd={(contact) => {
-            console.log('Adding contact:', contact);
+            logger.info('Adding contact', { contact });
             setShowAddModal(false);
           }}
         />

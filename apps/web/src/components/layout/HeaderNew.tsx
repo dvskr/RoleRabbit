@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Upload, Save, Sparkles, Menu, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen, Trash2 } from 'lucide-react';
+import { Download, Upload, Save, Sparkles, Menu, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
@@ -17,7 +17,6 @@ interface HeaderProps {
   onClear: () => void;
   onImport: () => void;
   onSave: () => void;
-  onToggleAIPanel: () => void;
   onTogglePreview?: () => void;
   onShowMobileMenu: () => void;
   setPreviousSidebarState: (state: boolean) => void;
@@ -34,7 +33,7 @@ export default function HeaderNew({
   isMobile,
   isSaving,
   showRightPanel,
-  previousSidebarState,
+  previousSidebarState: _previousSidebarState,
   sidebarCollapsed,
   isPreviewMode,
   lastSavedAt,
@@ -43,16 +42,15 @@ export default function HeaderNew({
   onClear,
   onImport,
   onSave,
-  onToggleAIPanel,
   onTogglePreview,
   onShowMobileMenu,
-  setPreviousSidebarState,
-  setSidebarCollapsed,
+  setPreviousSidebarState: _setPreviousSidebarState,
+  setSidebarCollapsed: _setSidebarCollapsed,
   setShowRightPanel,
   onToggleSidebar,
   mainSidebarCollapsed,
   setMainSidebarCollapsed,
-  previousMainSidebarState,
+  previousMainSidebarState: _previousMainSidebarState,
   setPreviousMainSidebarState
 }: HeaderProps) {
   const { theme } = useTheme();
@@ -136,29 +134,7 @@ export default function HeaderNew({
           </button>
         )}
         
-        {onToggleSidebar && (
-          <button 
-            onClick={onToggleSidebar}
-            className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
-            style={{
-              background: isLightMode ? '#ffffff' : colors.inputBackground,
-              border: `1px solid ${colors.border}`,
-              color: colors.secondaryText,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
-              e.currentTarget.style.borderColor = colors.successGreen;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = colors.secondaryText;
-              e.currentTarget.style.borderColor = colors.border;
-            }}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-            <span>{sidebarCollapsed ? 'Expand' : 'Collapse'}</span>
-          </button>
-        )}
+        {/* Sidebar toggle handled inside ResumeEditor to align with vertical icons */}
         
         {/* Auto-save feedback indicator */}
         {hasChanges && !isSaving && (

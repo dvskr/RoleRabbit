@@ -36,25 +36,33 @@ export function TemplateSelectionModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{
-        background: MODAL_STYLES.BACKDROP,
-        backdropFilter: MODAL_STYLES.BACKDROP_FILTER,
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-50 border-0 p-0 focus:outline-none"
+        style={{
+          background: MODAL_STYLES.BACKDROP,
+          backdropFilter: MODAL_STYLES.BACKDROP_FILTER,
+        }}
+        onClick={onClose}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onClose();
+          }
+        }}
+        aria-label="Close template selection modal"
+      />
+      <div className="fixed inset-0 z-[51] flex items-center justify-center p-4">
       <div
         className="rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl"
         style={{
           background: colors.cardBackground,
           border: `1px solid ${colors.border}`,
         }}
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="template-selection-title"
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -68,7 +76,7 @@ export function TemplateSelectionModal({
               <FileText size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-semibold" style={{ color: colors.primaryText }}>
+              <h3 id="template-selection-title" className="text-xl font-semibold" style={{ color: colors.primaryText }}>
                 Select Email Template
               </h3>
               <p className="text-sm" style={{ color: colors.secondaryText }}>
@@ -99,10 +107,11 @@ export function TemplateSelectionModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template) => (
-            <div
+            <button
+              type="button"
               key={template.id}
               onClick={() => onSelectTemplate(template)}
-              className="p-4 rounded-lg cursor-pointer transition-all border"
+              className="p-4 rounded-lg transition-all border text-left"
               style={{
                 background: colors.inputBackground,
                 borderColor: colors.border,
@@ -145,7 +154,7 @@ export function TemplateSelectionModal({
                 <MessageSquare size={12} />
                 <span>{template.usageCount || 0} uses</span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -162,6 +171,7 @@ export function TemplateSelectionModal({
         )}
       </div>
     </div>
+    </>
   );
 }
 

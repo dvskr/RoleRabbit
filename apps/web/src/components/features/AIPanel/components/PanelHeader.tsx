@@ -1,8 +1,20 @@
 import React from 'react';
 import { Sparkles, X, RefreshCw } from 'lucide-react';
 
+interface PanelColors {
+  badgePurpleBg: string;
+  badgeInfoBg: string;
+  border: string;
+  badgePurpleText: string;
+  primaryBlue: string;
+  primaryText: string;
+  secondaryText: string;
+  tertiaryText: string;
+  hoverBackground: string;
+}
+
 interface PanelHeaderProps {
-  colors: any;
+  colors: PanelColors;
   onClose: () => void;
   onClear: () => void;
 }

@@ -41,6 +41,13 @@ export default function NotesPanel({
     setShowForm(false);
   };
 
+  const fieldIds = {
+    title: `note-title-${jobId}`,
+    category: `note-category-${jobId}`,
+    content: `note-content-${jobId}`,
+    tagsInput: `note-tags-${jobId}`
+  } as const;
+
   const addTag = (tag: string) => {
     if (tag && !formData.tags.includes(tag)) {
       setFormData({ ...formData, tags: [...formData.tags, tag] });
@@ -121,8 +128,9 @@ export default function NotesPanel({
       {showForm && (
         <form onSubmit={handleSubmit} className="mt-4 p-3 bg-blue-50 rounded-lg space-y-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Title</label>
+            <label htmlFor={fieldIds.title} className="text-xs font-medium text-gray-700 mb-1 block">Title</label>
             <input
+              id={fieldIds.title}
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -132,8 +140,9 @@ export default function NotesPanel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Category</label>
+            <label htmlFor={fieldIds.category} className="text-xs font-medium text-gray-700 mb-1 block">Category</label>
             <select
+              id={fieldIds.category}
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value as JobNote['category'] })}
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
@@ -147,8 +156,9 @@ export default function NotesPanel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Content</label>
+            <label htmlFor={fieldIds.content} className="text-xs font-medium text-gray-700 mb-1 block">Content</label>
             <textarea
+              id={fieldIds.content}
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={3}
@@ -158,7 +168,7 @@ export default function NotesPanel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Tags</label>
+            <label htmlFor={fieldIds.tagsInput} className="text-xs font-medium text-gray-700 mb-1 block">Tags</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {formData.tags.map((tag) => (
                 <span key={tag} className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded flex items-center gap-1">
@@ -174,6 +184,7 @@ export default function NotesPanel({
               ))}
             </div>
             <input
+              id={fieldIds.tagsInput}
               type="text"
               placeholder="Add tag and press Enter"
               onKeyPress={(e) => {

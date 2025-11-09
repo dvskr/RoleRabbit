@@ -75,7 +75,7 @@
 
 3. **Import**
    - Location: Top toolbar
-   - Action: Opens `ImportModal` with options for file upload, JSON paste, LinkedIn/Cloud import
+   - Action: Opens `ImportModal` with options for file upload and Cloud import
    - Notes: Uses `handleJsonImport` implemented in `DashboardPageClient`
 
 4. **Export**
@@ -264,7 +264,7 @@
 2. **ImportModal** (`apps/web/src/components/modals/ImportModal.tsx`)
    - Purpose: Import resume from file or JSON
    - Triggers: Header import button
-   - Features: File upload, JSON paste (parsed through `handleJsonImport`), LinkedIn placeholder, Import from Cloud option
+   - Features: File upload, JSON paste (parsed through `handleJsonImport`), Import from Cloud option
    - Status: ⏳ To be tested end-to-end (JSON import handler implemented in `DashboardPageClient`)
 
 3. **AddSectionModal** (`apps/web/src/components/modals/AddSectionModal.tsx`)
@@ -603,7 +603,7 @@
 | Export PDF | ✅ | ✅ | ⏳ To test | No | ExportModal + export function |
 | Export DOCX | ✅ | ✅ | ⏳ To test | No | ExportModal + export function |
 | Export JSON | ✅ | ✅ | ⏳ To test | No | ExportModal + export function |
-| Import Resume | ✅ | ✅ | ⏳ To test | No | JSON import handler wired via `handleJsonImport`; LinkedIn/cloud paths need verification |
+| Import Resume | ✅ | ✅ | ⏳ To test | No | JSON import handler wired via `handleJsonImport`; cloud paths need verification |
 | Add Custom Field | ✅ | ✅ | ⏳ To test | No | AddFieldModal + API |
 | Validate Contact Fields | ✅ | ✅ | ⏳ To test | No | Email/Phone/URL validation |
 | Generate Smart Filename | ✅ | ✅ | ⏳ To test | No | Filename generator |
@@ -853,7 +853,7 @@ model Resume {
 - ✅ Accessibility features (ARIA labels)
 
 ### Potential Issues
-- ⚠️ Import flows (file/LinkedIn) need end-to-end verification even though JSON handler is wired
+- ⚠️ Import flows (file) need end-to-end verification even though JSON handler is wired
 - ⏳ Need to verify all API endpoints work correctly
 - ⏳ Need to verify database persistence
 - ⏳ Need to check for console errors/warnings

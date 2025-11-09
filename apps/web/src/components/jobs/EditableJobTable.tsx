@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Columns, Plus, Trash2, Eye, X, ArrowUpDown, ArrowUp, ArrowDown, Download, Upload, Star, CheckSquare, Filter as FilterIcon, List, Grid, RotateCcw, Trash, Trash as TrashIcon, Search, Calendar, BarChart3, Settings, Building2 } from 'lucide-react';
-import { Job, ViewMode, JobFilters, SavedView } from '../../types/job';
+import { Plus, ArrowUpDown, ArrowUp, ArrowDown, CheckSquare } from 'lucide-react';
+import { Job } from '../../types/job';
 import { useTheme } from '../../contexts/ThemeContext';
-import { getStatusBadgeStyles, getPriorityBadgeStyles } from '../../utils/themeHelpers';
-import { exportToCSV } from '../../utils/exportHelpers';
 import JobFiltersPanel from './JobFiltersPanel';
 // Import extracted types and constants
-import type { EditableJobTableProps, ColumnKey, SortDirection, Column, EditingCell } from './types/jobTable.types';
-import { defaultColumns, statusOptions, priorityOptions, getSampleJobs, STORAGE_KEY_COLUMNS } from './constants/jobTable.constants';
+import type { EditableJobTableProps, ColumnKey } from './types/jobTable.types';
+import { getSampleJobs } from './constants/jobTable.constants';
 // Import helper functions
 import { filterJobs } from './utils/jobTableFilters';
 import { sortJobsByColumn, sortJobsByFilter } from './utils/jobTableSorting';
@@ -29,11 +27,9 @@ import JobTableToolbar from './components/JobTableToolbar';
 
 export default function EditableJobTable({
   jobs: propsJobs,
-  onEdit,
   onDelete,
   onRestore,
   onView,
-  onAdd,
   onUpdate,
   onCreate,
   favorites = [],
@@ -92,7 +88,6 @@ export default function EditableJobTable({
     setNewRowData,
     inputRef,
     startEditing: startEditingHook,
-    cancelEditing,
     resetNewRow,
     setEditingCell,
   } = useJobTableEditing();
@@ -147,7 +142,7 @@ export default function EditableJobTable({
   
   const shouldShowGroups = tableFilters.groupBy && tableFilters.groupBy !== 'status';
 
-  const startEditing = useCallback((jobId: string, field: ColumnKey, currentValue: any) => {
+  const startEditing = useCallback((jobId: string, field: ColumnKey, currentValue: unknown) => {
     if (!isEditableColumn(field)) return;
     startEditingHook(jobId, field, currentValue);
   }, [startEditingHook]);
@@ -166,7 +161,7 @@ export default function EditableJobTable({
     }
     
     setEditingCell(null);
-  }, [editingCell, editingValue, onUpdate, displayJobs]);
+  }, [editingCell, editingValue, onUpdate, displayJobs, setNewRowData, setEditingCell]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, jobId: string, field: ColumnKey) => {
     if (!isEditableColumn(field)) return;
@@ -257,9 +252,9 @@ export default function EditableJobTable({
         setEditingCell(null);
       }
     }
-  }, [visibleColumns, displayJobs, newRowData, saveEdit, startEditing, onCreate]);
+  }, [visibleColumns, displayJobs, newRowData, saveEdit, startEditing, onCreate, resetNewRow, setEditingCell]);
 
-  const handleCellClick = (jobId: string, field: ColumnKey, value: any) => {
+  const handleCellClick = (jobId: string, field: ColumnKey, value: unknown) => {
     if (!isEditableColumn(field)) return;
     if (editingCell?.jobId === jobId && editingCell?.field === field) return;
     startEditing(jobId, field, value);
@@ -525,18 +520,22 @@ export default function EditableJobTable({
                       background: colors.toolbarBackground,
                       width: colDef.width,
                       minWidth: colDef.width || 120,
-                      cursor: isSortable ? 'pointer' : 'default',
                     }}
-                    onClick={() => isSortable && handleSort(column.key)}
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 w-full text-left focus:outline-none"
+                      style={{
+                        color: colors.tertiaryText,
+                        cursor: isSortable ? 'pointer' : 'default',
+                        background: 'transparent',
+                      }}
+                      onClick={() => isSortable && handleSort(column.key)}
+                      aria-label={`Sort by ${column.label}`}
+                    >
                       <span className="flex-1">{column.label}</span>
                       {isSortable && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSort(column.key);
-                          }}
+                        <span
                           className="p-0.5 rounded transition-all opacity-60 hover:opacity-100"
                           style={{ color: isSorted ? colors.primaryBlue : colors.tertiaryText }}
                         >
@@ -545,9 +544,9 @@ export default function EditableJobTable({
                           ) : (
                             <ArrowUpDown size={14} />
                           )}
-                        </button>
+                        </span>
                       )}
-                    </div>
+                    </button>
                     {/* Resize Handle */}
                     {isSortable && (
                       <div
@@ -559,6 +558,8 @@ export default function EditableJobTable({
                           e.stopPropagation();
                           startResize(idx, e.clientX, colDef.width || 150);
                         }}
+                        role="separator"
+                        aria-hidden="true"
                       />
                     )}
                 </th>
@@ -736,18 +737,22 @@ export default function EditableJobTable({
       {showFiltersModal && (
         <>
           {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-[99]"
+          <button 
+            type="button"
+            className="fixed inset-0 z-[99] border-0 p-0 focus:outline-none"
             style={{
               background: 'rgba(0, 0, 0, 0.4)',
               backdropFilter: 'blur(4px)',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
               animation: 'fadeIn 0.2s ease-out',
             }}
             onClick={() => setShowFiltersModal(false)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setShowFiltersModal(false);
+              }
+            }}
+            aria-label="Close filters panel"
           />
           {/* Side Panel */}
           <JobFiltersPanel

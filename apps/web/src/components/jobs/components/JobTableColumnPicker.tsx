@@ -22,9 +22,17 @@ export default function JobTableColumnPicker({
 
   return (
     <>
-      <div 
-        className="fixed inset-0 z-[100]" 
+      <button
+        type="button"
+        className="fixed inset-0 z-[100] bg-transparent focus:outline-none border-0 p-0"
         onClick={onClose}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onClose();
+          }
+        }}
+        aria-label="Close column picker"
       />
       <div 
         className="absolute right-4 top-full mt-2 rounded-lg shadow-2xl z-[101]"
@@ -39,12 +47,15 @@ export default function JobTableColumnPicker({
           minWidth: '200px',
           maxWidth: '350px',
         }}
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-labelledby="job-table-column-picker-heading"
+        tabIndex={-1}
       >
         <div className="p-3">
           <div 
             className="text-xs font-semibold mb-3 px-2 uppercase tracking-wider whitespace-nowrap"
             style={{ color: colors.tertiaryText }}
+            id="job-table-column-picker-heading"
           >
             Toggle Columns
           </div>

@@ -46,14 +46,22 @@ export function generateDuplicateFileName(originalName: string): string {
  * Find duplicate resumes in cloud storage
  */
 export function findDuplicateResumes(cloudResumes: ResumeFile[]): ResumeFile[][] {
+  if (!cloudResumes || !Array.isArray(cloudResumes)) {
+    return [];
+  }
+
   const nameMap = new Map<string, ResumeFile[]>();
   
   cloudResumes.forEach(resume => {
+    if (!resume || !resume.name) return;
     const baseName = resume.name.replace(/ - Copy( \d+)?$/, '');
     if (!nameMap.has(baseName)) {
       nameMap.set(baseName, []);
     }
-    nameMap.get(baseName)!.push(resume);
+    const group = nameMap.get(baseName);
+    if (group) {
+      group.push(resume);
+    }
   });
 
   // Return only groups with duplicates

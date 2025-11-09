@@ -19,7 +19,7 @@ export default function AIRecommendations({
     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
       <h4 className="text-sm font-medium text-gray-900 mb-3">AI Recommendations</h4>
       <div className="space-y-2">
-        {aiRecommendations.map((rec: any, index: number) => (
+        {aiRecommendations.map((rec, index) => (
           <div key={index} className="p-2 bg-white rounded-md border border-gray-100">
             <p className="text-xs text-gray-700">{rec}</p>
           </div>

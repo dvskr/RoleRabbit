@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Star, MapPin } from 'lucide-react';
+import { Plus, Star, MapPin, Eye, Edit, RotateCcw, Trash, Trash2 } from 'lucide-react';
 import { Job } from '../../types/job';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getStatusBadgeStyles, getPriorityBadgeStyles } from '../../utils/themeHelpers';
@@ -7,8 +7,15 @@ import { getStatusBadgeStyles, getPriorityBadgeStyles } from '../../utils/themeH
 interface JobKanbanProps {
   jobs: Job[];
   favorites: string[];
+  selectedJobs?: string[];
   onToggleFavorite: (jobId: string) => void;
+  onToggleSelection?: (jobId: string) => void;
+  onEdit?: (job: Job) => void;
+  onDelete?: (jobId: string, permanent?: boolean) => void;
+  onRestore?: (jobId: string) => void;
+  onView?: (job: Job) => void;
   onAddJobToColumn: (status: Job['status']) => void;
+  showDeleted?: boolean;
 }
 
 export default function JobKanban({

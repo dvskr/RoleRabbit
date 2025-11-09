@@ -73,3 +73,54 @@ export interface PortfolioTemplate {
   description: string;
   preview: string;
 }
+
+export type TemplateCategory = 'creative' | 'tech' | 'professional';
+
+export interface PortfolioTemplateDefinition extends PortfolioTemplate {
+  category: TemplateCategory;
+  accentColor: string;
+  styles: Record<string, unknown>;
+  darkMode?: boolean;
+}
+
+export type SectionType = 'hero' | 'about' | 'experience' | 'projects' | 'skills' | 'education' | 'contact';
+
+export interface SectionItem {
+  [key: string]: unknown;
+}
+
+export interface SectionConfig {
+  headline?: string;
+  subheading?: string;
+  ctaText?: string;
+  secondaryCta?: string;
+  title?: string;
+  description?: string;
+  items?: SectionItem[];
+  email?: string;
+  socialLinks?: SectionItem[];
+  [key: string]: unknown;
+}
+
+export interface Section {
+  id: string;
+  type: SectionType;
+  title?: string;
+  order: number;
+  enabled: boolean;
+  required?: boolean;
+  config: SectionConfig;
+}
+
+export interface WebsiteTheme {
+  templateId: string;
+  primaryColor: string;
+  colors: string[];
+  [key: string]: unknown;
+}
+
+export interface WebsiteConfig {
+  sections: Section[];
+  theme: WebsiteTheme;
+  settings?: Record<string, unknown>;
+}

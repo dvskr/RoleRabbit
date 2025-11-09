@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Inbox, Search, Mail } from 'lucide-react';
 import EmailThread from '../components/EmailThread';
 import { Email } from '../types';
@@ -58,10 +58,11 @@ export default function InboxTab() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'starred'>('all');
 
   // Debounce search input
-  const debouncedSetSearch = useCallback(
-    debounce((value: string) => {
-      setDebouncedSearchTerm(value);
-    }, 300),
+  const debouncedSetSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setDebouncedSearchTerm(value);
+      }, 300),
     []
   );
 

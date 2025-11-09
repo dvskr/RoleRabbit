@@ -1,9 +1,11 @@
 /**
- * AI Service for connecting to OpenAI, Anthropic, or other AI providers
+ * AI Service for connecting to OpenAI
  */
 
+import { logger } from '../utils/logger';
+
 export interface AIProvider {
-  name: 'openai' | 'anthropic' | 'custom';
+  name: 'openai' | 'custom';
   apiKey: string;
   endpoint?: string;
   model?: string;
@@ -20,11 +22,6 @@ export interface AIRequest {
 export interface AIResponse {
   content: string;
   model: string;
-  usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
 }
 
 class AIService {
@@ -37,7 +34,7 @@ class AIService {
   configure(provider: AIProvider): void {
     this.provider = provider;
     this.isConfigured = !!provider.apiKey;
-    console.log('AI Service configured:', provider.name);
+    logger.info('AI Service configured:', provider.name);
   }
 
   /**
@@ -47,7 +44,6 @@ class AIService {
     // Check if API key exists in environment or localStorage
     const hasApiKey = 
       process.env.NEXT_PUBLIC_OPENAI_API_KEY ||
-      process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY ||
       localStorage.getItem('aiProvider') ||
       this.isConfigured;
     
@@ -79,12 +75,7 @@ class AIService {
     
     return {
       content: data.content,
-      model: data.model,
-      usage: data.tokens_used ? {
-        promptTokens: Math.floor(data.tokens_used * 0.5),
-        completionTokens: Math.floor(data.tokens_used * 0.5),
-        totalTokens: data.tokens_used
-      } : undefined
+      model: data.model
     };
   }
 
@@ -124,73 +115,8 @@ class AIService {
     
     return {
       content: data.choices[0]?.message?.content || '',
-      model: data.model,
-      usage: data.usage
+      model: data.model
     };
-  }
-
-  /**
-   * Call Anthropic API (Claude)
-   */
-  private async callAnthropic(request: AIRequest): Promise<AIResponse> {
-    const apiKey = process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY || this.provider?.apiKey;
-    
-    if (!apiKey) {
-      throw new Error('Anthropic API key not found');
-    }
-
-    const fullPrompt = request.context ? `${request.context}\n\n${request.prompt}` : request.prompt;
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: this.provider?.model || 'claude-3-sonnet-20240229',
-        max_tokens: request.maxTokens || 1000,
-        temperature: request.temperature || 0.7,
-        messages: [{ role: 'user', content: fullPrompt }]
-      })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Anthropic API error');
-    }
-
-    const data = await response.json();
-    
-    return {
-      content: data.content[0]?.text || '',
-      model: data.model,
-      usage: {
-        promptTokens: data.usage?.input_tokens || 0,
-        completionTokens: data.usage?.output_tokens || 0,
-        totalTokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0)
-      }
-    };
-  }
-
-  /**
-   * Generate multiple variations of content
-   */
-  async generateVariations(prompt: string, count: number = 3): Promise<string[]> {
-    const variations: string[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      const request: AIRequest = {
-        prompt: `${prompt}\n\nGenerate variation ${i + 1}`,
-        temperature: 0.9 // Higher temperature for more variety
-      };
-      
-      const response = await this.generateContent(request);
-      variations.push(response.content);
-    }
-    
-    return variations;
   }
 
   /**
@@ -264,9 +190,9 @@ if (typeof window !== 'undefined') {
   const storedProvider = localStorage.getItem('aiProvider');
   const storedApiKey = localStorage.getItem('aiApiKey');
   
-  if (storedProvider && storedApiKey) {
+  if (storedProvider && storedApiKey && storedProvider === 'openai') {
     aiService.configure({
-      name: storedProvider as 'openai' | 'anthropic',
+      name: 'openai',
       apiKey: storedApiKey
     });
   }

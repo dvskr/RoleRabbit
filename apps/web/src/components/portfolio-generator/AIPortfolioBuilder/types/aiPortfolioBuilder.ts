@@ -1,7 +1,11 @@
 // Main component props
+export interface ProfileDataShape {
+  currentRole?: string;
+  [key: string]: unknown;
+}
+
 export interface AIPortfolioBuilderProps {
-  onClose?: () => void;
-  profileData?: any;
+  profileData?: ProfileDataShape | null;
 }
 
 // Portfolio section types

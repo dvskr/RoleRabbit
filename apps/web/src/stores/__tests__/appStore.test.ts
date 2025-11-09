@@ -21,9 +21,9 @@ describe('AppStore', () => {
       skills: [],
       customSections: []
     });
-    expect(result.current.aiState.mode).toBe('assistant');
+    expect(result.current.aiState.mode).toBe('tailor');
     expect(result.current.aiState.isAnalyzing).toBe(false);
-    expect(result.current.aiState.selectedModel).toBe('gpt-5');
+    expect(result.current.aiState.selectedModel).toBe('gpt-4o-mini');
     expect(result.current.uiState.activeTab).toBe('home');
     expect(result.current.uiState.sidebarCollapsed).toBe(false);
     expect(result.current.uiState.showRightPanel).toBe(false);
@@ -90,10 +90,10 @@ describe('AppStore', () => {
     const { result } = renderHook(() => useAppStore());
     
     act(() => {
-      result.current.setAiMode('analyzer');
+      result.current.setAiMode('analysis');
     });
     
-    expect(result.current.aiState.mode).toBe('analyzer');
+    expect(result.current.aiState.mode).toBe('analysis');
   });
 
   it('should set analyzing state', () => {
@@ -114,18 +114,6 @@ describe('AppStore', () => {
     });
     
     expect(result.current.aiState.selectedModel).toBe('sonnet-4.5');
-  });
-
-  it('should add AI message', () => {
-    const { result } = renderHook(() => useAppStore());
-    
-    act(() => {
-      result.current.addAIMessage('user', 'Hello AI');
-    });
-    
-    expect(result.current.aiState.conversation).toHaveLength(1);
-    expect(result.current.aiState.conversation[0].role).toBe('user');
-    expect(result.current.aiState.conversation[0].content).toBe('Hello AI');
   });
 
   it('should set recommendations', () => {

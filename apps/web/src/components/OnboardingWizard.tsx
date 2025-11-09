@@ -13,11 +13,24 @@ interface OnboardingStep {
 
 interface OnboardingWizardProps {
   onComplete: () => void;
+  onCreateResume?: () => void;
+  onImportResume?: () => void;
+  onOpenAIPanel?: () => void;
 }
 
-export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export default function OnboardingWizard({
+  onComplete,
+  onCreateResume,
+  onImportResume,
+  onOpenAIPanel
+}: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+
+  const triggerAndComplete = (callback?: () => void) => () => {
+    callback?.();
+    onComplete();
+  };
 
   const steps: OnboardingStep[] = [
     {
@@ -28,24 +41,24 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       content: (
         <div className="space-y-4">
           <p className="text-lg text-gray-600">
-            Let's get you set up in less than 2 minutes. We'll show you how to:
+            Let's get you set up in less than 2 minutes. We'll cover how to:
           </p>
           <ul className="space-y-3">
             <li className="flex items-center gap-3 text-gray-700">
               <Check size={20} className="text-green-600" />
-              <span>Build professional resumes with AI</span>
+              <span>Manage your base resume slots (1 Free • 5 Pro • 10 Premium)</span>
             </li>
             <li className="flex items-center gap-3 text-gray-700">
               <Check size={20} className="text-green-600" />
-              <span>Track your job applications</span>
+              <span>Activate AI tools on your currently active resume</span>
             </li>
             <li className="flex items-center gap-3 text-gray-700">
               <Check size={20} className="text-green-600" />
-              <span>Get AI-powered insights</span>
+              <span>Tailor content, run ATS checks, and apply AI recommendations</span>
             </li>
             <li className="flex items-center gap-3 text-gray-700">
               <Check size={20} className="text-green-600" />
-              <span>Automate your job search</span>
+              <span>Track your job applications and automate follow-ups</span>
             </li>
           </ul>
         </div>
@@ -58,22 +71,30 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       icon: <FileText size={48} className="text-blue-600" />,
       content: (
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">Quick Start Tips:</h3>
-            <ul className="space-y-2 text-sm text-blue-800">
-              <li>• Click "New Resume" to start fresh</li>
-              <li>• Import an existing resume if you have one</li>
-              <li>• Use AI suggestions to improve your content</li>
-              <li>• Choose from 10+ professional templates</li>
-            </ul>
-          </div>
-          <div className="flex gap-3">
-            <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              New Resume
-            </button>
-            <button className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50">
-              Import Existing
-            </button>
+          <div className="flex flex-col gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-2">Quick Start Tips:</h3>
+              <ul className="space-y-2 text-sm text-blue-800">
+                <li>• Click "New Resume" to start fresh in an empty slot</li>
+                <li>• Import an existing resume (we'll parse it for you)</li>
+                <li>• Use AI suggestions once the resume is marked Active</li>
+                <li>• Choose from multiple professional templates</li>
+              </ul>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={triggerAndComplete(onCreateResume)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                New Resume
+              </button>
+              <button
+                onClick={triggerAndComplete(onImportResume)}
+                className="flex-1 px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50"
+              >
+                Import Existing
+              </button>
+            </div>
           </div>
         </div>
       )
@@ -120,19 +141,25 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             </div>
           </div>
           <div className="flex items-start gap-3 p-3 bg-blue-50 rounded">
-            <div className="text-gray-400 mt-1"><Check size={20} /></div>
+            <div className="text-blue-500 mt-1"><Check size={20} /></div>
             <div>
-              <div className="font-semibold text-gray-600">Resume Optimizer</div>
-              <div className="text-sm text-gray-500">Keeps your resume ATS-ready</div>
+              <div className="font-semibold text-blue-700">Resume Optimizer</div>
+              <div className="text-sm text-blue-600">Generate content, tailor for jobs, and run ATS checks from the active resume</div>
             </div>
           </div>
           <div className="flex items-start gap-3 p-3 bg-green-50 rounded">
-            <div className="text-gray-400 mt-1"><Check size={20} /></div>
+            <div className="text-green-500 mt-1"><Check size={20} /></div>
             <div>
-              <div className="font-semibold text-gray-600">Follow-up Assistant</div>
-              <div className="text-sm text-gray-500">Sends reminders and emails</div>
+              <div className="font-semibold text-green-700">Follow-up Assistant</div>
+              <div className="text-sm text-green-600">Sends reminders and email drafts when jobs move stages</div>
             </div>
           </div>
+          <button
+            onClick={triggerAndComplete(onOpenAIPanel)}
+            className="w-full px-4 py-2 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50"
+          >
+            Open AI Panel
+          </button>
         </div>
       )
     },
@@ -195,6 +222,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
       <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden">
         {/* Progress Bar */}
         <div className="h-2 bg-gray-200">
+          {/* eslint-disable-next-line @next/next/no-inline-styles */}
           <div 
             className="h-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -216,6 +244,7 @@ export default function OnboardingWizard({ onComplete }: OnboardingWizardProps) 
             <button
               onClick={handleSkip}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Skip onboarding"
             >
               <X size={20} className="text-gray-500" />
             </button>

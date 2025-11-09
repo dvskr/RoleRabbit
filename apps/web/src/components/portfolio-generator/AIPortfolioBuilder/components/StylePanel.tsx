@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { DesignStyle, ThemeColor, ThemeColors } from '../types/aiPortfolioBuilder';
+import type { DesignStyle, ThemeColors } from '../types/aiPortfolioBuilder';
 import { DESIGN_STYLES, THEME_COLORS, FONTS } from '../constants/aiPortfolioBuilder';
 import { DesignStyleOption } from './DesignStyleOption';
 

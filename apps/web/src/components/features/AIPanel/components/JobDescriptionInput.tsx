@@ -1,17 +1,25 @@
 import React from 'react';
 import { Shield } from 'lucide-react';
 
+interface PanelColors {
+  primaryText: string;
+  inputBackground: string;
+  border: string;
+  badgePurpleText: string;
+  tertiaryText: string;
+}
+
 interface JobDescriptionInputProps {
   jobDescription: string;
   setJobDescription: (desc: string) => void;
-  colors: any;
+  colors: PanelColors;
   showApplyButton: boolean;
   isApplied: boolean;
   isApplying: boolean;
   isAnalyzing: boolean;
-  resumeData: any;
-  onATSAnalysis: () => void;
-  onApplyImprovements: () => void;
+  resumeData: unknown;
+  onATSAnalysis: () => Promise<any | null> | void;
+  onApplyImprovements: () => Promise<any | null> | void;
 }
 
 export default function JobDescriptionInput({
@@ -28,10 +36,11 @@ export default function JobDescriptionInput({
 }: JobDescriptionInputProps) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+      <label htmlFor="job-description-input" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
         Job Description
       </label>
       <textarea
+        id="job-description-input"
         value={jobDescription}
         onChange={(e) => setJobDescription(e.target.value)}
         placeholder="Paste the job description here..."

@@ -16,8 +16,8 @@ interface JobTableNewRowProps {
   visibleColumns: Column[];
   editingCell: EditingCell | null;
   editingValue: string;
-  inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>;
-  onCellClick: (jobId: string, field: ColumnKey, value: any) => void;
+  inputRef: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>;
+  onCellClick: (jobId: string, field: ColumnKey, value: unknown) => void;
   onEditChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, jobId: string, field: ColumnKey) => void;
   onBlur: () => void;
@@ -80,7 +80,6 @@ export default function JobTableNewRow({
               jobId="new"
               isEditing={isEditing}
               editingValue={editingValue}
-              editingCell={editingCell}
               inputRef={inputRef}
               onEditChange={onEditChange}
               onKeyDown={(e) => onKeyDown(e, 'new', column.key as ColumnKey)}

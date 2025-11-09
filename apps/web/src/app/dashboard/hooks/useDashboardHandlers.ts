@@ -20,6 +20,8 @@ import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 import { validateResumeData, sanitizeResumeData } from '../../../utils/validation';
 import { formatErrorForDisplay } from '../../../utils/errorMessages';
+import { mapEditorStateToBasePayload, BaseResumeRecord } from '../../../utils/resumeMapper';
+import { TailorResult, CoverLetterDraft, PortfolioDraft } from '../../../types/ai';
 
 export interface UseDashboardHandlersParams {
   // Resume data
@@ -99,8 +101,18 @@ export interface UseDashboardHandlersParams {
   setMissingKeywords: (keywords: string[]) => void;
   setAiRecommendations: (recommendations: string[]) => void;
   aiRecommendations: string[];
-  aiConversation: any[];
-  setAiConversation: (conversation: any[] | ((prev: any[]) => any[])) => void;
+  isAnalyzing: boolean;
+  setShowATSScore: (show: boolean) => void;
+  applyBaseResume?: (record?: BaseResumeRecord | null) => void;
+  tailorEditMode: string;
+  selectedTone: string;
+  selectedLength: string;
+  setTailorResult: (result: TailorResult | null) => void;
+  setIsTailoring: (value: boolean) => void;
+  setCoverLetterDraft: (draft: CoverLetterDraft | null) => void;
+  setIsGeneratingCoverLetter: (value: boolean) => void;
+  setPortfolioDraft: (draft: PortfolioDraft | null) => void;
+  setIsGeneratingPortfolio: (value: boolean) => void;
 }
 
 export interface UseDashboardHandlersReturn {
@@ -119,9 +131,11 @@ export interface UseDashboardHandlersReturn {
   // AI operations
   openAIGenerateModal: (section: string) => void;
   hideSection: (section: string) => void;
-  analyzeJobDescription: () => void;
-  applyAIRecommendations: () => void;
-  sendAIMessage: () => void;
+  analyzeJobDescription: () => Promise<any | null>;
+  applyAIRecommendations: () => Promise<any | null>;
+  tailorResumeForJob: () => Promise<any | null>;
+  generateCoverLetterDraft: () => Promise<any | null>;
+  generatePortfolioDraft: () => Promise<any | null>;
   
   // Other
   saveResume: () => void;
@@ -202,8 +216,18 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setMissingKeywords,
     setAiRecommendations,
     aiRecommendations,
-    aiConversation,
-    setAiConversation,
+    isAnalyzing,
+    setShowATSScore,
+    applyBaseResume,
+    tailorEditMode,
+    selectedTone,
+    selectedLength,
+    setTailorResult,
+    setIsTailoring,
+    setCoverLetterDraft,
+    setIsGeneratingCoverLetter,
+    setPortfolioDraft,
+    setIsGeneratingPortfolio
   } = params;
 
   const toggleSection = useCallback((section: string) => {
@@ -332,31 +356,273 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     resumeHelpers.hideSection(section, sectionVisibility, setSectionVisibility);
   }, [sectionVisibility, setSectionVisibility]);
 
-  const analyzeJobDescription = useCallback(() => {
-    aiHelpers.analyzeJobDescription(
-      jobDescription,
-      setIsAnalyzing,
-      setMatchScore,
-      setMatchedKeywords,
-      setMissingKeywords,
-      setAiRecommendations
-    );
+  const analyzeJobDescription = useCallback(async () => {
+    if (!jobDescription.trim()) {
+      return null;
+    }
+    if (!currentResumeId) {
+      setSaveError('Select a resume slot before running ATS analysis.');
+      return null;
+    }
+    if (isAnalyzing) {
+      return null;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const response = await apiService.runATSCheck({
+        resumeId: currentResumeId,
+        jobDescription
+      });
+      const analysis = response?.analysis;
+      if (analysis) {
+        setMatchScore(analysis.overall ?? 0);
+        setMatchedKeywords(response?.matchedKeywords ?? []);
+        setMissingKeywords(response?.missingKeywords ?? []);
+        setAiRecommendations(response?.improvements ?? []);
+        setShowATSScore(true);
+      }
+      return response;
+    } catch (error) {
+      logger.error('ATS analysis failed', { error });
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'analyzing job description',
+        feature: 'ATS analysis'
+      });
+      setSaveError(friendlyError);
+      return null;
+    } finally {
+      setIsAnalyzing(false);
+    }
   }, [
     jobDescription,
+    currentResumeId,
+    isAnalyzing,
     setIsAnalyzing,
     setMatchScore,
     setMatchedKeywords,
     setMissingKeywords,
     setAiRecommendations,
+    setShowATSScore,
+    setSaveError
   ]);
 
-  const applyAIRecommendations = useCallback(() => {
-    aiHelpers.applyAIRecommendations(aiRecommendations, setAiRecommendations);
-  }, [aiRecommendations, setAiRecommendations]);
+  const applyAIRecommendations = useCallback(async () => {
+    if (!currentResumeId) {
+      setSaveError('Select an active resume before applying recommendations.');
+      return null;
+    }
+    if (!jobDescription.trim()) {
+      setSaveError('Provide a job description before applying recommendations.');
+      return null;
+    }
 
-  const sendAIMessage = useCallback(() => {
-    aiHelpers.sendAIMessage(aiPrompt, setAiPrompt, aiConversation, setAiConversation);
-  }, [aiPrompt, setAiPrompt, aiConversation, setAiConversation]);
+    try {
+      const response = await apiService.applyAIRecommendations({
+        resumeId: currentResumeId,
+        jobDescription,
+        focusAreas: aiRecommendations?.length ? ['summary', 'experience', 'skills'] : undefined,
+        tone: writingTone
+      });
+      if (response?.updatedResume && applyBaseResume) {
+        applyBaseResume(response.updatedResume as BaseResumeRecord);
+      }
+      if (response?.appliedRecommendations) {
+        setAiRecommendations(response.appliedRecommendations);
+      }
+      if (response?.ats?.after?.overall !== undefined) {
+        setMatchScore(response.ats.after.overall ?? 0);
+        setShowATSScore(true);
+      }
+      return response;
+    } catch (error) {
+      logger.error('Failed to apply AI recommendations', { error });
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'applying AI recommendations',
+        feature: 'ATS analysis'
+      });
+      setSaveError(friendlyError);
+      return null;
+    }
+  }, [
+    currentResumeId,
+    jobDescription,
+    aiRecommendations,
+    writingTone,
+    applyBaseResume,
+    setAiRecommendations,
+    setMatchScore,
+    setShowATSScore,
+    setSaveError
+  ]);
+
+  const tailorResumeForJob = useCallback(async () => {
+    if (!currentResumeId) {
+      setSaveError('Select an active resume before tailoring.');
+      return null;
+    }
+    if (!jobDescription.trim()) {
+      setSaveError('Provide a job description before tailoring your resume.');
+      return null;
+    }
+
+    setTailorResult(null);
+    setIsTailoring(true);
+    try {
+      const response = await apiService.tailorResume({
+        resumeId: currentResumeId,
+        jobDescription,
+        mode: tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL',
+        tone: selectedTone,
+        length: selectedLength
+      });
+
+      if (response?.tailoredResume) {
+        const result: TailorResult = {
+          tailoredResume: response.tailoredResume,
+          diff: Array.isArray(response.diff) ? response.diff : [],
+          warnings: Array.isArray(response.warnings) ? response.warnings : [],
+          recommendedKeywords: Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : [],
+          ats: response.ats ?? null,
+          confidence: typeof response.confidence === 'number' ? response.confidence : null,
+          mode: response.tailoredVersion?.mode ?? (tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL')
+        };
+        setTailorResult(result);
+
+        if (Array.isArray(response.recommendedKeywords) && response.recommendedKeywords.length) {
+          setAiRecommendations(response.recommendedKeywords);
+        }
+        if (response.ats?.after?.overall !== undefined) {
+          setMatchScore(response.ats.after.overall ?? 0);
+          setShowATSScore(true);
+        }
+      }
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to tailor resume', { error });
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'tailoring resume',
+        feature: 'resume tailoring'
+      });
+      setSaveError(friendlyError);
+      return null;
+    } finally {
+      setIsTailoring(false);
+    }
+  }, [
+    currentResumeId,
+    jobDescription,
+    tailorEditMode,
+    selectedTone,
+    selectedLength,
+    setTailorResult,
+    setAiRecommendations,
+    setMatchScore,
+    setShowATSScore,
+    setSaveError,
+    setIsTailoring
+  ]);
+
+  const generateCoverLetterDraft = useCallback(async () => {
+    if (!currentResumeId) {
+      setSaveError('Select an active resume before generating a cover letter.');
+      return null;
+    }
+    if (!jobDescription.trim()) {
+      setSaveError('Provide a job description before generating a cover letter.');
+      return null;
+    }
+
+    setCoverLetterDraft(null);
+    setIsGeneratingCoverLetter(true);
+    try {
+      const response = await apiService.generateCoverLetter({
+        resumeId: currentResumeId,
+        jobDescription,
+        tone: selectedTone
+      });
+
+      if (response?.content) {
+        const draft: CoverLetterDraft = {
+          subject: response.content.subject || '',
+          greeting: response.content.greeting || '',
+          bodyParagraphs: Array.isArray(response.content.bodyParagraphs) ? response.content.bodyParagraphs : [],
+          closing: response.content.closing || '',
+          signature: response.content.signature || '',
+          jobTitle: response.content.jobTitle ?? response.document?.jobTitle ?? null,
+          company: response.content.company ?? response.document?.company ?? null,
+          tone: selectedTone
+        };
+        setCoverLetterDraft(draft);
+      }
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to generate cover letter', { error });
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'generating cover letter',
+        feature: 'cover letter AI'
+      });
+      setSaveError(friendlyError);
+      return null;
+    } finally {
+      setIsGeneratingCoverLetter(false);
+    }
+  }, [
+    currentResumeId,
+    jobDescription,
+    selectedTone,
+    setCoverLetterDraft,
+    setSaveError,
+    setIsGeneratingCoverLetter
+  ]);
+
+  const generatePortfolioDraft = useCallback(async () => {
+    if (!currentResumeId) {
+      setSaveError('Select an active resume before generating a portfolio outline.');
+      return null;
+    }
+
+    setPortfolioDraft(null);
+    setIsGeneratingPortfolio(true);
+    try {
+      const response = await apiService.generatePortfolio({
+        resumeId: currentResumeId,
+        tone: selectedTone
+      });
+
+      if (response?.content) {
+        const draft: PortfolioDraft = {
+          headline: response.content.headline || '',
+          tagline: response.content.tagline || '',
+          about: response.content.about || '',
+          highlights: Array.isArray(response.content.highlights) ? response.content.highlights : [],
+          selectedProjects: Array.isArray(response.content.selectedProjects) ? response.content.selectedProjects : [],
+          tone: selectedTone
+        };
+        setPortfolioDraft(draft);
+      }
+
+      return response;
+    } catch (error) {
+      logger.error('Failed to generate portfolio outline', { error });
+      const friendlyError = formatErrorForDisplay(error, {
+        action: 'generating portfolio outline',
+        feature: 'portfolio generator'
+      });
+      setSaveError(friendlyError);
+      return null;
+    } finally {
+      setIsGeneratingPortfolio(false);
+    }
+  }, [
+    currentResumeId,
+    selectedTone,
+    setPortfolioDraft,
+    setSaveError,
+    setIsGeneratingPortfolio
+  ]);
 
   const saveResume = useCallback(async () => {
     if (isSaving) {
@@ -387,44 +653,40 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       ? resumeFileName.trim()
       : 'Untitled Resume';
 
-    // Prepare payload and sanitize data
-    const rawPayload: any = {
-      name: sanitizedName,
-      fileName: sanitizedName,
-      templateId: selectedTemplateId || null,
-      data: {
-        resumeData,
-        sectionOrder,
-        sectionVisibility,
-        customSections,
-        customFields,
-        formatting: {
-          fontFamily,
-          fontSize,
-          lineSpacing,
-          sectionSpacing,
-          margins,
-          headingStyle,
-          bulletStyle,
-        },
-        metadata: {
-          savedAt: new Date().toISOString(),
-        },
+    const editorState = {
+      resumeData,
+      sectionOrder,
+      sectionVisibility,
+      customSections,
+      customFields,
+      formatting: {
+        fontFamily,
+        fontSize,
+        lineSpacing,
+        sectionSpacing,
+        margins,
+        headingStyle,
+        bulletStyle,
       },
-      lastKnownServerUpdatedAt: lastServerUpdatedAt,
+      name: sanitizedName
     };
 
-    // Sanitize all data before sending to backend to prevent XSS
-    const payload = sanitizeResumeData(rawPayload);
+    const mappedPayload = mapEditorStateToBasePayload(editorState);
+    const payload = sanitizeResumeData(mappedPayload);
 
     try {
       const response = currentResumeId
-        ? await apiService.updateResume(currentResumeId, payload)
-        : await apiService.createResume({
-          fileName: sanitizedName,
-          templateId: selectedTemplateId || null,
-          data: payload.data
-        });
+        ? await apiService.updateBaseResume(currentResumeId, {
+            ...payload,
+            name: sanitizedName,
+            lastKnownServerUpdatedAt: lastServerUpdatedAt
+          })
+        : await apiService.createBaseResume({
+            name: sanitizedName,
+            data: payload.data,
+            metadata: payload.metadata,
+            formatting: payload.formatting
+          });
 
       // Handle response - check both success flag and resume object
       if (response?.success === false) {
@@ -439,9 +701,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         if (savedResume.name && savedResume.name !== resumeFileName) {
           setResumeFileName(savedResume.name);
         }
-        setLastServerUpdatedAt(savedResume.lastUpdated || null);
+        setLastServerUpdatedAt(savedResume.updatedAt || savedResume.lastUpdated || null);
         // Always set lastSavedAt on successful save
-        setLastSavedAt(new Date(savedResume.lastUpdated || new Date()));
+        setLastSavedAt(new Date(savedResume.updatedAt || savedResume.lastUpdated || new Date()));
         // Clear hasChanges after successful save
         setHasChanges(false);
       } else {
@@ -511,7 +773,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     hideSection,
     analyzeJobDescription,
     applyAIRecommendations,
-    sendAIMessage,
+    tailorResumeForJob,
+    generateCoverLetterDraft,
+    generatePortfolioDraft,
     saveResume,
     undo,
     redo,

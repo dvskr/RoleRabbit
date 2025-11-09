@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSwipeable } from 'react-swipeable';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from '@use-gesture/react';
-import { ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 interface TouchGestureProps {
   children: React.ReactNode;
@@ -27,7 +27,6 @@ export const TouchGesture: React.FC<TouchGestureProps> = ({
 }) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const elementRef = useRef<HTMLDivElement>(null);
 
   const swipeHandlers = useSwipeable({
     onSwipedLeft: () => onSwipeLeft?.(),
@@ -154,7 +153,7 @@ export const MobileModal: React.FC<MobileModalProps> = ({
   const [dragOffset, setDragOffset] = useState(0);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  const bind = useDrag(({ active, movement: [mx, my], last, velocity: [vx, vy] }) => {
+  const bind = useDrag(({ active, movement: [, my], last, velocity: [, vy] }) => {
     if (active) {
       setDragOffset(my);
     } else if (last) {
@@ -236,9 +235,6 @@ export const MobileTabSwiper: React.FC<MobileTabSwiperProps> = ({
   onTabChange,
   className = ''
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-
   const activeIndex = tabs.findIndex(tab => tab.id === activeTab);
 
   const swipeHandlers = useSwipeable({
@@ -260,7 +256,7 @@ export const MobileTabSwiper: React.FC<MobileTabSwiperProps> = ({
     <div className={`mobile-tab-swiper ${className}`}>
       {/* Tab Indicators */}
       <div className="flex justify-center gap-2 p-4">
-        {tabs.map((tab, index) => (
+        {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
@@ -330,16 +326,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({
 }) => {
   const [dragOffset, setDragOffset] = useState(0);
   const drawerRef = useRef<HTMLDivElement>(null);
-
-  const getDragDirection = () => {
-    switch (position) {
-      case 'left': return 'x';
-      case 'right': return 'x';
-      case 'top': return 'y';
-      case 'bottom': return 'y';
-      default: return 'x';
-    }
-  };
 
   const bind = useDrag(({ active, movement: [mx, my], last, velocity: [vx, vy] }) => {
     const isHorizontal = position === 'left' || position === 'right';
@@ -483,6 +469,7 @@ export const MobileButton: React.FC<MobileButtonProps> = ({
         ${sizeClasses[size]}
         ${className}
       `}
+      {...props}
     >
       {children}
     </motion.button>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import { Menu, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
-import { MobileSidebar, MobileModal, MobileTabSwiper, MobileButton } from './MobileComponents';
+import { MobileSidebar, MobileButton } from './MobileComponents';
 import { RabbitLogoWithText } from './ui/RabbitLogo';
 
 interface MobileLayoutProps {

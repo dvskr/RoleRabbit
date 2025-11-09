@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Filter as FilterIcon, RotateCcw, Save, FileText, Trash as TrashIcon } from 'lucide-react';
+import { X, Filter as FilterIcon, Save, FileText, Trash as TrashIcon } from 'lucide-react';
 import { JobFilters, SavedView } from '../../types/job';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -29,7 +29,7 @@ export default function JobFiltersPanel({
   const [viewName, setViewName] = useState('');
   const [showSaveView, setShowSaveView] = useState(false);
 
-  const handleFilterChange = (key: keyof JobFilters, value: any) => {
+  const handleFilterChange = <K extends keyof JobFilters>(key: K, value: JobFilters[K]) => {
     onFiltersChange({
       ...filters,
       [key]: value
@@ -117,12 +117,12 @@ export default function JobFiltersPanel({
           {savedViews.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label 
+                <p 
                   className="text-xs font-semibold uppercase tracking-wider"
                   style={{ color: colors.tertiaryText }}
                 >
                   Saved Views
-                </label>
+                </p>
                 <button
                   onClick={() => setShowSaveView(true)}
                   className="p-1 rounded transition-all"
@@ -219,7 +219,6 @@ export default function JobFiltersPanel({
                     setViewName('');
                   }
                 }}
-                autoFocus
               />
               <div className="flex items-center gap-2">
                 <button
@@ -289,22 +288,24 @@ export default function JobFiltersPanel({
 
           {/* Filters Section */}
           <div className="space-y-4">
-            <label 
+            <p 
               className="text-xs font-semibold uppercase tracking-wider block"
               style={{ color: colors.tertiaryText }}
             >
               Filters
-            </label>
+            </p>
 
             {/* Status Filter */}
             <div>
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-panel-status"
               >
                 Status
               </label>
               <select
+                id="job-filters-panel-status"
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="w-full px-3 py-2 rounded-md text-sm transition-all"
@@ -335,10 +336,12 @@ export default function JobFiltersPanel({
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-panel-priority"
               >
                 Priority
               </label>
               <select
+                id="job-filters-panel-priority"
                 value={filters.priority || 'all'}
                 onChange={(e) => handleFilterChange('priority', e.target.value === 'all' ? undefined : e.target.value)}
                 className="w-full px-3 py-2 rounded-md text-sm transition-all"
@@ -368,10 +371,12 @@ export default function JobFiltersPanel({
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-panel-location"
               >
                 Location (contains)
               </label>
               <input
+                id="job-filters-panel-location"
                 type="text"
                 value={filters.location || ''}
                 onChange={(e) => handleFilterChange('location', e.target.value || undefined)}
@@ -393,51 +398,59 @@ export default function JobFiltersPanel({
 
             {/* Date Range */}
             <div>
-              <label 
+              <p 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
               >
                 Date Range
-              </label>
+              </p>
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={filters.dateRange?.start || ''}
-                  onChange={(e) => handleDateRangeChange('start', e.target.value)}
-                  className="w-full px-3 py-2 rounded-md text-sm transition-all outline-none"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                  title="Start date"
-                  aria-label="Start date"
-                />
-                <input
-                  type="date"
-                  value={filters.dateRange?.end || ''}
-                  onChange={(e) => handleDateRangeChange('end', e.target.value)}
-                  className="w-full px-3 py-2 rounded-md text-sm transition-all outline-none"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                  title="End date"
-                  aria-label="End date"
-                />
+                <label className="flex flex-col gap-1 text-sm" style={{ color: colors.secondaryText }}>
+                  <span>Start</span>
+                  <input
+                    id="job-filters-panel-start-date"
+                    type="date"
+                    value={filters.dateRange?.start || ''}
+                    onChange={(e) => handleDateRangeChange('start', e.target.value)}
+                    className="w-full px-3 py-2 rounded-md text-sm transition-all outline-none"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
+                    title="Start date"
+                    aria-label="Start date"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-sm" style={{ color: colors.secondaryText }}>
+                  <span>End</span>
+                  <input
+                    id="job-filters-panel-end-date"
+                    type="date"
+                    value={filters.dateRange?.end || ''}
+                    onChange={(e) => handleDateRangeChange('end', e.target.value)}
+                    className="w-full px-3 py-2 rounded-md text-sm transition-all outline-none"
+                    style={{
+                      background: colors.inputBackground,
+                      border: `1px solid ${colors.border}`,
+                      color: colors.primaryText,
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = colors.borderFocused;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = colors.border;
+                    }}
+                    title="End date"
+                    aria-label="End date"
+                  />
+                </label>
               </div>
             </div>
 
@@ -446,10 +459,12 @@ export default function JobFiltersPanel({
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-panel-group-by"
               >
                 Group By
               </label>
               <select
+                id="job-filters-panel-group-by"
                 value={filters.groupBy || 'status'}
                 onChange={(e) => handleFilterChange('groupBy', e.target.value as JobFilters['groupBy'])}
                 className="w-full px-3 py-2 rounded-md text-sm transition-all"
@@ -479,12 +494,14 @@ export default function JobFiltersPanel({
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-panel-sort-by"
               >
                 Sort By
               </label>
               <select
+                id="job-filters-panel-sort-by"
                 value={filters.sortBy || 'date'}
-                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                onChange={(e) => handleFilterChange('sortBy', e.target.value as JobFilters['sortBy'])}
                 className="w-full px-3 py-2 rounded-md text-sm transition-all"
                 style={{
                   background: colors.inputBackground,

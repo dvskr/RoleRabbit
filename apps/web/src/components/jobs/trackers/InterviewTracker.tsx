@@ -28,6 +28,14 @@ export default function InterviewTracker({
     rating: 0
   });
 
+  const fieldIds = {
+    type: `interview-type-${jobId}`,
+    date: `interview-date-${jobId}`,
+    interviewer: `interview-interviewer-${jobId}`,
+    notes: `interview-notes-${jobId}`,
+    feedback: `interview-feedback-${jobId}`
+  } as const;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddNote(jobId, {
@@ -128,8 +136,9 @@ export default function InterviewTracker({
         <form onSubmit={handleSubmit} className="mt-4 p-3 bg-blue-50 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Type</label>
+              <label htmlFor={fieldIds.type} className="text-xs font-medium text-gray-700 mb-1 block">Type</label>
               <select
+                id={fieldIds.type}
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as InterviewNote['type'] })}
                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
@@ -142,8 +151,9 @@ export default function InterviewTracker({
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
+              <label htmlFor={fieldIds.date} className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
               <input
+                id={fieldIds.date}
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -153,8 +163,9 @@ export default function InterviewTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Interviewer</label>
+            <label htmlFor={fieldIds.interviewer} className="text-xs font-medium text-gray-700 mb-1 block">Interviewer</label>
             <input
+              id={fieldIds.interviewer}
               type="text"
               value={formData.interviewer}
               onChange={(e) => setFormData({ ...formData, interviewer: e.target.value })}
@@ -164,8 +175,9 @@ export default function InterviewTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
+            <label htmlFor={fieldIds.notes} className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
             <textarea
+              id={fieldIds.notes}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
@@ -206,8 +218,9 @@ export default function InterviewTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Feedback</label>
+            <label htmlFor={fieldIds.feedback} className="text-xs font-medium text-gray-700 mb-1 block">Feedback</label>
             <textarea
+              id={fieldIds.feedback}
               value={formData.feedback}
               onChange={(e) => setFormData({ ...formData, feedback: e.target.value })}
               rows={2}

@@ -15,6 +15,7 @@ const prisma = new PrismaClient();
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
 const { validateEmail, validatePhone, validateURL } = require('../utils/validation');
+const { parseResumeBuffer } = require('../services/resumeParser');
 
 /**
  * Ensure value is a proper array (convert object with numeric keys to array)
@@ -86,6 +87,40 @@ const validateResumeContactInfo = (resumeData = {}) => {
  * @param {FastifyInstance} fastify - Fastify instance
  */
 async function resumeRoutes(fastify, options) {
+  // Hybrid resume parsing endpoint
+  fastify.post('/api/resumes/parse', {
+    preHandler: authenticate
+  }, async (request, reply) => {
+    try {
+      const filePart = await request.file();
+      if (!filePart) {
+        return reply.status(400).send({
+          success: false,
+          error: 'No resume file uploaded'
+        });
+      }
+
+      const buffer = await filePart.toBuffer();
+      const result = await parseResumeBuffer({
+        userId: request.user.userId,
+        buffer,
+        fileName: filePart.filename,
+        mimeType: filePart.mimetype
+      });
+
+      return reply.send({
+        success: true,
+        ...result
+      });
+    } catch (error) {
+      logger.error('Resume parsing failed', { error: error.message });
+      return reply.status(400).send({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // Get all resumes for the authenticated user
   fastify.get('/api/resumes', {
     preHandler: authenticate
@@ -500,12 +535,12 @@ async function resumeRoutes(fastify, options) {
         
         // Write to file for debugging (development only)
         if (process.env.NODE_ENV !== 'production') {
-          try {
-            const fs = require('fs');
-            fs.writeFileSync('prisma-error.json', JSON.stringify(errorDetails, null, 2));
+        try {
+          const fs = require('fs');
+          fs.writeFileSync('prisma-error.json', JSON.stringify(errorDetails, null, 2));
             logger.error('[PRISMA ERROR] Error details written to prisma-error.json');
-          } catch (fileError) {
-            // Ignore file write errors
+        } catch (fileError) {
+          // Ignore file write errors
           }
         }
         

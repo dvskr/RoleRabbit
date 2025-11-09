@@ -1,15 +1,12 @@
 'use client';
 
 import React from 'react';
-import { useState } from 'react';
 import EmailComposerAI from '../components/EmailComposerAI';
 import { logger } from '../../../utils/logger';
+import type { EmailData } from '../components/EmailComposerAI/types/EmailComposerAI.types';
 
 export default function ComposerTab() {
-  const [isSending, setIsSending] = useState(false);
-
-  const handleSend = async (emailData: any) => {
-    setIsSending(true);
+  const handleSend = async (emailData: EmailData) => {
     try {
       const response = await fetch('http://localhost:3001/api/emails/send', {
         method: 'POST',
@@ -33,7 +30,7 @@ export default function ComposerTab() {
     } catch (error) {
       logger.error('Failed to send email:', error);
     } finally {
-      setIsSending(false);
+      // no-op: UI can react to completion via parent state if needed
     }
   };
 

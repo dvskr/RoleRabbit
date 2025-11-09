@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Sparkles, Send, Wand2, Loader, Check, X, Paperclip, FileText, Image } from 'lucide-react';
+import { Sparkles, Send, Wand2, Loader, Check, X, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 
 interface AIPromptPanelProps {
-  onPromptSubmit: (prompt: string, attachments?: File[]) => Promise<any>;
+  onPromptSubmit: (prompt: string, attachments?: File[]) => Promise<void>;
   isLoading: boolean;
   onReset: () => void;
   onClose: () => void;
@@ -28,7 +28,7 @@ export default function AIPromptPanel({ onPromptSubmit, isLoading, onReset, onCl
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setAttachments(prev => [...prev, ...Array.from(e.target.files!)]);
+      setAttachments(prev => [...prev, ...Array.from(e.target.files)]);
     }
   };
 
@@ -37,7 +37,7 @@ export default function AIPromptPanel({ onPromptSubmit, isLoading, onReset, onCl
   };
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return <Image size={16} className="text-blue-500" />;
+    if (file.type.startsWith('image/')) return <ImageIcon size={16} className="text-blue-500" aria-hidden="true" />;
     return <FileText size={16} className="text-gray-500" />;
   };
 

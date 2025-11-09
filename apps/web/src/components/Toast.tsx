@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -147,15 +147,33 @@ export const ToastComponent: React.FC<ToastProps> = ({ toast, onDismiss }) => {
 // Toast manager hook
 export const useToasts = () => {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
+  // Throttle duplicate messages and keep a small cap of concurrent toasts
+  const lastShownRef = useRef<Map<string, number>>(new Map());
 
-  const showToast = (message: string, type: ToastType = 'info', duration?: number) => {
-    const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setToasts(prev => [...prev, { id, message, type, duration }]);
-  };
+  const showToast = useCallback((message: string, type: ToastType = 'info', duration?: number) => {
+    const normalizedMessage = (message ?? '').trim();
+    const key = `${type}:${normalizedMessage}`;
+    const now = Date.now();
+    const last = lastShownRef.current.get(key);
+    // Do not re-show the exact same message within 10 seconds
+    if (last && now - last < 10000) {
+      return;
+    }
+    lastShownRef.current.set(key, now);
 
-  const dismissToast = (id: string) => {
+    const id = `toast_${now}_${Math.random().toString(36).substr(2, 9)}`;
+    setToasts(prev => {
+      // Remove any currently visible duplicate of the same message/type
+      const withoutDupes = prev.filter(t => !(t.message === normalizedMessage && t.type === type));
+      // Cap to a reasonable number to avoid overwhelming the UI
+      const capped = withoutDupes.slice(-2); // keep last 2, we'll add the new one below to make 3
+      return [...capped, { id, message: normalizedMessage, type, duration }];
+    });
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  }, []);
 
   return { toasts, showToast, dismissToast };
 };

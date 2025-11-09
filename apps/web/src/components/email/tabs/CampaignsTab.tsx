@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Search, Filter, Play, Pause, Users, Mail, Eye, Reply, MousePointer } from 'lucide-react';
+import { Plus, Search, Users, Mail, Eye, Reply, MousePointer } from 'lucide-react';
 import { EmailCampaign } from '../types/email';
 import CampaignCard from '../components/CampaignCard';
+import { logger } from '../../../utils/logger';
 
 export default function CampaignsTab() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,24 +111,24 @@ export default function CampaignsTab() {
 
   const handleEditCampaign = (id: string) => {
     const campaign = campaigns.find(c => c.id === id);
-    console.log('Edit campaign:', campaign);
+    logger.info('Edit campaign', { campaign });
   };
 
   const handleDeleteCampaign = (id: string) => {
     const campaign = campaigns.find(c => c.id === id);
-    console.log('Delete campaign:', campaign);
+    logger.info('Delete campaign', { campaign });
   };
 
   const handlePauseCampaign = (id: string) => {
-    console.log('Pause campaign:', id);
+    logger.info('Pause campaign', { id });
   };
 
   const handleResumeCampaign = (id: string) => {
-    console.log('Resume campaign:', id);
+    logger.info('Resume campaign', { id });
   };
 
   const handleSendCampaign = (id: string) => {
-    console.log('Send campaign:', id);
+    logger.info('Send campaign', { id });
   };
 
   return (

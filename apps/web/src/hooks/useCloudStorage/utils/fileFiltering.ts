@@ -28,7 +28,7 @@ export const filterAndSortFiles = (
   const hasSearch = searchLower.length > 0;
   
   // Filter files
-  let filtered = files.filter(file => {
+  const filtered = files.filter(file => {
     // Recycle bin filter - show only deleted files when showDeleted is true
     if (showDeleted) {
       if (!file.deletedAt) {

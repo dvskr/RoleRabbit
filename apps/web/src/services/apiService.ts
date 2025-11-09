@@ -7,6 +7,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 import { logger } from '../utils/logger';
 import { retryWithBackoff, isOnline, waitForOnline } from '../utils/retryHandler';
+import type { Job } from '../types/job';
+import type { CoverLetterDraft } from '../components/coverletter/types/coverletter';
 
 class ApiService {
   private baseUrl: string;
@@ -195,10 +197,18 @@ class ApiService {
           finalErrorMessage = `An unexpected error occurred (HTTP ${statusCode})`;
         }
 
+        // Provide explicit guidance for authentication failures
+        if (statusCode === 401) {
+          finalErrorMessage = 'Your session has expired. Please log in again to continue editing.';
+        }
+
         try {
           const errorObj: any = new Error(finalErrorMessage);
           errorObj.statusCode = statusCode;
           errorObj.originalResponse = statusText;
+          if (statusCode === 401) {
+            errorObj.code = 'AUTH_REQUIRED';
+          }
           if (errorDetails !== undefined) {
             errorObj.details = errorDetails;
           }
@@ -211,6 +221,9 @@ class ApiService {
             originalResponse: statusText,
             name: 'APIError'
           };
+          if (statusCode === 401) {
+            fallbackError.code = 'AUTH_REQUIRED';
+          }
           if (errorDetails !== undefined) {
             fallbackError.details = errorDetails;
           }
@@ -708,44 +721,182 @@ class ApiService {
 
   // ===== RESUME ENDPOINTS =====
 
+  async getBaseResumes(): Promise<any> {
+    return this.request('/api/base-resumes', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  async getBaseResume(id: string): Promise<any> {
+    return this.request(`/api/base-resumes/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  async createBaseResume(payload: { name?: string; data?: any; formatting?: any; metadata?: any }): Promise<any> {
+    return this.request('/api/base-resumes', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include',
+    });
+  }
+
+  async activateBaseResume(id: string): Promise<any> {
+    return this.request(`/api/base-resumes/${id}/activate`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  async deleteBaseResume(id: string): Promise<any> {
+    return this.request(`/api/base-resumes/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  async updateBaseResume(id: string, payload: { name?: string; data?: any; metadata?: any; formatting?: any; lastKnownServerUpdatedAt?: string }): Promise<any> {
+    return this.request(`/api/base-resumes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async generateEditorAIContent(payload: {
+    resumeId: string;
+    sectionPath: string;
+    sectionType: string;
+    currentContent?: any;
+    jobContext?: any;
+    tone?: string;
+    length?: string;
+    instructions?: string;
+  }): Promise<any> {
+    return this.request('/api/editor/ai/generate-content', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async applyAIDraft(draftId: string): Promise<any> {
+    return this.request('/api/editor/ai/apply-draft', {
+      method: 'POST',
+      body: JSON.stringify({ draftId }),
+      credentials: 'include'
+    });
+  }
+
+  async runATSCheck(payload: { resumeId: string; jobDescription: string }): Promise<any> {
+    return this.request('/api/editor/ai/ats-check', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async tailorResume(payload: {
+    resumeId: string;
+    jobDescription: string;
+    mode?: 'PARTIAL' | 'FULL';
+    tone?: string;
+    length?: string;
+  }): Promise<any> {
+    return this.request('/api/editor/ai/tailor', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async applyAIRecommendations(payload: {
+    resumeId: string;
+    jobDescription: string;
+    focusAreas?: string[];
+    tone?: string;
+  }): Promise<any> {
+    return this.request('/api/editor/ai/apply-recommendations', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async generateCoverLetter(payload: {
+    resumeId: string;
+    jobTitle?: string;
+    company?: string;
+    jobDescription: string;
+    tone?: string;
+  }): Promise<any> {
+    return this.request('/api/editor/ai/cover-letter', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async generatePortfolio(payload: { resumeId: string; tone?: string }): Promise<any> {
+    return this.request('/api/editor/ai/portfolio', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
   /**
-   * Get all resumes for the current user
+   * Parse resume file (PDF/DOC/DOCX) on the server
    */
+  async parseResumeFile(file: File | Blob): Promise<any> {
+    const formData = new FormData();
+    const fileToUpload = file instanceof File ? file : new File([file], 'resume-upload');
+    formData.append('file', fileToUpload);
+
+    const response = await fetch(`${this.baseUrl}/api/resumes/parse`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      let message = 'Failed to parse resume';
+      try {
+        const err = await response.json();
+        message = err?.error || err?.message || message;
+      } catch (_) {
+        // ignore
+      }
+      throw new Error(message);
+    }
+    return await response.json();
+  }
+
+  /**
+   * Update base resume (replace data when re-importing)
+   */
+  async updateBaseResume(id: string, payload: { name?: string; data?: any; metadata?: any; formatting?: any; lastKnownServerUpdatedAt?: string }): Promise<any> {
+    return this.request(`/api/base-resumes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
   async getResumes(): Promise<any> {
-    return this.request('/api/resumes', {
-      method: 'GET',
-      credentials: 'include',
-    });
+    return this.getBaseResumes();
   }
 
-  /**
-   * Get a single resume by ID
-   */
-  async getResume(id: string): Promise<any> {
-    return this.request(`/api/resumes/${id}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-  }
-
-  /**
-   * Create a new resume
-   */
   async createResume(data: {
     fileName: string;
     templateId?: string;
     data: any;
   }): Promise<any> {
-    return this.request('/api/resumes', {
-      method: 'POST',
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
+    return this.createBaseResume({ name: data.fileName, data: data.data });
   }
 
-  /**
-   * Update an existing resume
-   */
   async updateResume(id: string, data: {
     fileName?: string;
     templateId?: string;
@@ -759,28 +910,8 @@ class ApiService {
     });
   }
 
-  /**
-   * Auto-save resume (optimistic update with conflict detection)
-   */
-  async autoSaveResume(id: string, data: {
-    data: any;
-    lastKnownServerUpdatedAt?: string;
-  }): Promise<any> {
-    return this.request(`/api/resumes/${id}/autosave`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-      credentials: 'include',
-    });
-  }
-
-  /**
-   * Delete a resume
-   */
   async deleteResume(id: string): Promise<any> {
-    return this.request(`/api/resumes/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    });
+    return this.deleteBaseResume(id);
   }
 
   /**
@@ -790,6 +921,84 @@ class ApiService {
     return this.request(`/api/resumes/${id}/duplicate`, {
       method: 'POST',
       body: JSON.stringify({ fileName }),
+      credentials: 'include',
+    });
+  }
+
+  // ===== JOBS ENDPOINTS =====
+
+  /**
+   * Fetch all jobs for the authenticated user
+   */
+  async getJobs(): Promise<any> {
+    return this.request('/api/jobs', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create a new job entry
+   */
+  async saveJob(job: Omit<Job, 'id'>): Promise<any> {
+    return this.request('/api/jobs', {
+      method: 'POST',
+      body: JSON.stringify(job),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update an existing job
+   */
+  async updateJob(id: string, updates: Partial<Job>): Promise<any> {
+    return this.request(`/api/jobs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Permanently delete a job entry
+   */
+  async deleteJob(id: string): Promise<any> {
+    return this.request(`/api/jobs/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  // ===== COVER LETTER ENDPOINTS =====
+
+  /**
+   * Fetch cover letters for the authenticated user
+   */
+  async getCoverLetters(): Promise<any> {
+    return this.request('/api/cover-letters', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create/save a new cover letter draft
+   */
+  async saveCoverLetter(data: Partial<CoverLetterDraft>): Promise<any> {
+    return this.request('/api/cover-letters', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update an existing cover letter draft
+   */
+  async updateCoverLetter(id: string, updates: Partial<CoverLetterDraft>): Promise<any> {
+    return this.request(`/api/cover-letters/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
       credentials: 'include',
     });
   }

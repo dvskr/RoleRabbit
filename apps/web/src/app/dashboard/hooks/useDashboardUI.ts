@@ -55,7 +55,9 @@ const normalizeTab = (tab?: string | null): DashboardTab | null => {
 
 const updateUrlTabParam = (tab: DashboardTab) => {
   if (typeof window === 'undefined') return;
+  if (!window.location) return;
 
+  try {
   const params = new URLSearchParams(window.location.search);
   const currentTab = params.get('tab');
   if (currentTab === tab) return;
@@ -64,6 +66,9 @@ const updateUrlTabParam = (tab: DashboardTab) => {
   const queryString = params.toString();
   const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
   window.history.replaceState(null, '', newUrl);
+  } catch (error) {
+    logger.error('Error updating URL tab param:', error);
+  }
 };
 
 export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn {
@@ -82,7 +87,9 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
   // Initialize tab from URL/localStorage after hydration
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!window.location) return;
 
+    try {
     const params = new URLSearchParams(window.location.search);
     const tabFromUrl = normalizeTab(params.get('tab'));
     if (tabFromUrl) {
@@ -90,7 +97,6 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
       return;
     }
 
-    try {
       const saved = window.localStorage.getItem('dashboard_activeTab');
       const savedTab = normalizeTab(saved);
       if (savedTab) {
@@ -98,19 +104,24 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
         updateUrlTabParam(savedTab);
       }
     } catch (error) {
-      logger.error('Error reading dashboard tab from localStorage:', error);
+      logger.error('Error reading dashboard tab from URL/localStorage:', error);
     }
   }, []);
 
   // Listen for browser navigation (back/forward)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!window.location) return;
 
     const handlePopState = () => {
+      try {
       const params = new URLSearchParams(window.location.search);
       const tabFromUrl = normalizeTab(params.get('tab'));
       if (tabFromUrl) {
         setActiveTab((prev) => (prev === tabFromUrl ? prev : tabFromUrl));
+        }
+      } catch (error) {
+        logger.error('Error handling popstate:', error);
       }
     };
 

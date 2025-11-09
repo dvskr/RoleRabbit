@@ -7,6 +7,34 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
+}
+
+enum TailorMode {
+  PARTIAL
+  FULL
+}
+
+enum AIAction {
+  GENERATE_CONTENT
+  TAILOR_PARTIAL
+  TAILOR_FULL
+  APPLY_RECOMMENDATIONS
+  COVER_LETTER
+  PORTFOLIO
+  JD_ANALYSIS
+  ATS_SCORE
+}
+
+enum GeneratedDocType {
+  COVER_LETTER
+  PORTFOLIO_SECTION
+  OTHER
+}
+
 model Certification {
   id        String @id @default(cuid())
   profileId String
@@ -298,9 +326,9 @@ model StorageFile {
 
   // Metadata
   description String? // File description
-  isPublic    Boolean  @default(false)
-  isStarred   Boolean  @default(false)
-  isArchived  Boolean  @default(false)
+  isPublic    Boolean @default(false)
+  isStarred   Boolean @default(false)
+  isArchived  Boolean @default(false)
   folderId    String? // Parent folder ID
 
   // Soft delete
@@ -446,6 +474,21 @@ model User {
   // Preferences (frequently accessed)
   emailNotifications Boolean @default(true)
 
+  // Subscription & Usage Tracking
+  subscriptionTier          SubscriptionTier @default(FREE)
+  subscriptionEndsAt        DateTime?
+  activeBaseResumeId        String?          @unique
+  resumeAiUsageCount        Int              @default(0)
+  resumeAiUsageResetAt      DateTime?
+  coverLetterAiUsageCount   Int              @default(0)
+  coverLetterAiUsageResetAt DateTime?
+  portfolioPublishesCount   Int              @default(0)
+  portfolioPublishesResetAt DateTime?
+  aiAgentsRunsCount         Int              @default(0)
+  aiAgentsRunsResetAt       DateTime?
+  workflowsRunsCount        Int              @default(0)
+  workflowsRunsResetAt      DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -464,6 +507,13 @@ model User {
   credentials         Credential[]         @relation("Credentials")
   storageQuota        StorageQuota?
   resumes             Resume[]             @relation("Resumes")
+  baseResumes         BaseResume[]         @relation("UserBaseResumes")
+  tailoredVersions    TailoredVersion[]
+  generatedDocuments  GeneratedDocument[]
+  aiRequests          AIRequestLog[]
+  aiDrafts            AIDraft[]
+  resumeCacheEntries  ResumeCache[]
+  activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([provider, providerId])
@@ -474,15 +524,15 @@ model WorkExperience {
   id        String @id @default(cuid())
   profileId String
 
-  company     String
-  role        String
-  location    String?
-  startDate   String
-  endDate     String?
-  isCurrent   Boolean @default(false)
-  description String?
+  company      String
+  role         String
+  location     String?
+  startDate    String
+  endDate      String?
+  isCurrent    Boolean  @default(false)
+  description  String?
   technologies String[] @default([]) // Technologies/tools used in this role
-  projectType String? @default("Full-time") // Full-time, Part-time, Contract, etc.
+  projectType  String?  @default("Full-time") // Full-time, Part-time, Contract, etc.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -494,12 +544,140 @@ model WorkExperience {
   @@map("work_experiences")
 }
 
+model BaseResume {
+  id                String    @id @default(cuid())
+  userId            String
+  slotNumber        Int
+  name              String
+  isActive          Boolean   @default(false)
+  data              Json
+  formatting        Json?     @default("{}")
+  metadata          Json?     @default("{}")
+  lastAIAccessedAt  DateTime?
+  parsingConfidence Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user               User                @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
+  activeUser         User?               @relation("ActiveBaseResume")
+  tailoredVersions   TailoredVersion[]
+  generatedDocuments GeneratedDocument[]
+  resumeCaches       ResumeCache[]
+  aiRequests         AIRequestLog[]
+  aiDrafts           AIDraft[]
+
+  @@unique([userId, slotNumber])
+  @@index([userId, isActive])
+  @@map("base_resumes")
+}
+
+model TailoredVersion {
+  id                 String     @id @default(cuid())
+  baseResumeId       String
+  userId             String
+  jobTitle           String?
+  company            String?
+  jobDescriptionHash String?
+  mode               TailorMode @default(PARTIAL)
+  tone               String?
+  data               Json
+  diff               Json?
+  atsScoreBefore     Int?
+  atsScoreAfter      Int?
+  isPromoted         Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  baseResume         BaseResume          @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedDocuments GeneratedDocument[]
+  aiRequests         AIRequestLog[]
+
+  @@index([baseResumeId])
+  @@index([userId])
+  @@index([jobDescriptionHash])
+  @@map("tailored_versions")
+}
+
+model ResumeCache {
+  id           String    @id @default(cuid())
+  userId       String
+  baseResumeId String?
+  fileHash     String    @unique
+  method       String
+  data         Json
+  confidence   Float?
+  hitCount     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime  @default(now())
+  expiresAt    DateTime?
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseResume BaseResume? @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("resume_cache")
+}
+
+model AIRequestLog {
+  id                String   @id @default(cuid())
+  userId            String
+  baseResumeId      String?
+  tailoredVersionId String?
+  action            AIAction
+  provider          String?
+  model             String?
+  tokensUsed        Int?
+  costUsd           Decimal? @db.Decimal(12, 4)
+  status            String   @default("success")
+  errorMessage      String?
+  metadata          Json?
+  createdAt         DateTime @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseResume      BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
+  tailoredVersion TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([baseResumeId])
+  @@index([tailoredVersionId])
+  @@index([action])
+  @@map("ai_request_logs")
+}
+
+model GeneratedDocument {
+  id                String           @id @default(cuid())
+  userId            String
+  baseResumeId      String?
+  tailoredVersionId String?
+  type              GeneratedDocType @default(COVER_LETTER)
+  templateId        String?
+  tone              String?
+  jobTitle          String?
+  company           String?
+  data              Json
+  storagePath       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseResume      BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
+  tailoredVersion TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([type])
+  @@map("generated_documents")
+}
+
 model Resume {
   id     String @id @default(cuid())
   userId String
 
   // Basic Info
-  fileName  String
+  fileName   String
   templateId String? // Selected template ID
 
   // Resume Data (stored as JSON)
@@ -507,17 +685,17 @@ model Resume {
   data Json // Complete resume data structure
 
   // Section Configuration
-  sectionOrder     String[] @default([]) // Order of sections
-  sectionVisibility Json   @default("{}") // Which sections are visible
-  customSections   Json    @default("[]") // Custom sections added by user
-  customFields     Json    @default("[]") // Custom contact fields
+  sectionOrder      String[] @default([]) // Order of sections
+  sectionVisibility Json     @default("{}") // Which sections are visible
+  customSections    Json     @default("[]") // Custom sections added by user
+  customFields      Json     @default("[]") // Custom contact fields
 
   // Formatting Options
   formatting Json @default("{}") // fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle
 
   // Metadata
-  isStarred  Boolean  @default(false)
-  isArchived Boolean  @default(false)
+  isStarred  Boolean @default(false)
+  isArchived Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -530,4 +708,24 @@ model Resume {
   @@index([isArchived])
   @@index([createdAt])
   @@map("resumes")
+}
+
+model AIDraft {
+  id           String   @id @default(cuid())
+  userId       String
+  baseResumeId String
+  action       AIAction
+  payload      Json
+  metadata     Json?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseResume BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([baseResumeId])
+  @@index([expiresAt])
+  @@map("ai_drafts")
 }

@@ -57,7 +57,7 @@ export function saveResumeToCloud(
 ): ResumeFile {
   // Load current cloud storage
   const cloudStorage = localStorage.getItem('cloudStorage');
-  let storage = cloudStorage ? JSON.parse(cloudStorage) : { files: [] };
+  const storage = cloudStorage ? JSON.parse(cloudStorage) : { files: [] };
 
   // Create new file
   const newFile: ResumeFile = {

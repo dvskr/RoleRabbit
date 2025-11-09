@@ -1,24 +1,64 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, Save, Image, Plus, Trash2 } from 'lucide-react';
-import { Section } from '../../types/portfolio';
+import React, { useId, useState } from 'react';
+import { X, Save, Plus, Trash2 } from 'lucide-react';
+import type { Section, SectionConfig, SectionItem } from '../../types/portfolio';
 
 interface SectionEditorProps {
   section: Section;
   onSave: (section: Section) => void;
   onClose: () => void;
-  portfolioData?: any;
 }
 
-export default function SectionEditor({ section, onSave, onClose, portfolioData }: SectionEditorProps) {
+export default function SectionEditor({ section, onSave, onClose }: SectionEditorProps) {
   const [editedSection, setEditedSection] = useState<Section>({ ...section });
+  const idPrefix = useId();
 
-  const updateConfig = (updates: any) => {
-    setEditedSection(prev => ({
+  const updateConfig = (updates: Partial<SectionConfig>) => {
+    setEditedSection((prev) => ({
       ...prev,
       config: { ...prev.config, ...updates }
     }));
+  };
+
+  const getItems = (): SectionItem[] =>
+    Array.isArray(editedSection.config.items) ? [...editedSection.config.items] : [];
+
+  const updateItem = (index: number, itemUpdates: SectionItem) => {
+    const items = getItems();
+    const current = items[index] || {};
+    items[index] = { ...current, ...itemUpdates };
+    updateConfig({ items });
+  };
+
+  const removeItem = (index: number) => {
+    const items = getItems().filter((_, itemIndex) => itemIndex !== index);
+    updateConfig({ items });
+  };
+
+  const getStringValue = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+  const getSkillItems = (): string[] => {
+    if (!Array.isArray(editedSection.config.items)) {
+      return [];
+    }
+
+    return editedSection.config.items.map((item) => (typeof item === 'string' ? item : String(item ?? '')));
+  };
+
+  const getSocialLinks = (): SectionItem[] =>
+    Array.isArray(editedSection.config.socialLinks) ? [...editedSection.config.socialLinks] : [];
+
+  const updateSocialLink = (index: number, updates: SectionItem) => {
+    const links = getSocialLinks();
+    const current = links[index] || {};
+    links[index] = { ...current, ...updates };
+    updateConfig({ socialLinks: links });
+  };
+
+  const removeSocialLink = (index: number) => {
+    const links = getSocialLinks().filter((_, linkIndex) => linkIndex !== index);
+    updateConfig({ socialLinks: links });
   };
 
   const handleSave = () => {
@@ -32,8 +72,9 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
         return (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Headline</label>
+              <label htmlFor={`${idPrefix}-hero-headline`} className="block text-sm font-medium text-gray-700 mb-2">Headline</label>
               <input
+                id={`${idPrefix}-hero-headline`}
                 type="text"
                 value={editedSection.config.headline || ''}
                 onChange={(e) => updateConfig({ headline: e.target.value })}
@@ -42,8 +83,9 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subheading</label>
+              <label htmlFor={`${idPrefix}-hero-subheading`} className="block text-sm font-medium text-gray-700 mb-2">Subheading</label>
               <textarea
+                id={`${idPrefix}-hero-subheading`}
                 value={editedSection.config.subheading || ''}
                 onChange={(e) => updateConfig({ subheading: e.target.value })}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
@@ -103,11 +145,13 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
         );
 
       case 'experience':
+        const experienceItems = getItems();
         return (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Section Title</label>
+              <label htmlFor={`${idPrefix}-experience-title`} className="block text-sm font-medium text-gray-700 mb-2">Section Title</label>
               <input
+                id={`${idPrefix}-experience-title`}
                 type="text"
                 value={editedSection.config.title || ''}
                 onChange={(e) => updateConfig({ title: e.target.value })}
@@ -116,78 +160,78 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Experience Items</label>
+              <p className="block text-sm font-medium text-gray-700 mb-2">Experience Items</p>
               <div className="space-y-3">
-                {(editedSection.config.items || []).map((item: any, index: number) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                    <div className="grid grid-cols-2 gap-3 mb-2">
-                      <input
-                        type="text"
-                        value={item.position || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], position: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
-                        className="border border-gray-300 rounded-lg px-3 py-2"
-                        placeholder="Position"
+                {experienceItems.map((item, index) => {
+                  const positionId = `${idPrefix}-experience-position-${index}`;
+                  const companyId = `${idPrefix}-experience-company-${index}`;
+                  const dateId = `${idPrefix}-experience-date-${index}`;
+                  const locationId = `${idPrefix}-experience-location-${index}`;
+                  const descriptionId = `${idPrefix}-experience-description-${index}`;
+
+                  return (
+                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        <input
+                          id={positionId}
+                          type="text"
+                          value={getStringValue((item as Record<string, unknown>).position)}
+                          onChange={(e) => updateItem(index, { position: e.target.value })}
+                          className="border border-gray-300 rounded-lg px-3 py-2"
+                          placeholder="Position"
+                        />
+                        <input
+                          id={companyId}
+                          type="text"
+                          value={getStringValue((item as Record<string, unknown>).company)}
+                          onChange={(e) => updateItem(index, { company: e.target.value })}
+                          className="border border-gray-300 rounded-lg px-3 py-2"
+                          placeholder="Company"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 mb-2">
+                        <input
+                          id={dateId}
+                          type="text"
+                          value={getStringValue((item as Record<string, unknown>).date)}
+                          onChange={(e) => updateItem(index, { date: e.target.value })}
+                          className="border border-gray-300 rounded-lg px-3 py-2"
+                          placeholder="2020 - Present"
+                        />
+                        <input
+                          id={locationId}
+                          type="text"
+                          value={getStringValue((item as Record<string, unknown>).location)}
+                          onChange={(e) => updateItem(index, { location: e.target.value })}
+                          className="border border-gray-300 rounded-lg px-3 py-2"
+                          placeholder="Location"
+                        />
+                      </div>
+                      <textarea
+                        id={descriptionId}
+                        value={getStringValue((item as Record<string, unknown>).description)}
+                        onChange={(e) => updateItem(index, { description: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        rows={2}
+                        placeholder="Job description..."
                       />
-                      <input
-                        type="text"
-                        value={item.company || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], company: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
-                        className="border border-gray-300 rounded-lg px-3 py-2"
-                        placeholder="Company"
-                      />
+                      <button
+                        onClick={() => removeItem(index)}
+                        className="mt-3 text-sm text-red-600 hover:text-red-700"
+                        type="button"
+                      >
+                        Remove experience
+                      </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 mb-2">
-                      <input
-                        type="text"
-                        value={item.date || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], date: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
-                        className="border border-gray-300 rounded-lg px-3 py-2"
-                        placeholder="2020 - Present"
-                      />
-                      <input
-                        type="text"
-                        value={item.location || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], location: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
-                        className="border border-gray-300 rounded-lg px-3 py-2"
-                        placeholder="Location"
-                      />
-                    </div>
-                    <textarea
-                      value={item.description || ''}
-                      onChange={(e) => {
-                        const newItems = [...(editedSection.config.items || [])];
-                        newItems[index] = { ...newItems[index], description: e.target.value };
-                        updateConfig({ items: newItems });
-                      }}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      rows={2}
-                      placeholder="Job description..."
-                    />
-                  </div>
-                ))}
+                  );
+                })}
                 <button
                   onClick={() => {
-                    updateConfig({
-                      items: [...(editedSection.config.items || []), { position: '', company: '', date: '', description: '' }]
-                    });
+                    const newItems = [...experienceItems, { position: '', company: '', date: '', description: '' } as SectionItem];
+                    updateConfig({ items: newItems });
                   }}
                   className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
+                  type="button"
                 >
                   <Plus size={18} />
                   Add Experience
@@ -198,6 +242,7 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
         );
 
       case 'projects':
+        const projectItems = getItems();
         return (
           <div className="space-y-4">
             <div>
@@ -213,24 +258,27 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Projects</label>
               <div className="space-y-3">
-                {(editedSection.config.items || []).map((project: any, index: number) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                {projectItems.map((item, index) => {
+                  const project = item as Record<string, unknown>;
+                  const nameId = `${idPrefix}-project-name-${index}`;
+                  const descriptionId = `${idPrefix}-project-description-${index}`;
+                  const urlId = `${idPrefix}-project-url-${index}`;
+
+                  return (
+                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-start justify-between mb-3">
                       <input
+                        id={nameId}
                         type="text"
-                        value={project.name || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], name: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
+                        value={getStringValue(project.name)}
+                        onChange={(e) => updateItem(index, { name: e.target.value })}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 mr-2"
                         placeholder="Project Name"
                       />
                       <button
+                        type="button"
                         onClick={() => {
-                          const newItems = (editedSection.config.items || []).filter((_: any, i: number) => i !== index);
-                          updateConfig({ items: newItems });
+                          removeItem(index);
                         }}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                         aria-label={`Remove project ${index + 1}`}
@@ -240,33 +288,29 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
                       </button>
                     </div>
                     <textarea
-                      value={project.description || ''}
-                      onChange={(e) => {
-                        const newItems = [...(editedSection.config.items || [])];
-                        newItems[index] = { ...newItems[index], description: e.target.value };
-                        updateConfig({ items: newItems });
-                      }}
+                      id={descriptionId}
+                      value={getStringValue(project.description)}
+                      onChange={(e) => updateItem(index, { description: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2"
                       rows={2}
                       placeholder="Project description..."
                     />
                     <input
+                      id={urlId}
                       type="text"
-                      value={project.url || ''}
-                      onChange={(e) => {
-                        const newItems = [...(editedSection.config.items || [])];
-                        newItems[index] = { ...newItems[index], url: e.target.value };
-                        updateConfig({ items: newItems });
-                      }}
+                      value={getStringValue(project.url)}
+                      onChange={(e) => updateItem(index, { url: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                       placeholder="Project URL (optional)"
                     />
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
                 <button
+                  type="button"
                   onClick={() => {
                     updateConfig({
-                      items: [...(editedSection.config.items || []), { name: '', description: '', url: '' }]
+                      items: [...projectItems, { name: '', description: '', url: '' }]
                     });
                   }}
                   className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
@@ -280,6 +324,7 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
         );
 
       case 'skills':
+        const skillItems = getSkillItems();
         return (
           <div className="space-y-4">
             <div>
@@ -295,12 +340,13 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Skills</label>
               <div className="flex flex-wrap gap-2 mb-3">
-                {(editedSection.config.items || []).map((skill: string, index: number) => (
-                  <div key={index} className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                {skillItems.map((skill, index) => (
+                  <div key={`${skill}-${index}`} className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
                     <span>{skill}</span>
                     <button
+                      type="button"
                       onClick={() => {
-                        const newSkills = (editedSection.config.items || []).filter((_: string, i: number) => i !== index);
+                        const newSkills = skillItems.filter((_, i) => i !== index);
                         updateConfig({ items: newSkills });
                       }}
                       className="text-blue-700 hover:text-red-600"
@@ -321,7 +367,7 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
                     if (e.key === 'Enter') {
                       const value = (e.target as HTMLInputElement).value.trim();
                       if (value) {
-                        updateConfig({ items: [...(editedSection.config.items || []), value] });
+                        updateConfig({ items: [...skillItems, value] });
                         (e.target as HTMLInputElement).value = '';
                       }
                     }
@@ -333,6 +379,7 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
         );
 
       case 'education':
+        const educationItems = getItems();
         return (
           <div className="space-y-4">
             <div>
@@ -348,49 +395,48 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Education Items</label>
               <div className="space-y-3">
-                {(editedSection.config.items || []).map((edu: any, index: number) => (
-                  <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                {educationItems.map((item, index) => {
+                  const education = item as Record<string, unknown>;
+                  const degreeId = `${idPrefix}-education-degree-${index}`;
+                  const institutionId = `${idPrefix}-education-institution-${index}`;
+                  const yearId = `${idPrefix}-education-year-${index}`;
+
+                  return (
+                    <div key={index} className="p-4 border border-gray-200 rounded-lg">
                     <div className="grid grid-cols-2 gap-3 mb-2">
                       <input
+                        id={degreeId}
                         type="text"
-                        value={edu.degree || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], degree: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
+                        value={getStringValue(education.degree)}
+                        onChange={(e) => updateItem(index, { degree: e.target.value })}
                         className="border border-gray-300 rounded-lg px-3 py-2"
                         placeholder="Degree"
                       />
                       <input
+                        id={institutionId}
                         type="text"
-                        value={edu.institution || ''}
-                        onChange={(e) => {
-                          const newItems = [...(editedSection.config.items || [])];
-                          newItems[index] = { ...newItems[index], institution: e.target.value };
-                          updateConfig({ items: newItems });
-                        }}
+                        value={getStringValue(education.institution)}
+                        onChange={(e) => updateItem(index, { institution: e.target.value })}
                         className="border border-gray-300 rounded-lg px-3 py-2"
                         placeholder="Institution"
                       />
                     </div>
                     <input
+                      id={yearId}
                       type="text"
-                      value={edu.year || ''}
-                      onChange={(e) => {
-                        const newItems = [...(editedSection.config.items || [])];
-                        newItems[index] = { ...newItems[index], year: e.target.value };
-                        updateConfig({ items: newItems });
-                      }}
+                      value={getStringValue(education.year)}
+                      onChange={(e) => updateItem(index, { year: e.target.value })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2"
                       placeholder="2020"
                     />
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
                 <button
+                  type="button"
                   onClick={() => {
                     updateConfig({
-                      items: [...(editedSection.config.items || []), { degree: '', institution: '', year: '' }]
+                      items: [...educationItems, { degree: '', institution: '', year: '' }]
                     });
                   }}
                   className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"
@@ -404,6 +450,7 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
         );
 
       case 'contact':
+        const socialLinks = getSocialLinks();
         return (
           <div className="space-y-4">
             <div>
@@ -429,34 +476,33 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Social Links</label>
               <div className="space-y-2">
-                {(editedSection.config.socialLinks || []).map((link: any, index: number) => (
-                  <div key={index} className="flex gap-2">
+                {socialLinks.map((link, index) => {
+                  const linkData = link as Record<string, unknown>;
+                  const labelId = `${idPrefix}-social-label-${index}`;
+                  const urlId = `${idPrefix}-social-url-${index}`;
+
+                  return (
+                    <div key={index} className="flex gap-2">
                     <input
+                      id={labelId}
                       type="text"
-                      value={link.label || ''}
-                      onChange={(e) => {
-                        const newLinks = [...(editedSection.config.socialLinks || [])];
-                        newLinks[index] = { ...newLinks[index], label: e.target.value };
-                        updateConfig({ socialLinks: newLinks });
-                      }}
+                      value={getStringValue(linkData.label)}
+                      onChange={(e) => updateSocialLink(index, { label: e.target.value })}
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
                       placeholder="LinkedIn"
                     />
                     <input
+                      id={urlId}
                       type="text"
-                      value={link.url || ''}
-                      onChange={(e) => {
-                        const newLinks = [...(editedSection.config.socialLinks || [])];
-                        newLinks[index] = { ...newLinks[index], url: e.target.value };
-                        updateConfig({ socialLinks: newLinks });
-                      }}
+                      value={getStringValue(linkData.url)}
+                      onChange={(e) => updateSocialLink(index, { url: e.target.value })}
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
                       placeholder="https://"
                     />
                     <button
+                      type="button"
                       onClick={() => {
-                        const newLinks = (editedSection.config.socialLinks || []).filter((_: any, i: number) => i !== index);
-                        updateConfig({ socialLinks: newLinks });
+                        removeSocialLink(index);
                       }}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                       aria-label={`Remove social link ${index + 1}`}
@@ -464,12 +510,14 @@ export default function SectionEditor({ section, onSave, onClose, portfolioData 
                     >
                       <Trash2 size={18} />
                     </button>
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
                 <button
+                  type="button"
                   onClick={() => {
                     updateConfig({
-                      socialLinks: [...(editedSection.config.socialLinks || []), { label: '', url: '' }]
+                      socialLinks: [...socialLinks, { label: '', url: '' }]
                     });
                   }}
                   className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-500 transition-colors flex items-center justify-center gap-2"

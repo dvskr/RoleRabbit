@@ -28,6 +28,15 @@ export default function SalaryTracker({
     status: 'initial' as SalaryOffer['status']
   });
 
+  const fieldIds = {
+    amount: `salary-amount-${jobId}`,
+    currency: `salary-currency-${jobId}`,
+    status: `salary-status-${jobId}`,
+    equity: `salary-equity-${jobId}`,
+    notes: `salary-notes-${jobId}`,
+    date: `salary-date-${jobId}`
+  } as const;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddOffer(jobId, {
@@ -140,8 +149,9 @@ export default function SalaryTracker({
         <form onSubmit={handleSubmit} className="mt-4 p-3 bg-blue-50 rounded-lg space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Amount</label>
+              <label htmlFor={fieldIds.amount} className="text-xs font-medium text-gray-700 mb-1 block">Amount</label>
               <input
+                id={fieldIds.amount}
                 type="number"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
@@ -150,8 +160,9 @@ export default function SalaryTracker({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Currency</label>
+              <label htmlFor={fieldIds.currency} className="text-xs font-medium text-gray-700 mb-1 block">Currency</label>
               <select
+                id={fieldIds.currency}
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
@@ -166,8 +177,9 @@ export default function SalaryTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
+            <label htmlFor={fieldIds.status} className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
             <select
+              id={fieldIds.status}
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as SalaryOffer['status'] })}
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
@@ -180,8 +192,9 @@ export default function SalaryTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Equity</label>
+            <label htmlFor={fieldIds.equity} className="text-xs font-medium text-gray-700 mb-1 block">Equity</label>
             <input
+              id={fieldIds.equity}
               type="text"
               value={formData.equity}
               onChange={(e) => setFormData({ ...formData, equity: e.target.value })}
@@ -222,8 +235,9 @@ export default function SalaryTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
+            <label htmlFor={fieldIds.notes} className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
             <textarea
+              id={fieldIds.notes}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={2}
@@ -233,8 +247,9 @@ export default function SalaryTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
+            <label htmlFor={fieldIds.date} className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
             <input
+              id={fieldIds.date}
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}

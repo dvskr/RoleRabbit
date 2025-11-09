@@ -24,6 +24,16 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
     appliedDate: new Date().toISOString().split('T')[0]
   });
 
+  const fieldIds = {
+    title: 'add-job-title',
+    company: 'add-job-company',
+    location: 'add-job-location',
+    salary: 'add-job-salary',
+    url: 'add-job-url',
+    appliedDate: 'add-job-applied-date',
+    description: 'add-job-description'
+  } as const;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd({
@@ -79,8 +89,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Job Title *</label>
+              <label htmlFor={fieldIds.title} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Job Title *</label>
               <input
+                id={fieldIds.title}
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -105,8 +116,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Company *</label>
+              <label htmlFor={fieldIds.company} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Company *</label>
               <input
+                id={fieldIds.company}
                 type="text"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
@@ -134,8 +146,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Location</label>
+              <label htmlFor={fieldIds.location} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Location</label>
               <input
+                id={fieldIds.location}
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -159,8 +172,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Salary</label>
+              <label htmlFor={fieldIds.salary} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Salary</label>
               <input
+                id={fieldIds.salary}
                 type="text"
                 value={formData.salary}
                 onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
@@ -184,8 +198,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Job URL</label>
+            <label htmlFor={fieldIds.url} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Job URL</label>
             <input
+              id={fieldIds.url}
               type="url"
               value={formData.url}
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
@@ -208,8 +223,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Date Applied</label>
+            <label htmlFor={fieldIds.appliedDate} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Date Applied</label>
             <input
+              id={fieldIds.appliedDate}
               type="date"
               value={formData.appliedDate}
               onChange={(e) => setFormData({ ...formData, appliedDate: e.target.value })}
@@ -234,8 +250,9 @@ export default function AddJobModal({ onClose, onAdd, initialStatus }: AddJobMod
           </div>
 
           <div>
-            <label className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Description</label>
+            <label htmlFor={fieldIds.description} className="text-sm font-medium mb-1 block" style={{ color: colors.primaryText }}>Description</label>
             <textarea
+              id={fieldIds.description}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}

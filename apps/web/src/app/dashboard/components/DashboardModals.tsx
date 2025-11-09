@@ -94,9 +94,12 @@ interface DashboardModalsProps {
   // Handlers
   onExport: (format: string) => void;
   onSaveToCloud: () => void;
-  onImport: () => void;
+  onImport?: () => void;
   onImportFromCloud: () => void;
-  onFileSelected: (file: File) => void;
+  onFileSelected: (file: File) => Promise<boolean | void> | boolean | void;
+  onCreateBlank?: () => Promise<boolean | void> | boolean | void;
+  slotsUsed?: number;
+  maxSlots?: number;
   onAddSection: () => void;
   onOpenAIGenerateModal: (section: string) => void;
   onAddField: () => void;
@@ -174,6 +177,9 @@ export function DashboardModals(props: DashboardModalsProps) {
     onImport,
     onImportFromCloud,
     onFileSelected,
+    onCreateBlank,
+    slotsUsed,
+    maxSlots,
     onAddSection,
     onOpenAIGenerateModal,
     onAddField,
@@ -212,9 +218,11 @@ export function DashboardModals(props: DashboardModalsProps) {
         setImportMethod={setImportMethod}
         importJsonData={importJsonData}
         setImportJsonData={setImportJsonData}
-        onImport={onImport}
         onImportFromCloud={onImportFromCloud}
         onFileSelected={onFileSelected}
+        onCreateBlank={onCreateBlank}
+        slotsUsed={slotsUsed}
+        maxSlots={maxSlots}
       />
 
       {/* Add Custom Section Modal */}

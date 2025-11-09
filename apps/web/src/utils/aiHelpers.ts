@@ -1,70 +1,143 @@
-import { ResumeData, AIMessage } from '../types/resume';
+import { ResumeData } from '../types/resume';
 import { aiService } from '../services/aiService';
+import apiService from '../services/apiService';
+import { logger } from './logger';
+import { BaseResumeRecord } from './resumeMapper';
+
+type GenerateSection = 'summary' | 'skills' | 'experience' | 'projects' | 'custom';
+
+interface GenerateAIContentOptions {
+  resumeId: string | null | undefined;
+  section: GenerateSection;
+  instructions: string;
+  tone: string;
+  length: string;
+  resumeData: ResumeData;
+  applyBaseResume?: (record?: BaseResumeRecord | null) => any;
+  setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
+  setShowAIGenerateModal: (show: boolean) => void;
+  setCustomSectionContent?: (content: string) => void;
+}
+
+const resolveSectionContext = (section: GenerateSection, resumeData: ResumeData) => {
+  switch (section) {
+    case 'summary':
+      return {
+        sectionPath: 'summary',
+        sectionType: 'summary',
+        currentContent: resumeData.summary || ''
+      };
+    case 'skills':
+      return {
+        sectionPath: 'skills.technical',
+        sectionType: 'skills',
+        currentContent: resumeData.skills || []
+      };
+    case 'experience': {
+      const index = resumeData.experience?.length ? 0 : -1;
+      const sectionPath = index >= 0 ? `experience[${index}].bullets` : 'experience[0].bullets';
+      const currentContent = index >= 0 ? resumeData.experience[index].bullets || [] : [];
+      return {
+        sectionPath,
+        sectionType: 'experience',
+        currentContent
+      };
+    }
+    case 'projects': {
+      const index = resumeData.projects?.length ? 0 : -1;
+      const sectionPath = index >= 0 ? `projects[${index}].description` : 'projects[0].description';
+      const currentContent = index >= 0 ? resumeData.projects[index].description || '' : '';
+      return {
+        sectionPath,
+        sectionType: 'projects',
+        currentContent
+      };
+    }
+    default:
+      return null;
+  }
+};
 
 // AI helper functions
 export const aiHelpers = {
-  generateAIContent: async (aiGenerateSection: string, aiPrompt: string, writingTone: string, contentLength: string, resumeData: ResumeData, setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void, setShowAIGenerateModal: (show: boolean) => void, setCustomSectionContent?: (content: string) => void) => {
-    if (!aiPrompt.trim()) return;
-    
+  generateAIContent: async ({
+    resumeId,
+    section,
+    instructions,
+    tone,
+    length,
+    resumeData,
+    applyBaseResume,
+    setResumeData,
+    setShowAIGenerateModal,
+    setCustomSectionContent
+  }: GenerateAIContentOptions) => {
+    const trimmedInstructions = instructions.trim();
+    if (!trimmedInstructions) return;
+
+    if (section === 'custom') {
+      alert('AI generation for custom sections will be available soon. Please choose a core resume section instead.');
+      return;
+    }
+
+    if (!resumeId) {
+      alert('You must select an active resume before using AI features.');
+      return;
+    }
+
+    const context = resolveSectionContext(section, resumeData);
+    if (!context) {
+      alert('Selected section is not yet supported for AI generation.');
+      return;
+    }
+
     try {
-      // Prepare system prompt based on section and tone
-      const systemPrompt = `You are a professional resume writer. Create ${writingTone} content for a ${aiGenerateSection} section. Keep it ${contentLength}.`;
-      
-      const response = await aiService.generateContent({
-        prompt: `Generate professional resume content for ${aiGenerateSection} based on: ${aiPrompt}`,
-        systemPrompt,
-        maxTokens: contentLength === 'comprehensive' ? 500 : contentLength === 'detailed' ? 300 : 150
+      const response = await apiService.generateEditorAIContent({
+        resumeId,
+        sectionPath: context.sectionPath,
+        sectionType: context.sectionType,
+        currentContent: context.currentContent,
+        tone,
+        length,
+        instructions: trimmedInstructions
       });
-      
-      switch (aiGenerateSection) {
-        case 'summary':
-          setResumeData(prev => ({ ...prev, summary: response.content }));
-          break;
-        case 'skills':
-          const skillsList = response.content.split(',').map(s => s.trim()).filter(Boolean);
-          const newSkills = [...resumeData.skills, ...skillsList.filter(skill => !resumeData.skills.includes(skill))];
-          setResumeData(prev => ({ ...prev, skills: newSkills }));
-          break;
-        case 'experience':
-          // Parse the AI response into experience format
-          const experienceBullets = response.content.split('\n').map(line => line.replace(/^[•\-]\s*/, '').trim()).filter(Boolean);
-          const newExperience = {
-            id: Date.now(),
-            company: 'AI-Generated Company',
-            position: 'AI-Generated Position',
-            period: '2023',
-            endPeriod: 'Present',
-            location: 'Remote',
-            bullets: experienceBullets,
-            environment: ['React', 'Node.js', 'AWS', 'TypeScript'],
-            customFields: []
-          };
-          setResumeData(prev => ({ ...prev, experience: [...prev.experience, newExperience] }));
-          break;
-        case 'projects':
-          const projectBullets = response.content.split('\n').map(line => line.replace(/^[•\-]\s*/, '').trim()).filter(Boolean);
-          const newProject = {
-            id: Date.now(),
-            name: `AI-Generated ${aiPrompt}`,
-            description: projectBullets[0] || response.content,
-            link: 'https://github.com/username/project',
-            bullets: projectBullets.slice(1),
-            skills: ['React', 'Node.js', 'MongoDB', 'AWS', 'Docker'],
-            customFields: []
-          };
-          setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
-          break;
-        case 'custom':
-          // Handle custom sections
-          if (setCustomSectionContent) {
-            setCustomSectionContent(response.content);
-          }
-          break;
+
+      const draft = response?.draft;
+      if (!draft?.id) {
+        throw new Error('AI draft was not created.');
       }
-      
+
+      const applyResponse = await apiService.applyAIDraft(draft.id);
+      const updatedResume = applyResponse?.resume;
+      if (updatedResume && applyBaseResume) {
+        applyBaseResume(updatedResume as BaseResumeRecord);
+      } else if (updatedResume?.data) {
+        logger.warn('AI draft applied but applyBaseResume was unavailable; falling back to local state patch.');
+        switch (section) {
+          case 'summary':
+            setResumeData(prev => ({ ...prev, summary: updatedResume.data.summary || '' }));
+            break;
+          case 'skills':
+            setResumeData(prev => ({ ...prev, skills: updatedResume.data.skills?.technical || [] }));
+            break;
+          case 'experience':
+            setResumeData(prev => ({
+              ...prev,
+              experience: updatedResume.data.experience || []
+            }));
+            break;
+          case 'projects':
+            setResumeData(prev => ({
+              ...prev,
+              projects: updatedResume.data.projects || []
+            }));
+            break;
+        }
+      }
+
       setShowAIGenerateModal(false);
     } catch (error) {
-      console.error('AI Generate Error:', error);
+      logger.error('AI Generate Error:', error);
       alert('Error generating content. Please try again.');
     }
   },
@@ -237,46 +310,14 @@ export const aiHelpers = {
       
       setIsAnalyzing(false);
     } catch (error) {
-      console.error('Error analyzing job description:', error);
+      logger.error('Error analyzing job description:', error);
       // Fallback to basic analysis
       setIsAnalyzing(false);
     }
   },
 
   applyAIRecommendations: (aiRecommendations: string[], setAiRecommendations: (recommendations: string[]) => void) => {
-    // In a real app, this would apply the recommendations to the resume
-    setAiRecommendations([]);
-  },
-
-  sendAIMessage: async (aiPrompt: string, setAiPrompt: (prompt: string) => void, aiConversation: AIMessage[], setAiConversation: (conversation: AIMessage[] | ((prev: AIMessage[]) => AIMessage[])) => void) => {
-    if (!aiPrompt.trim()) return;
-    
-    const newMessage = { role: 'user', text: aiPrompt };
-    setAiConversation(prev => [...prev, newMessage]);
-    setAiPrompt('');
-    
-    try {
-      // Build context from previous conversation
-      const context = aiConversation
-        .slice(-5) // Last 5 messages for context
-        .map(msg => `${msg.role}: ${msg.text}`)
-        .join('\n');
-      
-      const response = await aiService.generateContent({
-        prompt: aiPrompt,
-        context,
-        systemPrompt: 'You are a helpful AI assistant specializing in resume writing and career advice. Provide clear, actionable feedback.',
-        maxTokens: 500,
-        temperature: 0.7
-      });
-      
-      const aiResponse = { role: 'assistant', text: response.content };
-      setAiConversation(prev => [...prev, aiResponse]);
-    } catch (error) {
-      console.error('Error sending AI message:', error);
-      // Fallback response
-      const aiResponse = { role: 'assistant', text: 'I can help you improve your resume. What specific section would you like to work on?' };
-      setAiConversation(prev => [...prev, aiResponse]);
-    }
+    // Deprecated: recommendations now applied via backend AI endpoints.
+    setAiRecommendations(aiRecommendations);
   }
 };

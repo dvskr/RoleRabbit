@@ -62,7 +62,6 @@ Features that should exist but don't:
 
 | Feature | Requirements | Priority | ETA | Dependencies |
 |---------|--------------|----------|-----|-------------|
-| LinkedIn Import | Import resume data from LinkedIn profile | 🟢 Low | 8-12 hours | LinkedIn API integration, OAuth setup |
 
 ---
 
@@ -195,7 +194,6 @@ Features that should exist but don't:
 
 ### 🟢 LOW PRIORITY (Nice to have)
 
-- [ ] **Implement LinkedIn Import** - File: New - Issue: LinkedIn import flow not yet built - ETA: 8-12 hours - Dependencies: LinkedIn API & OAuth setup
 
 - [ ] **Add Section Loading Skeletons** - File: `apps/web/src/components/features/ResumeEditor.tsx` - Issue: Per-section skeletons would smooth perceived load - ETA: 1-2 hours - Dependencies: None
 

@@ -1,24 +1,57 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, User, Mail, Briefcase, Linkedin, Github, Globe, X, CheckCircle, FileText } from 'lucide-react';
+import { Upload, User, Briefcase, Linkedin, Github, Globe } from 'lucide-react';
+
+interface SetupProfileData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  currentRole?: string;
+  currentCompany?: string;
+  professionalBio?: string;
+  bio?: string;
+  professionalSummary?: {
+    overview?: string;
+  };
+  linkedin?: string;
+  github?: string;
+  website?: string;
+  portfolio?: string;
+  profilePicture?: string;
+}
+
+interface SetupFormData {
+  name: string;
+  email: string;
+  role: string;
+  bio: string;
+  professionalBio: string;
+  linkedin: string;
+  github: string;
+  website: string;
+  profilePic: string | null;
+  template: string;
+  links: string[];
+}
 
 interface SetupStepProps {
-  profileData?: any;
-  onComplete: (data: any) => void;
+  profileData?: SetupProfileData;
+  onComplete: (data: SetupFormData) => void;
 }
 
 export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
-  const [name, setName] = useState(profileData ? `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() : '');
-  const [email, setEmail] = useState(profileData?.email || '');
-  const [role, setRole] = useState(profileData?.currentRole || '');
-  const [company, setCompany] = useState(profileData?.currentCompany || '');
-  const [bio, setBio] = useState(profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '');
-  const [linkedin, setLinkedin] = useState(profileData?.linkedin || '');
-  const [github, setGithub] = useState(profileData?.github || '');
-  const [website, setWebsite] = useState(profileData?.website || profileData?.portfolio || '');
-  const [profilePic, setProfilePic] = useState(profileData?.profilePicture || null);
-  const [template, setTemplate] = useState('modern');
+  const initialName = profileData ? `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() : '';
+  const [name, setName] = useState<string>(initialName);
+  const [email, setEmail] = useState<string>(profileData?.email ?? '');
+  const [role, setRole] = useState<string>(profileData?.currentRole ?? '');
+  const [company, setCompany] = useState<string>(profileData?.currentCompany ?? '');
+  const [bio, setBio] = useState<string>(profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '');
+  const [linkedin, setLinkedin] = useState<string>(profileData?.linkedin ?? '');
+  const [github, setGithub] = useState<string>(profileData?.github ?? '');
+  const [website, setWebsite] = useState<string>(profileData?.website ?? profileData?.portfolio ?? '');
+  const [profilePic, setProfilePic] = useState<string | null>(profileData?.profilePicture ?? null);
+  const [template, setTemplate] = useState<string>('modern');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const templates = [
@@ -57,7 +90,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
 
 
   const handleContinue = () => {
-    const data = {
+    const data: SetupFormData = {
       name,
       email,
       role: company ? `${role} at ${company}` : role,
@@ -85,7 +118,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
 
           {/* Profile Picture Upload */}
           <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Profile Picture</label>
+            <p className="block text-sm font-medium text-gray-700 mb-3">Profile Picture</p>
             <div className="flex items-center gap-6">
               <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                 {profilePic ? (
@@ -110,8 +143,9 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
           {/* Basic Information */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+              <label htmlFor="setup-full-name" className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
               <input
+                id="setup-full-name"
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -120,8 +154,9 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+              <label htmlFor="setup-email" className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
               <input
+                id="setup-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -130,8 +165,9 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Role *</label>
+              <label htmlFor="setup-role" className="block text-sm font-medium text-gray-700 mb-2">Role *</label>
               <input
+                id="setup-role"
                 type="text"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
@@ -140,8 +176,9 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+              <label htmlFor="setup-company" className="block text-sm font-medium text-gray-700 mb-2">Company</label>
               <input
+                id="setup-company"
                 type="text"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
@@ -153,8 +190,9 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
 
           {/* Bio */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Professional Bio</label>
+            <label htmlFor="setup-bio" className="block text-sm font-medium text-gray-700 mb-2">Professional Bio</label>
             <textarea
+              id="setup-bio"
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell us about yourself..."
@@ -165,7 +203,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
 
           {/* Social Links */}
           <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Social Links</label>
+            <p className="block text-sm font-medium text-gray-700 mb-3">Social Links</p>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Linkedin size={20} className="text-blue-600" />
@@ -202,7 +240,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
 
           {/* Template Selection */}
           <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Choose Template</label>
+            <p className="block text-sm font-medium text-gray-700 mb-3">Choose Template</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {templates.map((t) => (
                 <button

@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Settings, Search, User, LogOut, LogIn, ChevronDown, Home } from 'lucide-react';
+import { Bell, Settings, Search, LogOut, LogIn, ChevronDown, Home } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { LogoIcon, Logo } from '../common/Logo';
 import { useTheme } from '../../contexts/ThemeContext';
 import ThemeToggle from '../ThemeToggle';
 
@@ -235,12 +234,17 @@ export default function DashboardHeader({ onSearch }: DashboardHeaderProps) {
 
           {showUserMenu && (
             <>
-              <div 
-                className="fixed inset-0 z-[9998]"
+              <button
+                type="button"
+                className="fixed inset-0 z-[9998] border-0 p-0 bg-transparent"
                 onClick={() => setShowUserMenu(false)}
-                style={{
-                  backgroundColor: 'transparent',
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setShowUserMenu(false);
+                  }
                 }}
+                aria-label="Close user menu"
               />
               <div 
                 ref={menuDropdownRef}

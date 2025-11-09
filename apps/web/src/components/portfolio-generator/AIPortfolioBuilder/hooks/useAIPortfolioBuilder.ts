@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { Message, PortfolioSection, TabType, Step, DeviceView, DesignStyle, QuickActionType } from '../types/aiPortfolioBuilder';
+import type { Message, PortfolioSection, TabType, Step, DeviceView, DesignStyle, QuickActionType, ProfileDataShape } from '../types/aiPortfolioBuilder';
 import { DEFAULT_SECTIONS, WELCOME_MESSAGE, DEFAULT_AI_RESPONSE } from '../constants/aiPortfolioBuilder';
 import { generateTimestamp } from '../utils/aiPortfolioBuilderHelpers';
 
 interface UseAIPortfolioBuilderOptions {
-  profileData?: any;
+  profileData?: ProfileDataShape | null;
 }
 
 export const useAIPortfolioBuilder = (options: UseAIPortfolioBuilderOptions = {}) => {
@@ -66,11 +66,12 @@ export const useAIPortfolioBuilder = (options: UseAIPortfolioBuilderOptions = {}
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.pdf,.doc,.docx,.txt';
-      input.onchange = (e: any) => {
-        const file = e.target.files?.[0];
+      input.onchange = (event: Event) => {
+        const target = event.target as HTMLInputElement | null;
+        const file = target?.files?.[0];
         if (file) {
           const reader = new FileReader();
-          reader.onload = (event) => {
+          reader.onload = () => {
             const message: Message = {
               role: 'user',
               content: `I've uploaded my resume: ${file.name}`,
@@ -114,7 +115,7 @@ export const useAIPortfolioBuilder = (options: UseAIPortfolioBuilderOptions = {}
         try {
           const saved = localStorage.getItem('userProfile');
           if (saved) {
-            const profile = JSON.parse(saved);
+            const parsedProfile = JSON.parse(saved) as ProfileDataShape;
             const message: Message = {
               role: 'user',
               content: "Use my RoleReady profile data",
@@ -125,7 +126,7 @@ export const useAIPortfolioBuilder = (options: UseAIPortfolioBuilderOptions = {}
             setTimeout(() => {
               const aiResponse: Message = {
                 role: 'assistant',
-                content: `Perfect! I've loaded your profile data. Let's customize your portfolio!`,
+                content: `Perfect! I've loaded your profile data. I can see your ${parsedProfile.currentRole || 'professional information'}. Let's customize your portfolio!`,
                 timestamp: generateTimestamp()
               };
               setMessages(prev => [...prev, aiResponse]);

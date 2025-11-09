@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Copy, Share2, Eye, EyeOff, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Download, Undo, Redo, Upload, Save, Sparkles, Menu, Share2, Eye, EyeOff, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 interface HeaderProps {
   isMobile: boolean;
@@ -19,7 +19,6 @@ interface HeaderProps {
   onRedo: () => void;
   onImport: () => void;
   onSave: () => void;
-  onToggleAIPanel: () => void;
   onTogglePreview?: () => void;
   onShowMobileMenu: () => void;
   onShowResumeSharing?: () => void;
@@ -40,7 +39,7 @@ export default function Header({
   canUndo,
   canRedo,
   showRightPanel,
-  previousSidebarState,
+  previousSidebarState: _previousSidebarState,
   sidebarCollapsed,
   isPreviewMode,
   lastSavedAt,
@@ -50,17 +49,16 @@ export default function Header({
   onRedo,
   onImport,
   onSave,
-  onToggleAIPanel,
   onTogglePreview,
   onShowMobileMenu,
   onShowResumeSharing,
-  setPreviousSidebarState,
-  setSidebarCollapsed,
+  setPreviousSidebarState: _setPreviousSidebarState,
+  setSidebarCollapsed: _setSidebarCollapsed,
   setShowRightPanel,
   onToggleSidebar,
   mainSidebarCollapsed,
   setMainSidebarCollapsed,
-  previousMainSidebarState,
+  previousMainSidebarState: _previousMainSidebarState,
   setPreviousMainSidebarState
 }: HeaderProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');

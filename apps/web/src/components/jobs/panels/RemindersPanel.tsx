@@ -58,6 +58,14 @@ export default function RemindersPanel({
     }
   };
 
+  const fieldIds = {
+    title: `reminder-title-${jobId}`,
+    description: `reminder-description-${jobId}`,
+    dueDate: `reminder-due-${jobId}`,
+    priority: `reminder-priority-${jobId}`,
+    type: `reminder-type-${jobId}`
+  } as const;
+
   const isOverdue = (dueDate: string) => {
     return new Date(dueDate) < new Date();
   };
@@ -130,8 +138,9 @@ export default function RemindersPanel({
       {showForm && (
         <form onSubmit={handleSubmit} className="mt-4 p-3 bg-blue-50 rounded-lg space-y-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Title</label>
+            <label htmlFor={fieldIds.title} className="text-xs font-medium text-gray-700 mb-1 block">Title</label>
             <input
+              id={fieldIds.title}
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -141,8 +150,9 @@ export default function RemindersPanel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Description</label>
+            <label htmlFor={fieldIds.description} className="text-xs font-medium text-gray-700 mb-1 block">Description</label>
             <textarea
+              id={fieldIds.description}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
@@ -153,8 +163,9 @@ export default function RemindersPanel({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Due Date</label>
+              <label htmlFor={fieldIds.dueDate} className="text-xs font-medium text-gray-700 mb-1 block">Due Date</label>
               <input
+                id={fieldIds.dueDate}
                 type="date"
                 value={formData.dueDate}
                 onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
@@ -163,8 +174,9 @@ export default function RemindersPanel({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Priority</label>
+              <label htmlFor={fieldIds.priority} className="text-xs font-medium text-gray-700 mb-1 block">Priority</label>
               <select
+                id={fieldIds.priority}
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value as JobReminder['priority'] })}
                 className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
@@ -177,8 +189,9 @@ export default function RemindersPanel({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Type</label>
+            <label htmlFor={fieldIds.type} className="text-xs font-medium text-gray-700 mb-1 block">Type</label>
             <select
+              id={fieldIds.type}
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as JobReminder['type'] })}
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded"

@@ -2,7 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { Palette, Layout, Code, Briefcase, Sparkles, ArrowRight, Monitor, Smartphone, Tablet, Eye } from 'lucide-react';
-import { WebsiteConfig, Theme } from '../../types/portfolio';
+import type { LucideIcon } from 'lucide-react';
+import type { WebsiteConfig, PortfolioTemplateDefinition, TemplateCategory } from '../../types/portfolio';
 import TemplatePreviewModal from './TemplatePreviewModal';
 
 interface TemplateSelectorProps {
@@ -12,7 +13,7 @@ interface TemplateSelectorProps {
   onUpdate: (config: Partial<WebsiteConfig>) => void;
 }
 
-const templates = [
+const templates: PortfolioTemplateDefinition[] = [
   {
     id: 'split-hero',
     name: 'Split Hero Focus',
@@ -113,7 +114,7 @@ const templates = [
     styles: { layout: 'editorial', heroStyle: 'columns', cardStyle: 'editorial' }
   },
   {
-    id: 'neon-neon',
+    id: 'neon-nights',
     name: 'Neon Nights',
     description: 'Electric neon glow effects',
     category: 'creative',
@@ -123,7 +124,12 @@ const templates = [
   }
 ];
 
-const colorPalettes = [
+type ColorPalette = {
+  name: string;
+  colors: string[];
+};
+
+const colorPalettes: ColorPalette[] = [
   { name: 'Ocean Blue', colors: ['#0ea5e9', '#3b82f6', '#0284c7', '#0369a1'] },
   { name: 'Forest Green', colors: ['#22c55e', '#16a34a', '#15803d', '#166534'] },
   { name: 'Sunset', colors: ['#f97316', '#ea580c', '#c2410c', '#9a3412'] },
@@ -137,8 +143,8 @@ const colorPalettes = [
 export default function TemplateSelector({ onNext, onBack, config, onUpdate }: TemplateSelectorProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(config.theme?.templateId || 'minimal');
   const [selectedPalette, setSelectedPalette] = useState<string[]>(config.theme?.colors || ['#3b82f6']);
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [previewingTemplate, setPreviewingTemplate] = useState<any>(null);
+  const [categoryFilter, setCategoryFilter] = useState<'all' | TemplateCategory>('all');
+  const [previewingTemplate, setPreviewingTemplate] = useState<PortfolioTemplateDefinition | null>(null);
 
   const filteredTemplates = useMemo(() => {
     if (categoryFilter === 'all') return templates;
@@ -173,7 +179,7 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
     });
   };
 
-  const categories = [
+  const categories: Array<{ id: 'all' | TemplateCategory; name: string; icon: LucideIcon }> = [
     { id: 'all', name: 'All', icon: Layout },
     { id: 'creative', name: 'Creative', icon: Palette },
     { id: 'tech', name: 'Tech', icon: Code },
@@ -190,6 +196,7 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
             <p className="text-gray-600 mt-1">Select a design that matches your style</p>
           </div>
           <button
+            type="button"
             onClick={onNext}
             disabled={!selectedTemplateId}
             className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -208,6 +215,7 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
               const Icon = cat.icon;
               return (
                 <button
+                  type="button"
                   key={cat.id}
                   onClick={() => setCategoryFilter(cat.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
@@ -470,6 +478,7 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
                     {/* Actions */}
                     <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200">
                       <button
+                        type="button"
                         onClick={() => handleSelectTemplate(template.id)}
                         className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
                           selectedTemplateId === template.id
@@ -480,6 +489,7 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
                         {selectedTemplateId === template.id ? 'Selected' : 'Select'}
                       </button>
                       <button
+                        type="button"
                         onClick={() => setPreviewingTemplate(template)}
                         className="px-3 py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors flex items-center gap-2"
                       >
@@ -501,6 +511,7 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
               <div className="space-y-3">
                 {colorPalettes.map((palette) => (
                   <button
+                    type="button"
                     key={palette.name}
                     onClick={() => handleSelectPalette(palette.colors)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
@@ -562,12 +573,14 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
       {/* Navigation */}
       <div className="bg-white border-t border-gray-200 px-6 py-4 flex justify-between items-center">
         <button
+          type="button"
           onClick={onBack}
           className="px-6 py-2.5 border border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all"
         >
           Back
         </button>
         <button
+          type="button"
           onClick={onNext}
           disabled={!selectedTemplateId}
           className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"

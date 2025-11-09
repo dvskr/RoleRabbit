@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { FileText, Layers, Palette } from 'lucide-react';
+import { PanelLeftOpen, FileText, Layers, Palette } from 'lucide-react';
 import { ThemeColors } from '../../../contexts/ThemeContext';
 
 interface CollapsedSidebarProps {
@@ -14,7 +14,7 @@ export default function CollapsedSidebar({ colors, onToggleSidebar }: CollapsedS
     <div className="flex flex-col gap-2">
       <button 
         className="p-2 border rounded-lg transition-all" 
-        title="File Name"
+        title="Expand sidebar"
         onClick={onToggleSidebar}
         style={{
           background: colors.cardBackground,
@@ -27,7 +27,7 @@ export default function CollapsedSidebar({ colors, onToggleSidebar }: CollapsedS
           e.currentTarget.style.boxShadow = 'none';
         }}
       >
-        <FileText size={16} className="mx-auto" style={{ color: colors.primaryBlue }} />
+        <PanelLeftOpen size={16} className="mx-auto" style={{ color: colors.primaryBlue }} />
       </button>
       <button 
         className="p-2 border rounded-lg transition-all" 

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { Step, StepConfig, ThemeColors } from '../types/aiPortfolioBuilder';
+import type { Step, ThemeColors } from '../types/aiPortfolioBuilder';
 import { STEPS } from '../constants/aiPortfolioBuilder';
 
 interface ProgressStepsProps {

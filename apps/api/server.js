@@ -79,6 +79,9 @@ const fastify = require('fastify')({
 // Custom logger
 const logger = require('./utils/logger');
 
+// Observability
+const metrics = require('./observability/metrics');
+
 // Security utilities
 const { sanitizeInput, getRateLimitConfig } = require('./utils/security');
 
@@ -294,6 +297,10 @@ fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
 fastify.register(require('./routes/resume.routes'));
+fastify.register(require('./routes/baseResume.routes'));
+fastify.register(require('./routes/editorAI.routes'));
+fastify.register(require('./routes/jobs.routes'));
+fastify.register(require('./routes/coverLetters.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -392,6 +399,11 @@ const start = async () => {
       logger.error('❌ Failed to connect to database after multiple attempts. Server will continue but database operations may fail.');
     }
     
+    fastify.get('/metrics', async (request, reply) => {
+      reply.header('Content-Type', metrics.register.contentType);
+      return metrics.register.metrics();
+    });
+
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || 'localhost';
     

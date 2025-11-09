@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { AIMessage } from '../types/resume';
+import type { TailorResult, CoverLetterDraft, PortfolioDraft } from '../types/ai';
 
 // AI state hook
 export const useAI = () => {
   const [aiMode, setAiMode] = useState('tailor');
-  const [selectedModel, setSelectedModel] = useState('gpt-5');
   const [jobDescription, setJobDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [matchScore, setMatchScore] = useState(0);
@@ -15,13 +14,16 @@ export const useAI = () => {
   const [tailorEditMode, setTailorEditMode] = useState('partial');
   const [selectedTone, setSelectedTone] = useState('professional');
   const [selectedLength, setSelectedLength] = useState('concise');
-  const [aiConversation, setAiConversation] = useState<AIMessage[]>([]);
+  const [tailorResult, setTailorResult] = useState<TailorResult | null>(null);
+  const [isTailoring, setIsTailoring] = useState(false);
+  const [coverLetterDraft, setCoverLetterDraft] = useState<CoverLetterDraft | null>(null);
+  const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
+  const [portfolioDraft, setPortfolioDraft] = useState<PortfolioDraft | null>(null);
+  const [isGeneratingPortfolio, setIsGeneratingPortfolio] = useState(false);
 
   return {
     aiMode,
     setAiMode,
-    selectedModel,
-    setSelectedModel,
     jobDescription,
     setJobDescription,
     isAnalyzing,
@@ -42,7 +44,17 @@ export const useAI = () => {
     setSelectedTone,
     selectedLength,
     setSelectedLength,
-    aiConversation,
-    setAiConversation
+    tailorResult,
+    setTailorResult,
+    isTailoring,
+    setIsTailoring,
+    coverLetterDraft,
+    setCoverLetterDraft,
+    isGeneratingCoverLetter,
+    setIsGeneratingCoverLetter,
+    portfolioDraft,
+    setPortfolioDraft,
+    isGeneratingPortfolio,
+    setIsGeneratingPortfolio
   };
 };

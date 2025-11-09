@@ -12,11 +12,11 @@ interface NavigationItemProps {
   isCollapsed: boolean;
   sectionColor: string;
   onClick: () => void;
-  colors?: any;
+  colors?: Record<string, string>;
 }
 
 export default function NavigationItem({
-  id,
+  id: _id,
   icon: Icon,
   label,
   isActive,

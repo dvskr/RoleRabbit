@@ -6,10 +6,10 @@ import React from 'react';
 import { CheckSquare, Star, Building2 } from 'lucide-react';
 import { Job } from '../../../types/job';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { getStatusBadgeStyles, getPriorityBadgeStyles } from '../../../utils/themeHelpers';
+import { getPriorityBadgeStyles } from '../../../utils/themeHelpers';
 import { statusOptions, priorityOptions } from '../constants/jobTable.constants';
-import { getCellValue, isEditableColumn } from '../utils/jobTableCellHelpers';
-import type { ColumnKey, EditingCell } from '../types/jobTable.types';
+import { getCellValue } from '../utils/jobTableCellHelpers';
+import type { ColumnKey } from '../types/jobTable.types';
 
 interface JobTableCellProps {
   job: Partial<Job> | Job;
@@ -17,8 +17,7 @@ interface JobTableCellProps {
   jobId: string;
   isEditing: boolean;
   editingValue: string;
-  editingCell: EditingCell | null;
-  inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>;
+  inputRef: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>;
   onEditChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, jobId: string, field: ColumnKey) => void;
   onBlur: () => void;
@@ -37,7 +36,6 @@ export default function JobTableCell({
   jobId,
   isEditing,
   editingValue,
-  editingCell,
   inputRef,
   onEditChange,
   onKeyDown,
@@ -51,6 +49,9 @@ export default function JobTableCell({
 }: JobTableCellProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const assignInputRef = (element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) => {
+    inputRef.current = element;
+  };
 
   // Checkbox column
   if (column === 'checkbox') {
@@ -130,7 +131,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <select
-          ref={inputRef as any}
+          ref={assignInputRef}
           value={editingValue || job.status || 'applied'}
           onChange={(e) => {
             onEditChange(e.target.value);
@@ -146,7 +147,6 @@ export default function JobTableCell({
           }}
           title="Select status"
           aria-label="Job status"
-          autoFocus
         >
           {statusOptions.map(status => (
             <option key={status} value={status} style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>
@@ -181,7 +181,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <select
-          ref={inputRef as any}
+          ref={assignInputRef}
           value={editingValue || job.priority || ''}
           onChange={(e) => {
             onEditChange(e.target.value);
@@ -197,7 +197,6 @@ export default function JobTableCell({
           }}
           title="Select priority"
           aria-label="Job priority"
-          autoFocus
         >
           <option value="" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>None</option>
           {priorityOptions.map(priority => (
@@ -229,7 +228,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <textarea
-          ref={inputRef as any}
+          ref={assignInputRef}
           value={editingValue}
           onChange={(e) => onEditChange(e.target.value)}
           onKeyDown={(e) => onKeyDown(e, jobId, column)}
@@ -245,7 +244,6 @@ export default function JobTableCell({
           placeholder="Enter notes..."
           title="Job notes"
           aria-label="Job notes"
-          autoFocus
         />
       );
     }
@@ -261,7 +259,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <input
-          ref={inputRef as any}
+          ref={assignInputRef}
           type="date"
           value={editingValue || (job[column as keyof Job] as string) || ''}
           onChange={(e) => onEditChange(e.target.value)}
@@ -275,7 +273,6 @@ export default function JobTableCell({
           }}
           title={column === 'appliedDate' ? 'Applied date' : column === 'lastUpdated' ? 'Last updated' : 'Next step date'}
           aria-label={column === 'appliedDate' ? 'Applied date' : column === 'lastUpdated' ? 'Last updated' : 'Next step date'}
-          autoFocus
         />
       );
     }
@@ -292,7 +289,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <input
-          ref={inputRef as any}
+          ref={assignInputRef}
           type="url"
           value={editingValue}
           onChange={(e) => onEditChange(e.target.value)}
@@ -307,7 +304,6 @@ export default function JobTableCell({
           placeholder="https://..."
           title="Job URL"
           aria-label="Job application URL"
-          autoFocus
         />
       );
     }
@@ -338,7 +334,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <input
-          ref={inputRef as any}
+          ref={assignInputRef}
           type={column === 'email' ? 'email' : 'text'}
           value={editingValue}
           onChange={(e) => onEditChange(e.target.value)}
@@ -353,7 +349,6 @@ export default function JobTableCell({
           placeholder={column === 'contact' ? 'Contact name...' : column === 'email' ? 'email@example.com' : '+1 (555) 000-0000'}
           title={column === 'contact' ? 'Contact name' : column === 'email' ? 'Email address' : 'Phone number'}
           aria-label={column === 'contact' ? 'Contact name' : column === 'email' ? 'Email address' : 'Phone number'}
-          autoFocus
         />
       );
     }
@@ -369,7 +364,7 @@ export default function JobTableCell({
     if (isEditing) {
       return (
         <input
-          ref={inputRef as any}
+          ref={assignInputRef}
           type="text"
           value={editingValue}
           onChange={(e) => onEditChange(e.target.value)}
@@ -384,7 +379,6 @@ export default function JobTableCell({
           placeholder="Company name..."
           title="Company name"
           aria-label="Company name"
-          autoFocus
         />
       );
     }
@@ -410,7 +404,7 @@ export default function JobTableCell({
   if (isEditing) {
     return (
       <input
-        ref={inputRef as any}
+        ref={assignInputRef}
         type="text"
         value={editingValue}
         onChange={(e) => onEditChange(e.target.value)}
@@ -425,7 +419,6 @@ export default function JobTableCell({
         placeholder={column === 'title' ? 'Job title...' : column === 'location' ? 'Location...' : column === 'salary' ? '$0,000' : ''}
         title={column === 'title' ? 'Job title' : column === 'location' ? 'Location' : column === 'salary' ? 'Salary' : column === 'nextStep' ? 'Next step' : column === 'nextStepDate' ? 'Next step date' : ''}
         aria-label={column || ''}
-        autoFocus
       />
     );
   }

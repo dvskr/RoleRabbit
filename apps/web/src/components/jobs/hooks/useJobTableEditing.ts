@@ -25,7 +25,7 @@ export function useJobTableEditing() {
   }, [editingCell]);
 
   // Start editing a cell
-  const startEditing = useCallback((jobId: string, field: ColumnKey, currentValue: any) => {
+  const startEditing = useCallback((jobId: string, field: ColumnKey, currentValue: unknown) => {
     setEditingCell({ jobId, field });
     setEditingValue(String(currentValue || ''));
     if (jobId === 'new') {

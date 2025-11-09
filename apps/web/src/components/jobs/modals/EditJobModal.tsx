@@ -25,6 +25,16 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
     appliedDate: job.appliedDate
   });
 
+  const fieldIds = {
+    title: 'edit-job-title',
+    company: 'edit-job-company',
+    location: 'edit-job-location',
+    salary: 'edit-job-salary',
+    url: 'edit-job-url',
+    appliedDate: 'edit-job-applied-date',
+    description: 'edit-job-description'
+  } as const;
+
   useEffect(() => {
     setFormData({
       title: job.title,
@@ -95,13 +105,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label 
+              <label
+                htmlFor={fieldIds.title}
                 className="text-sm font-medium mb-1 block"
                 style={{ color: colors.secondaryText }}
               >
                 Job Title *
               </label>
               <input
+                id={fieldIds.title}
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -121,13 +133,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
               />
             </div>
             <div>
-              <label 
+              <label
+                htmlFor={fieldIds.company}
                 className="text-sm font-medium mb-1 block"
                 style={{ color: colors.secondaryText }}
               >
                 Company *
               </label>
               <input
+                id={fieldIds.company}
                 type="text"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
@@ -150,13 +164,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label 
+              <label
+                htmlFor={fieldIds.location}
                 className="text-sm font-medium mb-1 block"
                 style={{ color: colors.secondaryText }}
               >
                 Location
               </label>
               <input
+                id={fieldIds.location}
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -175,13 +191,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
               />
             </div>
             <div>
-              <label 
+              <label
+                htmlFor={fieldIds.salary}
                 className="text-sm font-medium mb-1 block"
                 style={{ color: colors.secondaryText }}
               >
                 Salary
               </label>
               <input
+                id={fieldIds.salary}
                 type="text"
                 value={formData.salary}
                 onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
@@ -203,13 +221,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
           </div>
 
           <div>
-            <label 
+            <label
+              htmlFor={fieldIds.url}
               className="text-sm font-medium mb-1 block"
               style={{ color: colors.secondaryText }}
             >
               Job URL
             </label>
             <input
+              id={fieldIds.url}
               type="url"
               value={formData.url}
               onChange={(e) => setFormData({ ...formData, url: e.target.value })}
@@ -230,13 +250,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
           </div>
 
           <div>
-            <label 
+            <label
+              htmlFor={fieldIds.appliedDate}
               className="text-sm font-medium mb-1 block"
               style={{ color: colors.secondaryText }}
             >
               Date Applied
             </label>
             <input
+              id={fieldIds.appliedDate}
               type="date"
               value={formData.appliedDate}
               onChange={(e) => setFormData({ ...formData, appliedDate: e.target.value })}
@@ -257,13 +279,15 @@ export default function EditJobModal({ job, onClose, onUpdate }: EditJobModalPro
           </div>
 
           <div>
-            <label 
+            <label
+              htmlFor={fieldIds.description}
               className="text-sm font-medium mb-1 block"
               style={{ color: colors.secondaryText }}
             >
               Description
             </label>
             <textarea
+              id={fieldIds.description}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={4}

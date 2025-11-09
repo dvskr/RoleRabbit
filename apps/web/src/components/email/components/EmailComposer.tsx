@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import { Send, Paperclip, X } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import type { EmailData } from './EmailComposerAI/types/EmailComposerAI.types';
 
 interface EmailComposerProps {
   recipientEmail?: string;
   recipientName?: string;
-  onSend?: (emailData: any) => void;
+  onSend?: (emailData: EmailData) => void;
   onCancel?: () => void;
 }
 

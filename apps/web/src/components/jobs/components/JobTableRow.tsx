@@ -6,7 +6,7 @@ import React from 'react';
 import { Job } from '../../../types/job';
 import { useTheme } from '../../../contexts/ThemeContext';
 import type { ColumnKey, Column, EditingCell } from '../types/jobTable.types';
-import { getCellValue, isEditableColumn } from '../utils/jobTableCellHelpers';
+import { getCellValue } from '../utils/jobTableCellHelpers';
 import JobTableCell from './JobTableCell';
 import JobTableRowActions from './JobTableRowActions';
 
@@ -16,12 +16,12 @@ interface JobTableRowProps {
   visibleColumns: Column[];
   editingCell: EditingCell | null;
   editingValue: string;
-  inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>;
+  inputRef: React.MutableRefObject<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>;
   selectedJobs: string[];
   favorites: string[];
   showDeleted?: boolean;
   // Handlers
-  onCellClick: (jobId: string, field: ColumnKey, value: any) => void;
+  onCellClick: (jobId: string, field: ColumnKey, value: unknown) => void;
   onEditChange: (value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, jobId: string, field: ColumnKey) => void;
   onBlur: () => void;
@@ -100,7 +100,6 @@ export default function JobTableRow({
               jobId={job.id}
               isEditing={isEditing}
               editingValue={editingValue}
-              editingCell={editingCell}
               inputRef={inputRef}
               onEditChange={onEditChange}
               onKeyDown={onKeyDown}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Users, Inbox, FileText, Settings, BarChart3 } from 'lucide-react';
+import { Mail, Users, Inbox, FileText, Settings, BarChart3, LucideIcon } from 'lucide-react';
 import ContactsTab from './tabs/ContactsTab';
 import ComposerTab from './tabs/ComposerTab';
 import InboxTab from './tabs/InboxTab';
@@ -12,7 +12,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 export type EmailHubTab = 'contacts' | 'composer' | 'inbox' | 'templates' | 'settings' | 'analytics';
 
-const tabs: Array<{ id: EmailHubTab; label: string; icon: any }> = [
+const tabs: Array<{ id: EmailHubTab; label: string; icon: LucideIcon }> = [
   { id: 'contacts', label: 'Contacts', icon: Users },
   { id: 'composer', label: 'Composer', icon: Mail },
   { id: 'inbox', label: 'Inbox', icon: Inbox },

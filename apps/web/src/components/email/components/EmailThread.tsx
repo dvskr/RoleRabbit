@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, User, Clock, Reply, Forward } from 'lucide-react';
+import { Reply, Forward } from 'lucide-react';
 import { Email } from '../types';
 import { useTheme } from '../../../contexts/ThemeContext';
 

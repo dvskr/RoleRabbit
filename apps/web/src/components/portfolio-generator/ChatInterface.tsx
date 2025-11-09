@@ -4,68 +4,131 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, User, Bot, Upload, FileText, Award, Lightbulb, Wand2 } from 'lucide-react';
 import { portfolioPrompts, quickPrompts } from './prompts';
 
+interface FileUploadData {
+  name: string;
+  content: string;
+}
+
+interface PortfolioCollectedData {
+  name?: string;
+  role?: string;
+  bio?: string;
+  professionalBio?: string;
+  email?: string;
+  links?: string[];
+  projects?: Array<{
+    title?: string;
+    description?: string;
+    technologies?: string[];
+  }>;
+  skills?: string[];
+  achievements?: string[];
+  experience?: string[];
+  [key: string]: unknown;
+}
+
+interface PortfolioProfileData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  currentRole?: string;
+  currentCompany?: string;
+  professionalBio?: string;
+  bio?: string;
+  professionalSummary?: {
+    overview?: string;
+  };
+  linkedin?: string;
+  github?: string;
+  website?: string;
+  portfolio?: string;
+  projects?: unknown[];
+  skills?: Array<{ name?: string } | string>;
+  [key: string]: unknown;
+}
+
+interface InitialChatData extends PortfolioCollectedData {
+  resumeContent?: string;
+}
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   type?: 'text' | 'resume-upload' | 'link-input' | 'file-upload';
-  data?: any;
+  data?: FileUploadData | PortfolioCollectedData | Record<string, unknown>;
 }
 
 interface ChatInterfaceProps {
-  onComplete: (collectedData: any) => void;
-  profileData?: any;
-  initialData?: any;
-  onSyncToProfile?: (data: any) => void;
+  onComplete: (collectedData: PortfolioCollectedData) => void;
+  profileData?: PortfolioProfileData | null;
+  initialData?: InitialChatData | null;
+  onSyncToProfile?: (data: PortfolioCollectedData) => void;
 }
 
 export default function ChatInterface({ onComplete, profileData, initialData, onSyncToProfile }: ChatInterfaceProps) {
   // Pre-populate from profile data and initial setup data
-  const getInitialData = () => {
+  const getInitialData = (): PortfolioCollectedData => {
     const professionalBio = profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '';
-    const fromProfile = profileData ? {
-      name: `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim(),
-      role: profileData.currentRole || profileData.currentCompany ? 
-        `${profileData.currentRole || ''} at ${profileData.currentCompany || ''}`.trim() : '',
-      bio: professionalBio,
-      professionalBio,
-      email: profileData.email || '',
-      links: [
-        ...(profileData.github ? [profileData.github] : []),
-        ...(profileData.linkedin ? [profileData.linkedin] : []),
-        ...(profileData.website ? [profileData.website] : []),
-        ...(profileData.portfolio ? [profileData.portfolio] : [])
-      ].filter(Boolean),
-      projects: profileData.projects || [],
-      skills: profileData.skills?.map((s: any) => s.name) || []
-    } : {};
 
-    const data = { ...fromProfile, ...initialData };
+    const profileLinks = [
+      profileData?.github,
+      profileData?.linkedin,
+      profileData?.website,
+      profileData?.portfolio
+    ].filter((link): link is string => Boolean(link));
+
+    const profileSkills = Array.isArray(profileData?.skills)
+      ? profileData!.skills
+          .map((skill) => (typeof skill === 'string' ? skill : skill?.name ?? ''))
+          .filter((skill): skill is string => Boolean(skill))
+      : [];
+
+    const fromProfile: PortfolioCollectedData = profileData
+      ? {
+          name: `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim(),
+          role:
+            profileData.currentRole || profileData.currentCompany
+              ? `${profileData.currentRole || ''} at ${profileData.currentCompany || ''}`.trim()
+              : '',
+          bio: professionalBio,
+          professionalBio,
+          email: profileData.email || '',
+          links: profileLinks,
+          projects: Array.isArray(profileData.projects) ? [...profileData.projects] as PortfolioCollectedData['projects'] : undefined,
+          skills: profileSkills
+        }
+      : {};
+
+    const data: PortfolioCollectedData = {
+      ...fromProfile,
+      ...(initialData ?? {})
+    };
+
     if (data.professionalBio === undefined && data.bio !== undefined) {
       data.professionalBio = data.bio;
     } else if (data.bio === undefined && data.professionalBio !== undefined) {
       data.bio = data.professionalBio;
     }
+
     return data;
   };
 
-  // Store resume data for LLM context
-  const [resumeContext, setResumeContext] = useState<any>(null);
+  const [resumeContext, setResumeContext] = useState<string | null>(null);
 
   // If initialData includes resume content, store it
-  React.useEffect(() => {
-    if (initialData?.resumeContent) {
+  useEffect(() => {
+    if (typeof initialData?.resumeContent === 'string') {
       setResumeContext(initialData.resumeContent);
     }
   }, [initialData]);
 
   const getInitialMessage = () => {
     const data = getInitialData();
-    
-    // Build context-aware greeting
+
     if (resumeContext) {
       return `Perfect! I've reviewed your resume. I can see you're ${data.role || 'an experienced professional'}. Let's enhance your portfolio with AI. Want to add more projects, highlight achievements, or customize your story? Just type what you'd like to add!`;
     }
-    
+
     if (data.name || data.role || data.bio) {
       return `Perfect! I have your basic info from Step 1. Now let's enhance it with AI. Want to add projects, achievements, or customize anything? Or just type "ready" to proceed!`;
     }
@@ -80,14 +143,14 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
     }
   ]);
   const [currentInput, setCurrentInput] = useState('');
-  const [collectedData, setCollectedData] = useState<any>(getInitialData());
+  const [collectedData, setCollectedData] = useState<PortfolioCollectedData>(() => getInitialData());
   const [isTyping, setIsTyping] = useState(false);
   const [showPrompts, setShowPrompts] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const assignBio = (target: any, value: string) => {
-    if (value === undefined) {
+  const assignBio = (target: PortfolioCollectedData, value: string) => {
+    if (!value) {
       return;
     }
     target.bio = value;
@@ -110,43 +173,46 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
     }, 1500);
   };
 
-  const addMessage = (role: 'user' | 'assistant', content: string, type: 'text' | 'resume-upload' | 'link-input' | 'file-upload' = 'text', data?: any) => {
-    setMessages(prev => [...prev, { role, content, type, data }]);
+  const addMessage = (
+    role: 'user' | 'assistant',
+    content: string,
+    type: 'text' | 'resume-upload' | 'link-input' | 'file-upload' = 'text',
+    data?: Message['data']
+  ) => {
+    setMessages((prev) => [...prev, { role, content, type, data }]);
   };
 
   const handleResumeUpload = (file: File) => {
-    // Simulate parsing resume
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const resumeData = {
+    reader.onload = (event) => {
+      const textContent = typeof event.target?.result === 'string' ? event.target.result : '';
+      const resumeData: FileUploadData = {
         name: file.name,
-        data: e.target?.result
+        content: textContent
       };
+      setResumeContext(textContent);
       addMessage('user', `Uploaded resume: ${file.name}`, 'file-upload', resumeData);
-      
+
       setTimeout(() => {
-        addMessage('assistant', `Great! I've analyzed your resume. I can see your experience and skills. Let's add some personality - tell me what makes you unique or what you're passionate about?`, 'text');
+        addMessage(
+          'assistant',
+          `Great! I've analyzed your resume. I can see your experience and skills. Let's add some personality - tell me what makes you unique or what you're passionate about?`,
+          'text'
+        );
       }, 1000);
     };
     reader.readAsText(file);
   };
 
-  // AI-like intelligence to extract information from natural language and resume context
   const extractInformation = (message: string) => {
-    const updated = { ...collectedData };
+    const updated: PortfolioCollectedData = { ...collectedData };
     let extracted = false;
+    const resumeText = resumeContext ?? '';
+    const lowerMessage = message.toLowerCase();
 
-    // If we have resume context, use it to enhance extraction
-    if (resumeContext) {
-      // For projects: Check if message mentions project or if we should extract from resume
-      if (message.toLowerCase().includes('project') || message.toLowerCase().includes('built')) {
-        // Could extract from resume context here if needed
-      }
-      
-      // For experience: Map resume experience if mentioned
-      if (message.toLowerCase().includes('experience') && !updated.experience) {
-        // Extract experience from resume context
-        const expMatches = resumeContext.match(/(?:EXPERIENCE|WORK HISTORY)[:\s]*([^\n]+(?:\n[^\n]+){0,10})/i);
+    if (resumeText) {
+      if (lowerMessage.includes('experience') && !updated.experience) {
+        const expMatches = resumeText.match(/(?:EXPERIENCE|WORK HISTORY)[:\s]*([^\n]+(?:\n[^\n]+){0,10})/i);
         if (expMatches) {
           updated.experience = [expMatches[1]];
           extracted = true;
@@ -154,39 +220,35 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
       }
     }
 
-    // Extract projects
-    if (message.toLowerCase().includes('project') || message.toLowerCase().includes('built') || message.toLowerCase().includes('developed')) {
+    if (lowerMessage.includes('project') || lowerMessage.includes('built') || lowerMessage.includes('developed')) {
       const projectPattern = /(?:project|built|developed|created)\s*:?\s*([^.]{10,200})/i;
       const projectMatch = message.match(projectPattern);
       if (projectMatch && projectMatch[1].length > 10) {
-        updated.projects = [
-          ...(updated.projects || []),
-          {
-            title: extractProjectTitle(projectMatch[1]),
-            description: projectMatch[1],
-            technologies: extractTechnologies(projectMatch[1])
-          }
-        ];
+        const technologies = extractTechnologies(projectMatch[1]);
+        const newProject = {
+          title: extractProjectTitle(projectMatch[1]),
+          description: projectMatch[1],
+          technologies
+        };
+        updated.projects = [...(updated.projects || []), newProject];
         extracted = true;
       }
     }
 
-    // Extract skills
     const skillsPattern = /\b(?:Python|JavaScript|React|Node\.js|TypeScript|Java|C\+\+|PHP|Ruby|Go|Swift|Kotlin|Angular|Vue|Svelte|Express|Django|Flask|Laravel|AWS|Azure|GCP|Docker|Kubernetes|GraphQL|REST|SQL|NoSQL|MongoDB|PostgreSQL|MySQL)\b/gi;
     const skills = message.match(skillsPattern);
     if (skills) {
-      updated.skills = [...(updated.skills || []), ...skills.filter((skill, idx, arr) => arr.indexOf(skill) === idx)];
+      const existingSkills = new Set(updated.skills || []);
+      skills.forEach((skill) => existingSkills.add(skill));
+      updated.skills = Array.from(existingSkills);
       extracted = true;
     }
 
-    // Extract achievements
-    if (message.toLowerCase().includes('achievement') || message.toLowerCase().includes('award') || message.toLowerCase().includes('won')) {
-      const achievementText = message;
-      updated.achievements = [...(updated.achievements || []), achievementText];
+    if (lowerMessage.includes('achievement') || lowerMessage.includes('award') || lowerMessage.includes('won')) {
+      updated.achievements = [...(updated.achievements || []), message];
       extracted = true;
     }
 
-    // Extract email
     const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
     const emailMatch = message.match(emailPattern);
     if (!collectedData.email && emailMatch) {
@@ -194,20 +256,21 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
       extracted = true;
     }
 
-    // Extract URLs
     const urlPattern = /https?:\/\/[^\s]+/gi;
     const urls = message.match(urlPattern);
-    if (urls) {
-      updated.links = [...(updated.links || []), ...urls];
+    if (urls && urls.length > 0) {
+      const existingLinks = new Set(updated.links || []);
+      urls.forEach((url) => existingLinks.add(url));
+      updated.links = Array.from(existingLinks);
       extracted = true;
     }
 
-    // Extract experience
-    if (message.toLowerCase().includes('experience') || message.toLowerCase().includes('worked') || message.toLowerCase().includes('years')) {
-      const expText = message;
-      if (!updated.experience) updated.experience = [];
-      updated.experience.push(expText);
-      extracted = true;
+    if (lowerMessage.includes('experience') || lowerMessage.includes('worked') || lowerMessage.includes('years')) {
+      const expText = message.trim();
+      if (expText) {
+        updated.experience = [...(updated.experience || []), expText];
+        extracted = true;
+      }
     }
 
     return { updated, extracted };
@@ -220,45 +283,41 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
 
   const extractTechnologies = (text: string): string[] => {
     const techKeywords = ['React', 'Node.js', 'JavaScript', 'Python', 'TypeScript', 'MongoDB', 'PostgreSQL', 'AWS', 'Docker'];
-    return techKeywords.filter(tech => text.includes(tech));
+    return techKeywords.filter((tech) => text.includes(tech));
   };
 
   const handleSend = () => {
     if (!currentInput.trim()) return;
 
-    const userMessage = currentInput;
+    const userMessage = currentInput.trim();
     addMessage('user', userMessage);
 
-    // AI-like intelligence to understand user intent
     const { updated, extracted } = extractInformation(userMessage);
-    
+
     if (extracted) {
       setCollectedData(updated);
     } else {
-      // If no extraction happened, try to understand context
       const lowerMessage = userMessage.toLowerCase();
-      
-      // Check if user is answering questions
+
       if (!updated.name && userMessage.length < 50) {
         updated.name = userMessage;
       } else if (!updated.role && !(updated.professionalBio || updated.bio) && userMessage.length > 20 && userMessage.length < 200) {
-        if (userMessage.includes('http') || userMessage.includes('@')) {
-          // Contains contact info, might be sharing links
-        } else if (userMessage.toLowerCase().includes('engineer') || userMessage.toLowerCase().includes('developer')) {
+        if (lowerMessage.includes('http') || lowerMessage.includes('@')) {
+          // Likely contact info; leave as link parsing
+        } else if (lowerMessage.includes('engineer') || lowerMessage.includes('developer')) {
           updated.role = userMessage;
         } else if (!(updated.professionalBio || updated.bio)) {
           assignBio(updated, userMessage);
         }
       }
-      
+
       setCollectedData(updated);
     }
 
-    // Check for completion signals
+    const lowerMessage = userMessage.toLowerCase();
     const completionSignals = ['ready', 'done', 'build', 'complete', 'finish', 'generate', 'create portfolio'];
-    const isCompleting = completionSignals.some(signal => userMessage.toLowerCase().includes(signal));
+    const isCompleting = completionSignals.some((signal) => lowerMessage.includes(signal));
 
-    // Determine what to ask next based on missing information
     const missingInfo: string[] = [];
     if (!updated.name) missingInfo.push('name');
     if (!updated.role) missingInfo.push('role/profession');
@@ -269,26 +328,25 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
     let assistantResponse = '';
 
     if (isCompleting && (updated.name || updated.role || updated.professionalBio || updated.bio)) {
-      // User wants to complete with what they have
       const bioText = updated.professionalBio || updated.bio || 'A showcase of my work';
-      const completeData = {
+      const completeData: PortfolioCollectedData = {
         ...updated,
         skills: updated.skills || ['JavaScript', 'React', 'Node.js', 'TypeScript'],
-        projects: updated.projects || [
-          { title: 'Portfolio Project', description: bioText, technologies: ['React', 'Node.js'] }
-        ],
-        github: updated.links?.find((link: string) => link.includes('github')),
-        linkedin: updated.links?.find((link: string) => link.includes('linkedin'))
+        projects:
+          updated.projects || [
+            { title: 'Portfolio Project', description: bioText, technologies: ['React', 'Node.js'] }
+          ],
+        github: updated.links?.find((link) => link.includes('github')),
+        linkedin: updated.links?.find((link) => link.includes('linkedin'))
       };
       completeData.professionalBio = updated.professionalBio || updated.bio || '';
       if (!completeData.bio && completeData.professionalBio) {
         completeData.bio = completeData.professionalBio;
       }
-      
+
       simulateTyping('', () => {
         addMessage('assistant', 'Perfect! I have gathered your information. Generating your amazing portfolio website...', 'text');
         setTimeout(() => {
-          // Sync to profile if handler provided
           if (onSyncToProfile) {
             onSyncToProfile(completeData);
           }
@@ -299,14 +357,13 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
       return;
     }
 
-    // Advanced natural conversation responses based on collected data
     const hasName = !!updated.name;
     const hasRole = !!updated.role;
     const hasBio = !!(updated.professionalBio || updated.bio);
     const hasProjects = !!updated.projects && updated.projects.length > 0;
     const hasSkills = !!updated.skills && updated.skills.length > 0;
     const hasExperience = !!updated.experience && updated.experience.length > 0;
-    
+
     if (!hasName) {
       assistantResponse = 'Hi! I am your portfolio assistant. What is your name?';
     } else if (!hasRole) {
@@ -314,17 +371,15 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
     } else if (!hasBio) {
       assistantResponse = `Perfect! As a ${updated.role}, can you tell me about yourself - your passion, experience, and what drives you?`;
     } else if (!hasExperience) {
-      assistantResponse = `Excellent! I would love to hear about your professional experience. Where have you worked and what did you accomplish?`;
+      assistantResponse = 'Excellent! I would love to hear about your professional experience. Where have you worked and what did you accomplish?';
     } else if (!hasProjects) {
-      assistantResponse = `Great background! Tell me about projects you have built or are proud of. What technologies did you use?`;
+      assistantResponse = 'Great background! Tell me about projects you have built or are proud of. What technologies did you use?';
     } else if (!hasSkills) {
-      assistantResponse = `Nice projects! What are your technical skills and areas of expertise?`;
+      assistantResponse = 'Nice projects! What are your technical skills and areas of expertise?';
     } else if (missingInfo.length === 0) {
       assistantResponse = 'Amazing! You have shared a lot of information. Anything else to add, or type "ready" to build your portfolio!';
     } else {
-      assistantResponse = extracted 
-        ? 'Got it! I will include that in your portfolio.' 
-        : 'Tell me more! What else should I know about you?';
+      assistantResponse = extracted ? 'Got it! I will include that in your portfolio.' : 'Tell me more! What else should I know about you?';
     }
 
     simulateTyping('', () => {
@@ -455,8 +510,9 @@ export default function ChatInterface({ onComplete, profileData, initialData, on
               const input = document.createElement('input');
               input.type = 'file';
               input.accept = '.pdf,.doc,.docx';
-              input.onchange = (e: any) => {
-                const file = e.target.files[0];
+              input.onchange = (event: Event) => {
+                const fileInput = event.target as HTMLInputElement | null;
+                const file = fileInput?.files?.[0];
                 if (file) handleResumeUpload(file);
               };
               input.click();
