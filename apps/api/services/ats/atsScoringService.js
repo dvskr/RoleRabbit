@@ -5,11 +5,11 @@ const crypto = require('crypto');
 // ============================================================================
 
 const SCORING_WEIGHTS = Object.freeze({
-  technicalSkills: 0.35,      // Hard technical skills matching
+  technicalSkills: 0.50,      // Hard technical skills matching (INCREASED - most critical!)
   experience: 0.25,            // Work experience relevance and depth
-  education: 0.10,             // Educational background
-  contextualRelevance: 0.15,   // How well keywords appear in context
-  format: 0.10,                // Resume structure and ATS-friendliness
+  education: 0.05,             // Educational background (REDUCED - don't penalize self-taught)
+  contextualRelevance: 0.10,   // How well keywords appear in context (REDUCED)
+  format: 0.05,                // Resume structure and ATS-friendliness (REDUCED - fixable quickly)
   softSkills: 0.05            // Soft skills and leadership qualities
 });
 
@@ -715,9 +715,10 @@ function scoreTechnicalSkills(resumeAnalysis, jobAnalysis) {
     return [...resumeSkills].some(rs => cleanText(rs).includes(skillNorm) || skillNorm.includes(cleanText(rs)));
   });
 
-  // Calculate weighted score: Required (70%), Preferred (30%)
-  const requiredScore = requiredSkills.length > 0 ? (matchedRequired.length / requiredSkills.length) * 70 : 70;
-  const preferredScore = preferredSkills.length > 0 ? (matchedPreferred.length / preferredSkills.length) * 30 : 30;
+  // Calculate weighted score: Required (85%), Preferred (15%)
+  // Missing required skills should heavily penalize the score
+  const requiredScore = requiredSkills.length > 0 ? (matchedRequired.length / requiredSkills.length) * 85 : 85;
+  const preferredScore = preferredSkills.length > 0 ? (matchedPreferred.length / preferredSkills.length) * 15 : 15;
   const totalScore = requiredScore + preferredScore;
 
   return {
@@ -759,8 +760,8 @@ function scoreExperience(resumeAnalysis, jobAnalysis) {
 
   const phraseScore = jobPhrases.length > 0 ? (matchedPhrases.length / jobPhrases.length) * 100 : 50;
 
-  // Combined score: 60% years, 40% phrases
-  const combinedScore = (yearsScore * 0.6) + (phraseScore * 0.4);
+  // Combined score: 80% years (more important), 20% phrases (context)
+  const combinedScore = (yearsScore * 0.8) + (phraseScore * 0.2);
 
   return {
     score: Math.round(combinedScore),
@@ -1040,5 +1041,7 @@ module.exports = {
   extractKeywords,
   scoreResumeAgainstJob,
   analyzeJobDescription,
-  analyzeResume
+  analyzeResume,
+  extractTechnicalSkills,
+  ALL_TECHNICAL_SKILLS
 };

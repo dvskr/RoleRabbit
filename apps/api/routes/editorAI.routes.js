@@ -14,6 +14,7 @@ const {
 const { recordAIRequest, AIUsageError, ensureActionAllowed } = require('../services/ai/usageService');
 const cacheConfig = require('../config/cacheConfig');
 const { scoreResumeAgainstJob, hashJobDescription } = require('../services/ats/atsScoringService');
+const { scoreResumeWorldClass } = require('../services/ats/worldClassATS');
 const { AIAction } = require('@prisma/client');
 const { atsScoreCounter, atsScoreGauge } = require('../observability/metrics');
 
@@ -174,7 +175,14 @@ module.exports = async function editorAIRoutes(fastify) {
           if (!resume.isActive) {
             throw new AIUsageError('You can only run AI features on the active resume.', 400);
           }
-          const analysis = scoreResumeAgainstJob({ resumeData: resume.data, jobDescription });
+          
+          // 🌟 USE WORLD-CLASS ATS SYSTEM (with AI if available)
+          const analysis = await scoreResumeWorldClass({ 
+            resumeData: resume.data, 
+            jobDescription,
+            useAI: true // Enable AI-powered semantic matching
+          });
+          
           analysis.generatedAt = new Date().toISOString();
           analysis.resumeUpdatedAt = resume.updatedAt;
           return analysis;
@@ -224,7 +232,9 @@ module.exports = async function editorAIRoutes(fastify) {
         matchedKeywords: cachedValue.matchedKeywords || [],
         missingKeywords: cachedValue.missingKeywords || [],
         strengths: cachedValue.strengths || [],
-        improvements: cachedValue.improvements || []
+        improvements: cachedValue.improvements || [],
+        actionableTips: cachedValue.actionable_tips || [], // New: World-class actionable tips
+        meta: cachedValue.meta || {} // New: Analysis metadata
       });
     } catch (error) {
       if (error instanceof AIUsageError) {
