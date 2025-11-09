@@ -165,7 +165,21 @@ const toNumberId = (value: string | number | undefined, fallback: number) => {
   return Number.isFinite(num) ? num : fallback;
 };
 
-const normalizeArray = <T>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : []);
+const normalizeArray = <T>(value: T[] | Record<string, T> | undefined | null): T[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    const entries = Object.keys(value)
+      .filter((key) => /^\d+$/.test(key))
+      .sort((a, b) => Number(a) - Number(b))
+      .map((key) => (value as Record<string, T>)[key]);
+    if (entries.length > 0) {
+      return entries;
+    }
+  }
+  return [];
+};
 
 export const mapBaseResumeToEditor = (resume?: Partial<BaseResumeRecord> | null): ResumeSnapshot => {
   const normalizedResume = resume?.data || {};

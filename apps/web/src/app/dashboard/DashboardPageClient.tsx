@@ -39,6 +39,7 @@ import {
   SectionVisibility,
   CustomField
 } from '../../types/resume';
+import type { BaseResumeRecord } from '../../utils/resumeMapper';
 import { useResumeData } from '../../hooks/useResumeData';
 import { useBaseResumes } from '../../hooks/useBaseResumes';
 import { useModals } from '../../hooks/useModals';
@@ -188,9 +189,12 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setSelectedTemplateId(resume?.templateId ?? null);
   }, [setCustomFieldsBase, setSelectedTemplateId]);
 
-  const handleActiveResumeChange = useCallback((id: string | null) => {
+  const handleActiveResumeChange = useCallback(async (id: string | null) => {
     if (id) {
       setCurrentResumeId(id);
+      // Load the active resume data into the editor
+      // Note: we can't call loadResumeById here because resumeDataHook hasn't been initialized yet
+      // The active resume will be loaded by the useEffect below that watches activeId
     }
   }, []);
 
@@ -711,7 +715,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         if (resumeLoading && !currentResumeId && resumes.length === 0) {
           return <Loading message="Loading Resume Editor..." />;
         }
-
+        
         try {
           const resumeContent = isPreviewMode ? (
           <ResumePreview
@@ -809,7 +813,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 </button>
               </div>
             </div>
-          );
+        );
         }
       case 'templates':
         return <Templates 
@@ -981,13 +985,13 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
           <div className={`flex-1 min-h-0 flex ${activeTab === 'editor' ? 'overflow-hidden' : ''}`}>
             <div className={`flex-1 min-h-0 ${activeTab === 'editor' ? 'overflow-hidden' : 'overflow-y-auto'} transition-all duration-300`}>
               {renderActiveComponent()}
-            </div>
+                </div>
 
             {/* AI Panel */}
             {activeTab === 'editor' && (
               <div
                 className="min-h-0 transition-all duration-300 ease-in-out"
-                style={{
+                style={{ 
                   width: showRightPanel ? 360 : 0,
                   opacity: showRightPanel ? 1 : 0,
                   pointerEvents: showRightPanel ? 'auto' : 'none',
@@ -998,37 +1002,37 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               >
                 {showRightPanel && (
                   <div className="h-full overflow-y-auto">
-                    <AIPanel
-                      showRightPanel={showRightPanel}
-                      setShowRightPanel={(show) => {
-                        setShowRightPanel(show);
-                        if (!show) {
-                          // When closing AI panel, always open the main sidebar
-                          setSidebarCollapsed(false);
-                        }
-                      }}
-                      aiMode={aiMode}
-                      setAiMode={setAiMode}
-                      jobDescription={jobDescription}
-                      setJobDescription={setJobDescription}
-                      isAnalyzing={isAnalyzing}
-                      matchScore={matchScore}
-                      showATSScore={showATSScore}
-                      setShowATSScore={setShowATSScore}
-                      matchedKeywords={matchedKeywords}
-                      missingKeywords={missingKeywords}
-                      aiRecommendations={aiRecommendations}
-                      setAiRecommendations={setAiRecommendations}
-                      tailorEditMode={tailorEditMode}
-                      setTailorEditMode={setTailorEditMode}
-                      selectedTone={selectedTone}
-                      setSelectedTone={setSelectedTone}
-                      selectedLength={selectedLength}
-                      setSelectedLength={setSelectedLength}
-                      isMobile={false}
-                      resumeData={resumeData}
-                      onAnalyzeJobDescription={analyzeJobDescription}
-                      onApplyAIRecommendations={applyAIRecommendations}
+                <AIPanel
+                showRightPanel={showRightPanel}
+                setShowRightPanel={(show) => {
+                  setShowRightPanel(show);
+                  if (!show) {
+                    // When closing AI panel, always open the main sidebar
+                    setSidebarCollapsed(false);
+                  }
+                }}
+                aiMode={aiMode}
+                setAiMode={setAiMode}
+                jobDescription={jobDescription}
+                setJobDescription={setJobDescription}
+                isAnalyzing={isAnalyzing}
+                matchScore={matchScore}
+                showATSScore={showATSScore}
+                setShowATSScore={setShowATSScore}
+                matchedKeywords={matchedKeywords}
+                missingKeywords={missingKeywords}
+                aiRecommendations={aiRecommendations}
+                setAiRecommendations={setAiRecommendations}
+                tailorEditMode={tailorEditMode}
+                setTailorEditMode={setTailorEditMode}
+                selectedTone={selectedTone}
+                setSelectedTone={setSelectedTone}
+                selectedLength={selectedLength}
+                setSelectedLength={setSelectedLength}
+                isMobile={false}
+                resumeData={resumeData}
+                onAnalyzeJobDescription={analyzeJobDescription}
+                onApplyAIRecommendations={applyAIRecommendations}
                       onTailorResume={tailorResumeForJob}
                       onGenerateCoverLetter={generateCoverLetterDraft}
                       onGeneratePortfolio={generatePortfolioDraft}
@@ -1041,17 +1045,17 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                       isTailoring={isTailoring}
                       isGeneratingCoverLetter={isGeneratingCoverLetter}
                       isGeneratingPortfolio={isGeneratingPortfolio}
-                      onResumeUpdate={(updatedData) => {
-                        setResumeData(updatedData);
-                        // Add to history for undo/redo
-                        const newHistory = [...history.slice(0, historyIndex + 1), updatedData];
-                        setHistory(newHistory);
-                        setHistoryIndex(newHistory.length - 1);
-                      }}
-                    />
+                onResumeUpdate={(updatedData) => {
+                  setResumeData(updatedData);
+                  // Add to history for undo/redo
+                  const newHistory = [...history.slice(0, historyIndex + 1), updatedData];
+                  setHistory(newHistory);
+                  setHistoryIndex(newHistory.length - 1);
+                }}
+                />
                   </div>
                 )}
-              </div>
+                </div>
             )}
           </div>
         </div>
@@ -1127,6 +1131,30 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onCreateBlank={handleCreateBaseResume}
         slotsUsed={resumes.length}
         maxSlots={maxSlots}
+        onResumeApplied={async (resumeId, resumeRecord) => {
+          try {
+            if (process.env.NODE_ENV !== 'production') {
+              logger.debug('onResumeApplied called', { resumeId, hasRecord: !!resumeRecord });
+            }
+            if (resumeRecord) {
+              if (process.env.NODE_ENV !== 'production') {
+                logger.debug('Applying resume record', { id: resumeRecord.id, dataKeys: Object.keys(resumeRecord.data || {}) });
+              }
+              applyBaseResume(resumeRecord as BaseResumeRecord);
+            } else if (resumeId) {
+              if (process.env.NODE_ENV !== 'production') {
+                logger.debug('Loading resume by ID', { resumeId });
+              }
+              await loadResumeById(resumeId);
+            }
+            if (process.env.NODE_ENV !== 'production') {
+              logger.debug('Resume applied successfully');
+            }
+          } catch (error) {
+            logger.error('Failed to hydrate editor after resume import', error);
+            showToast('Resume applied but the editor could not refresh automatically. Please reopen the editor.', 'error', 6000);
+          }
+        }}
         onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}

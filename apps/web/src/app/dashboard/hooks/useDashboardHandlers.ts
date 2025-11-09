@@ -376,7 +376,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       });
       const analysis = response?.analysis;
       if (analysis) {
-        setMatchScore(analysis.overall ?? 0);
+        setMatchScore(analysis); // Set the full analysis object, not just the score
         setMatchedKeywords(response?.matchedKeywords ?? []);
         setMissingKeywords(response?.missingKeywords ?? []);
         setAiRecommendations(response?.improvements ?? []);

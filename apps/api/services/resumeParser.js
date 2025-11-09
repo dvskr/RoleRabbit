@@ -88,7 +88,8 @@ function inferMimeType(fileName, providedMime) {
 }
 
 async function detectDocumentType(buffer, mimeType) {
-  if (mimeType.includes('wordprocessingml')) {
+  // Primary by mime type
+  if (mimeType && mimeType.includes('wordprocessingml')) {
     return { type: 'DOCX', method: 'TEXT_ONLY' };
   }
 
@@ -106,8 +107,31 @@ async function detectDocumentType(buffer, mimeType) {
     }
   }
 
-  if (mimeType.startsWith('image/')) {
+  if (mimeType && mimeType.startsWith('image/')) {
     return { type: 'IMAGE', method: 'OCR_VISION' };
+  }
+
+  // Heuristics when mime is unknown or incorrect (octet-stream, missing extension, etc.)
+  try {
+    const header4 = buffer.slice(0, 4).toString('utf8');
+    if (header4.startsWith('%PDF')) {
+      // Native PDF signature
+      try {
+        const result = await pdfParse(buffer.slice(0, 200000));
+        const textLength = (result.text || '').trim().length;
+        return textLength > 120
+          ? { type: 'PDF_NATIVE', method: 'TEXT_ONLY' }
+          : { type: 'PDF_SCANNED', method: 'OCR_VISION' };
+      } catch {
+        return { type: 'PDF_SCANNED', method: 'OCR_VISION' };
+      }
+    }
+    // ZIP signature (PK) → likely DOCX
+    if (buffer[0] === 0x50 && buffer[1] === 0x4B) {
+      return { type: 'DOCX', method: 'TEXT_ONLY' };
+    }
+  } catch (e) {
+    // ignore heuristic errors
   }
 
   return { type: 'UNKNOWN', method: 'TEXT_ONLY' };

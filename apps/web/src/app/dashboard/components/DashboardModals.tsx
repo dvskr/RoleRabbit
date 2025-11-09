@@ -100,6 +100,7 @@ interface DashboardModalsProps {
   onCreateBlank?: () => Promise<boolean | void> | boolean | void;
   slotsUsed?: number;
   maxSlots?: number;
+  onResumeApplied?: (resumeId: string, resumeRecord?: any) => void;
   onAddSection: () => void;
   onOpenAIGenerateModal: (section: string) => void;
   onAddField: () => void;
@@ -180,6 +181,7 @@ export function DashboardModals(props: DashboardModalsProps) {
     onCreateBlank,
     slotsUsed,
     maxSlots,
+    onResumeApplied,
     onAddSection,
     onOpenAIGenerateModal,
     onAddField,
@@ -223,6 +225,7 @@ export function DashboardModals(props: DashboardModalsProps) {
         onCreateBlank={onCreateBlank}
         slotsUsed={slotsUsed}
         maxSlots={maxSlots}
+        onResumeApplied={onResumeApplied}
       />
 
       {/* Add Custom Section Modal */}

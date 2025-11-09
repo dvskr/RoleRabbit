@@ -34,6 +34,9 @@ export default function JobDescriptionInput({
   onATSAnalysis,
   onApplyImprovements
 }: JobDescriptionInputProps) {
+  const MIN_CHARS = 10; // must match backend validation
+  const jdLength = (jobDescription || '').trim().length;
+  const meetsMin = jdLength >= MIN_CHARS;
   return (
     <div>
       <label htmlFor="job-description-input" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
@@ -62,12 +65,17 @@ export default function JobDescriptionInput({
         }}
       />
       <div className="flex justify-between items-center mt-2">
-        <span className="text-xs" style={{ color: colors.tertiaryText }}>
-          {jobDescription.length} characters
-        </span>
+        <div className="text-xs">
+          <span style={{ color: colors.tertiaryText }}>{jobDescription.length} characters</span>
+          {!meetsMin && (
+            <span className="ml-2" style={{ color: '#dc2626' }}>
+              min {MIN_CHARS} characters
+            </span>
+          )}
+        </div>
         <button
           onClick={showApplyButton && !isApplied ? onApplyImprovements : onATSAnalysis}
-          disabled={(!jobDescription.trim() || isAnalyzing || !resumeData || isApplying) && !isApplied}
+          disabled={(!meetsMin || isAnalyzing || !resumeData || isApplying) && !isApplied}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
             isApplied 
               ? 'bg-green-600 text-white cursor-default' 

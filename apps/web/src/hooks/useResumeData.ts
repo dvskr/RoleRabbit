@@ -282,7 +282,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     setHasChanges(false);
     setSaveError(null);
   }, [runWithoutTracking, setHasChanges, setSaveError]);
- 
+
   const applyBaseResume = useCallback((record?: BaseResumeRecord | null) => {
     const snapshot = mapBaseResumeToEditor(record);
     applySnapshot(snapshot);
@@ -302,12 +302,12 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     setLastSavedAt,
     setHasChanges,
   ]);
- 
+
   const loadResumeById = useCallback(async (id: string) => {
     if (!id) {
       return null;
     }
- 
+
     setIsLoading(true);
     try {
       const response = await apiService.getBaseResume(id);
@@ -401,19 +401,19 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         setSaveError(null);
 
         const editorState = {
-          resumeData: resumeDataRef.current,
-          sectionOrder: sectionOrderRef.current,
-          sectionVisibility: sectionVisibilityRef.current,
-          customSections: customSectionsRef.current,
-          formatting: {
-            fontFamily: fontFamilyRef.current,
-            fontSize: fontSizeRef.current,
-            lineSpacing: lineSpacingRef.current,
-            sectionSpacing: sectionSpacingRef.current,
-            margins: marginsRef.current,
-            headingStyle: headingStyleRef.current,
+            resumeData: resumeDataRef.current,
+            sectionOrder: sectionOrderRef.current,
+            sectionVisibility: sectionVisibilityRef.current,
+            customSections: customSectionsRef.current,
+            formatting: {
+              fontFamily: fontFamilyRef.current,
+              fontSize: fontSizeRef.current,
+              lineSpacing: lineSpacingRef.current,
+              sectionSpacing: sectionSpacingRef.current,
+              margins: marginsRef.current,
+              headingStyle: headingStyleRef.current,
             bulletStyle: bulletStyleRef.current
-          },
+            },
           customFields: [] as CustomField[],
           name: resumeFileNameRef.current
         };
@@ -457,7 +457,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           const fileName = resumeFileNameRef.current && resumeFileNameRef.current.trim().length > 0
             ? resumeFileNameRef.current.trim()
             : 'Untitled Resume';
-
+          
           logger.info('Creating new base resume during auto-save', { fileName });
           try {
             const response = await apiService.createBaseResume({
@@ -494,7 +494,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         }
       } catch (error) {
         logger.error('Auto-save failed:', error);
-
+        
         const isNetworkError =
           (typeof error === 'object' &&
             error !== null &&
@@ -509,7 +509,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
             (error as { statusCode?: number }).statusCode === 0)
           ||
           !isOnline();
-
+        
         if (isNetworkError && currentResumeId) {
           const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
           offlineQueue.add(

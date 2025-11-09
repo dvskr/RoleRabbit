@@ -150,7 +150,7 @@ fastify.register(require('@fastify/helmet'), {
 fastify.register(require('@fastify/cors'), {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 });
 
@@ -403,7 +403,7 @@ const start = async () => {
       reply.header('Content-Type', metrics.register.contentType);
       return metrics.register.metrics();
     });
-
+    
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || 'localhost';
     

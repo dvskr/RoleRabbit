@@ -23,18 +23,118 @@ const {
 const { scoreResumeAgainstJob } = require('../ats/atsScoringService');
 const logger = require('../../utils/logger');
 
+/**
+ * Normalize resume data to ensure arrays are arrays and not objects with numeric keys
+ */
+function normalizeResumeData(data) {
+  if (!data || typeof data !== 'object') return data;
+  
+  const normalized = JSON.parse(JSON.stringify(data));
+  
+  // Normalize metadata.sectionOrder
+  if (normalized.metadata?.sectionOrder && typeof normalized.metadata.sectionOrder === 'object' && !Array.isArray(normalized.metadata.sectionOrder)) {
+    normalized.metadata.sectionOrder = Object.values(normalized.metadata.sectionOrder);
+  }
+  
+  // Normalize skills
+  if (normalized.skills) {
+    if (normalized.skills.technical && typeof normalized.skills.technical === 'object' && !Array.isArray(normalized.skills.technical)) {
+      normalized.skills.technical = Object.values(normalized.skills.technical);
+    }
+    if (normalized.skills.soft && typeof normalized.skills.soft === 'object' && !Array.isArray(normalized.skills.soft)) {
+      normalized.skills.soft = Object.values(normalized.skills.soft);
+    }
+    if (normalized.skills.tools && typeof normalized.skills.tools === 'object' && !Array.isArray(normalized.skills.tools)) {
+      normalized.skills.tools = Object.values(normalized.skills.tools);
+    }
+  }
+  
+  // Normalize experience
+  if (normalized.experience && typeof normalized.experience === 'object' && !Array.isArray(normalized.experience)) {
+    normalized.experience = Object.values(normalized.experience);
+  }
+  if (Array.isArray(normalized.experience)) {
+    normalized.experience = normalized.experience.map(exp => {
+      if (exp.bullets && typeof exp.bullets === 'object' && !Array.isArray(exp.bullets)) {
+        exp.bullets = Object.values(exp.bullets);
+      }
+      if (exp.responsibilities && typeof exp.responsibilities === 'object' && !Array.isArray(exp.responsibilities)) {
+        exp.responsibilities = Object.values(exp.responsibilities);
+      }
+      if (exp.technologies && typeof exp.technologies === 'object' && !Array.isArray(exp.technologies)) {
+        exp.technologies = Object.values(exp.technologies);
+      }
+      return exp;
+    });
+  }
+  
+  // Normalize projects
+  if (normalized.projects && typeof normalized.projects === 'object' && !Array.isArray(normalized.projects)) {
+    normalized.projects = Object.values(normalized.projects);
+  }
+  if (Array.isArray(normalized.projects)) {
+    normalized.projects = normalized.projects.map(proj => {
+      if (proj.technologies && typeof proj.technologies === 'object' && !Array.isArray(proj.technologies)) {
+        proj.technologies = Object.values(proj.technologies);
+      }
+      if (proj.bullets && typeof proj.bullets === 'object' && !Array.isArray(proj.bullets)) {
+        proj.bullets = Object.values(proj.bullets);
+      }
+      if (proj.skills && typeof proj.skills === 'object' && !Array.isArray(proj.skills)) {
+        proj.skills = Object.values(proj.skills);
+      }
+      return proj;
+    });
+  }
+  
+  // Normalize education
+  if (normalized.education && typeof normalized.education === 'object' && !Array.isArray(normalized.education)) {
+    normalized.education = Object.values(normalized.education);
+  }
+  if (Array.isArray(normalized.education)) {
+    normalized.education = normalized.education.map(edu => {
+      if (edu.bullets && typeof edu.bullets === 'object' && !Array.isArray(edu.bullets)) {
+        edu.bullets = Object.values(edu.bullets);
+      }
+      return edu;
+    });
+  }
+  
+  // Normalize certifications
+  if (normalized.certifications && typeof normalized.certifications === 'object' && !Array.isArray(normalized.certifications)) {
+    normalized.certifications = Object.values(normalized.certifications);
+  }
+  
+  return normalized;
+}
+
 function parseJsonResponse(rawText, description) {
   if (!rawText) {
+    logger.error(`${description} response was empty`);
     throw new Error(`${description} response was empty.`);
   }
   try {
     const jsonStart = rawText.indexOf('{');
     const jsonEnd = rawText.lastIndexOf('}');
     if (jsonStart === -1 || jsonEnd === -1 || jsonEnd <= jsonStart) {
+      logger.error(`No JSON payload found in ${description} response`, {
+        responseLength: rawText.length,
+        responsePreview: rawText.substring(0, 200)
+      });
       throw new Error('No JSON payload found');
     }
-    return JSON.parse(rawText.slice(jsonStart, jsonEnd + 1));
+    const jsonString = rawText.slice(jsonStart, jsonEnd + 1);
+    logger.info(`Attempting to parse JSON for ${description}`, {
+      jsonLength: jsonString.length,
+      jsonPreview: jsonString.substring(0, 200)
+    });
+    return JSON.parse(jsonString);
   } catch (error) {
+    logger.error(`Failed to parse ${description} response`, {
+      error: error.message,
+      rawTextLength: rawText?.length,
+      rawTextPreview: rawText?.substring(0, 500)
+    });
     throw new Error(`Failed to parse ${description} response: ${error.message}`);
   }
 }
@@ -92,10 +192,27 @@ async function tailorResume({
   });
 
   try {
+    logger.info('Starting AI tailoring', {
+      userId: user.id,
+      resumeId,
+      mode: tailorMode,
+      tone,
+      length,
+      promptLength: prompt.length
+    });
+
     const response = await generateText(prompt, {
       model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
       temperature: 0.3,
-      max_tokens: tailorMode === TailorMode.FULL ? 1600 : 1100
+      max_tokens: tailorMode === TailorMode.FULL ? 1600 : 1100,
+      timeout: 120000, // 2 minutes timeout
+      userId: user.id
+    });
+
+    logger.info('AI tailoring response received', {
+      userId: user.id,
+      responseLength: response.text?.length || 0,
+      tokensUsed: response.usage?.total_tokens
     });
 
     const payload = parseJsonResponse(response.text, 'tailor resume');
@@ -112,7 +229,10 @@ async function tailorResume({
       payload.warnings = [];
     }
 
-    const atsAfter = scoreResumeAgainstJob({ resumeData: payload.tailoredResume, jobDescription });
+    // Normalize the tailored resume data to convert objects with numeric keys to arrays
+    const normalizedTailoredResume = normalizeResumeData(payload.tailoredResume);
+
+    const atsAfter = scoreResumeAgainstJob({ resumeData: normalizedTailoredResume, jobDescription });
 
     const tailoredVersion = await prisma.tailoredVersion.create({
       data: {
@@ -123,7 +243,7 @@ async function tailorResume({
         jobDescriptionHash: atsAfter.jobDescriptionHash,
         mode: tailorMode,
         tone,
-        data: payload.tailoredResume,
+        data: normalizedTailoredResume,
         diff: payload.diff,
         atsScoreBefore: atsBefore.overall,
         atsScoreAfter: atsAfter.overall
@@ -166,7 +286,7 @@ async function tailorResume({
 
     return {
       tailoredVersion,
-      tailoredResume: payload.tailoredResume,
+      tailoredResume: normalizedTailoredResume,
       diff: payload.diff,
       recommendedKeywords: payload.recommendedKeywords,
       warnings: payload.warnings,
@@ -213,10 +333,25 @@ async function applyRecommendations({
   const stopTimer = aiActionLatency.startTimer({ action: 'apply_recommendations', model: 'gpt-4o-mini' });
 
   try {
+    logger.info('Starting apply recommendations', {
+      userId: user.id,
+      resumeId,
+      focusAreas: focusAreas?.length || 0,
+      promptLength: prompt.length
+    });
+
     const response = await generateText(prompt, {
       model: 'gpt-4o-mini',
       temperature: 0.25,
-      max_tokens: 1000
+      max_tokens: 1000,
+      timeout: 90000, // 90 seconds timeout
+      userId: user.id
+    });
+
+    logger.info('Apply recommendations response received', {
+      userId: user.id,
+      responseLength: response.text?.length || 0,
+      tokensUsed: response.usage?.total_tokens
     });
 
     const payload = parseJsonResponse(response.text, 'apply recommendations');
@@ -225,10 +360,13 @@ async function applyRecommendations({
       throw new Error('Apply recommendations response missing updatedResume payload');
     }
 
+    // Normalize the updated resume data to convert objects with numeric keys to arrays
+    const normalizedUpdatedResume = normalizeResumeData(updatedResume);
+
     const updatedRecord = await prisma.baseResume.update({
       where: { id: resume.id },
       data: {
-        data: updatedResume,
+        data: normalizedUpdatedResume,
         lastAIAccessedAt: new Date()
       },
       select: { id: true, userId: true, data: true, metadata: true, updatedAt: true, name: true }
@@ -241,7 +379,7 @@ async function applyRecommendations({
       logger.warn('Failed to invalidate caches after applyRecommendations', { error: error.message });
     });
 
-    const atsAfter = scoreResumeAgainstJob({ resumeData: updatedResume, jobDescription });
+    const atsAfter = scoreResumeAgainstJob({ resumeData: normalizedUpdatedResume, jobDescription });
 
     await recordAIRequest({
       userId: user.id,
@@ -319,10 +457,26 @@ async function generateCoverLetter({
   const stopTimer = aiActionLatency.startTimer({ action: 'cover_letter', model: 'gpt-4o-mini' });
 
   try {
+    logger.info('Starting cover letter generation', {
+      userId: user.id,
+      resumeId,
+      jobTitle,
+      company,
+      promptLength: prompt.length
+    });
+
     const response = await generateText(prompt, {
       model: 'gpt-4o-mini',
       temperature: 0.3,
-      max_tokens: 900
+      max_tokens: 900,
+      timeout: 90000, // 90 seconds timeout
+      userId: user.id
+    });
+
+    logger.info('Cover letter response received', {
+      userId: user.id,
+      responseLength: response.text?.length || 0,
+      tokensUsed: response.usage?.total_tokens
     });
 
     const payload = parseJsonResponse(response.text, 'cover letter generation');
@@ -401,10 +555,24 @@ async function generatePortfolio({
   const stopTimer = aiActionLatency.startTimer({ action: 'portfolio', model: 'gpt-4o-mini' });
 
   try {
+    logger.info('Starting portfolio generation', {
+      userId: user.id,
+      resumeId,
+      promptLength: prompt.length
+    });
+
     const response = await generateText(prompt, {
       model: 'gpt-4o-mini',
       temperature: 0.3,
-      max_tokens: 1000
+      max_tokens: 1000,
+      timeout: 90000, // 90 seconds timeout
+      userId: user.id
+    });
+
+    logger.info('Portfolio response received', {
+      userId: user.id,
+      responseLength: response.text?.length || 0,
+      tokensUsed: response.usage?.total_tokens
     });
 
     const payload = parseJsonResponse(response.text, 'portfolio generation');

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import type { TailorResult, CoverLetterDraft, PortfolioDraft } from '../types/ai';
+import type { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../types/ai';
 
 // AI state hook
 export const useAI = () => {
   const [aiMode, setAiMode] = useState('tailor');
   const [jobDescription, setJobDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [matchScore, setMatchScore] = useState(0);
+  const [matchScore, setMatchScore] = useState<ATSAnalysisResult | null>(null);
   const [showATSScore, setShowATSScore] = useState(false);
   const [matchedKeywords, setMatchedKeywords] = useState<string[]>([]);
   const [missingKeywords, setMissingKeywords] = useState<string[]>([]);

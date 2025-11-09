@@ -42,31 +42,82 @@ async function generateText(prompt, options = {}) {
     throw new Error('OpenAI not configured. Please set OPENAI_API_KEY environment variable.');
   }
   
-  const response = await openaiClient.chat.completions.create({
-    model: options.model || 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: options.temperature || 0.7,
-    max_tokens: options.max_tokens || 1000,
-    ...options
+  const model = options.model || 'gpt-4o-mini';
+  const timeout = options.timeout || 90000; // 90 seconds default
+  
+  // Remove timeout from options before passing to OpenAI
+  const {timeout: _, ...openAIOptions} = options;
+  
+  logger.info(`Generating text with OpenAI`, {
+    model,
+    promptLength: prompt.length,
+    maxTokens: options.max_tokens || 1000
   });
   
-  const usage = response.usage;
-  
-  // Track usage if userId provided
-  if (options.userId) {
-    await trackUsage(options.userId, {
-      endpoint: 'chat/completions',
-      model: options.model || 'gpt-4o-mini',
-      tokens: usage.total_tokens,
-      cost: calculateCost(usage.total_tokens, options.model || 'gpt-4o-mini')
+  try {
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`OpenAI request timed out after ${timeout}ms`)), timeout);
     });
+    
+    // Create the OpenAI request promise
+    const requestPromise = openaiClient.chat.completions.create({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: openAIOptions.temperature || 0.7,
+      max_tokens: openAIOptions.max_tokens || 1000
+    });
+    
+    // Race between timeout and actual request
+    const response = await Promise.race([requestPromise, timeoutPromise]);
+    
+    const usage = response.usage;
+    
+    logger.info(`OpenAI response received`, {
+      model: response.model,
+      tokensUsed: usage.total_tokens,
+      promptTokens: usage.prompt_tokens,
+      completionTokens: usage.completion_tokens
+    });
+    
+    // Track usage if userId provided
+    if (openAIOptions.userId) {
+      await trackUsage(openAIOptions.userId, {
+        endpoint: 'chat/completions',
+        model: response.model,
+        tokens: usage.total_tokens,
+        cost: calculateCost(usage.total_tokens, response.model)
+      });
+    }
+    
+    return {
+      text: response.choices[0].message.content,
+      usage,
+      model: response.model
+    };
+  } catch (error) {
+    logger.error(`OpenAI generation failed`, {
+      error: error.message,
+      model,
+      promptLength: prompt.length
+    });
+    
+    // Provide more specific error messages
+    if (error.message.includes('timed out')) {
+      throw new Error(`AI service timed out. Please try again or use a shorter job description.`);
+    }
+    if (error.code === 'insufficient_quota') {
+      throw new Error('OpenAI API quota exceeded. Please check your billing.');
+    }
+    if (error.code === 'rate_limit_exceeded') {
+      throw new Error('OpenAI rate limit exceeded. Please try again in a moment.');
+    }
+    if (error.code === 'invalid_api_key') {
+      throw new Error('OpenAI API key is invalid. Please check configuration.');
+    }
+    
+    throw new Error(`AI generation failed: ${error.message}`);
   }
-  
-  return {
-    text: response.choices[0].message.content,
-    usage,
-    model: response.model
-  };
 }
 
 /**
