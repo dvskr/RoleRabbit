@@ -79,6 +79,9 @@ const fastify = require('fastify')({
 // Custom logger
 const logger = require('./utils/logger');
 
+// Observability
+const metrics = require('./observability/metrics');
+
 // Security utilities
 const { sanitizeInput, getRateLimitConfig } = require('./utils/security');
 
@@ -147,7 +150,7 @@ fastify.register(require('@fastify/helmet'), {
 fastify.register(require('@fastify/cors'), {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 });
 
@@ -201,14 +204,16 @@ fastify.addHook('preHandler', async (request, reply) => {
   
   if (cookieToken && !authHeader) {
     request.headers.authorization = `Bearer ${cookieToken}`;
-    // Debug log (remove in production)
+    // Debug log (development only)
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
+      const logger = require('./utils/logger');
+      logger.debug(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
     }
   } else if (!cookieToken && !authHeader) {
-    // Debug log
+    // Debug log (development only)
     if (process.env.NODE_ENV !== 'production' && !request.url.includes('/health') && !request.url.includes('/api/status')) {
-      console.log(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
+      const logger = require('./utils/logger');
+      logger.debug(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
     }
   }
 });
@@ -292,6 +297,10 @@ fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
 fastify.register(require('./routes/resume.routes'));
+fastify.register(require('./routes/baseResume.routes'));
+fastify.register(require('./routes/editorAI.routes'));
+fastify.register(require('./routes/jobs.routes'));
+fastify.register(require('./routes/coverLetters.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -389,6 +398,11 @@ const start = async () => {
     if (!dbConnected) {
       logger.error('❌ Failed to connect to database after multiple attempts. Server will continue but database operations may fail.');
     }
+    
+    fastify.get('/metrics', async (request, reply) => {
+      reply.header('Content-Type', metrics.register.contentType);
+      return metrics.register.metrics();
+    });
     
     const port = parseInt(process.env.PORT || '3001');
     const host = process.env.HOST || 'localhost';

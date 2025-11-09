@@ -1,21 +1,44 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Download, Globe, Share2, CheckCircle, Package, ExternalLink, Copy } from 'lucide-react';
+import { Download, Globe, Share2, CheckCircle, Package, ExternalLink } from 'lucide-react';
+
+interface ProjectExportData {
+  title?: string;
+  description?: string;
+  technologies?: string[];
+}
+
+interface PortfolioExportData {
+  name?: string;
+  profilePic?: string;
+  role?: string;
+  professionalBio?: string;
+  bio?: string;
+  email?: string;
+  github?: string;
+  linkedin?: string;
+  website?: string;
+  projects?: ProjectExportData[];
+  [key: string]: unknown;
+}
+
+type HostingOption = 'export' | 'roleready' | 'custom';
 
 interface PublishStepProps {
-  portfolioData: any;
+  portfolioData: PortfolioExportData | null;
   onExport?: () => void;
 }
 
 export default function PublishStep({ portfolioData, onExport }: PublishStepProps) {
-  const [hostingOption, setHostingOption] = useState<'export' | 'roleready' | 'custom'>('export');
+  const [hostingOption, setHostingOption] = useState<HostingOption>('export');
   const [subdomain, setSubdomain] = useState('');
   const [customDomain, setCustomDomain] = useState('');
-  const [isExported, setIsExported] = useState(false);
 
   const handleExport = () => {
-    if (!portfolioData) return;
+    if (!portfolioData) {
+      return;
+    }
     
     // Generate files
     const htmlContent = generatePortfolioHTML(portfolioData);
@@ -42,10 +65,13 @@ export default function PublishStep({ portfolioData, onExport }: PublishStepProp
       URL.revokeObjectURL(url);
     });
     
-    setIsExported(true);
+    onExport?.();
   };
 
-  const generatePortfolioHTML = (data: any) => {
+  const ensureProjects = (projects?: ProjectExportData[]): ProjectExportData[] =>
+    Array.isArray(projects) ? projects : [];
+
+  const generatePortfolioHTML = (data: PortfolioExportData): string => {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,7 +85,7 @@ export default function PublishStep({ portfolioData, onExport }: PublishStepProp
         <!-- Header -->
         <section class="hero">
             <div class="container">
-                ${data.profilePic ? `<img src="${data.profilePic}" alt="${data.name}" class="profile-pic">` : ''}
+                ${data.profilePic ? `<img src="${data.profilePic}" alt="${data.name || 'Profile picture'}" class="profile-pic">` : ''}
                 <h1 class="title">${data.name || 'Your Name'}</h1>
                 <p class="subtitle">${data.role || 'Your Title'}</p>
                 <p class="bio">${data.professionalBio || data.bio || 'Your bio'}</p>
@@ -78,7 +104,7 @@ export default function PublishStep({ portfolioData, onExport }: PublishStepProp
             <div class="container">
                 <h2>Projects</h2>
                 <div class="project-grid">
-                    ${data.projects?.map((project: any) => `
+                    ${ensureProjects(data.projects).map((project) => `
                         <div class="project-card">
                             <h3>${project.title || 'Project'}</h3>
                             <p>${project.description || ''}</p>
@@ -97,7 +123,7 @@ export default function PublishStep({ portfolioData, onExport }: PublishStepProp
 </html>`;
   };
 
-  const generatePortfolioCSS = (data: any) => {
+  const generatePortfolioCSS = (_data: PortfolioExportData): string => {
     return `* {
     margin: 0;
     padding: 0;
@@ -210,7 +236,7 @@ body {
 }`;
   };
 
-  const generatePortfolioJS = () => {
+  const generatePortfolioJS = (): string => {
     return `// Smooth scroll
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
@@ -256,6 +282,7 @@ document.querySelectorAll('.project-card').forEach(card => {
           <div className="space-y-4 mb-8">
             {/* Export ZIP */}
             <button
+              type="button"
               onClick={() => setHostingOption('export')}
               className={`w-full p-6 border-2 rounded-xl text-left transition-all ${
                 hostingOption === 'export' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
@@ -274,6 +301,7 @@ document.querySelectorAll('.project-card').forEach(card => {
 
             {/* RoleReady Hosting */}
             <button
+              type="button"
               onClick={() => setHostingOption('roleready')}
               className={`w-full p-6 border-2 rounded-xl text-left transition-all ${
                 hostingOption === 'roleready' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
@@ -292,6 +320,7 @@ document.querySelectorAll('.project-card').forEach(card => {
 
             {/* Custom Domain */}
             <button
+              type="button"
               onClick={() => setHostingOption('custom')}
               className={`w-full p-6 border-2 rounded-xl text-left transition-all ${
                 hostingOption === 'custom' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
@@ -312,15 +341,16 @@ document.querySelectorAll('.project-card').forEach(card => {
           {/* Configuration */}
           {hostingOption === 'roleready' && (
             <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Subdomain</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="roleready-subdomain">Subdomain</label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
+                  id="roleready-subdomain"
                   value={subdomain}
                   onChange={(e) => setSubdomain(e.target.value)}
                   placeholder="yourname"
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                />
+                  />
                 <span className="text-gray-600">.roleready.com</span>
               </div>
             </div>
@@ -328,9 +358,10 @@ document.querySelectorAll('.project-card').forEach(card => {
 
           {hostingOption === 'custom' && (
             <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Custom Domain</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="custom-domain">Custom Domain</label>
               <input
                 type="text"
+                id="custom-domain"
                 value={customDomain}
                 onChange={(e) => setCustomDomain(e.target.value)}
                 placeholder="yourdomain.com"
@@ -344,6 +375,7 @@ document.querySelectorAll('.project-card').forEach(card => {
           <div className="space-y-3">
             {hostingOption === 'export' ? (
               <button
+                type="button"
                 onClick={handleExport}
                 className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
@@ -352,6 +384,7 @@ document.querySelectorAll('.project-card').forEach(card => {
               </button>
             ) : hostingOption === 'roleready' ? (
               <button
+                type="button"
                 onClick={() => alert('Hosting on RoleReady - Coming soon!')}
                 className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
@@ -360,6 +393,7 @@ document.querySelectorAll('.project-card').forEach(card => {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={() => alert('Custom domain setup - Coming soon!')}
                 className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
@@ -369,6 +403,7 @@ document.querySelectorAll('.project-card').forEach(card => {
             )}
             
             <button
+              type="button"
               onClick={() => window.open('#', '_blank')}
               className="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
             >

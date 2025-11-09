@@ -1,11 +1,23 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, X } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
+
+type PortfolioTheme = 'light' | 'dark';
+type PortfolioTemplate = 'modern' | 'minimal' | 'creative' | string;
+type PortfolioColor = 'blue' | 'purple' | 'green' | string;
+
+interface PortfolioDataShape {
+  template?: PortfolioTemplate;
+  colorScheme?: PortfolioColor;
+  showAnimations?: boolean;
+  theme?: PortfolioTheme | string;
+  [key: string]: unknown;
+}
 
 interface AICustomizationPanelProps {
-  portfolioData: any;
-  onUpdate: (data: any) => void;
+  portfolioData: PortfolioDataShape;
+  onUpdate: (data: PortfolioDataShape) => void;
 }
 
 export default function AICustomizationPanel({ portfolioData, onUpdate }: AICustomizationPanelProps) {
@@ -34,7 +46,7 @@ export default function AICustomizationPanel({ portfolioData, onUpdate }: AICust
     // Simulate AI understanding and making changes
     setTimeout(() => {
       const lowerInput = input.toLowerCase();
-      let updatedData = { ...portfolioData };
+      const updatedData = { ...portfolioData };
       let response = '';
 
       if (lowerInput.includes('modern') || lowerInput.includes('contemporary')) {

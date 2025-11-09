@@ -3,22 +3,46 @@
 import React, { useEffect, useState } from 'react';
 import { Github, Linkedin, Mail, Briefcase, Award, Code, ExternalLink, Sparkles } from 'lucide-react';
 
+interface ProjectPreview {
+  title?: string;
+  description?: string;
+  technologies?: string[];
+}
+
+interface PortfolioPreviewData {
+  name?: string;
+  role?: string;
+  email?: string;
+  linkedin?: string;
+  github?: string;
+  professionalBio?: string;
+  bio?: string;
+  skills?: Array<string | { name?: string }>;
+  projects?: ProjectPreview[];
+  experience?: string[];
+  achievements?: string[];
+  [key: string]: unknown;
+}
+
 interface AnimatedPreviewProps {
-  portfolioData: any;
+  portfolioData: PortfolioPreviewData;
   template?: 'modern' | 'minimal' | 'creative';
 }
 
 export default function AnimatedPreview({ portfolioData, template = 'modern' }: AnimatedPreviewProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [animateSection, setAnimateSection] = useState(0);
 
   useEffect(() => {
     setIsVisible(true);
-    const timer = setInterval(() => {
-      setAnimateSection(prev => (prev + 1) % 4);
-    }, 1000);
-    return () => clearInterval(timer);
   }, []);
+
+  const backgroundGradients: Record<string, string> = {
+    modern: 'from-gray-900 via-gray-800 to-gray-900',
+    minimal: 'from-slate-900 via-slate-800 to-slate-900',
+    creative: 'from-purple-900 via-indigo-800 to-blue-900'
+  };
+
+  const gradientClass = backgroundGradients[template] ?? backgroundGradients.modern;
 
   const fadeInUp = {
     opacity: isVisible ? 1 : 0,
@@ -27,7 +51,7 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
   };
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8 overflow-y-auto">
+    <div className={`w-full h-full bg-gradient-to-br ${gradientClass} p-8 overflow-y-auto`}>
       {/* Animated Background */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500 rounded-full blur-3xl animate-pulse"></div>
@@ -125,7 +149,9 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
           </div>
           
           <div className="grid md:grid-cols-3 gap-6">
-            {(portfolioData.skills?.length > 0 ? portfolioData.skills : ['JavaScript', 'React', 'Node.js', 'Python', 'AWS', 'Docker']).map((skill: string, index: number) => (
+            {(portfolioData.skills?.length ? portfolioData.skills : ['JavaScript', 'React', 'Node.js', 'Python', 'AWS', 'Docker']).map((skill, index: number) => {
+              const skillLabel = typeof skill === 'string' ? skill : skill?.name || 'Skill';
+              return (
               <div
                 key={index}
                 className="bg-gray-800 p-6 rounded-lg border border-gray-700 hover:border-purple-500 transition-all hover:scale-105"
@@ -138,12 +164,13 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
                     <Code size={24} className="text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold">{skill}</h3>
+                    <h3 className="text-white font-semibold">{skillLabel}</h3>
                     <p className="text-gray-400 text-sm">Expert Level</p>
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </section>
 
@@ -157,7 +184,7 @@ export default function AnimatedPreview({ portfolioData, template = 'modern' }: 
           </div>
           
           <div className="grid md:grid-cols-2 gap-8">
-            {portfolioData.projects?.slice(0, 4).map((project: any, index: number) => (
+            {portfolioData.projects?.slice(0, 4).map((project, index: number) => (
               <div
                 key={index}
                 className="group bg-gray-800 rounded-lg border border-gray-700 hover:border-purple-500 transition-all overflow-hidden hover:scale-105"

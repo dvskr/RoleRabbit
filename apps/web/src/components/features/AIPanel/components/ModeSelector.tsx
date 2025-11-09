@@ -1,13 +1,20 @@
 import React from 'react';
-import { Target, Bot } from 'lucide-react';
+import { Target } from 'lucide-react';
 
-interface ModeSelectorProps {
-  aiMode: string;
-  setAiMode: (mode: string) => void;
-  colors: any;
+interface ModeSelectorColors {
+  inputBackground: string;
+  cardBackground: string;
+  badgePurpleText: string;
+  badgePurpleBorder: string;
+  border: string;
 }
 
-export default function ModeSelector({ aiMode, setAiMode, colors }: ModeSelectorProps) {
+interface ModeSelectorProps {
+  setAiMode: (mode: string) => void;
+  colors: ModeSelectorColors;
+}
+
+export default function ModeSelector({ setAiMode, colors }: ModeSelectorProps) {
   return (
     <div>
       <div className="flex rounded-lg p-1" style={{ background: colors.inputBackground }}>
@@ -15,47 +22,14 @@ export default function ModeSelector({ aiMode, setAiMode, colors }: ModeSelector
           onClick={() => setAiMode('tailor')}
           className="flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all"
           style={{
-            background: aiMode === 'tailor' ? colors.cardBackground : 'transparent',
-            color: aiMode === 'tailor' ? colors.badgePurpleText : colors.secondaryText,
-            border: aiMode === 'tailor' ? `1px solid ${colors.badgePurpleBorder}` : 'none',
-            boxShadow: aiMode === 'tailor' ? `0 1px 2px ${colors.border}20` : 'none',
-          }}
-          onMouseEnter={(e) => {
-            if (aiMode !== 'tailor') {
-              e.currentTarget.style.color = colors.primaryText;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (aiMode !== 'tailor') {
-              e.currentTarget.style.color = colors.secondaryText;
-            }
+            background: colors.cardBackground,
+            color: colors.badgePurpleText,
+            border: `1px solid ${colors.badgePurpleBorder}`,
+            boxShadow: `0 1px 2px ${colors.border}20`,
           }}
         >
           <Target size={14} className="inline mr-1.5" />
           Tailor for Job
-        </button>
-        <button
-          onClick={() => setAiMode('chat')}
-          className="flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all"
-          style={{
-            background: aiMode === 'chat' ? colors.cardBackground : 'transparent',
-            color: aiMode === 'chat' ? colors.badgePurpleText : colors.secondaryText,
-            border: aiMode === 'chat' ? `1px solid ${colors.badgePurpleBorder}` : 'none',
-            boxShadow: aiMode === 'chat' ? `0 1px 2px ${colors.border}20` : 'none',
-          }}
-          onMouseEnter={(e) => {
-            if (aiMode !== 'chat') {
-              e.currentTarget.style.color = colors.primaryText;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (aiMode !== 'chat') {
-              e.currentTarget.style.color = colors.secondaryText;
-            }
-          }}
-        >
-          <Bot size={14} className="inline mr-1.5" />
-          AI Chat
         </button>
       </div>
     </div>

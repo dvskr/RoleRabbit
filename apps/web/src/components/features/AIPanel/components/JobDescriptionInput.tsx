@@ -1,17 +1,25 @@
 import React from 'react';
 import { Shield } from 'lucide-react';
 
+interface PanelColors {
+  primaryText: string;
+  inputBackground: string;
+  border: string;
+  badgePurpleText: string;
+  tertiaryText: string;
+}
+
 interface JobDescriptionInputProps {
   jobDescription: string;
   setJobDescription: (desc: string) => void;
-  colors: any;
+  colors: PanelColors;
   showApplyButton: boolean;
   isApplied: boolean;
   isApplying: boolean;
   isAnalyzing: boolean;
-  resumeData: any;
-  onATSAnalysis: () => void;
-  onApplyImprovements: () => void;
+  resumeData: unknown;
+  onATSAnalysis: () => Promise<any | null> | void;
+  onApplyImprovements: () => Promise<any | null> | void;
 }
 
 export default function JobDescriptionInput({
@@ -26,12 +34,16 @@ export default function JobDescriptionInput({
   onATSAnalysis,
   onApplyImprovements
 }: JobDescriptionInputProps) {
+  const MIN_CHARS = 10; // must match backend validation
+  const jdLength = (jobDescription || '').trim().length;
+  const meetsMin = jdLength >= MIN_CHARS;
   return (
     <div>
-      <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+      <label htmlFor="job-description-input" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
         Job Description
       </label>
       <textarea
+        id="job-description-input"
         value={jobDescription}
         onChange={(e) => setJobDescription(e.target.value)}
         placeholder="Paste the job description here..."
@@ -53,12 +65,17 @@ export default function JobDescriptionInput({
         }}
       />
       <div className="flex justify-between items-center mt-2">
-        <span className="text-xs" style={{ color: colors.tertiaryText }}>
-          {jobDescription.length} characters
-        </span>
+        <div className="text-xs">
+          <span style={{ color: colors.tertiaryText }}>{jobDescription.length} characters</span>
+          {!meetsMin && (
+            <span className="ml-2" style={{ color: '#dc2626' }}>
+              min {MIN_CHARS} characters
+            </span>
+          )}
+        </div>
         <button
           onClick={showApplyButton && !isApplied ? onApplyImprovements : onATSAnalysis}
-          disabled={(!jobDescription.trim() || isAnalyzing || !resumeData || isApplying) && !isApplied}
+          disabled={(!meetsMin || isAnalyzing || !resumeData || isApplying) && !isApplied}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
             isApplied 
               ? 'bg-green-600 text-white cursor-default' 

@@ -45,10 +45,11 @@ export default function ResumeSaveToCloudModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="cloud-resume-name" className="block text-sm font-medium text-gray-700 mb-2">
               Resume Name <span className="text-red-500">*</span>
             </label>
             <input
+              id="cloud-resume-name"
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
@@ -58,10 +59,11 @@ export default function ResumeSaveToCloudModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="cloud-resume-description" className="block text-sm font-medium text-gray-700 mb-2">
               Description
             </label>
             <textarea
+              id="cloud-resume-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe your resume"

@@ -35,27 +35,35 @@ export function PromptInputModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{
-        background: MODAL_STYLES.BACKDROP,
-        backdropFilter: MODAL_STYLES.BACKDROP_FILTER,
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className="rounded-lg shadow-xl w-full max-w-2xl p-6"
+    <>
+      <button
+        type="button"
+        className="fixed inset-0 z-50 border-0 p-0 focus:outline-none"
         style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
+          background: MODAL_STYLES.BACKDROP,
+          backdropFilter: MODAL_STYLES.BACKDROP_FILTER,
         }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
+        onClick={onClose}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onClose();
+          }
+        }}
+        aria-label="Close prompt input modal"
+      />
+      <div className="fixed inset-0 flex items-center justify-center z-[51]">
+        <div
+          className="rounded-lg shadow-xl w-full max-w-2xl p-6"
+          style={{
+            background: colors.cardBackground,
+            border: `1px solid ${colors.border}`,
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="prompt-input-modal-title"
+        >
+        <h3 id="prompt-input-modal-title" className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: colors.primaryText }}>
           <Sparkles size={20} style={{ color: colors.badgePurpleText }} />
           Generate Email from Prompt
         </h3>
@@ -127,8 +135,9 @@ export function PromptInputModal({
             )}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

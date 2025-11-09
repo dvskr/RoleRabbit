@@ -36,15 +36,9 @@ interface ResumeData {
 }
 
 interface AIState {
-  mode: 'assistant' | 'moderator' | 'analyzer';
+  mode: 'tailor' | 'analysis' | 'recommendations';
   isAnalyzing: boolean;
   selectedModel: string;
-  conversation: Array<{
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp: Date;
-  }>;
   recommendations: string[];
 }
 
@@ -78,7 +72,6 @@ interface AppStore {
   setAiMode: (mode: AIState['mode']) => void;
   setIsAnalyzing: (analyzing: boolean) => void;
   setSelectedModel: (model: string) => void;
-  addAIMessage: (role: 'user' | 'assistant', content: string) => void;
   setRecommendations: (recommendations: string[]) => void;
   
   // UI state
@@ -106,10 +99,9 @@ const defaultResumeData: ResumeData = {
 };
 
 const defaultAIState: AIState = {
-  mode: 'assistant',
+  mode: 'tailor',
   isAnalyzing: false,
-  selectedModel: 'gpt-5',
-  conversation: [],
+  selectedModel: 'gpt-4o-mini',
   recommendations: []
 };
 
@@ -149,20 +141,6 @@ export const useAppStore = create<AppStore>()(
         })),
         setSelectedModel: (model) => set((state) => ({
           aiState: { ...state.aiState, selectedModel: model }
-        })),
-        addAIMessage: (role, content) => set((state) => ({
-          aiState: {
-            ...state.aiState,
-            conversation: [
-              ...state.aiState.conversation,
-              {
-                id: Date.now().toString(),
-                role,
-                content,
-                timestamp: new Date()
-              }
-            ]
-          }
         })),
         setRecommendations: (recommendations) => set((state) => ({
           aiState: { ...state.aiState, recommendations }
@@ -221,9 +199,10 @@ export const useAppStore = create<AppStore>()(
           user: state.user,
           resumeData: state.resumeData,
           aiState: {
-            conversation: state.aiState.conversation,
             selectedModel: state.aiState.selectedModel,
-            mode: state.aiState.mode
+            mode: state.aiState.mode,
+            recommendations: state.aiState.recommendations,
+            isAnalyzing: state.aiState.isAnalyzing
           },
           uiState: {
             theme: state.uiState.theme,
@@ -250,7 +229,6 @@ export const useAppActions = () => useAppStore((state) => ({
   setAiMode: state.setAiMode,
   setIsAnalyzing: state.setIsAnalyzing,
   setSelectedModel: state.setSelectedModel,
-  addAIMessage: state.addAIMessage,
   setRecommendations: state.setRecommendations,
   setActiveTab: state.setActiveTab,
   setSidebarCollapsed: state.setSidebarCollapsed,

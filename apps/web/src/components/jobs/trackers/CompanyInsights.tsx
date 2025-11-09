@@ -26,6 +26,14 @@ export default function CompanyInsights({
     date: new Date().toISOString().split('T')[0]
   });
 
+  const fieldIds = {
+    type: `insight-type-${jobId}`,
+    title: `insight-title-${jobId}`,
+    content: `insight-content-${jobId}`,
+    source: `insight-source-${jobId}`,
+    date: `insight-date-${jobId}`
+  } as const;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddInsight(jobId, {
@@ -114,8 +122,9 @@ export default function CompanyInsights({
       {showForm && (
         <form onSubmit={handleSubmit} className="mt-4 p-3 bg-blue-50 rounded-lg space-y-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Type</label>
+            <label htmlFor={fieldIds.type} className="text-xs font-medium text-gray-700 mb-1 block">Type</label>
             <select
+              id={fieldIds.type}
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value as CompanyInsight['type'] })}
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded"
@@ -130,8 +139,9 @@ export default function CompanyInsights({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Title</label>
+            <label htmlFor={fieldIds.title} className="text-xs font-medium text-gray-700 mb-1 block">Title</label>
             <input
+              id={fieldIds.title}
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -142,8 +152,9 @@ export default function CompanyInsights({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Content</label>
+            <label htmlFor={fieldIds.content} className="text-xs font-medium text-gray-700 mb-1 block">Content</label>
             <textarea
+              id={fieldIds.content}
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
               rows={3}
@@ -154,8 +165,9 @@ export default function CompanyInsights({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Source (Optional)</label>
+            <label htmlFor={fieldIds.source} className="text-xs font-medium text-gray-700 mb-1 block">Source (Optional)</label>
             <input
+              id={fieldIds.source}
               type="url"
               value={formData.source}
               onChange={(e) => setFormData({ ...formData, source: e.target.value })}
@@ -165,8 +177,9 @@ export default function CompanyInsights({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
+            <label htmlFor={fieldIds.date} className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
             <input
+              id={fieldIds.date}
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}

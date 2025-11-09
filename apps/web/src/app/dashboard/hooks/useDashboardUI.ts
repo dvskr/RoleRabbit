@@ -11,6 +11,7 @@ import {
   type DashboardTab,
 } from '../constants/dashboard.constants';
 import { mapTabName } from '../utils/dashboardHandlers';
+import { logger } from '../../../utils/logger';
 
 export interface UseDashboardUIReturn {
   activeTab: DashboardTab;
@@ -54,7 +55,9 @@ const normalizeTab = (tab?: string | null): DashboardTab | null => {
 
 const updateUrlTabParam = (tab: DashboardTab) => {
   if (typeof window === 'undefined') return;
+  if (!window.location) return;
 
+  try {
   const params = new URLSearchParams(window.location.search);
   const currentTab = params.get('tab');
   if (currentTab === tab) return;
@@ -63,6 +66,9 @@ const updateUrlTabParam = (tab: DashboardTab) => {
   const queryString = params.toString();
   const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
   window.history.replaceState(null, '', newUrl);
+  } catch (error) {
+    logger.error('Error updating URL tab param:', error);
+  }
 };
 
 export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn {
@@ -81,7 +87,9 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
   // Initialize tab from URL/localStorage after hydration
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!window.location) return;
 
+    try {
     const params = new URLSearchParams(window.location.search);
     const tabFromUrl = normalizeTab(params.get('tab'));
     if (tabFromUrl) {
@@ -89,7 +97,6 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
       return;
     }
 
-    try {
       const saved = window.localStorage.getItem('dashboard_activeTab');
       const savedTab = normalizeTab(saved);
       if (savedTab) {
@@ -97,19 +104,24 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
         updateUrlTabParam(savedTab);
       }
     } catch (error) {
-      console.error('Error reading dashboard tab from localStorage:', error);
+      logger.error('Error reading dashboard tab from URL/localStorage:', error);
     }
   }, []);
 
   // Listen for browser navigation (back/forward)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (!window.location) return;
 
     const handlePopState = () => {
+      try {
       const params = new URLSearchParams(window.location.search);
       const tabFromUrl = normalizeTab(params.get('tab'));
       if (tabFromUrl) {
         setActiveTab((prev) => (prev === tabFromUrl ? prev : tabFromUrl));
+        }
+      } catch (error) {
+        logger.error('Error handling popstate:', error);
       }
     };
 
@@ -125,7 +137,7 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
       window.localStorage.setItem('dashboard_activeTab', activeTab);
       document.cookie = `dashboardTab=${activeTab}; path=/; max-age=31536000; SameSite=Lax`;
     } catch (error) {
-      console.error('Error persisting dashboard tab state:', error);
+      logger.error('Error persisting dashboard tab state:', error);
     }
 
     updateUrlTabParam(activeTab);

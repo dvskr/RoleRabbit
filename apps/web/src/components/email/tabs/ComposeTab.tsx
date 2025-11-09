@@ -4,36 +4,13 @@ import React, { useState } from 'react';
 import { Sparkles, Bot } from 'lucide-react';
 import EmailComposer from '../components/EmailComposer';
 import AIGenerator from '../components/AIGenerator';
-import { EmailDraft, AIContext } from '../types/email';
+import type { EmailData } from '../components/EmailComposerAI/types/EmailComposerAI.types';
 import { logger } from '../../../utils/logger';
 
 export default function ComposeTab() {
   const [showAIGenerator, setShowAIGenerator] = useState(false);
-  const [draft, setDraft] = useState<EmailDraft>({
-    id: '1',
-    toEmail: '',
-    cc: [],
-    bcc: [],
-    subject: '',
-    body: '',
-    attachments: [],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  });
-
-  const [aiContext, setAIContext] = useState<AIContext>({
-    mode: 'generate',
-    tone: 'professional',
-    length: 'medium'
-  });
-
-  const [aiPrompt, setAiPrompt] = useState('');
-
-  const handleDraftChange = (changes: Partial<EmailDraft>) => {
-    setDraft((prev: EmailDraft) => ({ ...prev, ...changes }));
-  };
-
-  const handleSend = async (emailData: any) => {
+ 
+  const handleSend = async (emailData: EmailData) => {
     try {
       const response = await fetch('http://localhost:3001/api/emails/send', {
         method: 'POST',
@@ -55,43 +32,14 @@ export default function ComposeTab() {
       const data = await response.json();
       logger.info('Email sent:', data);
       
-      // Reset form
       handleCancel();
     } catch (error) {
       logger.error('Failed to send email:', error);
     }
   };
-
-  const handleSave = () => {
-    console.log('Saving draft:', draft);
-    // In real app, this would save the draft
-  };
-
+ 
   const handleCancel = () => {
-    setDraft({
-      id: '1',
-      toEmail: '',
-      cc: [],
-      bcc: [],
-      subject: '',
-      body: '',
-      attachments: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-  };
-
-  const handleAIGenerate = (content: string) => {
-    setDraft(prev => ({
-      ...prev,
-      content: content,
-      aiGenerated: true
-    }));
-    setShowAIGenerator(false);
-  };
-
-  const handleAIContextChange = (changes: Partial<AIContext>) => {
-    setAIContext(prev => ({ ...prev, ...changes }));
+    logger.info('Composer canceled');
   };
 
   return (

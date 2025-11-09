@@ -8,9 +8,7 @@ import {
   ChevronDown,
   LogOut,
   Moon,
-  Sun,
-  Maximize2,
-  Minimize2
+  Sun
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { RabbitLogoWithText } from '../ui/RabbitLogo';
@@ -41,7 +39,7 @@ const UserMenu = memo(({
   onShowProfile, 
   onLogout 
 }: { 
-  user: any; 
+  user?: { firstName?: string | null } | null; 
   onShowProfile: () => void; 
   onLogout: () => void; 
 }) => {
@@ -150,10 +148,9 @@ const Header = memo<HeaderProps>(({
   }, [theme, setTheme]);
 
   const handleLogout = useCallback(() => {
-    // Implement logout logic
-    console.log('Logout clicked');
+    // Logout handling should be provided by parent via the store/action layer.
+    // Placeholder keeps lint satisfied without side effects.
   }, []);
-
   return (
     <header className={headerClasses}>
       {/* Left Section */}

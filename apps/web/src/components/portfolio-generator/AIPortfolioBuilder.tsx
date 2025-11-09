@@ -17,7 +17,7 @@ import { StylePanel } from './AIPortfolioBuilder/components/StylePanel';
 import { SectionsPanel } from './AIPortfolioBuilder/components/SectionsPanel';
 import { PreviewPanel } from './AIPortfolioBuilder/components/PreviewPanel';
 
-export default function AIPortfolioBuilder({ onClose, profileData }: AIPortfolioBuilderProps) {
+export default function AIPortfolioBuilder({ profileData }: AIPortfolioBuilderProps) {
   const [isMounted, setIsMounted] = useState(false);
   const { theme } = useTheme();
   const colors = theme.colors;

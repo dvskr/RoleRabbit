@@ -1,6 +1,9 @@
-import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import { useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { logger } from '../utils/logger';
+import apiService from '../services/apiService';
+import { mapBaseResumeToEditor, BaseResumeRecord } from '../utils/resumeMapper';
 
 // Create a client with optimized defaults
 const queryClient = new QueryClient({
@@ -46,11 +49,14 @@ export const getResumeQueryConfig = (resumeId: string) => {
   return {
     queryKey: ['resume', resumeId],
     queryFn: async () => {
-      const response = await fetch(`/api/resumes/${resumeId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch resume');
+      const response = await apiService.getBaseResume(resumeId);
+      const resume = response?.resume as BaseResumeRecord | undefined;
+      if (!resume) {
+        throw new Error(`Failed to fetch resume ${resumeId}`);
       }
-      return response.json();
+      const mapped = mapBaseResumeToEditor(resume);
+      queryClient.setQueryData(['resume', resumeId], { resume, snapshot: mapped });
+      return { resume, snapshot: mapped };
     },
     enabled: !!resumeId,
   };
@@ -102,19 +108,14 @@ export const getUserQueryConfig = (userId: string) => {
 export const useSaveResumeMutation = () => {
   return {
     mutationFn: async (resumeData: any) => {
-      const response = await fetch('/api/resumes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(resumeData),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save resume');
+      const response = await apiService.createBaseResume(resumeData);
+      const createdResume = response?.resume as BaseResumeRecord | undefined;
+      if (!createdResume) {
+        throw new Error(response?.error || 'Failed to save resume');
       }
-      
-      return response.json();
+      const mapped = mapBaseResumeToEditor(createdResume);
+      queryClient.setQueryData(['resume', createdResume.id], { resume: createdResume, snapshot: mapped });
+      return { resume: createdResume, snapshot: mapped };
     },
     onSuccess: () => {
       // Invalidate resume queries to refetch updated data
@@ -126,19 +127,35 @@ export const useSaveResumeMutation = () => {
 export const useDeleteResumeMutation = () => {
   return {
     mutationFn: async (resumeId: string) => {
-      const response = await fetch(`/api/resumes/${resumeId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete resume');
+      const response = await apiService.deleteBaseResume(resumeId);
+      if (!response?.success) {
+        throw new Error(response?.error || `Failed to delete resume ${resumeId}`);
       }
-      
-      return response.json();
+      queryClient.setQueryData(['resume', resumeId], null);
+      return response;
     },
     onSuccess: () => {
       // Invalidate resume queries
       queryClient.invalidateQueries({ queryKey: ['resume'] });
+    },
+  };
+};
+
+export const useUpdateResumeMutation = () => {
+  return {
+    mutationFn: async (resumeId: string, updates: any) => {
+      const response = await apiService.updateBaseResume(resumeId, updates);
+      const updatedResume = response?.resume as BaseResumeRecord | undefined;
+      if (!updatedResume) {
+        throw new Error(response?.error || `Failed to update resume ${resumeId}`);
+      }
+      const mapped = mapBaseResumeToEditor(updatedResume);
+      queryClient.setQueryData(['resume', resumeId], { resume: updatedResume, snapshot: mapped });
+      return { resume: updatedResume, snapshot: mapped };
+    },
+    onSuccess: (_, { resumeId }) => {
+      // Invalidate resume queries
+      queryClient.invalidateQueries({ queryKey: ['resume', resumeId] });
     },
   };
 };

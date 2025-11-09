@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -24,7 +24,50 @@ interface ToastProps {
 }
 
 export const ToastComponent: React.FC<ToastProps> = ({ toast, onDismiss }) => {
-  const { colors } = useTheme();
+  const { theme } = useTheme();
+
+  const colors = useMemo(() => theme?.colors ?? {
+    background: '#ffffff',
+    sidebarBackground: '#ffffff',
+    headerBackground: '#ffffff',
+    toolbarBackground: '#ffffff',
+    cardBackground: '#ffffff',
+    hoverBackground: '#f3f4f6',
+    hoverBackgroundStrong: '#e5e7eb',
+    inputBackground: '#f9fafb',
+    primaryText: '#111827',
+    secondaryText: '#4b5563',
+    tertiaryText: '#6b7280',
+    activeText: '#2563eb',
+    activeBlueText: '#2563eb',
+    border: '#e5e7eb',
+    borderFocused: '#2563eb',
+    primaryBlue: '#2563eb',
+    primaryBlueHover: '#1d4ed8',
+    accentTeal: '#2dd4bf',
+    accentCyan: '#06b6d4',
+    badgeInfoBg: '#dbeafe',
+    badgeInfoText: '#1d4ed8',
+    badgeInfoBorder: '#93c5fd',
+    badgeSuccessBg: '#dcfce7',
+    badgeSuccessText: '#047857',
+    badgeSuccessBorder: '#bbf7d0',
+    badgeWarningBg: '#fef3c7',
+    badgeWarningText: '#b45309',
+    badgeWarningBorder: '#fcd34d',
+    badgeErrorBg: '#fee2e2',
+    badgeErrorText: '#b91c1c',
+    badgeErrorBorder: '#fca5a5',
+    badgePurpleBg: '#ede9fe',
+    badgePurpleText: '#6b21a8',
+    badgePurpleBorder: '#c4b5fd',
+    badgeNeutralBg: '#e5e7eb',
+    badgeNeutralText: '#4b5563',
+    badgeNeutralBorder: '#cbd5f5',
+    errorRed: '#dc2626',
+    successGreen: '#059669',
+    warningYellow: '#ca8a04',
+  }, [theme]);
 
   useEffect(() => {
     if (toast.duration !== 0) {
@@ -104,15 +147,33 @@ export const ToastComponent: React.FC<ToastProps> = ({ toast, onDismiss }) => {
 // Toast manager hook
 export const useToasts = () => {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
+  // Throttle duplicate messages and keep a small cap of concurrent toasts
+  const lastShownRef = useRef<Map<string, number>>(new Map());
 
-  const showToast = (message: string, type: ToastType = 'info', duration?: number) => {
-    const id = `toast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    setToasts(prev => [...prev, { id, message, type, duration }]);
-  };
+  const showToast = useCallback((message: string, type: ToastType = 'info', duration?: number) => {
+    const normalizedMessage = (message ?? '').trim();
+    const key = `${type}:${normalizedMessage}`;
+    const now = Date.now();
+    const last = lastShownRef.current.get(key);
+    // Do not re-show the exact same message within 10 seconds
+    if (last && now - last < 10000) {
+      return;
+    }
+    lastShownRef.current.set(key, now);
 
-  const dismissToast = (id: string) => {
+    const id = `toast_${now}_${Math.random().toString(36).substr(2, 9)}`;
+    setToasts(prev => {
+      // Remove any currently visible duplicate of the same message/type
+      const withoutDupes = prev.filter(t => !(t.message === normalizedMessage && t.type === type));
+      // Cap to a reasonable number to avoid overwhelming the UI
+      const capped = withoutDupes.slice(-2); // keep last 2, we'll add the new one below to make 3
+      return [...capped, { id, message: normalizedMessage, type, duration }];
+    });
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+  }, []);
 
   return { toasts, showToast, dismissToast };
 };

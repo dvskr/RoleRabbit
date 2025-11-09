@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, FileText, Edit, Trash2, X } from 'lucide-react';
+import { Plus, Search, FileText, X } from 'lucide-react';
 import TemplateCard from './TemplateCard';
 import { EmailTemplate, TemplateCategory } from '../types';
 import { logger } from '../../../utils/logger';
@@ -252,13 +252,37 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
 
       {/* Create/Edit Template Modal */}
       {showCreateModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <React.Fragment>
+        <button 
+          type="button"
+          className="fixed inset-0 z-50 border-0 p-0 focus:outline-none"
           style={{
             backgroundColor: 'rgba(0, 0, 0, 0.75)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
           }}
+          onClick={() => {
+            setShowCreateModal(false);
+            setEditingTemplate(null);
+            setNewTemplate({ name: '', category: 'Custom', subject: '', body: '', variables: [] });
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setShowCreateModal(false);
+              setEditingTemplate(null);
+              setNewTemplate({ name: '', category: 'Custom', subject: '', body: '', variables: [] });
+            }
+          }}
+          aria-label="Close template modal"
+        >
+          <span className="sr-only">Close template modal</span>
+        </button>
+        <div 
+          className="fixed inset-0 z-[51] flex items-center justify-center p-4"
+          aria-modal="true"
+          role="dialog"
+          aria-labelledby="template-library-modal-title"
         >
           <div 
             className="rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl"
@@ -270,7 +294,7 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
                   <FileText size={24} style={{ color: colors.badgeInfoText }} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold" style={{ color: colors.primaryText }}>
+                  <h3 id="template-library-modal-title" className="text-xl font-semibold" style={{ color: colors.primaryText }}>
                     {editingTemplate ? 'Edit Template' : 'Create Template'}
                   </h3>
                   <p className="text-sm" style={{ color: colors.secondaryText }}>
@@ -302,10 +326,11 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                <label htmlFor="template-name-input" className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Template Name <span style={{ color: colors.errorRed }}>*</span>
                 </label>
                 <input
+                  id="template-name-input"
                   type="text"
                   value={newTemplate.name}
                   onChange={(e) => setNewTemplate({ ...newTemplate, name: e.target.value })}
@@ -322,10 +347,11 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                <label htmlFor="template-category-select" className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Category <span style={{ color: colors.errorRed }}>*</span>
                 </label>
                 <select
+                  id="template-category-select"
                   value={newTemplate.category}
                   onChange={(e) => setNewTemplate({ ...newTemplate, category: e.target.value as TemplateCategory })}
                   className="w-full px-3 py-2 rounded-lg"
@@ -347,11 +373,12 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                <label htmlFor="template-subject-input" className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Subject Line <span style={{ color: colors.errorRed }}>*</span>
                   <span className="text-xs ml-2" style={{ color: colors.tertiaryText }}>Use {"{{variable}}"} for dynamic values</span>
                 </label>
                 <input
+                  id="template-subject-input"
                   type="text"
                   value={newTemplate.subject}
                   onChange={(e) => setNewTemplate({ ...newTemplate, subject: e.target.value })}
@@ -368,11 +395,12 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
+                <label htmlFor="template-body-textarea" className="block text-sm font-medium mb-2" style={{ color: colors.secondaryText }}>
                   Email Body <span style={{ color: colors.errorRed }}>*</span>
                   <span className="text-xs ml-2" style={{ color: colors.tertiaryText }}>Use {"{{variable}}"} for dynamic values</span>
                 </label>
                 <textarea
+                  id="template-body-textarea"
                   value={newTemplate.body}
                   onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })}
                   placeholder="Dear {{name}},\n\nI wanted to follow up..."
@@ -443,6 +471,7 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
             </div>
           </div>
         </div>
+        </React.Fragment>
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Globe, Layout, FileText, Eye, Settings, Download, Send, Sparkles } from 'lucide-react';
+import { Globe, Layout, FileText, Eye, Settings, Sparkles } from 'lucide-react';
 import { WebsiteConfig } from '../../types/portfolio';
 import TemplateSelector from './TemplateSelector';
 import WebsiteBuilder from './WebsiteBuilder';
@@ -10,8 +10,13 @@ import PreviewPanel from './PreviewPanel';
 import ResumeUploadModal from './ResumeUploadModal';
 import { generateSectionsFromProfile, generateDefaultSections } from '../../utils/portfolioDataMapper';
 
+interface PortfolioUserData {
+  firstName?: string;
+  [key: string]: unknown;
+}
+
 interface PortfolioGeneratorProps {
-  userData?: any;
+  userData?: PortfolioUserData;
   onClose?: () => void;
 }
 
@@ -95,7 +100,7 @@ export default function PortfolioGenerator({ userData, onClose }: PortfolioGener
     
     if (source === 'profile') {
       // Generate sections from profile data
-      populatedSections = generateSectionsFromProfile(effectiveUserData as any);
+      populatedSections = generateSectionsFromProfile(effectiveUserData as Record<string, unknown>);
       setPortfolioConfig(prev => ({ ...prev, sections: populatedSections }));
     } else {
       // Use default empty sections for manual
@@ -106,7 +111,7 @@ export default function PortfolioGenerator({ userData, onClose }: PortfolioGener
     setActiveStep('template');
   };
 
-  const handleResumeUpload = async (file: File) => {
+  const handleResumeUpload = async (_file: File) => {
     setIsUploading(true);
     
     // Simulate file processing
@@ -114,7 +119,7 @@ export default function PortfolioGenerator({ userData, onClose }: PortfolioGener
     
     // Mock parsing - In real implementation, this would parse the PDF/Word file
     // For now, use profile data as a fallback
-    const populatedSections = generateSectionsFromProfile(effectiveUserData as any);
+    const populatedSections = generateSectionsFromProfile(effectiveUserData as Record<string, unknown>);
     setPortfolioConfig(prev => ({ ...prev, sections: populatedSections }));
     
     setIsUploading(false);
@@ -124,11 +129,6 @@ export default function PortfolioGenerator({ userData, onClose }: PortfolioGener
 
   const handleConfigUpdate = (updates: Partial<WebsiteConfig>) => {
     setPortfolioConfig(prev => ({ ...prev, ...updates }));
-  };
-
-  const generateSubdomain = () => {
-    const username = userData?.firstName?.toLowerCase() || 'user';
-    return `${username}-portfolio`;
   };
 
   const steps = [

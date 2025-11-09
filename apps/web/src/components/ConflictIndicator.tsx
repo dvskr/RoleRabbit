@@ -22,7 +22,8 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
   onDismiss,
   message = 'This resume was updated elsewhere. Please refresh to see the latest changes.',
 }) => {
-  const { colors } = useTheme();
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   if (!conflictDetected) {
     return null;

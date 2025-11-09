@@ -40,10 +40,11 @@ export function EmailFormFields({
     <div className="space-y-4">
       {/* To */}
       <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+        <label htmlFor="email-form-to" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
           To *
         </label>
         <input
+          id="email-form-to"
           type="email"
           value={to}
           onChange={(e) => onToChange(e.target.value)}
@@ -66,10 +67,11 @@ export function EmailFormFields({
 
       {/* CC */}
       <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+        <label htmlFor="email-form-cc" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
           CC
         </label>
         <input
+          id="email-form-cc"
           type="text"
           value={cc}
           onChange={(e) => onCcChange(e.target.value)}
@@ -91,10 +93,11 @@ export function EmailFormFields({
 
       {/* BCC */}
       <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+        <label htmlFor="email-form-bcc" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
           BCC
         </label>
         <input
+          id="email-form-bcc"
           type="text"
           value={bcc}
           onChange={(e) => onBccChange(e.target.value)}
@@ -116,10 +119,11 @@ export function EmailFormFields({
 
       {/* Subject */}
       <div>
-        <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+        <label htmlFor="email-form-subject" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
           Subject *
         </label>
         <input
+          id="email-form-subject"
           type="text"
           value={subject}
           onChange={(e) => onSubjectChange(e.target.value)}
@@ -142,10 +146,11 @@ export function EmailFormFields({
 
       {/* Body */}
       <div className="flex-1">
-        <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+        <label htmlFor="email-form-body" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
           Body *
         </label>
         <textarea
+          id="email-form-body"
           value={body}
           onChange={(e) => onBodyChange(e.target.value)}
           placeholder={PLACEHOLDERS.EMAIL_BODY}

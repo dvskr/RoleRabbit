@@ -66,10 +66,11 @@ export default function AddSectionModal({
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+            <label htmlFor="add-section-name" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
               Section Name
             </label>
             <input
+              id="add-section-name"
               type="text"
               value={newSectionName}
               onChange={(e) => setNewSectionName(e.target.value)}
@@ -93,7 +94,7 @@ export default function AddSectionModal({
           
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium" style={{ color: colors.primaryText }}>
+              <label htmlFor="add-section-content" className="block text-sm font-medium" style={{ color: colors.primaryText }}>
                 Section Content
               </label>
               {onOpenAIGenerateModal && (
@@ -121,6 +122,7 @@ export default function AddSectionModal({
               )}
             </div>
             <textarea
+              id="add-section-content"
               value={newSectionContent}
               onChange={(e) => setNewSectionContent(e.target.value)}
               placeholder="Enter the content for this section..."

@@ -295,7 +295,7 @@ export default function CoverLetterGenerator() {
   const handleConfirmSaveToCloud = (fileName: string, description: string) => {
     // Load current cloud storage
     const cloudStorage = localStorage.getItem('cloudStorage');
-    let storage = cloudStorage ? JSON.parse(cloudStorage) : { files: [] };
+    const storage = cloudStorage ? JSON.parse(cloudStorage) : { files: [] };
 
     // Create new file
     const newFile: ResumeFile = {

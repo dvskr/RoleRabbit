@@ -83,7 +83,7 @@ export function useJobsApi() {
 
     try {
       // Exclude deleted jobs unless showDeleted is true
-      let filtered = jobs.filter(job => {
+      const filtered = jobs.filter(job => {
         if (!job || typeof job !== 'object') return false;
         
         try {

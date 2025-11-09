@@ -2,7 +2,6 @@
 
 import React, { useMemo } from 'react';
 import MultiResumeManager from './MultiResumeManager';
-import { resumeTemplates } from '../../data/templates';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResumeEditorProps } from './ResumeEditor/types/ResumeEditor.types';
 import { useSidebarDimensions } from './ResumeEditor/hooks/useSidebarDimensions';
@@ -14,6 +13,7 @@ import NameInput from './ResumeEditor/components/NameInput';
 import ContactFieldsGrid from './ResumeEditor/components/ContactFieldsGrid';
 import FormattingPanel from './ResumeEditor/components/FormattingPanel';
 import { getTemplateClasses } from '../../app/dashboard/utils/templateClassesHelper';
+import { PanelLeftClose } from 'lucide-react';
 
 export default function ResumeEditor({
   resumeFileName,
@@ -40,20 +40,12 @@ export default function ResumeEditor({
   onToggleSection,
   onMoveSection,
   onShowAddSectionModal,
-  onDeleteCustomSection,
-  onUpdateCustomSection,
   onGenerateSmartFileName,
   onResetToDefault,
   renderSection,
-  showAddFieldModal,
   setShowAddFieldModal,
   customFields,
   setCustomFields,
-  newFieldName,
-  setNewFieldName,
-  newFieldIcon,
-  setNewFieldIcon,
-  onAddCustomField,
   selectedTemplateId,
   onTemplateApply,
   addedTemplates = [],
@@ -66,11 +58,6 @@ export default function ResumeEditor({
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  // Get the selected template data
-  const selectedTemplate = selectedTemplateId 
-    ? resumeTemplates.find(t => t.id === selectedTemplateId) 
-    : null;
-
   // Get template classes for styling
   const templateClasses = useMemo(() => {
     return getTemplateClasses(selectedTemplateId || null);
@@ -80,21 +67,15 @@ export default function ResumeEditor({
   useTemplateApplication(selectedTemplateId, onTemplateApply);
 
   // Memoize sections to prevent unnecessary re-renders
-  // Only render visible sections and optimize dependencies
   const renderedSections = useMemo(() => {
     return sectionOrder
       .filter((section) => sectionVisibility[section] !== false)
       .map((section) => {
         const sectionElement = renderSection(section);
-        return sectionElement ? (
-          <div key={section}>
-            {sectionElement}
-          </div>
-        ) : null;
+        return sectionElement ? <div key={section}>{sectionElement}</div> : null;
       })
       .filter(Boolean);
   }, [sectionOrder, renderSection, sectionVisibility]);
-
 
   // Calculate sidebar width and padding based on collapse state - responsive
   const { width: sidebarWidth, padding: sidebarPadding } = useSidebarDimensions(isSidebarCollapsed ?? false);
@@ -106,25 +87,25 @@ export default function ResumeEditor({
       times: 'Times New Roman, serif',
       verdana: 'Verdana, sans-serif',
     };
-    
+
     const fontSizeMap: Record<string, string> = {
       ats10pt: '10pt',
       ats11pt: '11pt',
       ats12pt: '12pt',
     };
-    
+
     const lineSpacingMap: Record<string, string> = {
       tight: '1.2',
       normal: '1.5',
       loose: '1.8',
     };
-    
+
     const sectionSpacingMap: Record<string, string> = {
-      tight: '0.5rem',
-      medium: '1rem',
-      loose: '1.5rem',
+      tight: '0.3rem',
+      medium: '0.6rem',
+      loose: '1rem',
     };
-    
+
     const marginsMap: Record<string, string> = {
       narrow: '0.5in',
       normal: '1in',
@@ -158,12 +139,21 @@ export default function ResumeEditor({
   }, [fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-full w-full overflow-hidden" style={{ height: '100%', width: '100%', maxHeight: '100%', background: colors.background }}>
+    <div
+      className="flex flex-col lg:flex-row w-full overflow-hidden"
+      style={{ 
+        height: '100%', 
+        width: '100%', 
+        maxHeight: '100%',
+        minHeight: 0,
+        background: colors.background 
+      }}
+    >
       {/* Left Sidebar - Section Controls */}
-      <div 
-        className="backdrop-blur-xl overflow-y-auto hidden lg:flex flex-col sidebar-scroller"
-        style={{ 
-          width: sidebarWidth, 
+      <div
+        className="backdrop-blur-xl hidden lg:flex flex-col sidebar-scroller"
+        style={{
+          width: sidebarWidth,
           minWidth: sidebarWidth,
           maxWidth: sidebarWidth,
           padding: sidebarPadding,
@@ -173,11 +163,12 @@ export default function ResumeEditor({
           flexGrow: 0,
           height: '100%',
           maxHeight: '100%',
+          minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
+          overscrollBehaviorY: 'contain',
         }}
       >
-        {/* Collapsed View - Just Icons */}
         {isSidebarCollapsed ? (
           <CollapsedSidebar colors={colors} onToggleSidebar={onToggleSidebar} />
         ) : (
@@ -188,70 +179,81 @@ export default function ResumeEditor({
               setResumeFileName={setResumeFileName}
               onGenerateSmartFileName={onGenerateSmartFileName}
               colors={colors}
+              isSidebarCollapsed={isSidebarCollapsed}
+              onToggleSidebar={onToggleSidebar}
             />
 
-        {/* Templates Horizontal Scroller */}
-        <div className="mb-6 flex-shrink-0">
-          <MultiResumeManager
-            onSelectTemplate={(templateId) => {
-              onTemplateApply?.(templateId);
-            }}
-            showHorizontalScroller={true}
-            addedTemplates={addedTemplates}
-            onRemoveTemplate={onRemoveTemplate}
-            onAddTemplates={onAddTemplates}
-            onNavigateToTemplates={onNavigateToTemplates}
-            selectedTemplateId={selectedTemplateId}
-          />
-        </div>
+            {/* Templates Horizontal Scroller */}
+            <div className="mb-6 flex-shrink-0">
+              <MultiResumeManager
+                onSelectTemplate={(templateId) => {
+                  onTemplateApply?.(templateId);
+                }}
+                showHorizontalScroller
+                addedTemplates={addedTemplates}
+                onRemoveTemplate={onRemoveTemplate}
+                onAddTemplates={onAddTemplates}
+                onNavigateToTemplates={onNavigateToTemplates}
+                selectedTemplateId={selectedTemplateId}
+              />
+            </div>
 
-        {/* Sections */}
-        <SectionsList
-          sectionOrder={sectionOrder}
-          sectionVisibility={sectionVisibility}
-          customSections={customSections}
-          onToggleSection={onToggleSection}
-          onMoveSection={onMoveSection}
-          onShowAddSectionModal={onShowAddSectionModal}
-          colors={colors}
-        />
-        
-        {/* Formatting */}
-        <FormattingPanel
-          fontFamily={fontFamily}
-          setFontFamily={setFontFamily}
-          fontSize={fontSize}
-          setFontSize={setFontSize}
-          lineSpacing={lineSpacing}
-          setLineSpacing={setLineSpacing}
-          sectionSpacing={sectionSpacing}
-          setSectionSpacing={setSectionSpacing}
-          margins={margins}
-          setMargins={setMargins}
-          headingStyle={headingStyle}
-          setHeadingStyle={setHeadingStyle}
-          bulletStyle={bulletStyle}
-          setBulletStyle={setBulletStyle}
-          onResetToDefault={onResetToDefault}
-          colors={colors}
-        />
+            {/* Sections */}
+            <SectionsList
+              sectionOrder={sectionOrder}
+              sectionVisibility={sectionVisibility}
+              customSections={customSections}
+              onToggleSection={onToggleSection}
+              onMoveSection={onMoveSection}
+              onShowAddSectionModal={onShowAddSectionModal}
+              colors={colors}
+            />
+
+            {/* Formatting */}
+            <FormattingPanel
+              fontFamily={fontFamily}
+              setFontFamily={setFontFamily}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+              lineSpacing={lineSpacing}
+              setLineSpacing={setLineSpacing}
+              sectionSpacing={sectionSpacing}
+              setSectionSpacing={setSectionSpacing}
+              margins={margins}
+              setMargins={setMargins}
+              headingStyle={headingStyle}
+              setHeadingStyle={setHeadingStyle}
+              bulletStyle={bulletStyle}
+              setBulletStyle={setBulletStyle}
+              onResetToDefault={onResetToDefault}
+              colors={colors}
+            />
           </div>
         )}
       </div>
 
       {/* Main Resume Editing Area */}
-      <div 
-        className="flex-1 h-full overflow-y-auto p-2 sm:p-4 lg:p-6 xl:p-10 resume-editor-content"
-        style={{ 
-          height: '100%', 
+      <div
+        className="flex-1 resume-editor-content"
+        style={{
+          height: '100%',
           maxHeight: '100%',
           width: '100%',
           background: colors.background,
           flex: '1 1 0%',
           minWidth: 0,
+          minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
           position: 'relative',
+          overscrollBehaviorY: 'contain',
+          fontFamily: getFormattingStyles.fontFamily,
+          fontSize: getFormattingStyles.fontSize,
+          lineHeight: getFormattingStyles.lineHeight,
+          paddingTop: '1.5rem',
+          paddingBottom: getFormattingStyles.padding,
+          paddingLeft: getFormattingStyles.padding,
+          paddingRight: getFormattingStyles.padding,
         }}
       >
         {/* Dynamic styles for heading, bullet, and template formatting */}
@@ -277,55 +279,48 @@ export default function ResumeEditor({
           ${templateClasses.sectionColor.includes('red') ? '.resume-editor-content h3 { color: #dc2626 !important; }' : ''}
           ${templateClasses.sectionColor.includes('orange') ? '.resume-editor-content h3 { color: #ea580c !important; }' : ''}
         `}</style>
-        <div 
-          className={`w-full rounded-2xl shadow-lg border transition-all box-border ${templateClasses.container}`}
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-            boxShadow: `0 4px 6px ${colors.border}10`,
-            width: '100%',
-            maxWidth: '100%',
-            minHeight: '100%',
-            fontFamily: getFormattingStyles.fontFamily,
-            fontSize: getFormattingStyles.fontSize,
-            lineHeight: getFormattingStyles.lineHeight,
-            padding: getFormattingStyles.padding,
-          }}
-        >
-          {/* Template Header Styling */}
-          <div className={`mb-6 pb-4 ${templateClasses.header}`}>
-            {/* Name Input */}
-            <NameInput
-              name={resumeData.name || ''}
-              onChange={(name) => setResumeData((prev: any) => ({...prev, name}))}
-              colors={colors}
-              nameColorClass={templateClasses.nameColor}
-              titleColorClass={templateClasses.titleColor}
-            />
-            
-            {/* Title Display */}
-            {resumeData.title && (
-              <p className={`text-lg font-medium px-3 ${templateClasses.titleColor}`}>
-                {resumeData.title}
-              </p>
-            )}
-          
-            {/* Contact Fields Grid */}
-            <ContactFieldsGrid
-              resumeData={resumeData}
-              setResumeData={setResumeData}
-              customFields={customFields}
-              setCustomFields={setCustomFields}
-              setShowAddFieldModal={setShowAddFieldModal}
-              colors={colors}
+
+        {/* Template Header Styling */}
+        <div className={`mb-4 pb-3 ${templateClasses.header}`}>
+          <NameInput
+            name={resumeData.name || ''}
+            onChange={(name) => setResumeData((prev) => ({ ...prev, name }))}
+            colors={colors}
+            nameColorClass={templateClasses.nameColor}
+            titleColorClass={templateClasses.titleColor}
+          />
+
+          <div className="mb-4">
+            <input
+              className={`text-lg font-medium w-1/2 border-none outline-none rounded-xl px-3 py-2 break-words overflow-wrap-anywhere transition-all ${templateClasses.titleColor || ''}`}
+              style={{
+                background: 'transparent',
+                color: colors.secondaryText || colors.primaryText,
+              }}
+              value={resumeData.title || ''}
+              onChange={(e) => setResumeData((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="Your Title / Designation"
+              onFocus={(e) => {
+                e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
+              }}
+              onBlur={(e) => {
+                e.target.style.outline = 'none';
+              }}
             />
           </div>
 
-          {/* Render All Sections */}
-          <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
-            {renderedSections}
-          </div>
-          
+          <ContactFieldsGrid
+            resumeData={resumeData}
+            setResumeData={setResumeData}
+            customFields={customFields}
+            setCustomFields={setCustomFields}
+            setShowAddFieldModal={setShowAddFieldModal}
+            colors={colors}
+          />
+        </div>
+
+        <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
+          {renderedSections}
         </div>
       </div>
     </div>

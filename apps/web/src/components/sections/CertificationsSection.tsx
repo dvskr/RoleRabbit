@@ -39,8 +39,8 @@ const CertificationsSection = React.memo(function CertificationsSection({
   };
 
   const updateCertification = (id: number, updates: Partial<CertificationItem>) => {
-    setResumeData((prev: any) => {
-      const updatedCertifications = (prev.certifications || []).map((item: any) => 
+    setResumeData((prev: ResumeData) => {
+      const updatedCertifications = (prev.certifications || []).map((item: CertificationItem) => 
         item.id === id ? { ...item, ...updates } : item
       );
       return {...prev, certifications: updatedCertifications};
@@ -48,8 +48,8 @@ const CertificationsSection = React.memo(function CertificationsSection({
   };
 
   const deleteCertification = (id: number) => {
-    setResumeData((prev: any) => {
-      const updatedCertifications = (prev.certifications || []).filter((item: any) => item.id !== id);
+    setResumeData((prev: ResumeData) => {
+      const updatedCertifications = (prev.certifications || []).filter((item: CertificationItem) => item.id !== id);
       return {...prev, certifications: updatedCertifications};
     });
   };
@@ -93,21 +93,7 @@ const CertificationsSection = React.memo(function CertificationsSection({
   };
 
   return (
-    <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
-      <div 
-        className="rounded-2xl p-6 transition-all"
-        style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
-          boxShadow: `0 4px 6px ${colors.border}10`,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = `0 8px 12px ${colors.border}20`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = `0 4px 6px ${colors.border}10`;
-        }}
-      >
+    <div className="mb-4 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
@@ -415,7 +401,6 @@ const CertificationsSection = React.memo(function CertificationsSection({
           </div>
         </div>
       ))}
-      </div>
     </div>
   );
 });

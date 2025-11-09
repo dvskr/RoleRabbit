@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ATSAnalysisResult } from '../types/AIPanel.types';
+import type { ATSAnalysisResult } from '../../../types/ai';
 import { calculateATSScore } from '../utils/atsHelpers';
+import type { ResumeData } from '../../../types/resume';
 
 export const useATSData = () => {
   const [atsAnalysis, setAtsAnalysis] = useState<ATSAnalysisResult | null>(null);
@@ -8,17 +9,28 @@ export const useATSData = () => {
   const [afterScore, setAfterScore] = useState<number | null>(null);
   const [showApplyButton, setShowApplyButton] = useState(false);
   const [isApplied, setIsApplied] = useState(false);
-  const [improvedResumeData, setImprovedResumeData] = useState<any>(null);
+  const [improvedResumeData, setImprovedResumeData] = useState<ResumeData | null>(null);
   const [isApplying, setIsApplying] = useState(false);
 
-  const handleATSAnalysis = (resumeData: any, jobDescription: string) => {
-    if (!jobDescription.trim() || !resumeData) return;
-    
-    const result = calculateATSScore(resumeData, jobDescription);
-    setAtsAnalysis(result);
-    setBeforeScore(result.overall);
-    setShowApplyButton(true);
-    return result;
+  const handleATSAnalysis = (
+    analysis: ATSAnalysisResult | null,
+    options: {
+      canApply?: boolean;
+      improvedResume?: ResumeData | null;
+      afterScore?: number | null;
+    } = {}
+  ) => {
+    if (!analysis) {
+      return;
+    }
+    setAtsAnalysis(analysis);
+    setBeforeScore(analysis.overall ?? null);
+    setShowApplyButton(Boolean(options.canApply));
+    setImprovedResumeData(options.improvedResume ?? null);
+    if (typeof options.afterScore === 'number') {
+      setAfterScore(options.afterScore);
+    }
+    setIsApplied(false);
   };
 
   const handleClearAnalysis = () => {

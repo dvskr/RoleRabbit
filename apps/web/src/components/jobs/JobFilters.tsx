@@ -15,7 +15,7 @@ export default function JobFilters({
   showAdvancedFilters,
   onToggleAdvancedFilters
 }: JobFiltersProps) {
-  const handleFilterChange = (key: keyof JobFiltersType, value: any) => {
+  const handleFilterChange = <K extends keyof JobFiltersType>(key: K, value: JobFiltersType[K]) => {
     onFiltersChange({
       ...filters,
       [key]: value
@@ -55,7 +55,7 @@ export default function JobFilters({
             {/* Sort By */}
             <select
               value={filters.sortBy}
-              onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+              onChange={(e) => handleFilterChange('sortBy', e.target.value as JobFiltersType['sortBy'])}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
             >
               <option value="date">Sort by Date</option>
@@ -85,8 +85,11 @@ export default function JobFilters({
           <div className="flex items-center gap-4">
             {/* Group By */}
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Group by:</label>
+              <label htmlFor="jobFiltersGroupBy" className="text-sm font-medium text-gray-700">
+                Group by:
+              </label>
               <select
+                id="jobFiltersGroupBy"
                 value={filters.groupBy}
                 onChange={(e) => handleFilterChange('groupBy', e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { FileType, SortBy, ViewMode, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
+import { FileType, SortBy, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
 import { filterAndSortFiles } from './useCloudStorage/utils/fileFiltering';
 import { useFileOperations, useCopyMoveOperations } from './useCloudStorage/hooks/useFileOperations';
 import { useSharingOperations } from './useCloudStorage/hooks/useSharingOperations';

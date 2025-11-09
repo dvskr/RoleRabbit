@@ -1,19 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Monitor, Tablet, Smartphone, CheckCircle, X } from 'lucide-react';
-import { WebsiteConfig, Section } from '../../types/portfolio';
+import { Monitor, Tablet, Smartphone, CheckCircle } from 'lucide-react';
+import type { WebsiteConfig, Section, SectionItem } from '../../types/portfolio';
 
 interface PreviewPanelProps {
   onNext: () => void;
   onBack: () => void;
   config: WebsiteConfig;
-  portfolioData: any;
 }
 
 type DeviceType = 'desktop' | 'tablet' | 'mobile';
 
-export default function PreviewPanel({ onNext, onBack, config, portfolioData }: PreviewPanelProps) {
+export default function PreviewPanel({ onNext, onBack, config }: PreviewPanelProps) {
   const [device, setDevice] = useState<DeviceType>('desktop');
 
   const deviceStyles: Record<DeviceType, string> = {
@@ -24,21 +23,23 @@ export default function PreviewPanel({ onNext, onBack, config, portfolioData }: 
 
   const currentStyle = deviceStyles[device];
 
+  const getItems = (items?: SectionItem[]): SectionItem[] => (Array.isArray(items) ? items : []);
+  const getString = (value: unknown, fallback: string = ''): string =>
+    typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+
   const renderSection = (section: Section) => {
-    const theme = config.theme || { primaryColor: '#3b82f6' };
-    
     switch (section.type) {
       case 'hero':
         return (
           <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-8 text-center">
-            <h2 className="text-3xl font-bold mb-2">{section.config.headline || 'Welcome'}</h2>
-            <p className="text-lg opacity-90 mb-4">{section.config.subheading || 'Your professional introduction'}</p>
+            <h2 className="text-3xl font-bold mb-2">{getString(section.config.headline, 'Welcome')}</h2>
+            <p className="text-lg opacity-90 mb-4">{getString(section.config.subheading, 'Your professional introduction')}</p>
             <div className="flex justify-center gap-3">
               <button className="px-4 py-2 bg-white text-blue-600 rounded-lg font-medium text-sm">
-                {section.config.ctaText || 'Contact Me'}
+                {getString(section.config.ctaText, 'Contact Me')}
               </button>
               <button className="px-4 py-2 border-2 border-white text-white rounded-lg font-medium text-sm">
-                {section.config.secondaryCta || 'View Resume'}
+                {getString(section.config.secondaryCta, 'View Resume')}
               </button>
             </div>
           </div>
@@ -47,63 +48,83 @@ export default function PreviewPanel({ onNext, onBack, config, portfolioData }: 
       case 'about':
         return (
           <div className="p-6 border-b">
-            <h3 className="text-xl font-bold text-gray-900 mb-3">{section.config.title || 'About Me'}</h3>
-            <p className="text-gray-600 text-sm">{section.config.description || 'Your story...'}</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">{getString(section.config.title, 'About Me')}</h3>
+            <p className="text-gray-600 text-sm">{getString(section.config.description, 'Your story...')}</p>
           </div>
         );
 
       case 'experience':
-        const expItems = (section.config.items || []).slice(0, 2).map((item: any) => (
-          <div key={item.position} className="border-l-4 border-blue-500 pl-3 py-2 mb-2">
-            <h4 className="font-semibold text-gray-900 text-sm">{item.position || 'Position'}</h4>
-            <p className="text-xs text-gray-600">{item.company || 'Company'} • {item.date || 'Date'}</p>
-          </div>
-        ));
+        const expItems = getItems(section.config.items)
+          .slice(0, 2)
+          .map((item, index) => {
+            const experience = item as Record<string, unknown>;
+            return (
+              <div key={`experience-${section.id}-${index}`} className="border-l-4 border-blue-500 pl-3 py-2 mb-2">
+                <h4 className="font-semibold text-gray-900 text-sm">{getString(experience.position, 'Position')}</h4>
+                <p className="text-xs text-gray-600">
+                  {getString(experience.company, 'Company')} • {getString(experience.date, 'Date')}
+                </p>
+              </div>
+            );
+          });
         return (
           <div className="p-6 bg-gray-50 border-b">
-            <h3 className="text-xl font-bold text-gray-900 mb-3">{section.config.title || 'Experience'}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">{getString(section.config.title, 'Experience')}</h3>
             <div className="space-y-2">{expItems}</div>
           </div>
         );
 
       case 'projects':
-        const projects = (section.config.items || []).slice(0, 2).map((project: any) => (
-          <div key={project.name} className="border rounded-lg p-3">
-            <div className="w-full h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded mb-2" />
-            <h4 className="font-semibold text-gray-900 text-sm">{project.name || 'Project'}</h4>
-            <p className="text-xs text-gray-600">{project.description || 'Description'}</p>
-          </div>
-        ));
+        const projects = getItems(section.config.items)
+          .slice(0, 2)
+          .map((item, index) => {
+            const project = item as Record<string, unknown>;
+            return (
+              <div key={`project-${section.id}-${index}`} className="border rounded-lg p-3">
+                <div className="w-full h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded mb-2" />
+                <h4 className="font-semibold text-gray-900 text-sm">{getString(project.name, 'Project')}</h4>
+                <p className="text-xs text-gray-600">{getString(project.description, 'Description')}</p>
+              </div>
+            );
+          });
         return (
           <div className="p-6 border-b">
-            <h3 className="text-xl font-bold text-gray-900 mb-3">{section.config.title || 'Projects'}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">{getString(section.config.title, 'Projects')}</h3>
             <div className="grid grid-cols-2 gap-3">{projects}</div>
           </div>
         );
 
       case 'skills':
-        const skills = (section.config.items || []).slice(0, 6).map((skill: string) => (
-          <span key={skill} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-            {skill}
-          </span>
-        ));
+        const skills = getItems(section.config.items)
+          .slice(0, 6)
+          .map((entry, index) => {
+            const skill = typeof entry === 'string' ? entry : String(entry ?? '');
+            return (
+              <span key={`skill-${section.id}-${index}`} className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                {skill || 'Skill'}
+              </span>
+            );
+          });
         return (
           <div className="p-6 bg-gray-50 border-b">
-            <h3 className="text-xl font-bold text-gray-900 mb-3">{section.config.title || 'Skills'}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">{getString(section.config.title, 'Skills')}</h3>
             <div className="flex flex-wrap gap-2">{skills}</div>
           </div>
         );
 
       case 'education':
-        const eduItems = (section.config.items || []).map((edu: any) => (
-          <div key={edu.degree} className="border-l-4 border-purple-500 pl-3 py-2">
-            <h4 className="font-semibold text-gray-900 text-sm">{edu.degree || 'Degree'}</h4>
-            <p className="text-xs text-gray-600">{edu.institution || 'Institution'} • {edu.year || 'Year'}</p>
-          </div>
-        ));
+        const eduItems = getItems(section.config.items).map((item, index) => {
+          const edu = item as Record<string, unknown>;
+          return (
+            <div key={`education-${section.id}-${index}`} className="border-l-4 border-purple-500 pl-3 py-2">
+              <h4 className="font-semibold text-gray-900 text-sm">{getString(edu.degree, 'Degree')}</h4>
+              <p className="text-xs text-gray-600">{getString(edu.institution, 'Institution')} • {getString(edu.year, 'Year')}</p>
+            </div>
+          );
+        });
         return (
           <div className="p-6 border-b">
-            <h3 className="text-xl font-bold text-gray-900 mb-3">{section.config.title || 'Education'}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">{getString(section.config.title, 'Education')}</h3>
             <div className="space-y-2">{eduItems}</div>
           </div>
         );
@@ -111,9 +132,9 @@ export default function PreviewPanel({ onNext, onBack, config, portfolioData }: 
       case 'contact':
         return (
           <div className="p-6 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-center border-b">
-            <h3 className="text-xl font-bold mb-2">{section.config.title || 'Get In Touch'}</h3>
+            <h3 className="text-xl font-bold mb-2">{getString((section.config as Record<string, unknown>).title, 'Get In Touch')}</h3>
             <p className="mb-4 text-sm opacity-90">
-              {section.config.email || 'contact@example.com'}
+              {getString(section.config.email, 'contact@example.com')}
             </p>
             <button className="px-6 py-2 bg-white text-blue-600 rounded-lg font-medium text-sm">
               Contact Me

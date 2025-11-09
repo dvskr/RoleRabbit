@@ -2,10 +2,42 @@ import React, { useState } from 'react';
 import { X, Sparkles, Wand2, FileText, Clock, Palette } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const QUICK_PROMPTS = {
+  summary: [
+    'Experienced software engineer with 5+ years in full-stack development',
+    'Results-driven marketing professional with proven track record',
+    'Dynamic sales executive with extensive B2B experience'
+  ],
+  experience: [
+    'Led development of scalable web applications using React and Node.js',
+    'Managed cross-functional teams and delivered projects on time',
+    'Built client relationships resulting in 30% increase in satisfaction'
+  ],
+  projects: [
+    'Built a full-stack e-commerce platform with payment integration',
+    'Developed a cross-platform mobile app with real-time features',
+    'Created data visualization dashboard for business intelligence'
+  ],
+  skills: [
+    'Frontend: React, Vue.js, Angular, TypeScript, JavaScript',
+    'Backend: Node.js, Python, Java, C#, Express.js',
+    'Cloud: AWS, Azure, Docker, Kubernetes, CI/CD'
+  ],
+  custom: [
+    'List of professional certifications and licenses with dates',
+    'Awards and recognitions received in my career',
+    'Publications and articles written or contributed to',
+    'Languages spoken with proficiency levels',
+    'Volunteer experience and community involvement'
+  ]
+} as const;
+
+type QuickPromptSection = keyof typeof QUICK_PROMPTS;
+
 interface AIGenerateModalProps {
   showAIGenerateModal: boolean;
   setShowAIGenerateModal: (show: boolean) => void;
-  aiGenerateSection: string;
+  aiGenerateSection: QuickPromptSection;
   aiPrompt: string;
   setAiPrompt: (prompt: string) => void;
   writingTone: string;
@@ -33,35 +65,7 @@ export default function AIGenerateModal({
 
   if (!showAIGenerateModal) return null;
 
-  const quickPrompts = {
-    summary: [
-      "Experienced software engineer with 5+ years in full-stack development",
-      "Results-driven marketing professional with proven track record",
-      "Dynamic sales executive with extensive B2B experience"
-    ],
-    experience: [
-      "Led development of scalable web applications using React and Node.js",
-      "Managed cross-functional teams and delivered projects on time",
-      "Built client relationships resulting in 30% increase in satisfaction"
-    ],
-    projects: [
-      "Built a full-stack e-commerce platform with payment integration",
-      "Developed a cross-platform mobile app with real-time features",
-      "Created data visualization dashboard for business intelligence"
-    ],
-    skills: [
-      "Frontend: React, Vue.js, Angular, TypeScript, JavaScript",
-      "Backend: Node.js, Python, Java, C#, Express.js",
-      "Cloud: AWS, Azure, Docker, Kubernetes, CI/CD"
-    ],
-    custom: [
-      "List of professional certifications and licenses with dates",
-      "Awards and recognitions received in my career",
-      "Publications and articles written or contributed to",
-      "Languages spoken with proficiency levels",
-      "Volunteer experience and community involvement"
-    ]
-  };
+  const quickPromptList = QUICK_PROMPTS[aiGenerateSection] ?? [];
 
   const toneOptions = [
     { value: 'professional', label: 'Professional', icon: '💼' },
@@ -134,10 +138,11 @@ export default function AIGenerateModal({
         <div className="space-y-4">
           {/* Prompt Input Box - FIRST */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+            <label htmlFor="ai-generate-prompt" className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
               Describe what you want to generate
             </label>
             <textarea
+              id="ai-generate-prompt"
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder={`Describe your ${aiGenerateSection}...`}
@@ -161,10 +166,10 @@ export default function AIGenerateModal({
           {/* Tone and Length with Icons */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
+              <p className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
                 <Palette size={14} style={{ color: colors.tertiaryText }} />
                 Style
-              </label>
+              </p>
               <div className="flex gap-1">
                 {toneOptions.map((option) => (
                   <button
@@ -199,10 +204,10 @@ export default function AIGenerateModal({
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
+              <p className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
                 <Clock size={14} style={{ color: colors.tertiaryText }} />
                 Length
-              </label>
+              </p>
               <div className="flex gap-1">
                 {lengthOptions.map((option) => (
                   <button
@@ -238,13 +243,13 @@ export default function AIGenerateModal({
           </div>
 
           {/* Quick Examples - LAST */}
-          <div>
-            <label className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
+          <div aria-labelledby="ai-quick-templates-label">
+            <p id="ai-quick-templates-label" className="block text-sm font-medium mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
               <FileText size={14} style={{ color: colors.tertiaryText }} />
               Quick templates
-            </label>
+            </p>
             <div className="space-y-2">
-              {(quickPrompts as any)[aiGenerateSection]?.map((prompt: string, index: number) => (
+              {quickPromptList.map((prompt, index) => (
                 <button
                   key={index}
                   onClick={() => handleQuickPrompt(prompt)}

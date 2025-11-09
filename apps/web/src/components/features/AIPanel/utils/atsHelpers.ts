@@ -1,18 +1,19 @@
 import { ATSAnalysisResult } from '../types/AIPanel.types';
 import { COMMON_KEYWORDS, REQUIRED_SECTIONS } from '../constants';
+import type { ResumeData, ExperienceItem } from '../../../types/resume';
 
 export const extractKeywords = (jobDesc: string): string[] => {
   const text = jobDesc.toLowerCase();
   return COMMON_KEYWORDS.filter(keyword => text.includes(keyword));
 };
 
-export const extractMissingKeywords = (jobDesc: string, data: any): string[] => {
+export const extractMissingKeywords = (jobDesc: string, data: ResumeData): string[] => {
   const keywords = extractKeywords(jobDesc);
   const resumeText = JSON.stringify(data).toLowerCase();
   return keywords.filter(keyword => !resumeText.includes(keyword.toLowerCase())).slice(0, 5);
 };
 
-export const generateStrengths = (data: any): string[] => {
+export const generateStrengths = (data: ResumeData): string[] => {
   const strengths = [];
   if (data.summary) strengths.push('Professional summary present');
   if (data.experience?.length > 0) strengths.push('Experience section well-documented');
@@ -21,7 +22,7 @@ export const generateStrengths = (data: any): string[] => {
   return strengths;
 };
 
-export const generateImprovements = (data: any, keywords: string[]): string[] => {
+export const generateImprovements = (_data: ResumeData, _keywords: string[]): string[] => {
   const improvements = [];
   improvements.push('Add more industry-specific keywords from job description');
   improvements.push('Include more quantifiable achievements with numbers');
@@ -30,9 +31,13 @@ export const generateImprovements = (data: any, keywords: string[]): string[] =>
   return improvements;
 };
 
-export const calculateATSScore = (data: any, jobDesc: string): ATSAnalysisResult => {
+const hasQuantifiableAchievements = (experience: ExperienceItem[] = []): boolean =>
+  experience.some((exp) =>
+    exp.bullets.some((bullet) => /(?:\d+%|\d+\+|\$\d+|saved|increased|decreased|managed)/i.test(bullet))
+  );
+
+export const calculateATSScore = (data: ResumeData, jobDesc: string): ATSAnalysisResult => {
   let score = 0;
-  let totalChecks = 0;
 
   // Check keywords
   const keywords = extractKeywords(jobDesc);
@@ -42,7 +47,6 @@ export const calculateATSScore = (data: any, jobDesc: string): ATSAnalysisResult
   );
   const keywordScore = (matchedKeywords.length / Math.max(keywords.length, 1)) * 30;
   score += keywordScore;
-  totalChecks += 30;
 
   // Check format (sections present)
   const presentSections = REQUIRED_SECTIONS.filter(section => {
@@ -54,27 +58,22 @@ export const calculateATSScore = (data: any, jobDesc: string): ATSAnalysisResult
   });
   const formatScore = (presentSections.length / REQUIRED_SECTIONS.length) * 25;
   score += formatScore;
-  totalChecks += 25;
 
   // Check content quality (quantifiable achievements)
-  const hasQuantifiableAchievements = data.experience?.some((exp: any) => 
-    exp.description?.match(/\d+%|\d+\+|\$\d+|saved|increased|decreased|managed/i)
-  ) || false;
-  const contentScore = hasQuantifiableAchievements ? 25 : 15;
+  const quantifiable = hasQuantifiableAchievements(data.experience);
+  const contentScore = quantifiable ? 25 : 15;
   score += contentScore;
-  totalChecks += 25;
 
   // Check experience depth
   const hasExperience = data.experience && data.experience.length > 0;
   const expScore = hasExperience ? 20 : 10;
   score += expScore;
-  totalChecks += 20;
 
   return {
     overall: Math.round(score),
     keywords: Math.round((matchedKeywords.length / Math.max(keywords.length, 1)) * 100),
     format: Math.round((presentSections.length / REQUIRED_SECTIONS.length) * 100),
-    content: Math.round((hasQuantifiableAchievements ? 100 : 60)),
+    content: Math.round((quantifiable ? 100 : 60)),
     experience: Math.round(hasExperience ? 100 : 50),
     strengths: generateStrengths(data),
     improvements: generateImprovements(data, keywords),

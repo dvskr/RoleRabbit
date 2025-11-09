@@ -225,7 +225,11 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
           {folders.map((folder) => (
             <div
               key={folder.id}
-              className="group flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all"
+              className="group relative"
+            >
+              <button
+                onClick={() => onSelectFolder(folder.id)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
               style={{
                 background:
                   selectedFolderId === folder.id
@@ -236,33 +240,24 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
                     ? palette.primaryBlue
                     : palette.primaryText,
               }}
-            >
-              <button
-                onClick={() => onSelectFolder(folder.id)}
-                className="flex-1 flex items-center gap-2 text-left"
-                style={{ color: 'inherit' }}
               >
                 <Folder size={16} style={{ color: folder.color || palette.primaryBlue }} />
-                <span className="flex-1 truncate">{folder.name}</span>
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: palette.inputBackground,
-                    color: palette.secondaryText,
-                  }}
-                >
-                  {folder.fileCount || 0}
-                </span>
-              </button>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="flex-1 text-left truncate">{folder.name}</span>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
                 <button
                   onClick={(event) => {
                     event.stopPropagation();
                     onRenameFolder(folder.id, folder.name);
                   }}
-                  className="p-1.5 rounded-md"
+                    className="p-1 rounded-md transition-opacity"
                   style={{ color: palette.primaryBlue, background: `${palette.primaryBlue}10` }}
                   aria-label="Rename folder"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = `${palette.primaryBlue}20`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = `${palette.primaryBlue}10`;
+                    }}
                 >
                   <Pencil size={12} />
                 </button>
@@ -273,13 +268,29 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
                       onDeleteFolder(folder.id);
                     }
                   }}
-                  className="p-1.5 rounded-md"
+                    className="p-1 rounded-md transition-opacity"
                   style={{ color: palette.errorRed, background: `${palette.errorRed}10` }}
                   aria-label="Delete folder"
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = `${palette.errorRed}20`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = `${palette.errorRed}10`;
+                    }}
                 >
                   <Trash size={12} />
                 </button>
               </div>
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{
+                    background: palette.inputBackground,
+                    color: palette.secondaryText,
+                  }}
+                >
+                  {folder.fileCount || 0}
+                </span>
+              </button>
             </div>
           ))}
         </div>

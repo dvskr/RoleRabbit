@@ -1,17 +1,24 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Building2, Palette, Plus, Edit, Home, User, Briefcase, FileText, Award, Mail, Sparkles, X } from 'lucide-react';
-import { WebsiteConfig, Theme, Section } from '../../types/portfolio';
+import { Building2, Edit, Home, User, Briefcase, FileText, Award, Mail, Sparkles } from 'lucide-react';
+import { WebsiteConfig, Section } from '../../types/portfolio';
 import SectionEditor from './SectionEditor';
 import AIPromptPanel from './AIPromptPanel';
+import { logger } from '../../utils/logger';
+
+interface PortfolioPersonalData {
+  firstName?: string;
+  lastName?: string;
+  [key: string]: unknown;
+}
 
 interface WebsiteBuilderProps {
   onNext: () => void;
   onBack: () => void;
   config: WebsiteConfig;
   onUpdate: (config: Partial<WebsiteConfig>) => void;
-  portfolioData: any;
+  portfolioData: PortfolioPersonalData;
 }
 
 const defaultSections: Section[] = [
@@ -95,7 +102,7 @@ const defaultSections: Section[] = [
   }
 ];
 
-const sectionIcons: Record<string, React.ComponentType<any>> = {
+const sectionIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   hero: Home,
   about: User,
   experience: Briefcase,
@@ -111,7 +118,7 @@ export default function WebsiteBuilder({ onNext, onBack, config, onUpdate, portf
   const [selectedSection, setSelectedSection] = useState<string>('hero');
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [isAILoading, setIsAILoading] = useState(false);
-  const [aiHistory, setAiHistory] = useState<any[]>([]);
+  const [aiHistory, setAiHistory] = useState<Array<{ prompt: string; timestamp: number }>>([]);
 
   const handleToggleSection = (sectionId: string) => {
     const updatedSections = sections.map(section => 
@@ -158,7 +165,7 @@ export default function WebsiteBuilder({ onNext, onBack, config, onUpdate, portf
     
     // Process attachments if provided
     if (attachments && attachments.length > 0) {
-      console.log('Attachments received:', attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
+      logger.info('Portfolio AI attachments received', attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
     }
     
     // Simulate AI processing
@@ -256,9 +263,10 @@ export default function WebsiteBuilder({ onNext, onBack, config, onUpdate, portf
             const isSelected = selectedSection === section.id;
             
             return (
-              <div
+              <button
+                type="button"
                 key={section.id}
-                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
                   isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
                 onClick={() => setSelectedSection(section.id)}
@@ -305,7 +313,7 @@ export default function WebsiteBuilder({ onNext, onBack, config, onUpdate, portf
                     ↓
                   </button>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

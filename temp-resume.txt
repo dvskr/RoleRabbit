@@ -1,0 +1,9 @@
+John Doe
+Software Engineer with 5 years experience in React, Node.js, AWS.
+Experience:
+Company ABC - Senior Developer (2019-2024)
+- Built scalable microservices using Node.js and AWS Lambda.
+- Led team of 5 engineers delivering React web app.
+Education:
+State University - B.S. Computer Science (2015-2019)
+Skills: React, Node.js, AWS, TypeScript, GraphQL

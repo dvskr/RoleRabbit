@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Filter as FilterIcon, List, Grid, Columns, BarChart3, Trash2, Download, Upload, Settings } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, Filter as FilterIcon, Columns, BarChart3, Trash2, Download, Upload, Settings, List, Grid } from 'lucide-react';
 import { JobFilters as JobFiltersType, ViewMode } from '../../types/job';
 import { useTheme } from '../../contexts/ThemeContext';
 import { debounce } from '../../utils/performance';
@@ -46,13 +46,14 @@ export default function JobMergedToolbar({
   const [localSearchTerm, setLocalSearchTerm] = useState(filters.searchTerm || '');
 
   // Debounced filter update for search
-  const debouncedUpdateFilters = useCallback(
-    debounce((searchValue: string) => {
-      onFiltersChange({
-        ...filters,
-        searchTerm: searchValue
-      });
-    }, 300),
+  const debouncedUpdateFilters = useMemo(
+    () =>
+      debounce((searchValue: string) => {
+        onFiltersChange({
+          ...filters,
+          searchTerm: searchValue
+        });
+      }, 300),
     [filters, onFiltersChange]
   );
 
@@ -68,10 +69,10 @@ export default function JobMergedToolbar({
     }
   }, [localSearchTerm, filters.searchTerm, debouncedUpdateFilters]);
 
-  const handleFilterChange = (key: keyof JobFiltersType, value: any) => {
+  const handleFilterChange = <K extends keyof JobFiltersType>(key: K, value: JobFiltersType[K]) => {
     if (key === 'searchTerm') {
       // Update local state immediately for instant UI feedback
-      setLocalSearchTerm(value);
+      setLocalSearchTerm((value as string) ?? '');
     } else {
       // For non-search filters, update immediately
       onFiltersChange({

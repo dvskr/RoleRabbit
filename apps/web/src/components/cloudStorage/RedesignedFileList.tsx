@@ -205,7 +205,7 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
         {files.map((file) => (
           <FileCard
             key={file.id}

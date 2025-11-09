@@ -1,17 +1,17 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Plus, Briefcase } from 'lucide-react';
 import EmptyState from './EmptyState';
-import { 
-  JobCard, 
-  JobMergedToolbar, 
-  JobKanban, 
-  JobStats, 
-  EditableJobTable, 
-  AddJobModal, 
-  EditJobModal, 
-  JobDetailView, 
-  ExportModal, 
-  SettingsModal 
+import {
+  JobCard,
+  JobMergedToolbar,
+  JobKanban,
+  JobStats,
+  EditableJobTable,
+  AddJobModal,
+  EditJobModal,
+  JobDetailView,
+  ExportModal,
+  SettingsModal
 } from './jobs';
 import { useJobsApi } from '../hooks/useJobsApi';
 import { Job, SavedView } from '../types/job';
@@ -19,69 +19,46 @@ import { logger } from '../utils/logger';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function JobTracker() {
-  try {
-    const { theme } = useTheme();
-    const colors = theme?.colors;
-    
-    // Safety check for theme
-    if (!colors) {
-      return (
-        <div className="h-full flex items-center justify-center bg-white">
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      );
-    }
+  const { theme } = useTheme();
+  const colors = theme?.colors;
+  const hookResult = useJobsApi();
 
-    let hookResult;
-    try {
-      hookResult = useJobsApi();
-    } catch (error) {
-      logger.error('Error initializing useJobsApi:', error);
-      return (
-        <div className="h-full flex items-center justify-center" style={{ background: colors.background || '#ffffff' }}>
-          <div className="text-center">
-            <p style={{ color: colors.primaryText || '#000000' }}>Error loading job tracker. Please refresh the page.</p>
-          </div>
-        </div>
-      );
-    }
-
-    const {
-      jobs = [], // Already filtered and sorted - use this for ALL views
-      isLoading = false,
-      filters = {
-        status: 'all',
-        searchTerm: '',
-        sortBy: 'date',
-        groupBy: 'status',
-        showArchived: false
-      },
-      viewMode = 'table',
-      selectedJobs = [],
-      favorites = [],
-      showFilters = false,
-      stats = {
-        total: 0,
-        applied: 0,
-        interview: 0,
-        offer: 0,
-        rejected: 0,
-        favorites: 0
-      },
-      setFilters = () => {},
-      setViewMode = () => {},
-      setShowFilters = () => {},
-      addJob = async () => {},
-      updateJob = async () => {},
-      deleteJob = async () => {},
-      restoreJob = async () => {},
-      bulkDelete = async () => {},
-      bulkRestore = async () => {},
-      bulkUpdateStatus = async () => {},
-      toggleJobSelection = () => {},
-      clearSelection = () => {},
-      toggleFavorite = () => {}
-    } = hookResult || {};
+  const {
+    jobs = [], // Already filtered and sorted - use this for ALL views
+    isLoading = false,
+    filters = {
+      status: 'all',
+      searchTerm: '',
+      sortBy: 'date',
+      groupBy: 'status',
+      showArchived: false
+    },
+    viewMode = 'table',
+    selectedJobs = [],
+    favorites = [],
+    showFilters = false,
+    stats = {
+      total: 0,
+      applied: 0,
+      interview: 0,
+      offer: 0,
+      rejected: 0,
+      favorites: 0
+    },
+    setFilters = () => {},
+    setViewMode = () => {},
+    setShowFilters = () => {},
+    addJob = async () => {},
+    updateJob = async () => {},
+    deleteJob = async () => {},
+    restoreJob = async () => {},
+    bulkDelete = async () => {},
+    bulkRestore = async () => {},
+    bulkUpdateStatus = async () => {},
+    toggleJobSelection = () => {},
+    clearSelection = () => {},
+    toggleFavorite = () => {}
+  } = hookResult || {};
 
   const [showAddJob, setShowAddJob] = useState(false);
   const [preSelectedStatus, setPreSelectedStatus] = useState<Job['status'] | null>(null);
@@ -98,17 +75,32 @@ export default function JobTracker() {
     }
   });
 
+  const palette = useMemo(
+    () => ({
+      primaryText: colors?.primaryText ?? '#1f2937',
+      secondaryText: colors?.secondaryText ?? '#4b5563',
+      background: colors?.background ?? '#ffffff',
+      primaryBlue: colors?.primaryBlue ?? '#3b82f6',
+      primaryBlueHover: colors?.primaryBlueHover ?? '#2563eb',
+      hoverBackground: colors?.hoverBackground ?? '#f3f4f6'
+    }),
+    [colors]
+  );
+
   // All hooks must be called before any conditional returns
   const handleAddJob = useCallback(() => {
     setPreSelectedStatus(null);
     setShowAddJob(true);
   }, []);
 
-  const handleAddJobSubmit = useCallback((jobData: any) => {
-    addJob(jobData);
-    setShowAddJob(false);
-    setPreSelectedStatus(null);
-  }, [addJob]);
+  const handleAddJobSubmit = useCallback(
+    async (jobData: Omit<Job, 'id'>) => {
+      await addJob(jobData);
+      setShowAddJob(false);
+      setPreSelectedStatus(null);
+    },
+    [addJob]
+  );
 
   const handleEditJob = useCallback((job: Job) => {
     setEditingJob(job);
@@ -132,23 +124,26 @@ export default function JobTracker() {
     setShowExportModal(true);
   }, []);
 
-  const handleImportJobs = () => {
+  const handleImportJobs = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-    input.onchange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+    input.onchange = (event: Event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = (loadEvent: ProgressEvent<FileReader>) => {
           try {
-            const importedJobs = JSON.parse(event.target?.result as string);
+            const resultText = loadEvent.target?.result;
+            const importedJobs = resultText
+              ? (JSON.parse(resultText.toString()) as Partial<Job>[])
+              : [];
             logger.debug('Imported jobs:', importedJobs);
             
             // Validate and import jobs
             if (Array.isArray(importedJobs)) {
               // Process each job and add to state
-              const jobsToAdd = importedJobs.map((job: any) => {
+              const jobsToAdd = importedJobs.map((job) => {
                 // Create a new job with ensured ID
                 const newJob: Omit<Job, 'id'> = {
                   title: job.title || 'Untitled Job',
@@ -169,7 +164,13 @@ export default function JobTracker() {
               });
               
               // Add all jobs
-              jobsToAdd.forEach(job => addJob(job));
+              jobsToAdd.forEach(async (job) => {
+                try {
+                  await addJob(job);
+                } catch (importError) {
+                  logger.error('Failed to import job:', importError);
+                }
+              });
               
               alert(`Successfully imported ${importedJobs.length} job(s)`);
             } else {
@@ -184,7 +185,7 @@ export default function JobTracker() {
       }
     };
     input.click();
-  };
+  }, [addJob]);
 
   const handleShowSettings = useCallback(() => {
     setShowSettingsModal(true);
@@ -369,12 +370,45 @@ export default function JobTracker() {
       return (
         <div className="flex-1 flex items-center justify-center h-full">
           <div className="text-center">
-            <p style={{ color: colors.primaryText }}>Error displaying jobs. Please refresh the page.</p>
+            <p style={{ color: palette.primaryText }}>Error displaying jobs. Please refresh the page.</p>
           </div>
         </div>
       );
     }
-  }, [viewMode, jobs, favorites, selectedJobs, filters, toggleFavorite, toggleJobSelection, handleEditJob, deleteJob, handleViewJob, restoreJob, handleAddJob, handleAddJobToColumn, handleEditJobSubmit, bulkDelete, bulkRestore, setViewMode, setShowFilters, showFilters, setFilters, savedViews, handleAddJobSubmit, colors]);
+  }, [
+    viewMode,
+    jobs,
+    favorites,
+    selectedJobs,
+    filters,
+    toggleFavorite,
+    toggleJobSelection,
+    handleEditJob,
+    deleteJob,
+    handleViewJob,
+    restoreJob,
+    handleAddJob,
+    handleAddJobToColumn,
+    handleEditJobSubmit,
+    bulkDelete,
+    bulkRestore,
+    setViewMode,
+    setShowFilters,
+    showFilters,
+    setFilters,
+    savedViews,
+    handleAddJobSubmit,
+    palette.primaryText,
+    handleImportJobs
+  ]);
+
+  if (!colors) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   // Show loading state when fetching from API
   if (isLoading) {
@@ -517,21 +551,5 @@ export default function JobTracker() {
         </button>
       </div>
     </div>
-    );
-  } catch (error) {
-    logger.error('Critical error in JobTracker:', error);
-    return (
-      <div className="h-full flex items-center justify-center bg-white">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">Error loading Job Tracker</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    );
-  }
+  );
 }

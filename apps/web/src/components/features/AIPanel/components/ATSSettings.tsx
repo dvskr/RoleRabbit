@@ -2,8 +2,19 @@ import React, { useState } from 'react';
 import { Settings } from 'lucide-react';
 import { TONE_ICON_MAP, TONE_LABEL_MAP, LENGTH_COMPACT_OPTIONS } from '../constants';
 
+interface ATSSettingsColors {
+  cardBackground: string;
+  border: string;
+  primaryText: string;
+  inputBackground: string;
+  badgePurpleBg: string;
+  badgePurpleBorder: string;
+  badgePurpleText: string;
+  secondaryText: string;
+}
+
 interface ATSSettingsProps {
-  colors: any;
+  colors: ATSSettingsColors;
   tailorEditMode: string;
   setTailorEditMode: (mode: string) => void;
   selectedTone: string;
@@ -68,9 +79,9 @@ export default function ATSSettings({
         <div className="px-3 pb-3 space-y-3 border-t" style={{ borderColor: colors.border }}>
           <div className="space-y-3 pt-3">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
+              <p className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
                 Mode
-              </label>
+              </p>
               <div className="flex rounded-lg p-1" style={{ background: colors.inputBackground }}>
                 <button
                   onClick={() => setTailorEditMode('partial')}
@@ -98,9 +109,9 @@ export default function ATSSettings({
             </div>
 
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
+              <p className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
                 Writing Tone
-              </label>
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {Object.keys(TONE_ICON_MAP).map((toneId) => (
                   <button
@@ -121,9 +132,9 @@ export default function ATSSettings({
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
+            <p className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
               Length
-            </label>
+            </p>
             <div className="flex rounded-lg p-1" style={{ background: colors.inputBackground }}>
               {LENGTH_COMPACT_OPTIONS.map((length) => (
                 <button

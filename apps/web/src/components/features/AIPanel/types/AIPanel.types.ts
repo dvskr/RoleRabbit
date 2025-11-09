@@ -1,3 +1,7 @@
+import type { LucideIcon } from 'lucide-react';
+import type { ResumeData } from '../../../types/resume';
+import type { ATSAnalysisResult, TailorResult, CoverLetterDraft, PortfolioDraft } from '../../../types/ai';
+
 export interface AIPanelProps {
   showRightPanel: boolean;
   setShowRightPanel: (show: boolean) => void;
@@ -19,34 +23,29 @@ export interface AIPanelProps {
   setSelectedTone: (tone: string) => void;
   selectedLength: string;
   setSelectedLength: (length: string) => void;
-  aiConversation: any[];
-  aiPrompt: string;
-  setAiPrompt: (prompt: string) => void;
-  selectedModel: string;
-  setSelectedModel: (model: string) => void;
   isMobile: boolean;
-  resumeData: any;
-  onAnalyzeJobDescription: () => void;
-  onApplyAIRecommendations: () => void;
-  onSendAIMessage: () => void;
-  onResumeUpdate?: (updatedData: any) => void;
-}
-
-export interface ATSAnalysisResult {
-  overall: number;
-  keywords: number;
-  format: number;
-  content: number;
-  experience: number;
-  strengths: string[];
-  improvements: string[];
-  missingKeywords: string[];
+  resumeData: ResumeData | null;
+  onAnalyzeJobDescription: () => Promise<any | null> | void;
+  onApplyAIRecommendations: () => Promise<any | null> | void;
+  onTailorResume: () => Promise<any | null> | void;
+  onGenerateCoverLetter: () => Promise<any | null> | void;
+  onGeneratePortfolio: () => Promise<any | null> | void;
+  tailorResult: TailorResult | null;
+  setTailorResult: (result: TailorResult | null) => void;
+  coverLetterDraft: CoverLetterDraft | null;
+  setCoverLetterDraft: (draft: CoverLetterDraft | null) => void;
+  portfolioDraft: PortfolioDraft | null;
+  setPortfolioDraft: (draft: PortfolioDraft | null) => void;
+  isTailoring: boolean;
+  isGeneratingCoverLetter: boolean;
+  isGeneratingPortfolio: boolean;
+  onResumeUpdate?: (data: ResumeData) => void;
 }
 
 export interface ToneOption {
   id: string;
   name: string;
-  icon: any;
+  icon: LucideIcon;
   description: string;
   color: string;
 }
@@ -59,7 +58,7 @@ export interface LengthOption {
 
 export interface QuickAction {
   name: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 export interface AIModel {

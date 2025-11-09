@@ -27,6 +27,15 @@ export default function ReferralTracker({
     notes: ''
   });
 
+  const fieldIds = {
+    name: `referral-name-${jobId}`,
+    position: `referral-position-${jobId}`,
+    relationship: `referral-relationship-${jobId}`,
+    contacted: `referral-contacted-${jobId}`,
+    date: `referral-date-${jobId}`,
+    notes: `referral-notes-${jobId}`
+  } as const;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAddReferral(jobId, {
@@ -95,8 +104,9 @@ export default function ReferralTracker({
       {showForm && (
         <form onSubmit={handleSubmit} className="mt-4 p-3 bg-blue-50 rounded-lg space-y-3">
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Name</label>
+            <label htmlFor={fieldIds.name} className="text-xs font-medium text-gray-700 mb-1 block">Name</label>
             <input
+              id={fieldIds.name}
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -106,8 +116,9 @@ export default function ReferralTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Position</label>
+            <label htmlFor={fieldIds.position} className="text-xs font-medium text-gray-700 mb-1 block">Position</label>
             <input
+              id={fieldIds.position}
               type="text"
               value={formData.position}
               onChange={(e) => setFormData({ ...formData, position: e.target.value })}
@@ -117,8 +128,9 @@ export default function ReferralTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Relationship</label>
+            <label htmlFor={fieldIds.relationship} className="text-xs font-medium text-gray-700 mb-1 block">Relationship</label>
             <input
+              id={fieldIds.relationship}
               type="text"
               value={formData.relationship}
               onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
@@ -129,21 +141,24 @@ export default function ReferralTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Contacted</label>
-            <label className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-700 mb-1 block" id={fieldIds.contacted}>Contacted</span>
+            <label className="flex items-center gap-2" htmlFor={`${fieldIds.contacted}-checkbox`}>
               <input
+                id={`${fieldIds.contacted}-checkbox`}
                 type="checkbox"
                 checked={formData.contacted}
                 onChange={(e) => setFormData({ ...formData, contacted: e.target.checked })}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                aria-labelledby={fieldIds.contacted}
               />
               <span className="text-xs text-gray-700">Already contacted</span>
             </label>
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
+            <label htmlFor={fieldIds.date} className="text-xs font-medium text-gray-700 mb-1 block">Date</label>
             <input
+              id={fieldIds.date}
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -153,8 +168,9 @@ export default function ReferralTracker({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
+            <label htmlFor={fieldIds.notes} className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
             <textarea
+              id={fieldIds.notes}
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={2}

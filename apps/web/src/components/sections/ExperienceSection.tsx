@@ -44,8 +44,8 @@ const ExperienceSection = React.memo(function ExperienceSection({
   };
 
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
-    setResumeData((prev: any) => {
-      const updatedExperience = (prev.experience || []).map((item: any) => 
+    setResumeData((prev: ResumeData) => {
+      const updatedExperience = (prev.experience || []).map((item: ExperienceItem) => 
       item.id === id ? { ...item, ...updates } : item
     );
       return {...prev, experience: updatedExperience};
@@ -53,8 +53,8 @@ const ExperienceSection = React.memo(function ExperienceSection({
   };
 
   const deleteExperience = (id: number) => {
-    setResumeData((prev: any) => {
-      const updatedExperience = (prev.experience || []).filter((item: any) => item.id !== id);
+    setResumeData((prev: ResumeData) => {
+      const updatedExperience = (prev.experience || []).filter((item: ExperienceItem) => item.id !== id);
       return {...prev, experience: updatedExperience};
     });
   };
@@ -127,21 +127,7 @@ const ExperienceSection = React.memo(function ExperienceSection({
   };
 
   return (
-    <div className="mb-8 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
-      <div 
-        className="rounded-2xl p-6 transition-all"
-        style={{
-          background: colors.cardBackground,
-          border: `1px solid ${colors.border}`,
-          boxShadow: `0 4px 6px ${colors.border}10`,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.boxShadow = `0 8px 12px ${colors.border}20`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.boxShadow = `0 4px 6px ${colors.border}10`;
-        }}
-      >
+    <div className="mb-4 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
         <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
@@ -582,7 +568,6 @@ const ExperienceSection = React.memo(function ExperienceSection({
             <Sparkles size={16} />
             AI Generate
           </button>
-        </div>
       </div>
     </div>
   );

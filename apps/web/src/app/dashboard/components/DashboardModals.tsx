@@ -17,7 +17,6 @@ const MobileMenuModal = dynamic(() => import('../../../components/modals').then(
 const AIGenerateModal = dynamic(() => import('../../../components/modals').then(mod => mod.AIGenerateModal), { ssr: false });
 const ResumeSaveToCloudModal = dynamic(() => import('../../../components/modals').then(mod => mod.ResumeSaveToCloudModal), { ssr: false });
 const ResumeImportFromCloudModal = dynamic(() => import('../../../components/modals').then(mod => mod.ResumeImportFromCloudModal), { ssr: false });
-const ResumeSharing = dynamic(() => import('../../../components/features/ResumeSharing'), { ssr: false });
 const CoverLetterAnalytics = dynamic(() => import('../../../components/CoverLetterAnalytics'), { ssr: false });
 const EmailAnalytics = dynamic(() => import('../../../components/email/EmailAnalytics'), { ssr: false });
 const ApplicationAnalytics = dynamic(() => import('../../../components/ApplicationAnalytics'), { ssr: false });
@@ -42,8 +41,6 @@ interface DashboardModalsProps {
   setShowSaveToCloudModal: (show: boolean) => void;
   showImportFromCloudModal: boolean;
   setShowImportFromCloudModal: (show: boolean) => void;
-  showResumeSharing: boolean;
-  setShowResumeSharing: (show: boolean) => void;
   showCoverLetterAnalytics: boolean;
   setShowCoverLetterAnalytics: (show: boolean) => void;
   showEmailAnalytics: boolean;
@@ -97,8 +94,13 @@ interface DashboardModalsProps {
   // Handlers
   onExport: (format: string) => void;
   onSaveToCloud: () => void;
+  onImport?: () => void;
   onImportFromCloud: () => void;
-  onFileSelected: (file: File) => void;
+  onFileSelected: (file: File) => Promise<boolean | void> | boolean | void;
+  onCreateBlank?: () => Promise<boolean | void> | boolean | void;
+  slotsUsed?: number;
+  maxSlots?: number;
+  onResumeApplied?: (resumeId: string, resumeRecord?: any) => void;
   onAddSection: () => void;
   onOpenAIGenerateModal: (section: string) => void;
   onAddField: () => void;
@@ -129,8 +131,6 @@ export function DashboardModals(props: DashboardModalsProps) {
     setShowSaveToCloudModal,
     showImportFromCloudModal,
     setShowImportFromCloudModal,
-    showResumeSharing,
-    setShowResumeSharing,
     showCoverLetterAnalytics,
     setShowCoverLetterAnalytics,
     showEmailAnalytics,
@@ -175,8 +175,13 @@ export function DashboardModals(props: DashboardModalsProps) {
     onTabChange,
     onExport,
     onSaveToCloud,
+    onImport,
     onImportFromCloud,
     onFileSelected,
+    onCreateBlank,
+    slotsUsed,
+    maxSlots,
+    onResumeApplied,
     onAddSection,
     onOpenAIGenerateModal,
     onAddField,
@@ -215,11 +220,12 @@ export function DashboardModals(props: DashboardModalsProps) {
         setImportMethod={setImportMethod}
         importJsonData={importJsonData}
         setImportJsonData={setImportJsonData}
-        onImport={() => {
-          // TODO: Implement import functionality
-        }}
         onImportFromCloud={onImportFromCloud}
         onFileSelected={onFileSelected}
+        onCreateBlank={onCreateBlank}
+        slotsUsed={slotsUsed}
+        maxSlots={maxSlots}
+        onResumeApplied={onResumeApplied}
       />
 
       {/* Add Custom Section Modal */}
@@ -289,16 +295,6 @@ export function DashboardModals(props: DashboardModalsProps) {
           files={cloudResumes}
           onClose={() => setShowImportFromCloudModal(false)}
           onLoad={onLoadFromCloud}
-        />
-      )}
-
-      {/* Resume Sharing Modal */}
-      {showResumeSharing && (
-        <ResumeSharing
-          resumeId={`resume_${Date.now()}`}
-          resumeName={resumeFileName}
-          isOpen={showResumeSharing}
-          onClose={() => setShowResumeSharing(false)}
         />
       )}
 

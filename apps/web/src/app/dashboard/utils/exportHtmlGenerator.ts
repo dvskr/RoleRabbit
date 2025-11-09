@@ -36,7 +36,7 @@ function getTemplateClassesForExport(templateId: string | null) {
   const colorScheme = template.colorScheme;
   let containerClass = 'bg-white';
   let headerClass = 'border-b-2';
-  let nameColor = 'text-gray-900';
+  const nameColor = 'text-gray-900';
   let titleColor = 'text-gray-700';
   let sectionColor = 'text-gray-900';
   let accentColor = 'text-gray-700';

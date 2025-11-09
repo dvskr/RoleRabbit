@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import type { SetStateAction } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -39,8 +39,9 @@ import {
   SectionVisibility,
   CustomField
 } from '../../types/resume';
+import type { BaseResumeRecord } from '../../utils/resumeMapper';
 import { useResumeData } from '../../hooks/useResumeData';
-import { useResumeList } from '../../hooks/useResumeList';
+import { useBaseResumes } from '../../hooks/useBaseResumes';
 import { useModals } from '../../hooks/useModals';
 import { useAI } from '../../hooks/useAI';
 // Keep utils lazy - import only when actually needed
@@ -48,11 +49,11 @@ import { resumeHelpers } from '../../utils/resumeHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
 import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
-import { ConflictIndicator } from '../../components/ConflictIndicator';
+import { Loading } from '../../components/Loading';
 import { useToasts, ToastContainer } from '../../components/Toast';
-import apiService from '../../services/apiService';
+import { ConflictIndicator } from '../../components/ConflictIndicator';
+import { PlusCircle, Upload, Trash2 } from 'lucide-react';
 // Lazy load heavy analytics and modal components
-const ResumeSharing = dynamic(() => import('../../components/features/ResumeSharing'), { ssr: false });
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
 const EmailAnalytics = dynamic(() => import('../../components/email/EmailAnalytics'), { ssr: false });
 const ApplicationAnalytics = dynamic(() => import('../../components/ApplicationAnalytics'), { ssr: false });
@@ -147,7 +148,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   const { theme } = useTheme();
   const colors = theme.colors;
   const initializingCustomFieldsRef = useRef(false);
-  const { toasts, showToast, dismissToast } = useToasts();
   
   // Dashboard-specific state hooks
   const dashboardUI = useDashboardUI(initialTab);
@@ -176,6 +176,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setAddedTemplates,
   } = dashboardTemplates;
 
+  // Toast notifications
+  const { toasts, showToast, dismissToast } = useToasts();
+
   const handleResumeLoaded = useCallback(({ resume, snapshot }: { resume: any; snapshot: { customFields?: CustomField[] } }) => {
     initializingCustomFieldsRef.current = true;
     try {
@@ -186,21 +189,34 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setSelectedTemplateId(resume?.templateId ?? null);
   }, [setCustomFieldsBase, setSelectedTemplateId]);
 
-  const resumeDataHook = useResumeData({ onResumeLoaded: handleResumeLoaded });
-
-  // Resume list management
-  const resumeListHook = useResumeList({
-    onResumeSwitched: async (resumeId: string) => {
-      // When switching resumes, load the new resume
-      if (resumeDataHook.loadResumeById) {
-        try {
-          await resumeDataHook.loadResumeById(resumeId);
-        } catch (error) {
-          logger.error('Failed to load resume:', error);
-        }
-      }
+  const handleActiveResumeChange = useCallback(async (id: string | null) => {
+    if (id) {
+      setCurrentResumeId(id);
+      // Load the active resume data into the editor
+      // Note: we can't call loadResumeById here because resumeDataHook hasn't been initialized yet
+      // The active resume will be loaded by the useEffect below that watches activeId
     }
+  }, []);
+
+  const resumeHook = useBaseResumes({
+    onActiveChange: handleActiveResumeChange
   });
+
+  const {
+    resumes,
+    activeId,
+    limits,
+    isLoading: isLoadingResumes,
+    error: resumeError,
+    createResume: createBaseResume,
+    activateResume,
+    deleteResume: deleteBaseResume
+  } = resumeHook;
+
+  // Memoize maxSlots to prevent unnecessary re-renders
+  const maxSlots = useMemo(() => limits?.maxSlots ?? 1, [limits?.maxSlots]);
+
+  const resumeDataHook = useResumeData({ onResumeLoaded: handleResumeLoaded });
 
   const dashboardCloudStorage = useDashboardCloudStorage();
   const {
@@ -216,8 +232,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   const dashboardAnalytics = useDashboardAnalytics();
   const {
-    showResumeSharing,
-    setShowResumeSharing,
     showCoverLetterAnalytics,
     setShowCoverLetterAnalytics,
     showEmailAnalytics,
@@ -254,15 +268,52 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     sectionVisibility, setSectionVisibility,
     customSections, setCustomSections,
     history, setHistory,
-    historyIndex, setHistoryIndex
+    historyIndex, setHistoryIndex,
+    loadResumeById,
+    applyBaseResume
   } = resumeDataHook;
+  const enforcedVisibilityRef = useRef<string | null>(null);
 
-  // Sync activeResumeId when currentResumeId changes
   useEffect(() => {
-    if (currentResumeId && currentResumeId !== resumeListHook.activeResumeId) {
-      resumeListHook.setActiveResumeId(currentResumeId);
+    const resumeKey = currentResumeId || '__default__';
+    if (enforcedVisibilityRef.current !== resumeKey) {
+      enforcedVisibilityRef.current = resumeKey;
+      const hasHidden = Object.values(sectionVisibility || {}).some((visible) => visible === false);
+      if (hasHidden) {
+        setSectionVisibility((prev) => {
+          const next = { ...prev };
+          Object.keys(next).forEach((key) => {
+            next[key] = true;
+          });
+          return next;
+        });
+      }
     }
-  }, [currentResumeId, resumeListHook]);
+  }, [currentResumeId, sectionVisibility, setSectionVisibility]);
+
+  // Display saveError via toast notifications
+  useEffect(() => {
+    if (saveError) {
+      showToast(saveError, 'error', 8000); // Show error toast for 8 seconds
+    }
+  }, [saveError, showToast]);
+
+  // Load resume data when active base resume changes
+  useEffect(() => {
+    if (!activeId) {
+      setCurrentResumeId(null);
+      return;
+    }
+
+    if (currentResumeId !== activeId) {
+      setCurrentResumeId(activeId);
+    }
+
+    loadResumeById(activeId).catch((error: unknown) => {
+      logger.error('Failed to load active resume', error);
+      showToast('Failed to load selected resume', 'error', 6000);
+    });
+  }, [activeId, currentResumeId, setCurrentResumeId, loadResumeById, showToast]);
 
   const setCustomFieldsTracked = useCallback((value: SetStateAction<CustomField[]>) => {
     setCustomFieldsBase((prev) => {
@@ -275,9 +326,117 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     });
   }, [setCustomFieldsBase, setHasChanges, setSaveError]);
 
+  const handleCreateBaseResume = useCallback(async () => {
+    if (resumes.length >= maxSlots) {
+      showToast(`You've reached your plan limit of ${maxSlots} base resumes. Delete one or upgrade to add more slots.`, 'error', 6000);
+      return false;
+    }
+
+    try {
+      const created = await createBaseResume({});
+      if (created?.id) {
+        await activateResume(created.id);
+      }
+      showToast('Created a new base resume slot', 'success', 4000);
+      return true;
+    } catch (error: any) {
+      logger.error('Failed to create base resume', error);
+      const message = error?.meta?.maxSlots
+        ? `You have reached the limit of ${error.meta.maxSlots} base resumes for your plan.`
+        : error?.response?.data?.error || error?.message || 'Failed to create base resume';
+      showToast(message, 'error', 6000);
+      return false;
+    }
+  }, [resumes.length, maxSlots, createBaseResume, activateResume, showToast]);
+
+  const handleActivateBaseResume = useCallback(async (id: string) => {
+    try {
+      await activateResume(id);
+      showToast('Active resume updated', 'success', 3000);
+    } catch (error: any) {
+      logger.error('Failed to activate base resume', error);
+      const message = error?.response?.data?.error || error?.message || 'Failed to activate resume';
+      showToast(message, 'error', 6000);
+    }
+  }, [activateResume, showToast]);
+
+  const handleDeleteBaseResume = useCallback(async (id: string) => {
+    try {
+      await deleteBaseResume(id);
+      showToast('Base resume deleted', 'success', 3000);
+    } catch (error: any) {
+      logger.error('Failed to delete base resume', error);
+      const message = error?.response?.data?.error || error?.message || 'Failed to delete resume';
+      showToast(message, 'error', 6000);
+    }
+  }, [deleteBaseResume, showToast]);
+
+  const handleResumeUpload = useCallback(async (file: File) => {
+    if (resumes.length >= maxSlots) {
+      showToast(`All ${maxSlots} base resume slots are filled. Delete an existing resume to import a new one.`, 'error', 6000);
+      return false;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/resumes/parse', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload?.error || 'Failed to parse resume');
+      }
+
+      const result = await response.json();
+      if (!result?.success || !result?.structuredResume) {
+        throw new Error(result?.error || 'Failed to parse resume');
+      }
+
+      const created = await createBaseResume({
+        name: file.name.replace(/\.[^/.]+$/, ''),
+        data: result.structuredResume,
+        metadata: {
+          parseConfidence: result.confidence,
+          parseMethod: result.method,
+          fileHash: result.fileHash
+        }
+      });
+
+      if (created?.id) {
+        await activateResume(created.id);
+      }
+
+      showToast('Resume uploaded and parsed successfully', 'success', 4000);
+      setShowImportModal(false);
+      return true;
+    } catch (error: any) {
+      logger.error('Failed to import resume', error);
+      const message = error?.message || 'Failed to import resume';
+      showToast(message, 'error', 6000);
+      return false;
+    }
+  }, [resumes.length, maxSlots, createBaseResume, activateResume, showToast, setShowImportModal]);
+
+  const handleOpenImportModal = useCallback(() => {
+    // Always open the modal; slot gating is handled inside the modal by disabling actions
+    setShowImportModal(true);
+  }, [setShowImportModal]);
+
+  const handleImportFromCloudWithSlotCheck = useCallback(() => {
+    if (resumes.length >= maxSlots) {
+      showToast(`All ${maxSlots} base resume slots are filled. Delete an existing resume or upgrade your plan to import from cloud.`, 'error', 6000);
+      return;
+    }
+    handleImportFromCloud();
+  }, [resumes.length, maxSlots, handleImportFromCloud, showToast]);
+
   const {
     aiMode, setAiMode,
-    selectedModel, setSelectedModel,
     jobDescription, setJobDescription,
     isAnalyzing, setIsAnalyzing,
     matchScore, setMatchScore,
@@ -288,7 +447,12 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     tailorEditMode, setTailorEditMode,
     selectedTone, setSelectedTone,
     selectedLength, setSelectedLength,
-    aiConversation, setAiConversation
+    tailorResult, setTailorResult,
+    isTailoring, setIsTailoring,
+    coverLetterDraft, setCoverLetterDraft,
+    isGeneratingCoverLetter, setIsGeneratingCoverLetter,
+    portfolioDraft, setPortfolioDraft,
+    isGeneratingPortfolio, setIsGeneratingPortfolio
   } = aiHook;
 
   // Save changes to history when resumeData changes
@@ -369,8 +533,18 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       setMissingKeywords,
     setAiRecommendations,
     aiRecommendations,
-    aiConversation,
-    setAiConversation,
+    isAnalyzing,
+    setShowATSScore,
+    applyBaseResume,
+    tailorEditMode,
+    selectedTone,
+    selectedLength,
+    setTailorResult,
+    setIsTailoring,
+    setCoverLetterDraft,
+    setIsGeneratingCoverLetter,
+    setPortfolioDraft,
+    setIsGeneratingPortfolio
   });
 
   const {
@@ -386,14 +560,16 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     hideSection,
     analyzeJobDescription,
     applyAIRecommendations,
-    sendAIMessage,
+    tailorResumeForJob,
+    generateCoverLetterDraft,
+    generatePortfolioDraft,
     saveResume,
     undo,
     redo,
   } = dashboardHandlers;
 
   // Dashboard export hook
-  const { handleFileSelected, handleExport } = useDashboardExport({
+  const { handleExport } = useDashboardExport({
     resumeFileName,
     resumeData,
     customSections,
@@ -441,6 +617,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setShowSaveToCloudModal,
     setShowImportFromCloudModal,
   });
+
 
   // Memoize renderSection to prevent unnecessary re-renders in ResumeEditor
   const renderSection = useCallback((section: string) => {
@@ -534,7 +711,13 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       case 'storage':
         return <CloudStorage />;
       case 'editor':
-        return isPreviewMode ? (
+        // Show loading state only on initial load, not on subsequent updates
+        if (resumeLoading && !currentResumeId && resumes.length === 0) {
+          return <Loading message="Loading Resume Editor..." />;
+        }
+        
+        try {
+          const resumeContent = isPreviewMode ? (
           <ResumePreview
             resumeFileName={resumeFileName}
             resumeData={resumeData}
@@ -576,51 +759,23 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             onToggleSection={toggleSection}
             onMoveSection={moveSection}
             onShowAddSectionModal={() => setShowAddSectionModal(true)}
-            onDeleteCustomSection={deleteCustomSection}
-            onUpdateCustomSection={updateCustomSection}
             onGenerateSmartFileName={generateSmartFileName}
             onResetToDefault={resetToDefault}
             renderSection={renderSection}
-            showAddFieldModal={showAddFieldModal}
             setShowAddFieldModal={setShowAddFieldModal}
             customFields={customFields}
             setCustomFields={setCustomFieldsTracked}
-            newFieldName={newFieldName}
-            setNewFieldName={setNewFieldName}
-            newFieldIcon={newFieldIcon}
-            setNewFieldIcon={setNewFieldIcon}
-            onAddCustomField={addCustomField}
             selectedTemplateId={selectedTemplateId || DEFAULT_TEMPLATE_ID}
             onTemplateApply={(templateId) => {
               // Apply template styling
               setSelectedTemplateId(templateId);
-              
-              // Get the template from the templates data
               const template = resumeTemplates.find(t => t.id === templateId);
               if (template) {
-                // Apply template-specific styling
                 logger.debug('Applying template:', template.name);
-                
-                // Apply color scheme
-                if (template.colorScheme === 'blue') {
-                  // Could apply blue theme
-                } else if (template.colorScheme === 'green') {
-                  // Could apply green theme
-                } else if (template.colorScheme === 'monochrome') {
-                  // Could apply monochrome theme
-                }
-                
-                // Apply layout style
-                if (template.layout === 'two-column') {
-                  // Could apply two-column layout
-                } else if (template.layout === 'single-column') {
-                  // Could apply single-column layout
-                }
               }
             }}
             addedTemplates={addedTemplates}
             onRemoveTemplate={(templateId) => {
-              // Prevent removing the last template
               if (addedTemplates.length > 1) {
                 dashboardTemplates.removeTemplate(templateId);
               } else {
@@ -628,17 +783,38 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               }
             }}
             onAddTemplates={(templateIds) => {
-              // Add multiple templates at once
               templateIds.forEach(id => dashboardTemplates.addTemplate(id));
               logger.debug('Templates added to editor:', templateIds);
             }}
             onNavigateToTemplates={() => {
               handleTabChange('templates');
             }}
+            onGenerateSummary={() => openAIGenerateModal('summary')}
+            onOpenAIGenerateModal={openAIGenerateModal}
+            colors={colors}
+            onToggleSidebar={() => setResumePanelCollapsed((prev) => !prev)}
             isSidebarCollapsed={resumePanelCollapsed}
-            onToggleSidebar={() => setResumePanelCollapsed(!resumePanelCollapsed)}
+            resumeLoading={resumeLoading}
           />
         );
+
+          return resumeContent;
+        } catch (error) {
+          logger.error('Error rendering editor:', error);
+          return (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-red-600 mb-4">Error loading editor. Please refresh the page.</p>
+                <button 
+                  onClick={() => window.location.reload()} 
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                >
+                  Reload Page
+                </button>
+              </div>
+            </div>
+        );
+        }
       case 'templates':
         return <Templates 
           onAddToEditor={(templateId) => {
@@ -700,7 +876,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   };
 
   return (
-    <>
+    <ErrorBoundary>
       <div className="fixed inset-0 flex" style={{ background: colors.background }}>
         {/* Sidebar */}
         <Sidebar
@@ -711,7 +887,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         />
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {/* Header */}
           {activeTab === 'editor' ? (
             <Header
@@ -724,12 +900,57 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               onExport={() => setShowExportModal(true)}
               onUndo={undo}
               onRedo={redo}
-              onImport={() => setShowImportModal(true)}
+              onClear={() => {
+                if (confirm('Are you sure you want to clear all resume data? This action cannot be undone.')) {
+                  // Clear all resume data
+                  setResumeData({
+                    name: '',
+                    title: '',
+                    email: '',
+                    phone: '',
+                    location: '',
+                    summary: '',
+                    skills: [],
+                    experience: [],
+                    education: [],
+                    projects: [],
+                    certifications: [],
+                  });
+                  // Clear custom sections
+                  setCustomSections([]);
+                  // Reset section order to default
+                  setSectionOrder(['summary', 'skills', 'experience', 'education', 'projects', 'certifications']);
+                  // Reset section visibility to default (all visible)
+                  setSectionVisibility({
+                    summary: true,
+                    skills: true,
+                    experience: true,
+                    education: true,
+                    projects: true,
+                    certifications: true,
+                  });
+                  // Clear history
+                  setHistory([{
+                    name: '',
+                    title: '',
+                    email: '',
+                    phone: '',
+                    location: '',
+                    summary: '',
+                    skills: [],
+                    experience: [],
+                    education: [],
+                    projects: [],
+                    certifications: [],
+                  }]);
+                  setHistoryIndex(0);
+                }
+              }}
+              onImport={handleOpenImportModal}
               onSave={saveResume}
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
               onShowMobileMenu={() => setShowMobileMenu(true)}
-              onShowResumeSharing={() => setShowResumeSharing(true)}
               showRightPanel={showRightPanel}
               previousSidebarState={previousSidebarState}
               sidebarCollapsed={resumePanelCollapsed}
@@ -761,137 +982,26 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
           ) : null}
 
           {/* Main Content */}
-          <div className="flex-1 flex overflow-hidden relative">
-            <div className="absolute inset-0 h-full w-full overflow-y-auto">
-              {/* Render all tabs but hide inactive ones - keeps components mounted to preserve state */}
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'dashboard') ? 'block' : 'none' }}
-              >
-                  <DashboardFigma 
-                    onQuickAction={(actionId) => {
-                      logger.debug('Quick action:', actionId);
-                      switch (actionId) {
-                        case 'export':
-                          setShowExportModal(true);
-                          break;
-                        case 'customize':
-                          // Open customization modal
-                          break;
-                        case 'themes':
-                          // Open theme selector
-                          break;
-                        default:
-                          break;
-                      }
-                    }}
-                    onNavigateToTab={(tab) => handleTabChange(tab)}
-                  />
+          <div className={`flex-1 min-h-0 flex ${activeTab === 'editor' ? 'overflow-hidden' : ''}`}>
+            <div className={`flex-1 min-h-0 ${activeTab === 'editor' ? 'overflow-hidden' : 'overflow-y-auto'} transition-all duration-300`}>
+              {renderActiveComponent()}
                 </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'profile') ? 'block' : 'none' }}
-              >
-                  <Profile />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'storage') ? 'block' : 'none' }}
-              >
-                  <CloudStorage />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'tracker' || activeTab === 'jobs') ? 'block' : 'none' }}
-              >
-                <ErrorBoundary
-                  fallback={
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-red-600 mb-4">Error loading Job Tracker</p>
-                        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
-                          Refresh Page
-                        </button>
-                      </div>
-                    </div>
-                  }
-                >
-                  <JobTracker />
-                </ErrorBoundary>
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'templates') ? 'block' : 'none' }}
-              >
-                  <Templates 
-                    onAddToEditor={(templateId) => {
-                      setSelectedTemplateId(templateId);
-                      dashboardTemplates.addTemplate(templateId);
-                      logger.debug('Template added to editor:', templateId);
-                    }}
-                    addedTemplates={addedTemplates}
-                    onRemoveTemplate={dashboardTemplates.removeTemplate}
-                  />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'cover-letter') ? 'block' : 'none' }}
-              >
-                  <CoverLetterGenerator />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'portfolio') ? 'block' : 'none' }}
-              >
-                  <PortfolioGenerator />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'discussion') ? 'block' : 'none' }}
-              >
-                  <Discussion />
-                </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'email') ? 'block' : 'none' }}
-              >
-                <Email />
-              </div>
-              <div 
-                className="absolute inset-0 h-full w-full"
-                style={{ display: (activeTab === 'agents' || activeTab === 'ai-agents') ? 'block' : 'none' }}
-              >
-                <ErrorBoundary
-                  fallback={
-                    <div className="h-full flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-red-600 mb-4">Error loading AI Auto-Apply</p>
-                        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
-                          Refresh Page
-                        </button>
-                      </div>
-                    </div>
-                  }
-                >
-                  <AIAgents />
-                </ErrorBoundary>
-                </div>
-              {/* Editor is special and handles its own rendering */}
-              <div 
-                className="absolute inset-0 h-full"
+
+            {/* AI Panel */}
+            {activeTab === 'editor' && (
+              <div
+                className="min-h-0 transition-all duration-300 ease-in-out"
                 style={{ 
-                  display: (activeTab === 'editor') ? 'block' : 'none',
-                  right: showRightPanel ? '320px' : '0',
-                  width: showRightPanel ? 'calc(100% - 320px)' : '100%',
-                  transition: 'right 0.3s ease, width 0.3s ease',
+                  width: showRightPanel ? 360 : 0,
+                  opacity: showRightPanel ? 1 : 0,
+                  pointerEvents: showRightPanel ? 'auto' : 'none',
+                  borderLeft: showRightPanel ? `1px solid ${colors.border}` : 'none',
+                  background: colors.sidebarBackground,
+                  overflow: 'hidden'
                 }}
               >
-                  {renderActiveComponent()}
-                </div>
-            </div>
-            {/* AI Panel */}
-            {activeTab === 'editor' && showRightPanel && (
-              <div className="absolute top-0 right-0 bottom-0 w-80 z-50">
+                {showRightPanel && (
+                  <div className="h-full overflow-y-auto">
                 <AIPanel
                 showRightPanel={showRightPanel}
                 setShowRightPanel={(show) => {
@@ -919,16 +1029,22 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 setSelectedTone={setSelectedTone}
                 selectedLength={selectedLength}
                 setSelectedLength={setSelectedLength}
-                aiConversation={aiConversation}
-                aiPrompt={aiPrompt}
-                setAiPrompt={setAiPrompt}
-                selectedModel={selectedModel}
-                setSelectedModel={setSelectedModel}
                 isMobile={false}
                 resumeData={resumeData}
                 onAnalyzeJobDescription={analyzeJobDescription}
                 onApplyAIRecommendations={applyAIRecommendations}
-                onSendAIMessage={sendAIMessage}
+                      onTailorResume={tailorResumeForJob}
+                      onGenerateCoverLetter={generateCoverLetterDraft}
+                      onGeneratePortfolio={generatePortfolioDraft}
+                      tailorResult={tailorResult}
+                      setTailorResult={setTailorResult}
+                      coverLetterDraft={coverLetterDraft}
+                      setCoverLetterDraft={setCoverLetterDraft}
+                      portfolioDraft={portfolioDraft}
+                      setPortfolioDraft={setPortfolioDraft}
+                      isTailoring={isTailoring}
+                      isGeneratingCoverLetter={isGeneratingCoverLetter}
+                      isGeneratingPortfolio={isGeneratingPortfolio}
                 onResumeUpdate={(updatedData) => {
                   setResumeData(updatedData);
                   // Add to history for undo/redo
@@ -937,6 +1053,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                   setHistoryIndex(newHistory.length - 1);
                 }}
                 />
+                  </div>
+                )}
                 </div>
             )}
           </div>
@@ -963,8 +1081,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         setShowSaveToCloudModal={setShowSaveToCloudModal}
         showImportFromCloudModal={showImportFromCloudModal}
         setShowImportFromCloudModal={setShowImportFromCloudModal}
-        showResumeSharing={showResumeSharing}
-        setShowResumeSharing={setShowResumeSharing}
         showCoverLetterAnalytics={showCoverLetterAnalytics}
         setShowCoverLetterAnalytics={setShowCoverLetterAnalytics}
         showEmailAnalytics={showEmailAnalytics}
@@ -1010,8 +1126,35 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onTabChange={handleTabChange}
         onExport={handleExport}
         onSaveToCloud={handleSaveToCloud}
-        onImportFromCloud={handleImportFromCloud}
-        onFileSelected={handleFileSelected}
+        onImportFromCloud={handleImportFromCloudWithSlotCheck}
+        onFileSelected={handleResumeUpload}
+        onCreateBlank={handleCreateBaseResume}
+        slotsUsed={resumes.length}
+        maxSlots={maxSlots}
+        onResumeApplied={async (resumeId, resumeRecord) => {
+          try {
+            if (process.env.NODE_ENV !== 'production') {
+              logger.debug('onResumeApplied called', { resumeId, hasRecord: !!resumeRecord });
+            }
+            if (resumeRecord) {
+              if (process.env.NODE_ENV !== 'production') {
+                logger.debug('Applying resume record', { id: resumeRecord.id, dataKeys: Object.keys(resumeRecord.data || {}) });
+              }
+              applyBaseResume(resumeRecord as BaseResumeRecord);
+            } else if (resumeId) {
+              if (process.env.NODE_ENV !== 'production') {
+                logger.debug('Loading resume by ID', { resumeId });
+              }
+              await loadResumeById(resumeId);
+            }
+            if (process.env.NODE_ENV !== 'production') {
+              logger.debug('Resume applied successfully');
+            }
+          } catch (error) {
+            logger.error('Failed to hydrate editor after resume import', error);
+            showToast('Resume applied but the editor could not refresh automatically. Please reopen the editor.', 'error', 6000);
+          }
+        }}
         onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}
@@ -1031,16 +1174,18 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
           });
           setShowNewResumeModal(false);
         }}
-        onGenerateAIContent={() => aiHelpers.generateAIContent(
-          aiGenerateSection,
-          aiPrompt,
-          writingTone,
-          contentLength,
+        onGenerateAIContent={() => aiHelpers.generateAIContent({
+          resumeId: currentResumeId,
+          section: aiGenerateSection as any,
+          instructions: aiPrompt,
+          tone: writingTone,
+          length: contentLength,
           resumeData,
+          applyBaseResume,
           setResumeData,
           setShowAIGenerateModal,
-          aiGenerateSection === 'custom' ? setNewSectionContent : undefined
-        )}
+          setCustomSectionContent: aiGenerateSection === 'custom' ? setNewSectionContent : undefined
+        })}
         onConfirmSaveToCloud={handleConfirmSaveToCloud}
         onLoadFromCloud={handleLoadFromCloud}
         DEFAULT_TEMPLATE_ID={DEFAULT_TEMPLATE_ID}
@@ -1060,6 +1205,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       />
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </>
+    </ErrorBoundary>
   );
 }

@@ -3,19 +3,16 @@
 import React, { useState } from 'react';
 import { Globe, Server, Cloud, Upload, CheckCircle, ExternalLink, Copy } from 'lucide-react';
 import { WebsiteConfig } from '../../types/portfolio';
-// Import will be done dynamically when needed
 
 interface HostingConfigProps {
-  onNext: () => void;
   onBack: () => void;
   config: WebsiteConfig;
-  onUpdate: (config: Partial<WebsiteConfig>) => void;
-  portfolioData: any;
+  portfolioData: Record<string, unknown>;
 }
 
 type HostingOption = 'subdomain' | 'custom' | 'download';
 
-export default function HostingConfig({ onNext, onBack, config, portfolioData }: HostingConfigProps) {
+export default function HostingConfig({ onBack, config, portfolioData }: HostingConfigProps) {
   const [hostingType, setHostingType] = useState<HostingOption>('subdomain');
   const [subdomain, setSubdomain] = useState<string>('john-doe');
   const [customDomain, setCustomDomain] = useState<string>('johndoe.com');
@@ -55,6 +52,11 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2000);
     }
+  };
+
+  const handleDownload = async () => {
+    const { downloadPortfolio } = await import('../../utils/portfolioExporter');
+    await downloadPortfolio(config, portfolioData);
   };
 
   return (
@@ -157,13 +159,14 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
             {hostingType === 'subdomain' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="hosting-subdomain" className="block text-sm font-medium text-gray-700 mb-2">
                     Subdomain
                   </label>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 flex items-center border border-gray-300 rounded-lg px-4 py-2.5">
                       <span className="text-gray-500">https://</span>
                       <input
+                        id="hosting-subdomain"
                         type="text"
                         value={subdomain}
                         onChange={(e) => setSubdomain(e.target.value)}
@@ -184,10 +187,11 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
             {hostingType === 'custom' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="hosting-custom-domain" className="block text-sm font-medium text-gray-700 mb-2">
                     Custom Domain
                   </label>
                   <input
+                    id="hosting-custom-domain"
                     type="text"
                     value={customDomain}
                     onChange={(e) => setCustomDomain(e.target.value)}
@@ -243,11 +247,12 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
             {/* Preview URL */}
             {portfolioUrl && (
               <div className="mt-6 pt-6 border-t border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="hosting-portfolio-url" className="block text-sm font-medium text-gray-700 mb-2">
                   Your Portfolio URL
                 </label>
                 <div className="flex items-center gap-2">
                   <input
+                    id="hosting-portfolio-url"
                     type="text"
                     value={portfolioUrl}
                     readOnly
@@ -271,6 +276,9 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
                     Visit
                   </a>
                 </div>
+                {copiedUrl && (
+                  <p className="text-xs text-green-600 mt-2" role="status">URL copied to clipboard!</p>
+                )}
               </div>
             )}
           </div>
@@ -314,7 +322,7 @@ export default function HostingConfig({ onNext, onBack, config, portfolioData }:
         <div className="flex items-center gap-4">
           {hostingType === 'download' ? (
             <button
-              onClick={() => downloadPortfolio(config, portfolioData)}
+              onClick={handleDownload}
               className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/30 hover:shadow-xl transition-all flex items-center gap-2"
             >
               <Upload size={18} />

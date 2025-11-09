@@ -21,10 +21,22 @@ function resolveTab(tab?: string | null): DashboardTab | null {
 }
 
 export default function DashboardPage({ searchParams }: DashboardPageProps) {
-  const cookieStore = cookies();
+  let tabFromCookie: DashboardTab | null = null;
+  
+  try {
+    const cookieStore = cookies();
+    if (cookieStore) {
+      const dashboardTabCookie = cookieStore.get('dashboardTab');
+      tabFromCookie = resolveTab(dashboardTabCookie?.value ?? null);
+    }
+  } catch (error) {
+    // cookieStore might be null or unavailable in some contexts, handle gracefully
+    console.error('Error reading cookie store:', error);
+  }
+  
   const tabFromSearch = resolveTab(searchParams?.tab ?? null);
-  const tabFromCookie = resolveTab(cookieStore.get('dashboardTab')?.value ?? null);
   const initialTab = tabFromSearch ?? tabFromCookie ?? DEFAULT_TAB;
 
   return <DashboardPageClient initialTab={initialTab} />;
 }
+

@@ -82,12 +82,14 @@ export default function AddFieldModal({
         <div className="space-y-6">
           <div>
             <label 
+              htmlFor="add-field-name"
               className="block text-sm font-semibold mb-3"
               style={{ color: colors.secondaryText }}
             >
               Field Name
             </label>
             <input
+              id="add-field-name"
               type="text"
               value={newFieldName}
               onChange={(e) => setNewFieldName(e.target.value)}
@@ -112,12 +114,14 @@ export default function AddFieldModal({
           
           <div>
             <label 
+              htmlFor="add-field-icon"
               className="block text-sm font-semibold mb-3"
               style={{ color: colors.secondaryText }}
             >
               Icon
             </label>
             <select
+              id="add-field-icon"
               value={newFieldIcon}
               onChange={(e) => setNewFieldIcon(e.target.value)}
               className="w-full rounded-xl px-4 py-3 transition-all duration-200 focus:outline-none appearance-none cursor-pointer"

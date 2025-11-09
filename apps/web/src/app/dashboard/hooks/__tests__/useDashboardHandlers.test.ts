@@ -8,12 +8,65 @@ import { resumeHelpers } from '../../../../utils/resumeHelpers';
 import { aiHelpers } from '../../../../utils/aiHelpers';
 import { createCustomField } from '../../utils/dashboardHandlers';
 import { logger } from '../../../../utils/logger';
+import apiService from '../../../../services/apiService';
 
 // Mock dependencies
 jest.mock('../../../../utils/resumeHelpers');
 jest.mock('../../../../utils/aiHelpers');
 jest.mock('../../utils/dashboardHandlers');
 jest.mock('../../../../utils/logger');
+jest.mock('../../../../services/apiService', () => ({
+  __esModule: true,
+  default: {
+    runATSCheck: jest.fn(() => Promise.resolve({
+      analysis: {
+        overall: 72,
+        keywords: 65,
+        content: 70,
+        experience: 68,
+        format: 80,
+        strengths: ['Good keyword coverage'],
+        improvements: ['Add metrics to recent role'],
+        matchedKeywords: ['react', 'typescript'],
+        missingKeywords: ['graphql']
+      },
+      matchedKeywords: ['react', 'typescript'],
+      missingKeywords: ['graphql'],
+      improvements: ['Add metrics to recent role']
+    })),
+    applyAIRecommendations: jest.fn(() => Promise.resolve({
+      updatedResume: { id: 'resume-1', data: {}, metadata: {}, updatedAt: new Date().toISOString() },
+      ats: { after: { overall: 82 } },
+      appliedRecommendations: ['Added metrics to summary']
+    })),
+    tailorResume: jest.fn(() => Promise.resolve({
+      tailoredResume: {},
+      diff: [],
+      warnings: [],
+      recommendedKeywords: ['leadership'],
+      ats: { after: { overall: 88 } },
+      confidence: 0.82
+    })),
+    generateCoverLetter: jest.fn(() => Promise.resolve({
+      content: {
+        subject: 'Application for Frontend Role',
+        greeting: 'Dear Hiring Manager,',
+        bodyParagraphs: ['I am excited to apply...'],
+        closing: 'Sincerely,',
+        signature: 'Test User'
+      }
+    })),
+    generatePortfolio: jest.fn(() => Promise.resolve({
+      content: {
+        headline: 'Building delightful products',
+        tagline: 'Frontend engineer crafting user-focused experiences',
+        about: 'Detailed about section',
+        highlights: ['Delivered 5+ enterprise apps'],
+        selectedProjects: []
+      }
+    }))
+  }
+}));
 jest.mock('../../utils/resumeDataHelpers', () => ({
   removeDuplicateResumeEntries: jest.fn(() => ({ data: {}, removedCount: 0 })),
   duplicateResumeState: jest.fn(() => ({
@@ -50,6 +103,18 @@ describe('useDashboardHandlers', () => {
     setCustomSections: jest.fn(),
     resumeFileName: 'test-resume',
     setResumeFileName: jest.fn(),
+    currentResumeId: 'resume-1',
+    setCurrentResumeId: jest.fn(),
+    hasChanges: false,
+    setHasChanges: jest.fn(),
+    isSaving: false,
+    setIsSaving: jest.fn(),
+    setSaveError: jest.fn(),
+    lastSavedAt: null,
+    setLastSavedAt: jest.fn(),
+    lastServerUpdatedAt: null,
+    setLastServerUpdatedAt: jest.fn(),
+    selectedTemplateId: null,
     history: [],
     setHistory: jest.fn(),
     historyIndex: 0,
@@ -95,15 +160,25 @@ describe('useDashboardHandlers', () => {
     contentLength: 'medium',
     setContentLength: jest.fn(),
     setShowAIGenerateModal: jest.fn(),
-    jobDescription: 'test job',
+    jobDescription: 'We are looking for a React and TypeScript developer to build scalable features.',
     setIsAnalyzing: jest.fn(),
     setMatchScore: jest.fn(),
     setMatchedKeywords: jest.fn(),
     setMissingKeywords: jest.fn(),
     setAiRecommendations: jest.fn(),
     aiRecommendations: [],
-    aiConversation: [],
-    setAiConversation: jest.fn(),
+    isAnalyzing: false,
+    setShowATSScore: jest.fn(),
+    applyBaseResume: jest.fn(),
+    tailorEditMode: 'partial',
+    selectedTone: 'professional',
+    selectedLength: 'concise',
+    setTailorResult: jest.fn(),
+    setIsTailoring: jest.fn(),
+    setCoverLetterDraft: jest.fn(),
+    setIsGeneratingCoverLetter: jest.fn(),
+    setPortfolioDraft: jest.fn(),
+    setIsGeneratingPortfolio: jest.fn()
   };
 
   beforeEach(() => {
@@ -127,7 +202,9 @@ describe('useDashboardHandlers', () => {
     expect(result.current).toHaveProperty('hideSection');
     expect(result.current).toHaveProperty('analyzeJobDescription');
     expect(result.current).toHaveProperty('applyAIRecommendations');
-    expect(result.current).toHaveProperty('sendAIMessage');
+    expect(result.current).toHaveProperty('tailorResumeForJob');
+    expect(result.current).toHaveProperty('generateCoverLetterDraft');
+    expect(result.current).toHaveProperty('generatePortfolioDraft');
     expect(result.current).toHaveProperty('saveResume');
     expect(result.current).toHaveProperty('undo');
     expect(result.current).toHaveProperty('redo');
@@ -149,20 +226,44 @@ describe('useDashboardHandlers', () => {
     expect(resumeHelpers.generateSmartFileName).toHaveBeenCalled();
   });
 
-  it('should call aiHelpers functions for AI operations', () => {
+  it('should call AI services for AI operations', async () => {
     const { result } = renderHook(() => useDashboardHandlers(mockParams));
-    
+
     act(() => {
       result.current.openAIGenerateModal('summary');
     });
-    
+
     expect(aiHelpers.openAIGenerateModal).toHaveBeenCalled();
-    
-    act(() => {
-      result.current.analyzeJobDescription();
+
+    await act(async () => {
+      await result.current.analyzeJobDescription();
     });
-    
-    expect(aiHelpers.analyzeJobDescription).toHaveBeenCalled();
+
+    expect(apiService.runATSCheck).toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.applyAIRecommendations();
+    });
+
+    expect(apiService.applyAIRecommendations).toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.tailorResumeForJob();
+    });
+
+    expect(apiService.tailorResume).toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.generateCoverLetterDraft();
+    });
+
+    expect(apiService.generateCoverLetter).toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.generatePortfolioDraft();
+    });
+
+    expect(apiService.generatePortfolio).toHaveBeenCalled();
   });
 
   it('should call createCustomField when adding a field', () => {

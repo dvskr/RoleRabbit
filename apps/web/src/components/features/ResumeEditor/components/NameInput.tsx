@@ -20,7 +20,7 @@ export default function NameInput({ name, onChange, colors, nameColorClass, titl
   return (
     <div className="mb-4">
       <input 
-        className={`text-xl sm:text-2xl lg:text-3xl font-bold w-full border-none outline-none rounded-xl px-3 py-2 break-words overflow-wrap-anywhere transition-all ${nameColorClass || ''}`}
+        className={`text-xl sm:text-2xl lg:text-3xl font-bold w-1/2 border-none outline-none rounded-xl px-3 py-2 break-words overflow-wrap-anywhere transition-all ${nameColorClass || ''}`}
         style={{
           background: 'transparent',
           color: colors.primaryText,

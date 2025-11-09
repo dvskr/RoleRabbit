@@ -39,9 +39,7 @@ export default function EmailComposerAI({
   
   // Template states
   const [showTemplateModal, setShowTemplateModal] = useState(false);
-  const { templates, setTemplates } = useEmailTemplates();
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
-  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const { templates } = useEmailTemplates();
 
   const handleSend = () => {
     if (onSend) {
@@ -83,29 +81,21 @@ export default function EmailComposerAI({
     setSubject(generatedSubject);
   };
 
-  const handleSelectTemplate = (template: EmailTemplate) => {
-    setSelectedTemplate(template);
-    // Extract variables from template
-    const vars = extractTemplateVariables(template);
-    
-    setVariableValues({});
-    // If no variables, apply directly
-    if (vars.length === 0) {
-      applyTemplate(template, {});
-    } else {
-      // Show variable input modal by showing the template modal with variable inputs
-    }
-    setShowTemplateModal(true);
-  };
-
-  const applyTemplate = (template: EmailTemplate, values: Record<string, string>) => {
+  const applyTemplate = (template: EmailTemplate, values: Record<string, string> = {}) => {
     const { subject: finalSubject, body: finalBody } = applyTemplateVariables(template, values);
-    
     setSubject(finalSubject);
     setBody(finalBody);
     setShowTemplateModal(false);
-    setSelectedTemplate(null);
-    setVariableValues({});
+  };
+
+  const handleSelectTemplate = (template: EmailTemplate) => {
+    const vars = extractTemplateVariables(template);
+    if (vars.length === 0) {
+      applyTemplate(template);
+    } else {
+      // TODO: support variable prompts; for now apply with empty values
+      applyTemplate(template);
+    }
   };
 
 

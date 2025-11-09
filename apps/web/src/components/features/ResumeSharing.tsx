@@ -122,9 +122,9 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
       <div 
         className="rounded-2xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all relative pointer-events-auto"
         style={{
-          background: theme.mode === 'light' ? '#ffffff' : colors.badgePurpleBg,
-          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : `0 20px 25px -5px ${colors.border}40`,
-          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.badgePurpleBorder}`,
+          background: theme.mode === 'light' ? '#ffffff' : '#0D1117',
+          boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : `0 20px 25px -5px rgba(0, 0, 0, 0.5)`,
+          border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : '#21262D'}`,
         }}
       >
         {/* Header */}
@@ -132,9 +132,9 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
           <div className="flex items-center gap-3">
             <div 
               className="p-2 rounded-lg"
-              style={{ background: colors.badgePurpleBg }}
+              style={{ background: theme.mode === 'light' ? colors.badgePurpleBg : '#161B22' }}
             >
-              <Share2 size={24} style={{ color: colors.badgePurpleText }} />
+              <Share2 size={24} style={{ color: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan }} />
             </div>
             <div>
               <h3 className="text-xl font-semibold" style={{ color: colors.primaryText }}>Share & Get Feedback</h3>
@@ -165,8 +165,8 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
           <button 
             className="px-4 py-2 border-b-2 font-medium text-sm transition-colors"
             style={{
-              borderBottomColor: colors.badgePurpleText,
-              color: colors.badgePurpleText,
+              borderBottomColor: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan,
+              color: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan,
             }}
           >
             Share Links
@@ -193,15 +193,15 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
               onClick={() => setShowCreateLinkModal(true)}
               className="px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all"
               style={{
-                background: colors.badgePurpleText,
+                background: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan,
                 color: 'white',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = colors.badgePurpleBorder;
-                e.currentTarget.style.boxShadow = `0 4px 12px ${colors.badgePurpleText}40`;
+                e.currentTarget.style.background = theme.mode === 'light' ? colors.badgePurpleBorder : '#2EC4B6';
+                e.currentTarget.style.boxShadow = `0 4px 12px ${theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan}40`;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = colors.badgePurpleText;
+                e.currentTarget.style.background = theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan;
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
@@ -230,18 +230,20 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
                   className="border rounded-lg p-4 transition-all"
                   style={{
                     border: `1px solid ${colors.border}`,
-                    background: colors.cardBackground,
+                    background: theme.mode === 'light' ? colors.cardBackground : '#161B22',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.badgePurpleBorder;
+                    e.currentTarget.style.borderColor = theme.mode === 'light' ? colors.badgePurpleBorder : colors.accentCyan;
+                    e.currentTarget.style.boxShadow = theme.mode === 'light' ? 'none' : `0 4px 6px ${colors.accentCyan}20`;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = colors.border;
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Globe size={18} style={{ color: colors.badgePurpleText }} />
+                      <Globe size={18} style={{ color: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan }} />
                       <span className="text-sm font-medium" style={{ color: colors.primaryText }}>Shared Link</span>
                       {link.isActive && (
                         <span 
@@ -291,9 +293,9 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
 
                   <div 
                     className="rounded p-2 mb-3 flex items-center gap-2"
-                    style={{ background: colors.inputBackground }}
+                    style={{ background: theme.mode === 'light' ? colors.inputBackground : '#0D1117' }}
                   >
-                    <span className="text-sm font-mono flex-1 truncate" style={{ color: colors.secondaryText }}>{link.url}</span>
+                    <span className="text-sm font-mono flex-1 truncate" style={{ color: theme.mode === 'light' ? colors.secondaryText : colors.accentCyan }}>{link.url}</span>
                   </div>
 
                   <div className="flex items-center gap-4 text-xs" style={{ color: colors.tertiaryText }}>
@@ -306,7 +308,7 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
                       <span>Expires: {new Date(link.expiresAt).toLocaleDateString()}</span>
                     </div>
                     {link.allowComments && (
-                      <div className="flex items-center gap-1" style={{ color: colors.badgePurpleText }}>
+                      <div className="flex items-center gap-1" style={{ color: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan }}>
                         <MessageCircle size={14} />
                         <span>Comments enabled</span>
                       </div>
@@ -347,7 +349,15 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
                   className="border rounded-lg p-4 transition-all"
                   style={{
                     border: `1px solid ${colors.border}`,
-                    background: colors.cardBackground,
+                    background: theme.mode === 'light' ? colors.cardBackground : '#161B22',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = theme.mode === 'light' ? colors.borderFocused : colors.accentCyan;
+                    e.currentTarget.style.boxShadow = theme.mode === 'light' ? 'none' : `0 4px 6px ${colors.accentCyan}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -404,7 +414,7 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
                     className="text-sm rounded p-3"
                     style={{
                       color: colors.primaryText,
-                      background: colors.inputBackground,
+                      background: theme.mode === 'light' ? colors.inputBackground : '#0D1117',
                     }}
                   >
                     {fb.comment}
@@ -457,8 +467,9 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
           <div 
             className="rounded-2xl p-6 w-full max-w-md shadow-2xl transition-all relative"
             style={{
-              background: colors.cardBackground,
-              boxShadow: `0 20px 25px -5px ${colors.border}40`,
+              background: theme.mode === 'light' ? colors.cardBackground : '#0D1117',
+              boxShadow: theme.mode === 'light' ? `0 20px 25px -5px ${colors.border}40` : '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
+              border: `1px solid ${theme.mode === 'light' ? 'transparent' : '#21262D'}`,
               zIndex: 10002,
             }}
             onClick={(e) => {
@@ -569,15 +580,15 @@ export default function ResumeSharing({ resumeId, resumeName, isOpen, onClose }:
                 onClick={handleCreateShareLink}
                 className="flex-1 px-4 py-2 rounded-lg font-medium transition-all"
                 style={{
-                  background: colors.badgePurpleText,
+                  background: theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan,
                   color: 'white',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.badgePurpleBorder;
-                  e.currentTarget.style.boxShadow = `0 4px 12px ${colors.badgePurpleText}40`;
+                  e.currentTarget.style.background = theme.mode === 'light' ? colors.badgePurpleBorder : '#2EC4B6';
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan}40`;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.badgePurpleText;
+                  e.currentTarget.style.background = theme.mode === 'light' ? colors.badgePurpleText : colors.accentCyan;
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >

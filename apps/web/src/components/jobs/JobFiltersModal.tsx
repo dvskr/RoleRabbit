@@ -19,7 +19,7 @@ export default function JobFiltersModal({
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  const handleFilterChange = (key: keyof JobFilters, value: any) => {
+  const handleFilterChange = <K extends keyof JobFilters>(key: K, value: JobFilters[K]) => {
     onFiltersChange({
       ...filters,
       [key]: value
@@ -27,23 +27,31 @@ export default function JobFiltersModal({
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{
-        background: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(10px)',
-      }}
-      onClick={onClose}
-    >
-      <div 
-        className="rounded-lg shadow-2xl w-full max-w-md mx-4"
+  <>
+      <button
+        type="button"
+        className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.7)] backdrop-blur focus:outline-none border-0 p-0"
+        onClick={onClose}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onClose();
+          }
+        }}
+        aria-label="Close job filters"
+      />
+      <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none" aria-hidden="true">
+        <div 
+          className="rounded-lg shadow-2xl w-full max-w-md mx-4 pointer-events-auto"
         style={{
           background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
           border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
           backdropFilter: 'blur(20px)',
           boxShadow: theme.mode === 'light' ? '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         }}
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="job-filters-modal-heading"
       >
         {/* Header */}
         <div 
@@ -55,6 +63,7 @@ export default function JobFiltersModal({
             <h2 
               className="text-lg font-semibold"
               style={{ color: colors.primaryText }}
+              id="job-filters-modal-heading"
             >
               Filters
             </h2>
@@ -84,10 +93,12 @@ export default function JobFiltersModal({
             <label 
               className="block text-sm font-medium mb-2"
               style={{ color: colors.secondaryText }}
+              htmlFor="job-filters-status"
             >
               Status
             </label>
             <select
+              id="job-filters-status"
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
               aria-label="Filter by status"
@@ -118,10 +129,12 @@ export default function JobFiltersModal({
             <label 
               className="block text-sm font-medium mb-2"
               style={{ color: colors.secondaryText }}
+              htmlFor="job-filters-priority"
             >
               Priority
             </label>
             <select
+              id="job-filters-priority"
               value={filters.priority || 'all'}
               aria-label="Filter by priority"
               title="Filter by priority"
@@ -151,10 +164,12 @@ export default function JobFiltersModal({
             <label 
               className="block text-sm font-medium mb-2"
               style={{ color: colors.secondaryText }}
+              htmlFor="job-filters-location"
             >
               Location (contains)
             </label>
             <input
+              id="job-filters-location"
               type="text"
               value={filters.location || ''}
               onChange={(e) => handleFilterChange('location', e.target.value || undefined)}
@@ -180,10 +195,12 @@ export default function JobFiltersModal({
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-start-date"
               >
                 Start Date
               </label>
               <input
+                id="job-filters-start-date"
                 type="date"
                 value={filters.dateRange?.start || ''}
                 aria-label="Start date"
@@ -209,10 +226,12 @@ export default function JobFiltersModal({
               <label 
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.secondaryText }}
+                htmlFor="job-filters-end-date"
               >
                 End Date
               </label>
               <input
+                id="job-filters-end-date"
                 type="date"
                 value={filters.dateRange?.end || ''}
                 aria-label="End date"
@@ -314,7 +333,8 @@ export default function JobFiltersModal({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -1,0 +1,603 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { AIPanelProps } from './types/AIPanel.types';
+import { ChevronDown, ChevronUp, X, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+
+export default function AIPanelRedesigned({
+  showRightPanel,
+  setShowRightPanel,
+  jobDescription,
+  setJobDescription,
+  isAnalyzing,
+  matchScore,
+  showATSScore,
+  matchedKeywords = [],
+  missingKeywords = [],
+  tailorEditMode,
+  setTailorEditMode,
+  selectedTone,
+  setSelectedTone,
+  selectedLength,
+  setSelectedLength,
+  resumeData,
+  onAnalyzeJobDescription,
+  tailorResult,
+  setTailorResult,
+  isTailoring,
+  onTailorResume,
+  onGenerateCoverLetter,
+  onGeneratePortfolio,
+  isGeneratingCoverLetter,
+  isGeneratingPortfolio
+}: AIPanelProps) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
+  const [beforeScore, setBeforeScore] = useState<number | null>(null);
+
+  // Calculate score color and label
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return { color: '#10b981', label: 'Excellent', bg: '#d1fae5' };
+    if (score >= 60) return { color: '#f59e0b', label: 'Good', bg: '#fef3c7' };
+    return { color: '#ef4444', label: 'Needs Work', bg: '#fee2e2' };
+  };
+
+  const scoreInfo = useMemo(() => {
+    const score = matchScore?.overall || 0;
+    return getScoreColor(score);
+  }, [matchScore]);
+
+  const handleRunAnalysis = async () => {
+    setBeforeScore(null);
+    setTailorResult?.(null);
+    await onAnalyzeJobDescription?.();
+  };
+
+  const handleAutoTailor = async () => {
+    if (matchScore?.overall) {
+      setBeforeScore(matchScore.overall);
+    }
+    await onTailorResume?.();
+  };
+
+  const topMissingSkills = useMemo(() => {
+    return (missingKeywords || []).slice(0, 5);
+  }, [missingKeywords]);
+
+  const improvements = useMemo(() => {
+    return (matchScore?.improvements || []).slice(0, 3);
+  }, [matchScore]);
+
+  if (!showRightPanel) return null;
+
+  return (
+    <div
+      className="flex-shrink-0 border-l"
+      style={{
+        width: '100%',
+        maxWidth: '420px',
+        minWidth: '320px',
+        borderColor: colors.border,
+        background: colors.cardBackground,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflowX: 'hidden',
+        overflowY: 'auto'
+      }}
+    >
+      {/* Header */}
+      <div
+        className="sticky top-0 z-10 p-4 border-b flex items-center justify-between"
+        style={{
+          background: colors.cardBackground,
+          borderColor: colors.border
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5" style={{ color: colors.activeBlueText }} />
+          <div>
+            <h3 className="text-base font-semibold" style={{ color: colors.text }}>
+              AI Assistant
+            </h3>
+            <p className="text-xs" style={{ color: colors.textSecondary }}>
+              Resume Optimization
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowRightPanel?.(false)}
+          className="p-2 rounded-lg hover:bg-opacity-10 transition-colors"
+          style={{ color: colors.textSecondary }}
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Main Content */}
+      <div 
+        className="flex-1" 
+        style={{ 
+          padding: '1rem',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          overflowX: 'hidden'
+        }}
+      >
+        <div className="space-y-4" style={{ width: '100%', maxWidth: '100%' }}>
+        {/* Step 1: Job Description Input */}
+        <div className="space-y-2" style={{ width: '100%', maxWidth: '100%' }}>
+          <label className="block text-sm font-medium" style={{ color: colors.text }}>
+            Job Description
+          </label>
+          <textarea
+            value={jobDescription}
+            onChange={(e) => setJobDescription?.(e.target.value)}
+            placeholder="Paste the job description here..."
+            rows={8}
+            className="w-full px-3 py-2 rounded-lg border text-sm resize-none focus:outline-none focus:ring-2"
+            style={{
+              background: colors.inputBackground,
+              borderColor: colors.border,
+              color: colors.text,
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs" style={{ color: colors.textSecondary }}>
+              {jobDescription?.length || 0} characters
+            </span>
+            {jobDescription && jobDescription.length < 10 && (
+              <span className="text-xs" style={{ color: '#ef4444' }}>
+                Min 10 characters
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={handleRunAnalysis}
+            disabled={isAnalyzing || !jobDescription || jobDescription.length < 10}
+            className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              background: colors.activeBlueText,
+              opacity: isAnalyzing || !jobDescription || jobDescription.length < 10 ? 0.5 : 1,
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            {isAnalyzing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                Run ATS Check
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Step 2: ATS Results */}
+        {showATSScore && matchScore && (
+          <div
+            className="p-4 rounded-lg space-y-3"
+            style={{
+              background: theme.mode === 'light' ? '#fafafa' : colors.hoverBackground,
+              border: `1px solid ${colors.border}`,
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+              overflowX: 'hidden'
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium" style={{ color: colors.text }}>
+                {beforeScore ? 'Before' : 'ATS Score'}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold" style={{ color: scoreInfo.color }}>
+                  {matchScore.overall}/100
+                </span>
+                <span
+                  className="text-xs font-medium px-2 py-1 rounded"
+                  style={{ background: scoreInfo.bg, color: scoreInfo.color }}
+                >
+                  {scoreInfo.label}
+                </span>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div 
+              className="w-full h-2 rounded-full" 
+              style={{ 
+                background: colors.border, 
+                width: '100%',
+                maxWidth: '100%',
+                overflow: 'hidden'
+              }}
+            >
+              <div
+                className="h-full transition-all duration-500 rounded-full"
+                style={{
+                  width: `${matchScore.overall}%`,
+                  background: scoreInfo.color
+                }}
+              />
+            </div>
+
+            {/* Quick Summary */}
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                {matchedKeywords.length > 0 ? (
+                  <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#10b981' }} />
+                ) : (
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#f59e0b' }} />
+                )}
+                <span className="text-xs" style={{ color: colors.textSecondary }}>
+                  {matchedKeywords.length} skills matched
+                </span>
+              </div>
+              
+              {topMissingSkills.length > 0 && (
+                <div className="space-y-1" style={{ width: '100%', maxWidth: '100%' }}>
+                  <span className="text-xs font-medium" style={{ color: colors.text }}>
+                    Missing Skills:
+                  </span>
+                  <div className="flex flex-wrap gap-1" style={{ width: '100%', maxWidth: '100%' }}>
+                    {topMissingSkills.map((keyword, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-2 py-1 rounded"
+                        style={{
+                          background: '#fee2e2',
+                          color: '#ef4444',
+                          wordBreak: 'break-word',
+                          maxWidth: '100%',
+                          display: 'inline-block'
+                        }}
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Show Details Toggle */}
+            <button
+              onClick={() => setShowDetailedBreakdown(!showDetailedBreakdown)}
+              className="w-full py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+              style={{
+                color: colors.activeBlueText,
+                background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground
+              }}
+            >
+              {showDetailedBreakdown ? 'Hide Details' : 'Show Details'}
+              {showDetailedBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            {/* Detailed Breakdown */}
+            {showDetailedBreakdown && (
+              <div className="space-y-2 pt-2 border-t" style={{ borderColor: colors.border }}>
+                <div className="text-xs font-medium" style={{ color: colors.text }}>
+                  Breakdown:
+                </div>
+                {matchScore.keywords !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: colors.textSecondary }}>Keywords</span>
+                    <span className="text-xs font-medium" style={{ color: colors.text }}>{matchScore.keywords}/100</span>
+                  </div>
+                )}
+                {matchScore.experience !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: colors.textSecondary }}>Experience</span>
+                    <span className="text-xs font-medium" style={{ color: colors.text }}>{matchScore.experience}/100</span>
+                  </div>
+                )}
+                {matchScore.format !== undefined && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: colors.textSecondary }}>Format</span>
+                    <span className="text-xs font-medium" style={{ color: colors.text }}>{matchScore.format}/100</span>
+                  </div>
+                )}
+                
+                {improvements.length > 0 && (
+                  <div className="pt-2 space-y-1">
+                    <div className="text-xs font-medium" style={{ color: colors.text }}>
+                      Quick Wins:
+                    </div>
+                    {improvements.map((imp, idx) => (
+                      <div key={idx} className="text-xs pl-3" style={{ color: colors.textSecondary }}>
+                        • {imp}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Auto-Tailor Button */}
+            {!tailorResult && (
+              <button
+                onClick={handleAutoTailor}
+                disabled={isTailoring}
+                className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{
+                  background: '#10b981',
+                  opacity: isTailoring ? 0.5 : 1,
+                  width: '100%',
+                  maxWidth: '100%',
+                  boxSizing: 'border-box'
+                }}
+              >
+                {isTailoring ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Tailoring Resume...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Auto-Tailor Resume
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Tailor Results - After Score */}
+        {tailorResult && (
+          <div
+            className="p-4 rounded-lg space-y-3"
+            style={{
+              background: '#d1fae5',
+              border: `1px solid #10b981`
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" style={{ color: '#10b981' }} />
+              <span className="text-sm font-bold" style={{ color: '#065f46' }}>
+                Resume Tailored Successfully!
+              </span>
+            </div>
+
+            {/* Before/After Comparison */}
+            {beforeScore && tailorResult.atsScoreAfter && (
+              <div className="flex items-center justify-between py-2">
+                <div className="text-center flex-1">
+                  <div className="text-xs" style={{ color: '#065f46' }}>Before</div>
+                  <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>{beforeScore}</div>
+                </div>
+                <div className="text-2xl font-bold" style={{ color: '#065f46' }}>→</div>
+                <div className="text-center flex-1">
+                  <div className="text-xs" style={{ color: '#065f46' }}>After</div>
+                  <div className="text-2xl font-bold" style={{ color: '#10b981' }}>{tailorResult.atsScoreAfter}</div>
+                </div>
+                <div className="text-center flex-1">
+                  <div className="text-xs" style={{ color: '#065f46' }}>Improvement</div>
+                  <div className="text-xl font-bold" style={{ color: '#10b981' }}>
+                    +{tailorResult.atsScoreAfter - beforeScore}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Changes Summary */}
+            {tailorResult.diff && tailorResult.diff.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium" style={{ color: '#065f46' }}>
+                  Changes Made:
+                </div>
+                <div className="text-xs" style={{ color: '#065f46' }}>
+                  • Modified {tailorResult.diff.length} sections
+                </div>
+                {tailorResult.recommendedKeywords && tailorResult.recommendedKeywords.length > 0 && (
+                  <div className="text-xs" style={{ color: '#065f46' }}>
+                    • Added {tailorResult.recommendedKeywords.length} keywords
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  // Apply changes to resume
+                  if (tailorResult.tailoredResume) {
+                    // This should trigger the resume update
+                    console.log('Applying tailored resume');
+                  }
+                }}
+                className="flex-1 py-2 px-4 rounded-lg font-medium text-white"
+                style={{ background: '#10b981' }}
+              >
+                Apply Changes
+              </button>
+              <button
+                onClick={() => setTailorResult?.(null)}
+                className="px-4 py-2 rounded-lg font-medium"
+                style={{
+                  color: '#065f46',
+                  background: '#ffffff'
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Advanced Settings - Collapsed by Default */}
+        <div
+          className="border rounded-lg"
+          style={{ 
+            borderColor: colors.border,
+            width: '100%',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+            className="w-full py-3 px-4 flex items-center justify-between hover:bg-opacity-5 transition-colors"
+            style={{ background: colors.cardBackground }}
+          >
+            <span className="text-sm font-medium" style={{ color: colors.text }}>
+              ⚙️ Advanced Settings
+            </span>
+            {showAdvancedSettings ? (
+              <ChevronUp className="w-4 h-4" style={{ color: colors.textSecondary }} />
+            ) : (
+              <ChevronDown className="w-4 h-4" style={{ color: colors.textSecondary }} />
+            )}
+          </button>
+
+          {showAdvancedSettings && (
+            <div className="p-4 space-y-4 border-t" style={{ borderColor: colors.border }}>
+              {/* Mode */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium" style={{ color: colors.text }}>
+                  Mode
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTailorEditMode?.('PARTIAL')}
+                    className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors"
+                    style={{
+                      background: tailorEditMode === 'PARTIAL' ? colors.activeBlueText : colors.inputBackground,
+                      color: tailorEditMode === 'PARTIAL' ? '#ffffff' : colors.text,
+                      border: `1px solid ${tailorEditMode === 'PARTIAL' ? colors.activeBlueText : colors.border}`
+                    }}
+                  >
+                    Partial
+                  </button>
+                  <button
+                    onClick={() => setTailorEditMode?.('FULL')}
+                    className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors"
+                    style={{
+                      background: tailorEditMode === 'FULL' ? colors.activeBlueText : colors.inputBackground,
+                      color: tailorEditMode === 'FULL' ? '#ffffff' : colors.text,
+                      border: `1px solid ${tailorEditMode === 'FULL' ? colors.activeBlueText : colors.border}`
+                    }}
+                  >
+                    Full
+                  </button>
+                </div>
+              </div>
+
+              {/* Tone */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium" style={{ color: colors.text }}>
+                  Writing Tone
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['professional', 'technical', 'creative', 'casual'].map((tone) => (
+                    <button
+                      key={tone}
+                      onClick={() => setSelectedTone?.(tone)}
+                      className="py-2 px-3 rounded-lg text-xs font-medium capitalize transition-colors"
+                      style={{
+                        background: selectedTone === tone ? colors.activeBlueText : colors.inputBackground,
+                        color: selectedTone === tone ? '#ffffff' : colors.text,
+                        border: `1px solid ${selectedTone === tone ? colors.activeBlueText : colors.border}`
+                      }}
+                    >
+                      {tone}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Length */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium" style={{ color: colors.text }}>
+                  Length
+                </label>
+                <div className="flex gap-2">
+                  {['brief', 'thorough', 'complete'].map((length) => (
+                    <button
+                      key={length}
+                      onClick={() => setSelectedLength?.(length)}
+                      className="flex-1 py-2 px-3 rounded-lg text-xs font-medium capitalize transition-colors"
+                      style={{
+                        background: selectedLength === length ? colors.activeBlueText : colors.inputBackground,
+                        color: selectedLength === length ? '#ffffff' : colors.text,
+                        border: `1px solid ${selectedLength === length ? colors.activeBlueText : colors.border}`
+                      }}
+                    >
+                      {length}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Other AI Actions */}
+        <div className="space-y-2 pt-2" style={{ width: '100%', maxWidth: '100%' }}>
+          <button
+            onClick={onGenerateCoverLetter}
+            disabled={isGeneratingCoverLetter}
+            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              background: colors.inputBackground,
+              color: colors.text,
+              border: `1px solid ${colors.border}`,
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            {isGeneratingCoverLetter ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              'Generate Cover Letter'
+            )}
+          </button>
+          <button
+            onClick={onGeneratePortfolio}
+            disabled={isGeneratingPortfolio}
+            className="w-full py-2.5 px-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{
+              background: colors.inputBackground,
+              color: colors.text,
+              border: `1px solid ${colors.border}`,
+              width: '100%',
+              maxWidth: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            {isGeneratingPortfolio ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              'Generate Portfolio Outline'
+            )}
+          </button>
+        </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

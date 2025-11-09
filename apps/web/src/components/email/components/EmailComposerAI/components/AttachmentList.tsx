@@ -21,9 +21,9 @@ export function AttachmentList({ attachments, onRemove, colors }: AttachmentList
 
   return (
     <div>
-      <label className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
+      <p className="block text-sm font-medium mb-2" style={{ color: colors.primaryText }}>
         Attachments
-      </label>
+      </p>
       <div className="flex flex-wrap gap-2">
         {attachments.map((file, idx) => (
           <div

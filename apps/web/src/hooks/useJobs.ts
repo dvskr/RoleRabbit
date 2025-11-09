@@ -72,7 +72,7 @@ export function useJobs() {
 
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
-    let filtered = jobs.filter(job => {
+    const filtered = jobs.filter(job => {
       const matchesFilter = filters.status === 'all' || job.status === filters.status;
       const matchesSearch = job.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
                            job.company.toLowerCase().includes(filters.searchTerm.toLowerCase());

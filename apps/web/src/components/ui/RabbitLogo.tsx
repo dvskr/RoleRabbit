@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
 interface RabbitLogoProps {
   size?: number;
@@ -19,7 +19,9 @@ export function RabbitLogo({
   primaryColor = '#0d9488',
   secondaryColor = '#14b8a6'
 }: RabbitLogoProps) {
-  const logoId = `rabbit-logo-${Math.random().toString(36).substr(2, 9)}`;
+  // Use useId() hook for consistent ID generation between server and client
+  const id = useId();
+  const logoId = `rabbit-logo-${id.replace(/:/g, '-')}`;
   
   return (
     <svg 

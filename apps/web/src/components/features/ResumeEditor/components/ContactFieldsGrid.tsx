@@ -6,12 +6,13 @@ import { ThemeColors } from '../../../../contexts/ThemeContext';
 import { STANDARD_CONTACT_FIELDS } from '../constants';
 import { getFieldIcon } from '../utils/iconHelpers';
 import { validateEmail, validatePhone, validateURL, normalizeURL } from '../../../../utils/validation';
+import { ResumeData, CustomField } from '../../../../types/resume';
 
 interface ContactFieldsGridProps {
-  resumeData: any;
-  setResumeData: (data: any) => void;
-  customFields: Array<{ id: string; name: string; icon?: string; value?: string }>;
-  setCustomFields: (fields: Array<{ id: string; name: string; icon?: string; value?: string }>) => void;
+  resumeData: ResumeData;
+  setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
+  customFields: CustomField[];
+  setCustomFields: (fields: CustomField[]) => void;
   setShowAddFieldModal: (show: boolean) => void;
   colors: ThemeColors;
 }
@@ -36,11 +37,8 @@ export default function ContactFieldsGrid({
   // Validation errors state
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Use accentCyan for icons that should have the accent color
-  const getIconColor = (index: number) => {
-    // Email, Location use gray (tertiaryText)
-    if (index === 0 || index === 2) return colors.tertiaryText;
-    // Phone, LinkedIn, Github, Website use accent color
+  // Use accentCyan for all icons
+  const getIconColor = () => {
     return colors.accentCyan;
   };
 
@@ -74,7 +72,7 @@ export default function ContactFieldsGrid({
 
   // Handle field change with validation
   const handleFieldChange = useCallback((field: string, value: string) => {
-    setResumeData((prev: any) => ({ ...prev, [field]: value }));
+    setResumeData((prev: ResumeData) => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
     if (validationErrors[field]) {
@@ -93,7 +91,7 @@ export default function ContactFieldsGrid({
     if ((field === 'linkedin' || field === 'github' || field === 'website') && value.trim()) {
       const normalized = normalizeURL(value);
       if (normalized !== value) {
-        setResumeData((prev: any) => ({ ...prev, [field]: normalized }));
+        setResumeData((prev: ResumeData) => ({ ...prev, [field]: normalized }));
         valueToValidate = normalized;
       }
     }
@@ -140,7 +138,7 @@ export default function ContactFieldsGrid({
               {IconComponent && (
                 <IconComponent 
                   size={16} 
-                  style={{ color: getIconColor(idx) }}
+                  style={{ color: getIconColor() }}
                   aria-label={`${field} icon`}
                   role="img"
                 />
@@ -214,7 +212,7 @@ export default function ContactFieldsGrid({
       
       {/* Add Custom Field Button */}
       <div className="flex items-center gap-2 group">
-        <Plus size={16} style={{ color: colors.tertiaryText }} />
+        <Plus size={16} style={{ color: colors.accentCyan }} />
         <button
           onClick={() => setShowAddFieldModal(true)}
           className="flex-1 border-2 border-dashed rounded-lg px-2 sm:px-3 py-2 text-left min-w-0 max-w-full transition-all"

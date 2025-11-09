@@ -3,61 +3,29 @@ import type { SetStateAction } from 'react';
 import { ResumeData, CustomSection, SectionVisibility, CustomField } from '../types/resume';
 import apiService from '../services/apiService';
 import { logger } from '../utils/logger';
-import { sanitizeResumeData } from '../utils/validation';
+import { sanitizeResumeData, validateResumeData } from '../utils/validation';
 import { formatErrorForDisplay } from '../utils/errorMessages';
 import { offlineQueue } from '../utils/offlineQueue';
 import { isOnline } from '../utils/retryHandler';
-
-const DEFAULT_SECTION_ORDER = ['summary', 'skills', 'experience', 'education', 'projects', 'certifications'];
-
-const DEFAULT_SECTION_VISIBILITY: SectionVisibility = {
-  summary: true,
-  skills: true,
-  experience: true,
-  education: true,
-  projects: true,
-  certifications: true,
-};
-
-const DEFAULT_FORMATTING = {
-  fontFamily: 'arial',
-  fontSize: 'ats11pt',
-  lineSpacing: 'normal',
-  sectionSpacing: 'medium',
-  margins: 'normal',
-  headingStyle: 'bold',
-  bulletStyle: 'disc',
-};
+import {
+  DEFAULT_SECTION_ORDER,
+  DEFAULT_SECTION_VISIBILITY,
+  DEFAULT_FORMATTING,
+  createDefaultResumeData
+} from '../utils/resumeDefaults';
+import {
+  mapBaseResumeToEditor,
+  mapEditorStateToBasePayload,
+  ResumeSnapshot,
+  BaseResumeRecord
+} from '../utils/resumeMapper';
 
 const AUTOSAVE_DEBOUNCE_MS = 5000;
 
-const createDefaultResumeData = (): ResumeData => ({
-  name: '',
-  title: '',
-  email: '',
-  phone: '',
-  location: '',
-  summary: '',
-  skills: [],
-  experience: [],
-  education: [],
-  projects: [],
-  certifications: [],
-});
-
 const cloneResumeData = (data: ResumeData): ResumeData => JSON.parse(JSON.stringify(data));
 
-interface ResumeSnapshot {
-  resumeData: ResumeData;
-  sectionOrder: string[];
-  sectionVisibility: SectionVisibility;
-  customSections: CustomSection[];
-  formatting: typeof DEFAULT_FORMATTING;
-  customFields?: CustomField[];
-}
-
 interface UseResumeDataOptions {
-  onResumeLoaded?: (payload: { resume: any; snapshot: ResumeSnapshot }) => void;
+  onResumeLoaded?: (payload: { resume: BaseResumeRecord | null | undefined; snapshot: ResumeSnapshot }) => void;
 }
 
 // Resume data state hook
@@ -295,86 +263,6 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     });
   }, [setHasChanges, setSaveError]);
 
-  const buildSnapshotFromStoredData = useCallback((stored: any): ResumeSnapshot => {
-    const data = stored && typeof stored === 'object' ? stored : {};
-    const resumeData = data.resumeData && typeof data.resumeData === 'object'
-      ? cloneResumeData(data.resumeData)
-      : cloneResumeData(createDefaultResumeData());
-    
-    // Normalize all array fields to always be arrays
-    if (!Array.isArray(resumeData.skills)) {
-      resumeData.skills = [];
-    }
-    if (!Array.isArray(resumeData.experience)) {
-      resumeData.experience = [];
-    }
-    if (!Array.isArray(resumeData.education)) {
-      resumeData.education = [];
-    }
-    if (!Array.isArray(resumeData.projects)) {
-      resumeData.projects = [];
-    }
-    if (!Array.isArray(resumeData.certifications)) {
-      resumeData.certifications = [];
-    }
-    
-    // Normalize nested arrays in experience items
-    resumeData.experience.forEach((exp: any) => {
-      if (exp && typeof exp === 'object') {
-        if (!Array.isArray(exp.bullets)) exp.bullets = [];
-        if (!Array.isArray(exp.environment)) exp.environment = [];
-        if (!Array.isArray(exp.customFields)) exp.customFields = [];
-      }
-    });
-    
-    // Normalize nested arrays in project items
-    resumeData.projects.forEach((proj: any) => {
-      if (proj && typeof proj === 'object') {
-        if (!Array.isArray(proj.bullets)) proj.bullets = [];
-        if (!Array.isArray(proj.skills)) proj.skills = [];
-        if (!Array.isArray(proj.customFields)) proj.customFields = [];
-      }
-    });
-    
-    // Normalize nested arrays in certification items
-    resumeData.certifications.forEach((cert: any) => {
-      if (cert && typeof cert === 'object') {
-        if (!Array.isArray(cert.skills)) cert.skills = [];
-        if (!Array.isArray(cert.customFields)) cert.customFields = [];
-      }
-    });
-    const sectionOrder = Array.isArray(data.sectionOrder) && data.sectionOrder.length > 0
-      ? [...data.sectionOrder]
-      : [...DEFAULT_SECTION_ORDER];
-    const sectionVisibility = {
-      ...DEFAULT_SECTION_VISIBILITY,
-      ...(data.sectionVisibility && typeof data.sectionVisibility === 'object' ? data.sectionVisibility : {}),
-    };
-    const customSections = Array.isArray(data.customSections)
-      ? [...data.customSections]
-      : [];
-    const formattingSource = data.formatting && typeof data.formatting === 'object' ? data.formatting : {};
-    const formatting = {
-      fontFamily: formattingSource.fontFamily || DEFAULT_FORMATTING.fontFamily,
-      fontSize: formattingSource.fontSize || DEFAULT_FORMATTING.fontSize,
-      lineSpacing: formattingSource.lineSpacing || DEFAULT_FORMATTING.lineSpacing,
-      sectionSpacing: formattingSource.sectionSpacing || DEFAULT_FORMATTING.sectionSpacing,
-      margins: formattingSource.margins || DEFAULT_FORMATTING.margins,
-      headingStyle: formattingSource.headingStyle || DEFAULT_FORMATTING.headingStyle,
-      bulletStyle: formattingSource.bulletStyle || DEFAULT_FORMATTING.bulletStyle,
-    } as typeof DEFAULT_FORMATTING;
-    const customFields = Array.isArray(data.customFields) ? [...data.customFields] : [];
-
-    return {
-      resumeData,
-      sectionOrder,
-      sectionVisibility,
-      customSections,
-      formatting,
-      customFields,
-    };
-  }, []);
-
   const applySnapshot = useCallback((snapshot: ResumeSnapshot) => {
     runWithoutTracking(() => {
       _setResumeData(cloneResumeData(snapshot.resumeData));
@@ -395,24 +283,19 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     setSaveError(null);
   }, [runWithoutTracking, setHasChanges, setSaveError]);
 
-  const applyResumeRecord = useCallback((resumeRecord: any) => {
-    if (!resumeRecord) {
-      return null;
-    }
-
-    const snapshot = buildSnapshotFromStoredData(resumeRecord.data);
+  const applyBaseResume = useCallback((record?: BaseResumeRecord | null) => {
+    const snapshot = mapBaseResumeToEditor(record);
     applySnapshot(snapshot);
     runWithoutTracking(() => {
-      _setResumeFileName(resumeRecord.fileName || resumeRecord.name || 'My_Resume');
+      _setResumeFileName(record?.name || 'My_Resume');
     });
-    setCurrentResumeId(resumeRecord.id || null);
-    setLastServerUpdatedAt(resumeRecord.lastUpdated || null);
-    setLastSavedAt(resumeRecord.lastUpdated ? new Date(resumeRecord.lastUpdated) : null);
+    setCurrentResumeId(record?.id || null);
+    setLastServerUpdatedAt(record?.updatedAt || null);
+    setLastSavedAt(record?.updatedAt ? new Date(record.updatedAt) : null);
     setHasChanges(false);
-    return { resume: resumeRecord, snapshot };
+    return { resume: record, snapshot };
   }, [
     applySnapshot,
-    buildSnapshotFromStoredData,
     runWithoutTracking,
     setCurrentResumeId,
     setLastServerUpdatedAt,
@@ -427,12 +310,12 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
 
     setIsLoading(true);
     try {
-      const response = await apiService.getResume(id);
+      const response = await apiService.getBaseResume(id);
       if (response?.resume) {
-        return applyResumeRecord(response.resume);
+        return applyBaseResume(response.resume as BaseResumeRecord);
       }
       throw new Error('Resume not found');
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Failed to load resume by id:', error);
       const friendlyError = formatErrorForDisplay(error, {
         action: 'loading resume',
@@ -443,22 +326,21 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [applyResumeRecord, setSaveError]);
+  }, [applyBaseResume, setSaveError]);
 
   useEffect(() => {
     const loadResume = async () => {
       setIsLoading(true);
       try {
-        const response = await apiService.getResumes();
+        const response = await apiService.getBaseResumes();
         if (response?.resumes?.length) {
-          const resumeRecord = response.resumes[0];
-          const applied = applyResumeRecord(resumeRecord);
+          const resumeRecord = response.resumes[0] as BaseResumeRecord;
+          const applied = applyBaseResume(resumeRecord);
           if (applied) {
             onResumeLoaded?.(applied);
           }
         } else {
-          // No resumes exist - show empty state
-          const snapshot = buildSnapshotFromStoredData({});
+          const snapshot = mapBaseResumeToEditor(null);
           applySnapshot(snapshot);
           runWithoutTracking(() => {
             _setResumeFileName('');
@@ -467,7 +349,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           setLastServerUpdatedAt(null);
           setLastSavedAt(null);
         }
-      } catch (error: any) {
+      } catch (error) {
         logger.error('Failed to load resume:', error);
         const friendlyError = formatErrorForDisplay(error, {
           action: 'loading resume',
@@ -503,14 +385,22 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     autosaveTimerRef.current = setTimeout(async () => {
       logger.info('Auto-save timer fired, executing save...');
       autosaveTimerRef.current = null;
+
+      // Prevent auto-save when validation fails (e.g., invalid email)
+      const validation = validateResumeData(resumeDataRef.current);
+      if (!validation.isValid) {
+        const errorMessages = Object.values(validation.errors).join(', ');
+        logger.warn('Auto-save validation failed', validation.errors);
+        setSaveError(`Auto-save blocked: ${errorMessages}`);
+        setHasChanges(true);
+        return;
+      }
+
       try {
         setIsSaving(true);
         setSaveError(null);
 
-        // Use refs to get latest values without adding them to dependency array
-        // Sanitize data before sending to prevent XSS attacks
-        const rawPayload = {
-          data: {
+        const editorState = {
             resumeData: resumeDataRef.current,
             sectionOrder: sectionOrderRef.current,
             sectionVisibility: sectionVisibilityRef.current,
@@ -522,121 +412,121 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
               sectionSpacing: sectionSpacingRef.current,
               margins: marginsRef.current,
               headingStyle: headingStyleRef.current,
-              bulletStyle: bulletStyleRef.current,
+            bulletStyle: bulletStyleRef.current
             },
-          },
-          lastKnownServerUpdatedAt: lastServerUpdatedAtRef.current,
+          customFields: [] as CustomField[],
+          name: resumeFileNameRef.current
         };
-        
-        // Sanitize all string fields in the payload to prevent XSS
-        const payload = sanitizeResumeData(rawPayload);
 
-        // Log payload details using logger for development debugging
-        logger.debug('Auto-save payload', {
-          hasResumeData: !!payload.data.resumeData,
-          resumeDataKeys: payload.data.resumeData ? Object.keys(payload.data.resumeData) : [],
-          name: payload.data.resumeData?.name,
-          email: payload.data.resumeData?.email,
-          phone: payload.data.resumeData?.phone,
-          location: payload.data.resumeData?.location,
-          summary: payload.data.resumeData?.summary ? `${payload.data.resumeData.summary.substring(0, 50)}...` : '(empty)',
-          skillsType: Array.isArray(payload.data.resumeData?.skills) ? 'array' : typeof payload.data.resumeData?.skills,
-          skillsCount: Array.isArray(payload.data.resumeData?.skills) ? payload.data.resumeData.skills.length : 0,
-        });
+        const mappedPayload = mapEditorStateToBasePayload(editorState);
+        const sanitizedPayload = sanitizeResumeData(mappedPayload);
 
-        // Auto-save: create resume if it doesn't exist, otherwise update
-        const currentId = currentResumeId; // Capture current value
+        const currentId = currentResumeId;
         if (currentId) {
-          // Update existing resume
-          logger.info('Auto-saving existing resume:', { resumeId: currentId });
+          logger.info('Auto-saving existing base resume', { baseResumeId: currentId });
           try {
-            const response = await apiService.autoSaveResume(currentId, payload);
-            const savedResume = response?.resume;
-            if (savedResume) {
-              logger.info('Resume auto-saved successfully:', { id: savedResume.id, lastUpdated: savedResume.lastUpdated });
-              setLastServerUpdatedAt(savedResume.lastUpdated || null);
-              if (savedResume.lastUpdated) {
-                setLastSavedAt(new Date(savedResume.lastUpdated));
+            const response = await apiService.updateBaseResume(currentId, {
+              ...sanitizedPayload,
+              name: (sanitizedPayload.name || resumeFileNameRef.current || '').trim() || 'Untitled Resume',
+              lastKnownServerUpdatedAt: lastServerUpdatedAtRef.current
+            });
+            const updatedResume = response?.resume as BaseResumeRecord | undefined;
+            if (updatedResume) {
+              setLastServerUpdatedAt(updatedResume.updatedAt || null);
+              if (updatedResume.updatedAt) {
+                setLastSavedAt(new Date(updatedResume.updatedAt));
               }
               setHasChanges(false);
-              setHasConflict(false); // Clear conflict on successful save
-            } else {
-              logger.warn('Auto-save response missing resume data:', response);
+              setHasConflict(false);
             }
-          } catch (conflictError: any) {
-            // Handle 409 Conflict errors
-            if (conflictError?.statusCode === 409) {
-              logger.warn('Conflict detected during auto-save:', conflictError);
+          } catch (conflictError) {
+            if (
+              conflictError &&
+              typeof conflictError === 'object' &&
+              'statusCode' in conflictError &&
+              (conflictError as { statusCode?: number }).statusCode === 409
+            ) {
+              logger.warn('Conflict detected during auto-save', conflictError);
               setHasConflict(true);
               setSaveError('Resume was updated elsewhere. Please refresh to sync changes.');
             } else {
-              throw conflictError; // Re-throw non-conflict errors
+              throw conflictError;
             }
           }
         } else {
-          // Create new resume if it doesn't exist yet
           const fileName = resumeFileNameRef.current && resumeFileNameRef.current.trim().length > 0
             ? resumeFileNameRef.current.trim()
             : 'Untitled Resume';
           
-          logger.info('Creating new resume during auto-save:', { fileName, hasData: !!payload.data });
-          
+          logger.info('Creating new base resume during auto-save', { fileName });
           try {
-            const response = await apiService.createResume({
-              fileName,
-              templateId: null,
-              data: payload.data
+            const response = await apiService.createBaseResume({
+              name: fileName,
+              data: sanitizedPayload.data,
+              metadata: sanitizedPayload.metadata,
+              formatting: sanitizedPayload.formatting
             });
-            
-            logger.info('Create resume response:', { success: response?.success, hasResume: !!response?.resume });
-            
-            const savedResume = response?.resume;
+            const savedResume = response?.resume as BaseResumeRecord | undefined;
             if (savedResume) {
-              logger.info('Resume created successfully:', { id: savedResume.id, fileName: savedResume.fileName });
               setCurrentResumeId(savedResume.id);
-              setLastServerUpdatedAt(savedResume.lastUpdated || null);
-              if (savedResume.lastUpdated) {
-                setLastSavedAt(new Date(savedResume.lastUpdated));
+              setLastServerUpdatedAt(savedResume.updatedAt || null);
+              if (savedResume.updatedAt) {
+                setLastSavedAt(new Date(savedResume.updatedAt));
               }
-              if (savedResume.fileName && savedResume.fileName !== resumeFileNameRef.current) {
+              if (savedResume.name && savedResume.name !== resumeFileNameRef.current) {
                 runWithoutTracking(() => {
-                  _setResumeFileName(savedResume.fileName);
+                  _setResumeFileName(savedResume.name || fileName);
                 });
               }
               setHasChanges(false);
             } else {
-              logger.error('Create resume response missing resume data:', response);
-              setSaveError('Failed to create resume: No resume data in response');
+              logger.error('Create base resume response missing resume data', response);
+              setSaveError('Failed to create resume: No resume data in response.');
             }
-          } catch (createError: any) {
-            logger.error('Failed to create resume during auto-save:', createError);
-            setSaveError(createError?.message || 'Failed to create resume');
-            // Don't throw - let user continue editing
+          } catch (createError) {
+            logger.error('Failed to create base resume during auto-save', createError);
+            const friendlyError = formatErrorForDisplay(createError, {
+              action: 'creating resume',
+              feature: 'resume builder'
+            });
+            setSaveError(typeof friendlyError === 'string' ? friendlyError : 'Failed to create resume');
           }
         }
-      } catch (error: any) {
+      } catch (error) {
         logger.error('Auto-save failed:', error);
         
-        // If offline or network error, queue the save operation
-        const isNetworkError = error?.message?.includes('Failed to fetch') || 
-                              error?.message?.includes('NetworkError') ||
-                              error?.statusCode === 0 ||
-                              !isOnline();
+        const isNetworkError =
+          (typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            typeof (error as { message?: string }).message === 'string' &&
+            ((error as { message: string }).message.includes('Failed to fetch') ||
+              (error as { message: string }).message.includes('NetworkError')))
+          ||
+          (typeof error === 'object' &&
+            error !== null &&
+            'statusCode' in error &&
+            (error as { statusCode?: number }).statusCode === 0)
+          ||
+          !isOnline();
         
-        if (isNetworkError && currentId) {
+        if (isNetworkError && currentResumeId) {
           const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
           offlineQueue.add(
             'save',
-            `${apiBaseUrl}/api/resumes/${currentId}/autosave`,
-            payload,
-            { method: 'PUT' }
+            `${apiBaseUrl}/api/base-resumes/${currentResumeId}`,
+            {
+              ...sanitizedPayload,
+              name: (sanitizedPayload.name || resumeFileNameRef.current || '').trim() || 'Untitled Resume'
+            },
+            { method: 'PATCH' }
           );
           logger.info('Queued failed save operation for retry when online');
           setSaveError('Changes will be saved when connection is restored.');
         } else {
           const friendlyError = formatErrorForDisplay(error, {
             action: 'saving resume',
-            feature: 'resume builder',
+            feature: 'resume builder'
           });
           setSaveError(friendlyError);
         }
@@ -716,6 +606,6 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     historyIndex,
     setHistoryIndex,
     loadResumeById,
-    applyResumeRecord,
+    applyBaseResume,
   };
 };
