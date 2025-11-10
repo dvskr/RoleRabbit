@@ -96,11 +96,43 @@ async function generateText(prompt, options = {}) {
       model: response.model
     };
   } catch (error) {
-    logger.error(`OpenAI generation failed`, {
-      error: error.message,
-      model,
-      promptLength: prompt.length
+    const status = error?.response?.status;
+    let responseData = undefined;
+    try {
+      responseData = error?.response?.data
+        ? typeof error.response.data === 'string'
+          ? error.response.data
+          : JSON.stringify(error.response.data)
+        : undefined;
+    } catch (_) {
+      responseData = '[unserializable response data]';
+    }
+
+    const responseExcerpt =
+      typeof responseData === 'string'
+        ? responseData.slice(0, 500)
+        : responseData;
+
+    console.error('OpenAI generation failed details:', {
+      status,
+      response: responseExcerpt,
+      message: error?.message,
+      stack: error?.stack
     });
+
+    logger.error(
+      `OpenAI generation failed (status=${status ?? 'unknown'}): ${error?.message}${
+        responseExcerpt ? ` | response=${responseExcerpt}` : ''
+      }`,
+      {
+        error: error?.message,
+        model,
+        promptLength: prompt.length,
+        status,
+        responseData: responseExcerpt,
+        stack: error?.stack
+      }
+    );
     
     // Provide more specific error messages
     if (error.message.includes('timed out')) {

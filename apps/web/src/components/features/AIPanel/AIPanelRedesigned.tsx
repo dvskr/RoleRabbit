@@ -15,6 +15,7 @@ export default function AIPanelRedesigned({
   showATSScore,
   matchedKeywords = [],
   missingKeywords = [],
+  aiRecommendations = [],
   tailorEditMode,
   setTailorEditMode,
   selectedTone,
@@ -47,8 +48,26 @@ export default function AIPanelRedesigned({
   };
 
   const scoreInfo = useMemo(() => {
-    const score = matchScore?.overall || 0;
+    const score = typeof matchScore?.overall === 'number' ? matchScore.overall : 0;
     return getScoreColor(score);
+  }, [matchScore]);
+
+  const effectiveMatchedKeywords = matchedKeywords.length
+    ? matchedKeywords
+    : matchScore?.matchedKeywords ?? [];
+  const effectiveMissingKeywords = missingKeywords.length
+    ? missingKeywords
+    : matchScore?.missingKeywords ?? [];
+
+  const actionableTips = useMemo(() => {
+    const tips = matchScore?.actionable_tips ?? matchScore?.actionableTips ?? [];
+    return tips
+      .map((tip) => {
+        if (typeof tip === 'string') return tip;
+        const prefix = tip.priority ? `${tip.priority.toUpperCase()}: ` : '';
+        return `${prefix}${tip.action}`;
+      })
+      .filter(Boolean);
   }, [matchScore]);
 
   const handleRunAnalysis = async () => {
@@ -58,19 +77,31 @@ export default function AIPanelRedesigned({
   };
 
   const handleAutoTailor = async () => {
-    if (matchScore?.overall) {
+    if (typeof matchScore?.overall === 'number') {
       setBeforeScore(matchScore.overall);
     }
     await onTailorResume?.();
   };
 
   const topMissingSkills = useMemo(() => {
-    return (missingKeywords || []).slice(0, 5);
-  }, [missingKeywords]);
+    return effectiveMissingKeywords.slice(0, 5);
+  }, [effectiveMissingKeywords]);
 
   const improvements = useMemo(() => {
-    return (matchScore?.improvements || []).slice(0, 3);
-  }, [matchScore]);
+    const combined = [
+      ...(matchScore?.improvements ?? []),
+      ...actionableTips,
+      ...aiRecommendations,
+    ].filter(Boolean);
+    return combined.slice(0, 3);
+  }, [matchScore, actionableTips, aiRecommendations]);
+
+  const afterTailorScore = tailorResult?.ats?.after?.overall ?? null;
+  const beforeTailorScore =
+    beforeScore ??
+    tailorResult?.ats?.before?.overall ??
+    matchScore?.overall ??
+    null;
 
   if (!showRightPanel) return null;
 
@@ -239,13 +270,13 @@ export default function AIPanelRedesigned({
             {/* Quick Summary */}
             <div className="space-y-2">
               <div className="flex items-start gap-2">
-                {matchedKeywords.length > 0 ? (
+                {effectiveMatchedKeywords.length > 0 ? (
                   <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#10b981' }} />
                 ) : (
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#f59e0b' }} />
                 )}
                 <span className="text-xs" style={{ color: colors.textSecondary }}>
-                  {matchedKeywords.length} skills matched
+                  {effectiveMatchedKeywords.length} skills matched
                 </span>
               </div>
               
@@ -375,21 +406,21 @@ export default function AIPanelRedesigned({
             </div>
 
             {/* Before/After Comparison */}
-            {beforeScore && tailorResult.atsScoreAfter && (
+            {beforeTailorScore !== null && afterTailorScore !== null && (
               <div className="flex items-center justify-between py-2">
                 <div className="text-center flex-1">
                   <div className="text-xs" style={{ color: '#065f46' }}>Before</div>
-                  <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>{beforeScore}</div>
+                  <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>{beforeTailorScore}</div>
                 </div>
                 <div className="text-2xl font-bold" style={{ color: '#065f46' }}>→</div>
                 <div className="text-center flex-1">
                   <div className="text-xs" style={{ color: '#065f46' }}>After</div>
-                  <div className="text-2xl font-bold" style={{ color: '#10b981' }}>{tailorResult.atsScoreAfter}</div>
+                  <div className="text-2xl font-bold" style={{ color: '#10b981' }}>{afterTailorScore}</div>
                 </div>
                 <div className="text-center flex-1">
                   <div className="text-xs" style={{ color: '#065f46' }}>Improvement</div>
                   <div className="text-xl font-bold" style={{ color: '#10b981' }}>
-                    +{tailorResult.atsScoreAfter - beforeScore}
+                    +{afterTailorScore - beforeTailorScore}
                   </div>
                 </div>
               </div>

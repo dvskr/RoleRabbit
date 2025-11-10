@@ -10,7 +10,7 @@ export interface AIPanelProps {
   jobDescription: string;
   setJobDescription: (desc: string) => void;
   isAnalyzing: boolean;
-  matchScore: number;
+  matchScore: ATSAnalysisResult | null;
   showATSScore: boolean;
   setShowATSScore: (show: boolean) => void;
   matchedKeywords: string[];

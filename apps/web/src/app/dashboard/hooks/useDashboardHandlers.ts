@@ -3,7 +3,7 @@
  * Consolidates handler logic for better organization
  */
 
-import { useCallback } from 'react';
+import { useCallback, Dispatch, SetStateAction } from 'react';
 import type {
   ResumeData,
   CustomSection,
@@ -15,13 +15,35 @@ import { createCustomField } from '../utils/dashboardHandlers';
 import {
   removeDuplicateResumeEntries,
   duplicateResumeState,
+  mergeTailoredResume,
 } from '../utils/resumeDataHelpers';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 import { validateResumeData, sanitizeResumeData } from '../../../utils/validation';
 import { formatErrorForDisplay } from '../../../utils/errorMessages';
 import { mapEditorStateToBasePayload, BaseResumeRecord } from '../../../utils/resumeMapper';
-import { TailorResult, CoverLetterDraft, PortfolioDraft } from '../../../types/ai';
+import { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../../../types/ai';
+
+const buildATSFromScore = (
+  score: number,
+  previous?: ATSAnalysisResult | null
+): ATSAnalysisResult => {
+  const base: ATSAnalysisResult = previous
+    ? { ...previous, overall: score }
+    : {
+        overall: score,
+        keywords: 0,
+        content: 0,
+        experience: 0,
+        format: 0,
+        improvements: [],
+        strengths: [],
+        matchedKeywords: [],
+        missingKeywords: [],
+      };
+  base.overall = score;
+  return base;
+};
 
 export interface UseDashboardHandlersParams {
   // Resume data
@@ -96,7 +118,7 @@ export interface UseDashboardHandlersParams {
   // Other handlers
   jobDescription: string;
   setIsAnalyzing: (analyzing: boolean) => void;
-  setMatchScore: (score: number) => void;
+  setMatchScore: Dispatch<SetStateAction<ATSAnalysisResult | null>>;
   setMatchedKeywords: (keywords: string[]) => void;
   setMissingKeywords: (keywords: string[]) => void;
   setAiRecommendations: (recommendations: string[]) => void;
@@ -357,10 +379,17 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [sectionVisibility, setSectionVisibility]);
 
   const analyzeJobDescription = useCallback(async () => {
+    logger.debug('ATS analyzeJobDescription invoked', {
+      currentResumeId,
+      hasJobDescription: !!jobDescription?.trim(),
+      jobDescriptionLength: jobDescription?.length ?? 0,
+      isAnalyzing
+    });
     if (!jobDescription.trim()) {
       return null;
     }
     if (!currentResumeId) {
+      logger.warn('ATS analysis blocked - no active resume id');
       setSaveError('Select a resume slot before running ATS analysis.');
       return null;
     }
@@ -374,12 +403,18 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         resumeId: currentResumeId,
         jobDescription
       });
-      const analysis = response?.analysis;
+      const analysis: ATSAnalysisResult | null = response?.analysis ?? null;
       if (analysis) {
-        setMatchScore(analysis); // Set the full analysis object, not just the score
-        setMatchedKeywords(response?.matchedKeywords ?? []);
-        setMissingKeywords(response?.missingKeywords ?? []);
-        setAiRecommendations(response?.improvements ?? []);
+        setMatchScore(analysis);
+        setMatchedKeywords(response?.matchedKeywords ?? analysis.matchedKeywords ?? []);
+        setMissingKeywords(response?.missingKeywords ?? analysis.missingKeywords ?? []);
+        const actionable = analysis.actionable_tips ?? analysis.actionableTips ?? [];
+        const improvements = response?.improvements ?? analysis.improvements ?? [];
+        const recommendationStrings = [
+          ...improvements,
+          ...actionable.map((tip) => (typeof tip === 'string' ? tip : tip.action)),
+        ].filter(Boolean);
+        setAiRecommendations(recommendationStrings);
         setShowATSScore(true);
       }
       return response;
@@ -427,11 +462,15 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       if (response?.updatedResume && applyBaseResume) {
         applyBaseResume(response.updatedResume as BaseResumeRecord);
       }
-      if (response?.appliedRecommendations) {
-        setAiRecommendations(response.appliedRecommendations);
-      }
-      if (response?.ats?.after?.overall !== undefined) {
-        setMatchScore(response.ats.after.overall ?? 0);
+      setAiRecommendations(response?.appliedRecommendations ?? []);
+      if (response?.ats?.after) {
+        const afterAnalysis = response.ats.after as ATSAnalysisResult;
+        setMatchScore(afterAnalysis);
+        setMatchedKeywords(afterAnalysis.matchedKeywords ?? []);
+        setMissingKeywords(afterAnalysis.missingKeywords ?? []);
+        setShowATSScore(true);
+      } else if (typeof response?.atsScoreAfter === 'number') {
+        setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
         setShowATSScore(true);
       }
       return response;
@@ -478,22 +517,43 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       });
 
       if (response?.tailoredResume) {
+        let mergedResume: ResumeData | null = null;
+
+        setResumeData((previous) => {
+          const merged = mergeTailoredResume(previous, response.tailoredResume as ResumeData);
+          const deduped = removeDuplicateResumeEntries(merged).data;
+          mergedResume = deduped;
+          return deduped;
+        });
+
+        if (!mergedResume) {
+          const merged = mergeTailoredResume(resumeData, response.tailoredResume as ResumeData);
+          mergedResume = removeDuplicateResumeEntries(merged).data;
+        }
+
+        setHasChanges(true);
+        
         const result: TailorResult = {
-          tailoredResume: response.tailoredResume,
+          tailoredResume: mergedResume,
           diff: Array.isArray(response.diff) ? response.diff : [],
           warnings: Array.isArray(response.warnings) ? response.warnings : [],
           recommendedKeywords: Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : [],
           ats: response.ats ?? null,
           confidence: typeof response.confidence === 'number' ? response.confidence : null,
-          mode: response.tailoredVersion?.mode ?? (tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL')
+          mode: response.tailoredVersion?.mode ?? (tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL'),
+          tailoredVersionId: response.tailoredVersion?.id
         };
         setTailorResult(result);
 
-        if (Array.isArray(response.recommendedKeywords) && response.recommendedKeywords.length) {
-          setAiRecommendations(response.recommendedKeywords);
-        }
-        if (response.ats?.after?.overall !== undefined) {
-          setMatchScore(response.ats.after.overall ?? 0);
+        setAiRecommendations(Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : []);
+        const afterAnalysis = response.ats?.after as ATSAnalysisResult | undefined;
+        if (afterAnalysis) {
+          setMatchScore(afterAnalysis);
+          setMatchedKeywords(afterAnalysis.matchedKeywords ?? response.recommendedKeywords ?? []);
+          setMissingKeywords(afterAnalysis.missingKeywords ?? []);
+          setShowATSScore(true);
+        } else if (typeof response.atsScoreAfter === 'number') {
+          setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
           setShowATSScore(true);
         }
       }
@@ -516,6 +576,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     tailorEditMode,
     selectedTone,
     selectedLength,
+    resumeData,
+    setResumeData,
+    setHasChanges,
     setTailorResult,
     setAiRecommendations,
     setMatchScore,

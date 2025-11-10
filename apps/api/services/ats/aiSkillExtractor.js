@@ -340,7 +340,11 @@ Return ONLY valid JSON:
     return result;
 
   } catch (error) {
-    logger.error('❌ Skill quality analysis failed', { error: error.message });
+    // Log as warning instead of error since we have a fallback
+    logger.warn('⚠️ Skill quality analysis using fallback', { 
+      skill,
+      reason: error.message?.includes('timeout') ? 'timeout' : 'api_error'
+    });
     
     // Fallback
     return {
@@ -349,7 +353,7 @@ Return ONLY valid JSON:
       depth_score: 50,
       evidence_quotes: [],
       context_quality: 'moderate',
-      reasoning: 'Fallback analysis due to error',
+      reasoning: 'Fallback analysis due to API limitations',
       fallback: true
     };
   }
