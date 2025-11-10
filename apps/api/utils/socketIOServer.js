@@ -210,6 +210,89 @@ class SocketIOServer {
   }
 
   /**
+   * ===========================================
+   * AI AGENT EVENTS
+   * ===========================================
+   */
+
+  /**
+   * Emit AI Agent task progress update
+   */
+  notifyTaskProgress(userId, taskId, progress, currentStep) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_progress', {
+      taskId,
+      progress,
+      currentStep,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit AI Agent task completed event
+   */
+  notifyTaskCompleted(userId, taskId, result) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_completed', {
+      taskId,
+      result,
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of completed task ${taskId}`);
+  }
+
+  /**
+   * Emit AI Agent task failed event
+   */
+  notifyTaskFailed(userId, taskId, error) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_failed', {
+      taskId,
+      error,
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of failed task ${taskId}`);
+  }
+
+  /**
+   * Emit AI Agent task started event
+   */
+  notifyTaskStarted(userId, taskId, taskType) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_started', {
+      taskId,
+      taskType,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit AI Agent task cancelled event
+   */
+  notifyTaskCancelled(userId, taskId) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_cancelled', {
+      taskId,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit batch tasks progress (for bulk operations)
+   */
+  notifyBatchProgress(userId, batchId, completed, total, currentTask) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:batch_progress', {
+      batchId,
+      completed,
+      total,
+      currentTask,
+      percentage: Math.round((completed / total) * 100),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
    * Get instance
    */
   getIO() {
