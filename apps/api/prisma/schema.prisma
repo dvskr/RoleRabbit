@@ -780,6 +780,7 @@ model AIAgentTask {
   baseResumeId String? // Which base resume to use
   tone         String? @default("professional")
   length       String? @default("medium")
+  batchId      String? // Correlation ID for bulk operations
 
   // Results
   resultData   Json? // Generated resume, cover letter, etc.
@@ -805,6 +806,7 @@ model AIAgentTask {
   @@index([userId, createdAt])
   @@index([status])
   @@index([type])
+  @@index([batchId])
   @@map("ai_agent_tasks")
 }
 

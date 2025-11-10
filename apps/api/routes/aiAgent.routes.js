@@ -15,7 +15,9 @@ const {
   getMetrics,
   getChatHistory,
   sendChatMessage,
-  createOrUpdateConversation
+  createOrUpdateConversation,
+  checkBatchUsageLimits,
+  incrementUsageCounter
 } = require('../services/aiAgentService');
 
 module.exports = async function aiAgentRoutes(fastify) {
@@ -352,12 +354,15 @@ module.exports = async function aiAgentRoutes(fastify) {
 
   /**
    * POST /api/ai-agent/tasks/bulk-apply
-   * Create bulk job application tasks
+   * Create bulk job application tasks with proper validation and error handling
    */
   fastify.post('/api/ai-agent/tasks/bulk-apply', { preHandler: authenticate }, async (request, reply) => {
     try {
       const userId = request.user.userId;
       const { jobs, baseResumeId, tone, length } = request.body;
+
+      // ✅ 1. Validate batch size
+      const MAX_BATCH_SIZE = 50;
 
       if (!Array.isArray(jobs) || jobs.length === 0) {
         return reply.status(400).send({
@@ -366,49 +371,128 @@ module.exports = async function aiAgentRoutes(fastify) {
         });
       }
 
-      // Create tasks for each job
-      const taskPromises = jobs.map(job => {
-        return createTask(userId, {
+      if (jobs.length > MAX_BATCH_SIZE) {
+        return reply.status(400).send({
+          success: false,
+          error: `Batch size cannot exceed ${MAX_BATCH_SIZE} jobs. You submitted ${jobs.length} jobs.`
+        });
+      }
+
+      // ✅ 2. Validate all job objects upfront
+      const validationErrors = [];
+      jobs.forEach((job, index) => {
+        if (!job.jobDescription || typeof job.jobDescription !== 'string' || job.jobDescription.trim() === '') {
+          validationErrors.push(`Job ${index + 1}: Missing or invalid job description`);
+        }
+        if (!job.company || typeof job.company !== 'string' || job.company.trim() === '') {
+          validationErrors.push(`Job ${index + 1}: Missing or invalid company name`);
+        }
+        if (!job.jobTitle || typeof job.jobTitle !== 'string' || job.jobTitle.trim() === '') {
+          validationErrors.push(`Job ${index + 1}: Missing or invalid job title`);
+        }
+      });
+
+      if (validationErrors.length > 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Validation failed for some jobs',
+          errors: validationErrors
+        });
+      }
+
+      // ✅ 3. Check usage limits UPFRONT for entire batch (atomic check)
+      try {
+        await checkBatchUsageLimits(userId, jobs.length);
+      } catch (error) {
+        if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+          return reply.status(403).send({
+            success: false,
+            error: error.message
+          });
+        }
+        throw error;
+      }
+
+      // ✅ 4. Generate batchId BEFORE creating tasks
+      const batchId = `batch_${Date.now()}_${userId.slice(0, 8)}`;
+
+      // ✅ 5. Use Promise.allSettled for partial success handling
+      const taskPromises = jobs.map(job =>
+        createTask(userId, {
           type: 'RESUME_GENERATION',
           jobDescription: job.jobDescription,
           jobTitle: job.jobTitle,
           company: job.company,
           jobUrl: job.jobUrl,
           baseResumeId,
-          tone,
-          length
-        });
-      });
+          tone: tone || 'professional',
+          length: length || 'medium',
+          batchId // ✅ Store correlation ID
+        }, { skipUsageCheck: true }) // Skip individual checks since we checked the batch upfront
+      );
 
-      const tasks = await Promise.all(taskPromises);
-      const batchId = `batch_${Date.now()}`;
+      const results = await Promise.allSettled(taskPromises);
 
-      logger.info('Bulk tasks created', {
+      // ✅ 6. Separate successes from failures
+      const successful = results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => r.value);
+
+      const failed = results
+        .map((r, i) => ({ result: r, index: i, job: jobs[i] }))
+        .filter(({ result }) => result.status === 'rejected')
+        .map(({ result, index, job }) => ({
+          index: index + 1,
+          company: job.company,
+          jobTitle: job.jobTitle,
+          error: result.reason?.message || 'Unknown error'
+        }));
+
+      // ✅ 7. Increment usage counter by actual successful count
+      if (successful.length > 0) {
+        await incrementUsageCounter(userId, successful.length);
+      }
+
+      // ✅ 8. Log with correlation ID and detailed breakdown
+      logger.info('Bulk tasks processed', {
         userId,
         batchId,
-        taskCount: tasks.length,
-        tone,
-        length
+        totalRequested: jobs.length,
+        successful: successful.length,
+        failed: failed.length,
+        tone: tone || 'professional',
+        length: length || 'medium',
+        failureDetails: failed.length > 0 ? failed : undefined
       });
 
-      return reply.status(201).send({
-        success: true,
+      // ✅ 9. Return detailed breakdown with appropriate status code
+      const statusCode = failed.length === 0 ? 201 : (successful.length > 0 ? 207 : 500);
+
+      return reply.status(statusCode).send({
+        success: failed.length === 0,
         batchId,
-        taskCount: tasks.length,
-        tasks,
-        message: `Started processing ${tasks.length} job${tasks.length > 1 ? 's' : ''}`
+        summary: {
+          total: jobs.length,
+          successful: successful.length,
+          failed: failed.length
+        },
+        tasks: successful,
+        failures: failed.length > 0 ? failed : undefined,
+        message: failed.length === 0
+          ? `Successfully started processing all ${successful.length} job${successful.length !== 1 ? 's' : ''}`
+          : `Processed ${successful.length} out of ${jobs.length} jobs. ${failed.length} job${failed.length !== 1 ? 's' : ''} failed.`
       });
+
     } catch (error) {
-      if (error.code === 'USAGE_LIMIT_EXCEEDED') {
-        return reply.status(403).send({
-          success: false,
-          error: error.message
-        });
-      }
-      logger.error('Failed to create bulk tasks', { error: error.message, userId: request.user.userId });
+      logger.error('Bulk apply error', {
+        error: error.message,
+        stack: error.stack,
+        userId: request.user.userId
+      });
+
       return reply.status(500).send({
         success: false,
-        error: 'Failed to create bulk tasks'
+        error: 'Failed to process bulk request. Please try again.'
       });
     }
   });

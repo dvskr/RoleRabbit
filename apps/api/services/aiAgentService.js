@@ -135,12 +135,12 @@ async function checkUsageLimits(userId) {
 /**
  * Increment usage counter
  */
-async function incrementUsageCounter(userId) {
+async function incrementUsageCounter(userId, count = 1) {
   try {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        aiAgentsRunsCount: { increment: 1 }
+        aiAgentsRunsCount: { increment: count }
       }
     });
   } catch (error) {
@@ -150,12 +150,94 @@ async function incrementUsageCounter(userId) {
 }
 
 /**
- * Create a new AI agent task
+ * Check if user can create a batch of tasks
+ * This is an atomic check for bulk operations to prevent race conditions
  */
-async function createTask(userId, taskData) {
+async function checkBatchUsageLimits(userId, batchSize) {
   try {
-    // Check usage limits
-    await checkUsageLimits(userId);
+    const now = new Date();
+
+    // Get subscription tier and limit
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        subscriptionTier: true,
+        aiAgentsRunsCount: true,
+        aiAgentsRunsResetAt: true
+      }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Monthly limits by tier
+    const limits = {
+      FREE: 5,
+      PRO: 50,
+      PREMIUM: 999999
+    };
+
+    const monthlyLimit = limits[user.subscriptionTier] || limits.FREE;
+    const resetDate = user.aiAgentsRunsResetAt ? new Date(user.aiAgentsRunsResetAt) : null;
+
+    // Reset if needed
+    if (!resetDate || now > resetDate) {
+      const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          aiAgentsRunsCount: 0,
+          aiAgentsRunsResetAt: nextMonth
+        }
+      });
+
+      // After reset, check if batch fits within limit
+      if (batchSize > monthlyLimit) {
+        const error = new Error(`Batch size (${batchSize}) exceeds your monthly limit (${monthlyLimit}). Please reduce batch size or upgrade your plan.`);
+        error.code = 'USAGE_LIMIT_EXCEEDED';
+        throw error;
+      }
+
+      return { allowed: true, used: 0, limit: monthlyLimit, remaining: monthlyLimit };
+    }
+
+    // Check if batch would exceed limit
+    const remaining = monthlyLimit - user.aiAgentsRunsCount;
+    if (batchSize > remaining) {
+      const error = new Error(`Batch would exceed your limit. You have ${remaining} task${remaining !== 1 ? 's' : ''} remaining out of ${monthlyLimit}.`);
+      error.code = 'USAGE_LIMIT_EXCEEDED';
+      throw error;
+    }
+
+    return {
+      allowed: true,
+      used: user.aiAgentsRunsCount,
+      limit: monthlyLimit,
+      remaining
+    };
+  } catch (error) {
+    if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+      throw error;
+    }
+    logger.error('Error checking batch usage limits', { error: error.message, userId, batchSize });
+    throw error;
+  }
+}
+
+/**
+ * Create a new AI agent task
+ * @param {string} userId - User ID
+ * @param {object} taskData - Task data
+ * @param {object} options - Optional parameters
+ * @param {boolean} options.skipUsageCheck - Skip individual usage check (for bulk operations)
+ */
+async function createTask(userId, taskData, options = {}) {
+  try {
+    // Check usage limits (unless skipped for bulk operations)
+    if (!options.skipUsageCheck) {
+      await checkUsageLimits(userId);
+    }
 
     // Create the task
     const task = await prisma.aIAgentTask.create({
@@ -169,18 +251,26 @@ async function createTask(userId, taskData) {
         baseResumeId: taskData.baseResumeId,
         tone: taskData.tone || 'professional',
         length: taskData.length || 'medium',
+        batchId: taskData.batchId || null,
         totalSteps: 4, // Default: analyze, generate, score, save
         currentStep: 'Queued'
       }
     });
 
-    // Increment usage counter
-    await incrementUsageCounter(userId);
+    // Increment usage counter (unless skipped for bulk operations)
+    if (!options.skipUsageCheck) {
+      await incrementUsageCounter(userId);
+    }
 
     // Enqueue the task for processing
     await enqueueTask(task);
 
-    logger.info('Created AI agent task', { userId, taskId: task.id, type: task.type });
+    logger.info('Created AI agent task', {
+      userId,
+      taskId: task.id,
+      type: task.type,
+      batchId: task.batchId
+    });
     return task;
   } catch (error) {
     if (error.code === 'USAGE_LIMIT_EXCEEDED') {
@@ -714,5 +804,6 @@ module.exports = {
   createOrUpdateConversation,
   sendChatMessage,
   checkUsageLimits,
+  checkBatchUsageLimits,
   incrementUsageCounter
 };
