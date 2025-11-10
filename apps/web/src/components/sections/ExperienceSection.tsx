@@ -5,6 +5,89 @@ import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, ExperienceItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const sanitizeString = (value: unknown): string => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/\s+/g, ' ').trim().replace(/^[•\-\u2022]+\s*/, '');
+};
+
+const collectOrderedValues = (value: unknown): unknown[] => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return Object.keys(record)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((key) => record[key]);
+  }
+  return [value];
+};
+
+const normalizeBulletList = (value: unknown): string[] => {
+  return collectOrderedValues(value)
+    .flatMap((entry) => collectOrderedValues(entry))
+    .map((entry) => sanitizeString(entry))
+    .filter(Boolean);
+};
+
+const normalizeEnvironmentList = (value: unknown): string[] => {
+  const delimiterRegex = /[,\n\r•·\u2022]+/;
+  return collectOrderedValues(value)
+    .flatMap((entry) => collectOrderedValues(entry))
+    .map((entry) => (typeof entry === 'string' ? entry : String(entry ?? '')))
+    .flatMap((entry) =>
+      entry
+        .split(delimiterRegex)
+        .map((token) => sanitizeString(token))
+        .filter(Boolean)
+    )
+    .reduce<string[]>((acc, item) => {
+      if (!acc.includes(item)) {
+        acc.push(item);
+      }
+      return acc;
+    }, []);
+};
+
+const normalizeCustomFields = (value: unknown): CustomField[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((field): field is CustomField => !!field);
+};
+
+const normalizeExperienceArray = (value: unknown): ExperienceItem[] => {
+  const list = collectOrderedValues(value);
+
+  return list
+    .map((entry, index) => {
+      const candidate = entry as Partial<ExperienceItem>;
+      const rawId = candidate?.id;
+      const id =
+        typeof rawId === 'number'
+          ? rawId
+          : Number(rawId) || Date.now() + index;
+
+      return {
+        id,
+        company: sanitizeString(candidate?.company),
+        position: sanitizeString(candidate?.position),
+        period: sanitizeString(candidate?.period),
+        endPeriod: sanitizeString(candidate?.endPeriod),
+        location: sanitizeString(candidate?.location),
+        bullets: normalizeBulletList(
+          candidate?.bullets?.length ? candidate?.bullets : candidate?.responsibilities
+        ),
+        environment: normalizeEnvironmentList(candidate?.environment),
+        customFields: normalizeCustomFields(candidate?.customFields),
+      } as ExperienceItem;
+    })
+    .filter((item) => !!item);
+};
+
 interface ExperienceSectionProps {
   resumeData: ResumeData;
   setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
@@ -25,7 +108,7 @@ const ExperienceSection = React.memo(function ExperienceSection({
   
   // Memoize experience array
   const experience = useMemo(() => {
-    return Array.isArray(resumeData.experience) ? resumeData.experience : [];
+    return normalizeExperienceArray(resumeData.experience);
   }, [resumeData.experience]);
 
   const addExperience = () => {
@@ -40,36 +123,42 @@ const ExperienceSection = React.memo(function ExperienceSection({
       environment: [],
       customFields: []
     };
-    setResumeData(prev => ({ ...prev, experience: [...(Array.isArray(prev.experience) ? prev.experience : []), newExperience] }));
+    setResumeData(prev => {
+      const normalized = normalizeExperienceArray(prev.experience);
+      return { ...prev, experience: [...normalized, newExperience] };
+    });
   };
 
   const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
     setResumeData((prev: ResumeData) => {
-      const updatedExperience = (prev.experience || []).map((item: ExperienceItem) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-      return {...prev, experience: updatedExperience};
+      const normalized = normalizeExperienceArray(prev.experience);
+      const updatedExperience = normalized.map((item: ExperienceItem) =>
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return { ...prev, experience: updatedExperience };
     });
   };
 
   const deleteExperience = (id: number) => {
     setResumeData((prev: ResumeData) => {
-      const updatedExperience = (prev.experience || []).filter((item: ExperienceItem) => item.id !== id);
-      return {...prev, experience: updatedExperience};
+      const normalized = normalizeExperienceArray(prev.experience);
+      const updatedExperience = normalized.filter((item: ExperienceItem) => item.id !== id);
+      return { ...prev, experience: updatedExperience };
     });
   };
 
   const addBullet = (expId: number) => {
     const exp = experience.find(e => e.id === expId);
     if (exp) {
-      updateExperience(expId, { bullets: [...(Array.isArray(exp.bullets) ? exp.bullets : []), ''] });
+      const currentBullets = normalizeBulletList(exp.bullets);
+      updateExperience(expId, { bullets: [...currentBullets, ''] });
     }
   };
 
   const updateBullet = (expId: number, bulletIndex: number, value: string) => {
     const exp = experience.find(e => e.id === expId);
     if (!exp) return;
-    const updatedBullets = [...(Array.isArray(exp.bullets) ? exp.bullets : [])];
+    const updatedBullets = [...normalizeBulletList(exp.bullets)];
     updatedBullets[bulletIndex] = value;
     updateExperience(expId, { bullets: updatedBullets });
   };
@@ -77,21 +166,22 @@ const ExperienceSection = React.memo(function ExperienceSection({
   const deleteBullet = (expId: number, bulletIndex: number) => {
     const exp = experience.find(e => e.id === expId);
     if (!exp) return;
-    const updatedBullets = (Array.isArray(exp.bullets) ? exp.bullets : []).filter((_, index) => index !== bulletIndex);
+    const updatedBullets = normalizeBulletList(exp.bullets).filter((_, index) => index !== bulletIndex);
     updateExperience(expId, { bullets: updatedBullets });
   };
 
   const addEnvironment = (expId: number) => {
     const exp = experience.find(e => e.id === expId);
     if (exp) {
-      updateExperience(expId, { environment: [...(Array.isArray(exp.environment) ? exp.environment : []), ''] });
+      const envList = normalizeEnvironmentList(exp.environment);
+      updateExperience(expId, { environment: [...envList, ''] });
     }
   };
 
   const updateEnvironment = (expId: number, envIndex: number, value: string) => {
     const exp = experience.find(e => e.id === expId);
     if (!exp) return;
-    const updatedEnvironment = [...(Array.isArray(exp.environment) ? exp.environment : [])];
+    const updatedEnvironment = [...normalizeEnvironmentList(exp.environment)];
     updatedEnvironment[envIndex] = value;
     updateExperience(expId, { environment: updatedEnvironment });
   };
@@ -99,7 +189,7 @@ const ExperienceSection = React.memo(function ExperienceSection({
   const deleteEnvironment = (expId: number, envIndex: number) => {
     const exp = experience.find(e => e.id === expId);
     if (!exp) return;
-    const updatedEnvironment = (Array.isArray(exp.environment) ? exp.environment : []).filter((_, index) => index !== envIndex);
+    const updatedEnvironment = normalizeEnvironmentList(exp.environment).filter((_, index) => index !== envIndex);
     updateExperience(expId, { environment: updatedEnvironment });
   };
 

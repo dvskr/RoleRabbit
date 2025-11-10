@@ -5,6 +5,84 @@ import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, ProjectItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const sanitizeString = (value: unknown): string => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/\s+/g, ' ').trim().replace(/^[•\-\u2022]+\s*/, '');
+};
+
+const collectOrderedValues = (value: unknown): unknown[] => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return Object.keys(record)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((key) => record[key]);
+  }
+  return [value];
+};
+
+const normalizeStringList = (value: unknown, splitDelimiters = false): string[] => {
+  const delimiterRegex = /[,\n\r•·\u2022]+/;
+  const values = collectOrderedValues(value)
+    .flatMap((entry) => collectOrderedValues(entry))
+    .map((entry) => (typeof entry === 'string' ? entry : String(entry ?? '')));
+
+  if (!splitDelimiters) {
+    return values.map((entry) => sanitizeString(entry)).filter(Boolean);
+  }
+
+  return values
+    .flatMap((entry) =>
+      entry
+        .split(delimiterRegex)
+        .map((token) => sanitizeString(token))
+        .filter(Boolean)
+    )
+    .reduce<string[]>((acc, item) => {
+      if (!acc.includes(item)) {
+        acc.push(item);
+      }
+      return acc;
+    }, []);
+};
+
+const normalizeCustomFields = (value: unknown): CustomField[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((field): field is CustomField => !!field);
+};
+
+const normalizeProjectArray = (value: unknown): ProjectItem[] => {
+  const list = collectOrderedValues(value);
+
+  return list
+    .map((entry, index) => {
+      const candidate = entry as Partial<ProjectItem>;
+      const rawId = candidate?.id;
+      const id =
+        typeof rawId === 'number'
+          ? rawId
+          : Number(rawId) || Date.now() + index;
+
+      return {
+        id,
+        name: sanitizeString(candidate?.name),
+        description: sanitizeString(candidate?.description),
+        link: sanitizeString(candidate?.link),
+        bullets: normalizeStringList(candidate?.bullets, false),
+        skills: normalizeStringList(candidate?.skills, true),
+        customFields: normalizeCustomFields(candidate?.customFields),
+      } as ProjectItem;
+    })
+    .filter((item) => !!item);
+};
+
 interface ProjectsSectionProps {
   resumeData: ResumeData;
   setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
@@ -25,7 +103,7 @@ const ProjectsSection = React.memo(function ProjectsSection({
   
   // Memoize projects array
   const projects = useMemo(() => {
-    return Array.isArray(resumeData.projects) ? resumeData.projects : [];
+    return normalizeProjectArray(resumeData.projects);
   }, [resumeData.projects]);
 
   const addProject = () => {
@@ -38,77 +116,93 @@ const ProjectsSection = React.memo(function ProjectsSection({
       skills: [],
       customFields: []
     };
-    setResumeData(prev => ({ ...prev, projects: [...prev.projects, newProject] }));
+    setResumeData(prev => {
+      const normalized = normalizeProjectArray(prev.projects);
+      return { ...prev, projects: [...normalized, newProject] };
+    });
   };
 
   const updateProject = (id: number, updates: Partial<ProjectItem>) => {
     setResumeData((prev: ResumeData) => {
-      const updatedProjects = (prev.projects || []).map((item: ProjectItem) => 
-      item.id === id ? { ...item, ...updates } : item
-    );
-      return {...prev, projects: updatedProjects};
+      const normalized = normalizeProjectArray(prev.projects);
+      const updatedProjects = normalized.map((item: ProjectItem) =>
+        item.id === id ? { ...item, ...updates } : item
+      );
+      return { ...prev, projects: updatedProjects };
     });
   };
 
   const deleteProject = (id: number) => {
     setResumeData((prev: ResumeData) => {
-      const updatedProjects = (prev.projects || []).filter((item: ProjectItem) => item.id !== id);
-      return {...prev, projects: updatedProjects};
+      const normalized = normalizeProjectArray(prev.projects);
+      const updatedProjects = normalized.filter((item: ProjectItem) => item.id !== id);
+      return { ...prev, projects: updatedProjects };
     });
   };
 
   const addBullet = (projectId: number) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    updateProject(projectId, { bullets: [...project.bullets, ''] });
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const currentBullets = normalizeStringList(project.bullets, false);
+    updateProject(projectId, { bullets: [...currentBullets, ''] });
   };
 
   const updateBullet = (projectId: number, bulletIndex: number, value: string) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const updatedBullets = [...project.bullets];
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const updatedBullets = [...normalizeStringList(project.bullets, false)];
     updatedBullets[bulletIndex] = value;
     updateProject(projectId, { bullets: updatedBullets });
   };
 
   const deleteBullet = (projectId: number, bulletIndex: number) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const updatedBullets = project.bullets.filter((_, index) => index !== bulletIndex);
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const updatedBullets = normalizeStringList(project.bullets, false).filter((_, index) => index !== bulletIndex);
     updateProject(projectId, { bullets: updatedBullets });
   };
 
   const addSkill = (projectId: number) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    updateProject(projectId, { skills: [...project.skills, ''] });
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const skills = normalizeStringList(project.skills, true);
+    updateProject(projectId, { skills: [...skills, ''] });
   };
 
   const updateSkill = (projectId: number, skillIndex: number, value: string) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const updatedSkills = [...project.skills];
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const updatedSkills = [...normalizeStringList(project.skills, true)];
     updatedSkills[skillIndex] = value;
     updateProject(projectId, { skills: updatedSkills });
   };
 
   const deleteSkill = (projectId: number, skillIndex: number) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const updatedSkills = project.skills.filter((_, index) => index !== skillIndex);
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const updatedSkills = normalizeStringList(project.skills, true).filter((_, index) => index !== skillIndex);
     updateProject(projectId, { skills: updatedSkills });
   };
 
   const addCustomFieldToProject = (projectId: number, field: CustomField) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const currentFields = project.customFields || [];
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const currentFields = normalizeCustomFields(project.customFields);
     updateProject(projectId, { customFields: [...currentFields, field] });
   };
 
   const updateCustomFieldInProject = (projectId: number, fieldId: string, value: string) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const currentFields = project.customFields || [];
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const currentFields = normalizeCustomFields(project.customFields);
     const updatedFields = currentFields.map(f => f.id === fieldId ? { ...f, value } : f);
     updateProject(projectId, { customFields: updatedFields });
   };
 
   const deleteCustomFieldFromProject = (projectId: number, fieldId: string) => {
-    const project = resumeData.projects.find(p => p.id === projectId)!;
-    const currentFields = project.customFields || [];
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const currentFields = normalizeCustomFields(project.customFields);
     const updatedFields = currentFields.filter(f => f.id !== fieldId);
     updateProject(projectId, { customFields: updatedFields });
   };

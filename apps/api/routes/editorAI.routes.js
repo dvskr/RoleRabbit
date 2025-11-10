@@ -32,8 +32,35 @@ function validateGeneratePayload(body) {
 }
 
 module.exports = async function editorAIRoutes(fastify) {
+  const allowCorsPreflight = (request, reply) => {
+    const origin = request.headers.origin || process.env.CORS_ORIGIN || 'http://localhost:3000';
+    const requestHeaders = request.headers['access-control-request-headers'] || 'content-type, authorization, x-csrf-token';
+    reply
+      .header('Access-Control-Allow-Origin', origin)
+      .header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+      .header('Access-Control-Allow-Headers', requestHeaders)
+      .header('Access-Control-Allow-Credentials', 'true')
+      .status(204)
+      .send();
+  };
+
+  const setCorsHeaders = (request, reply) => {
+    const origin = request.headers.origin || process.env.CORS_ORIGIN || 'http://localhost:3000';
+    reply.header('Access-Control-Allow-Origin', origin);
+    reply.header('Access-Control-Allow-Credentials', 'true');
+  };
+
+  fastify.options('/api/editor/ai/ats-check', allowCorsPreflight);
+  fastify.options('/api/editor/ai/tailor', allowCorsPreflight);
+  fastify.options('/api/editor/ai/apply-recommendations', allowCorsPreflight);
+  fastify.options('/api/editor/ai/cover-letter', allowCorsPreflight);
+  fastify.options('/api/editor/ai/portfolio', allowCorsPreflight);
+  fastify.options('/api/editor/ai/generate-content', allowCorsPreflight);
+  fastify.options('/api/editor/ai/apply-draft', allowCorsPreflight);
+
   fastify.post('/api/editor/ai/generate-content', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const validationError = validateGeneratePayload(request.body);
       if (validationError) {
         return reply.status(400).send({ success: false, error: validationError });
@@ -76,6 +103,7 @@ module.exports = async function editorAIRoutes(fastify) {
         instructions
       });
 
+      setCorsHeaders(request, reply);
       return reply.send({
         success: true,
         draft: result.draft,
@@ -93,6 +121,7 @@ module.exports = async function editorAIRoutes(fastify) {
 
   fastify.post('/api/editor/ai/apply-draft', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const { draftId } = request.body || {};
       if (!draftId) {
         return reply.status(400).send({ success: false, error: 'draftId is required' });
@@ -138,11 +167,14 @@ module.exports = async function editorAIRoutes(fastify) {
 
   fastify.post('/api/editor/ai/ats-check', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const { resumeId, jobDescription } = request.body || {};
       if (!resumeId) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'resumeId is required' });
       }
       if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
       }
 
@@ -177,11 +209,22 @@ module.exports = async function editorAIRoutes(fastify) {
           }
           
           // 🌟 USE WORLD-CLASS ATS SYSTEM (with AI if available)
-          const analysis = await scoreResumeWorldClass({ 
-            resumeData: resume.data, 
-            jobDescription,
-            useAI: true // Enable AI-powered semantic matching
-          });
+          let analysis;
+          try {
+            analysis = await scoreResumeWorldClass({ 
+              resumeData: resume.data, 
+              jobDescription,
+              useAI: true // Enable AI-powered semantic matching
+            });
+          } catch (worldClassError) {
+            logger.error('World-class ATS failed, using fallback', { error: worldClassError.message });
+            // Fallback to basic scoring if world-class fails
+            const { scoreResumeAgainstJob } = require('../services/ats/atsScoringService');
+            analysis = scoreResumeAgainstJob({ 
+              resumeData: resume.data, 
+              jobDescription 
+            });
+          }
           
           analysis.generatedAt = new Date().toISOString();
           analysis.resumeUpdatedAt = resume.updatedAt;
@@ -226,6 +269,7 @@ module.exports = async function editorAIRoutes(fastify) {
         cacheHit: hit ? 'hit' : 'miss'
       });
 
+      setCorsHeaders(request, reply);
       return reply.send({
         success: true,
         analysis: cachedValue,
@@ -238,15 +282,18 @@ module.exports = async function editorAIRoutes(fastify) {
       });
     } catch (error) {
       if (error instanceof AIUsageError) {
+        setCorsHeaders(request, reply);
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to run ATS analysis', { error: error.message });
+      setCorsHeaders(request, reply);
       return reply.status(500).send({ success: false, error: 'Failed to run ATS analysis.' });
     }
   });
 
   fastify.post('/api/editor/ai/tailor', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const {
         resumeId,
         jobDescription,
@@ -256,9 +303,11 @@ module.exports = async function editorAIRoutes(fastify) {
       } = request.body || {};
 
       if (!resumeId) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'resumeId is required' });
       }
       if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
       }
 
@@ -280,21 +329,25 @@ module.exports = async function editorAIRoutes(fastify) {
         length
       });
 
+      setCorsHeaders(request, reply);
       return reply.send({
         success: true,
         ...result
       });
     } catch (error) {
       if (error instanceof AIUsageError) {
+        setCorsHeaders(request, reply);
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to tailor resume', { error: error.message });
+      setCorsHeaders(request, reply);
       return reply.status(500).send({ success: false, error: 'Failed to tailor resume.' });
     }
   });
 
   fastify.post('/api/editor/ai/apply-recommendations', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const {
         resumeId,
         jobDescription,
@@ -303,9 +356,11 @@ module.exports = async function editorAIRoutes(fastify) {
       } = request.body || {};
 
       if (!resumeId) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'resumeId is required' });
       }
       if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
       }
 
@@ -326,21 +381,25 @@ module.exports = async function editorAIRoutes(fastify) {
         tone
       });
 
+      setCorsHeaders(request, reply);
       return reply.send({
         success: true,
         ...result
       });
     } catch (error) {
       if (error instanceof AIUsageError) {
+        setCorsHeaders(request, reply);
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to apply AI recommendations', { error: error.message });
+      setCorsHeaders(request, reply);
       return reply.status(500).send({ success: false, error: 'Failed to apply AI recommendations.' });
     }
   });
 
   fastify.post('/api/editor/ai/cover-letter', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const {
         resumeId,
         jobTitle,
@@ -350,9 +409,11 @@ module.exports = async function editorAIRoutes(fastify) {
       } = request.body || {};
 
       if (!resumeId) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'resumeId is required' });
       }
       if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
+        setCorsHeaders(request, reply);
         return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
       }
 
@@ -374,18 +435,22 @@ module.exports = async function editorAIRoutes(fastify) {
         tone
       });
 
+      setCorsHeaders(request, reply);
       return reply.send({ success: true, ...result });
     } catch (error) {
       if (error instanceof AIUsageError) {
+        setCorsHeaders(request, reply);
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to generate cover letter', { error: error.message });
+      setCorsHeaders(request, reply);
       return reply.status(500).send({ success: false, error: 'Failed to generate cover letter.' });
     }
   });
 
   fastify.post('/api/editor/ai/portfolio', { preHandler: authenticate }, async (request, reply) => {
     try {
+      setCorsHeaders(request, reply);
       const { resumeId, tone } = request.body || {};
       if (!resumeId) {
         return reply.status(400).send({ success: false, error: 'resumeId is required' });

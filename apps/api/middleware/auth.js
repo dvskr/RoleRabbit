@@ -12,6 +12,10 @@
  */
 async function authenticate(request, reply) {
   try {
+    // Allow CORS preflight requests to pass through without authentication
+    if (request.method === 'OPTIONS') {
+      return;
+    }
     // The hook in server.js already sets Authorization header from cookie if needed
     // So jwtVerify() should work for both cookie and header tokens
     await request.jwtVerify();
@@ -32,6 +36,10 @@ async function authenticate(request, reply) {
     // Use logger instead of console.log for production readiness
     const logger = require('../utils/logger');
     logger.debug(`[Auth] Authentication failed:`, authDebug);
+    
+    const origin = request.headers.origin || process.env.CORS_ORIGIN || 'http://localhost:3000';
+    reply.header('Access-Control-Allow-Origin', origin);
+    reply.header('Access-Control-Allow-Credentials', 'true');
     
     // Authentication failed, send 401 response
     let errorMessage = 'Unauthorized';

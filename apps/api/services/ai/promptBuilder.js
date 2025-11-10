@@ -12,9 +12,25 @@ const LENGTH_PRESETS = {
   complete: 'Provide comprehensive output with 4-6 sentences or bullets including metrics where possible.'
 };
 
-function normalizeJson(value) {
+const MAX_JSON_CONTEXT_LENGTH = 20000;
+const TRUNCATION_SENTINEL = '\n[TRUNCATED FOR LENGTH — prioritize the most relevant recent content]\n';
+
+function normalizeJson(value, maxLength = MAX_JSON_CONTEXT_LENGTH) {
   try {
-    return JSON.stringify(value, null, 2);
+    const jsonString = JSON.stringify(value ?? '', null, 0);
+    if (typeof jsonString !== 'string') {
+      return String(jsonString ?? '');
+    }
+    if (jsonString.length <= maxLength) {
+      return jsonString;
+    }
+
+    const headLength = Math.floor(maxLength * 0.6);
+    const tailLength = maxLength - headLength;
+    const head = jsonString.slice(0, headLength);
+    const tail = jsonString.slice(-tailLength);
+
+    return `${head}${TRUNCATION_SENTINEL}${tail}`;
   } catch (error) {
     return String(value ?? '');
   }
@@ -90,8 +106,8 @@ Rules:
 - Highlight metrics wherever possible, but only when already present or inferable from context.
 - Diff entries must list JSONPath style paths (e.g. "summary", "experience[1].bullets[0]").
 
-Base Resume: ${normalizeJson(resumeSnapshot)}
-Job Description: ${normalizeJson(jobDescription)}
+Base Resume (JSON, truncated if extremely long): ${normalizeJson(resumeSnapshot)}
+Job Description (truncated if extremely long): ${normalizeJson(jobDescription, 8000)}
 Requested Tailoring Mode: ${mode}`;
 }
 
@@ -123,7 +139,7 @@ Rules:
 - Add high-impact action verbs and quantifiable outcomes only when already implied.
 
 Base Resume: ${normalizeJson(resumeSnapshot)}
-Job Description: ${normalizeJson(jobDescription)}`;
+Job Description: ${normalizeJson(jobDescription, 8000)}`;
 }
 
 function buildCoverLetterPrompt({

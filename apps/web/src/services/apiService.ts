@@ -17,6 +17,20 @@ class ApiService {
     this.baseUrl = API_BASE_URL;
   }
 
+  private resolveUrl(endpoint: string): string {
+    if (!endpoint) {
+      return this.baseUrl;
+    }
+    const trimmed = endpoint.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/api/proxy/')) {
+      return trimmed;
+    }
+    return `${this.baseUrl}${trimmed}`;
+  }
+
   /**
    * Authentication token is now managed via httpOnly cookies
    * No need to get/manage token in JavaScript
@@ -91,7 +105,8 @@ class ApiService {
       // httpOnly cookie is automatically sent by browser
       // No need to manually add Authorization header
 
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const url = this.resolveUrl(endpoint);
+      const response = await fetch(url, {
         ...options,
         headers,
         credentials: 'include', // Important: Include cookies in all requests
@@ -775,7 +790,7 @@ class ApiService {
     length?: string;
     instructions?: string;
   }): Promise<any> {
-    return this.request('/api/editor/ai/generate-content', {
+    return this.request('/api/proxy/editor/ai/generate-content', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -783,7 +798,7 @@ class ApiService {
   }
 
   async applyAIDraft(draftId: string): Promise<any> {
-    return this.request('/api/editor/ai/apply-draft', {
+    return this.request('/api/proxy/editor/ai/apply-draft', {
       method: 'POST',
       body: JSON.stringify({ draftId }),
       credentials: 'include'
@@ -791,7 +806,7 @@ class ApiService {
   }
 
   async runATSCheck(payload: { resumeId: string; jobDescription: string }): Promise<any> {
-    return this.request('/api/editor/ai/ats-check', {
+    return this.request('/api/proxy/editor/ai/ats-check', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -805,7 +820,7 @@ class ApiService {
     tone?: string;
     length?: string;
   }): Promise<any> {
-    return this.request('/api/editor/ai/tailor', {
+    return this.request('/api/proxy/editor/ai/tailor', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -818,7 +833,7 @@ class ApiService {
     focusAreas?: string[];
     tone?: string;
   }): Promise<any> {
-    return this.request('/api/editor/ai/apply-recommendations', {
+    return this.request('/api/proxy/editor/ai/apply-recommendations', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -832,7 +847,7 @@ class ApiService {
     jobDescription: string;
     tone?: string;
   }): Promise<any> {
-    return this.request('/api/editor/ai/cover-letter', {
+    return this.request('/api/proxy/editor/ai/cover-letter', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -840,7 +855,7 @@ class ApiService {
   }
 
   async generatePortfolio(payload: { resumeId: string; tone?: string }): Promise<any> {
-    return this.request('/api/editor/ai/portfolio', {
+    return this.request('/api/proxy/editor/ai/portfolio', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
