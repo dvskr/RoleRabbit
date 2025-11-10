@@ -887,6 +887,8 @@ model AIAgentConversation {
 
   user User @relation("AIAgentConversations", fields: [userId], references: [id], onDelete: Cascade)
 
+  // Note: Partial unique index (userId where isActive=true) created in migration
+  // to allow only one active conversation per user, but unlimited archived ones
   @@index([userId, isActive])
   @@index([updatedAt])
   @@map("ai_agent_conversations")

@@ -690,50 +690,29 @@ async function getChatHistory(userId) {
 
 /**
  * Create or update conversation
+ * Uses findFirst + update/create instead of upsert to work with partial unique index
  */
 async function createOrUpdateConversation(userId, messages) {
   try {
-    const conversation = await prisma.aIAgentConversation.upsert({
-      where: {
-        userId_isActive: {
-          userId,
-          isActive: true
-        }
-      },
-      update: {
-        messages,
-        updatedAt: new Date()
-      },
-      create: {
-        userId,
-        messages,
-        isActive: true
-      }
+    // Find active conversation for this user
+    const existing = await prisma.aIAgentConversation.findFirst({
+      where: { userId, isActive: true }
     });
 
-    return conversation;
-  } catch (error) {
-    // Fallback: try to find and update
-    try {
-      const existing = await prisma.aIAgentConversation.findFirst({
-        where: { userId, isActive: true }
+    if (existing) {
+      return await prisma.aIAgentConversation.update({
+        where: { id: existing.id },
+        data: { messages, updatedAt: new Date() }
       });
-
-      if (existing) {
-        return await prisma.aIAgentConversation.update({
-          where: { id: existing.id },
-          data: { messages, updatedAt: new Date() }
-        });
-      }
-
-      // Create new
-      return await prisma.aIAgentConversation.create({
-        data: { userId, messages, isActive: true }
-      });
-    } catch (fallbackError) {
-      logger.error('Error in conversation fallback', { error: fallbackError.message, userId });
-      throw fallbackError;
     }
+
+    // Create new conversation
+    return await prisma.aIAgentConversation.create({
+      data: { userId, messages, isActive: true }
+    });
+  } catch (error) {
+    logger.error('Error creating/updating conversation', { error: error.message, userId });
+    throw error;
   }
 }
 
