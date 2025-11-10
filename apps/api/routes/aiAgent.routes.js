@@ -357,7 +357,7 @@ module.exports = async function aiAgentRoutes(fastify) {
   fastify.post('/api/ai-agent/tasks/bulk-apply', { preHandler: authenticate }, async (request, reply) => {
     try {
       const userId = request.user.userId;
-      const { jobs, baseResumeId } = request.body;
+      const { jobs, baseResumeId, tone, length } = request.body;
 
       if (!Array.isArray(jobs) || jobs.length === 0) {
         return reply.status(400).send({
@@ -374,16 +374,29 @@ module.exports = async function aiAgentRoutes(fastify) {
           jobTitle: job.jobTitle,
           company: job.company,
           jobUrl: job.jobUrl,
-          baseResumeId
+          baseResumeId,
+          tone,
+          length
         });
       });
 
       const tasks = await Promise.all(taskPromises);
+      const batchId = `batch_${Date.now()}`;
+
+      logger.info('Bulk tasks created', {
+        userId,
+        batchId,
+        taskCount: tasks.length,
+        tone,
+        length
+      });
 
       return reply.status(201).send({
         success: true,
+        batchId,
+        taskCount: tasks.length,
         tasks,
-        count: tasks.length
+        message: `Started processing ${tasks.length} job${tasks.length > 1 ? 's' : ''}`
       });
     } catch (error) {
       if (error.code === 'USAGE_LIMIT_EXCEEDED') {
