@@ -308,6 +308,12 @@ module.exports = async function aiAgentRoutes(fastify) {
         task
       });
     } catch (error) {
+      if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+        return reply.status(403).send({
+          success: false,
+          error: error.message
+        });
+      }
       logger.error('Failed to create cover letter task', { error: error.message, userId: request.user.userId });
       return reply.status(500).send({
         success: false,
@@ -344,6 +350,12 @@ module.exports = async function aiAgentRoutes(fastify) {
         task
       });
     } catch (error) {
+      if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+        return reply.status(403).send({
+          success: false,
+          error: error.message
+        });
+      }
       logger.error('Failed to create company research task', { error: error.message, userId: request.user.userId });
       return reply.status(500).send({
         success: false,

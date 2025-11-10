@@ -20,6 +20,14 @@ export interface JobInputData {
   length?: string;
 }
 
+// Map UI task types to API enum values
+const API_TASK_TYPE_MAP: Record<'resume' | 'cover-letter' | 'company-research' | 'interview-prep', string> = {
+  resume: 'RESUME_GENERATION',
+  'cover-letter': 'COVER_LETTER_GENERATION',
+  'company-research': 'COMPANY_RESEARCH',
+  'interview-prep': 'INTERVIEW_PREP',
+};
+
 const taskTypeConfig = {
   resume: {
     title: 'Generate Tailored Resume',
@@ -59,7 +67,7 @@ export const JobInputModal: React.FC<JobInputModalProps> = ({
   // Memoize default form data based on taskType
   const defaultFormData = useMemo(
     () => ({
-      taskType: taskType.toUpperCase().replace('-', '_'),
+      taskType: API_TASK_TYPE_MAP[taskType],
       jobTitle: '',
       company: '',
       jobUrl: '',

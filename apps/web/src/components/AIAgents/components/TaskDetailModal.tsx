@@ -61,6 +61,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     if (!taskId) return;
 
     setIsLoading(true);
+    setTask(null); // Clear previous task before fetching new one
     try {
       const response = await fetch(`/api/ai-agent/tasks/${taskId}`, {
         credentials: 'include',
@@ -71,9 +72,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         if (data.success) {
           setTask(data.task);
         }
+      } else {
+        // Explicitly clear task on fetch failure (404, etc.)
+        setTask(null);
       }
     } catch (error) {
       console.error('Error fetching task details:', error);
+      setTask(null); // Clear task on error
     } finally {
       setIsLoading(false);
     }

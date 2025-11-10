@@ -149,6 +149,11 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
             `Started ${successful} of ${total} jobs. ${failed} failed. ` +
             `Check console (F12) for details or try those jobs individually.`
           );
+
+          // If ALL jobs failed (total failure), keep modal open for retry
+          if (successful === 0) {
+            return; // Don't close modal, let user fix issues and retry
+          }
         } else {
           // Full success
           showSuccess(`All ${successful} job${successful !== 1 ? 's' : ''} started successfully! Track progress in Active Tasks.`);

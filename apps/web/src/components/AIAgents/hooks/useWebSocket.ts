@@ -129,18 +129,7 @@ export function useWebSocket(userId: string | null, handlers: WebSocketEventHand
     };
   }, [userId]);
 
-  // Return methods to interact with socket
-  const joinFileRoom = useCallback((fileId: string) => {
-    socketRef.current?.emit('join_file_room', { fileId });
-  }, []);
-
-  const leaveFileRoom = useCallback((fileId: string) => {
-    socketRef.current?.emit('leave_file_room', { fileId });
-  }, []);
-
   return {
     socket: socketRef.current,
-    joinFileRoom,
-    leaveFileRoom,
   };
 }

@@ -88,7 +88,8 @@ export const QuickActions: React.FC = () => {
       console.log('Task created:', result);
 
       // Show success and refresh tasks
-      showSuccess(`Task created successfully! Your ${data.taskType.toLowerCase().replace('_', ' ')} is being processed.`);
+      const humanReadableTask = data.taskType.toLowerCase().replace(/_/g, ' ');
+      showSuccess(`Task created successfully! Your ${humanReadableTask} is being processed.`);
       await refreshActiveTasks();
     } catch (error) {
       console.error('Error creating task:', error);

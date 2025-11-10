@@ -364,7 +364,8 @@ aiAgentQueue.process(async (job) => {
             taskId: task.id,
             userId: task.userId,
             jobDescription: task.jobDescription,
-            company: task.company
+            company: task.company,
+            baseResumeId: task.baseResumeId
           }
         });
 
