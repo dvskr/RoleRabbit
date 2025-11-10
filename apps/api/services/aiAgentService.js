@@ -1,6 +1,7 @@
 const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
 const { enqueueTask } = require('./aiAgentQueue');
+const aiService = require('./aiService');
 
 /**
  * Get or create AI Agent settings for a user
@@ -663,17 +664,15 @@ async function sendChatMessage(userId, message, conversationHistory = []) {
       timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
     };
 
-    // For now, return a placeholder response
-    // TODO: Integrate with actual AI service (OpenAI, Anthropic, etc.)
+    // Get AI response using the AI service
+    const aiResponse = await aiService.handleChatMessage(message, messages);
+
     const aiMsg = {
       id: (Date.now() + 1).toString(),
       sender: 'ai',
-      message: "I understand you'd like help with that. Let me work on it for you. This feature is currently being enhanced with full AI capabilities!",
+      message: aiResponse.message,
       timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      suggestedActions: [
-        { label: 'Generate resume for job', action: 'generate_resume' },
-        { label: 'Research company', action: 'research_company' }
-      ]
+      suggestedActions: aiResponse.suggestedActions || []
     };
 
     const updatedMessages = [...messages, userMsg, aiMsg];

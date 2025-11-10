@@ -6,6 +6,9 @@
 const Queue = require('bull');
 const logger = require('../utils/logger');
 const socketIO = require('../utils/socketIOServer');
+const aiService = require('./aiService');
+const atsCalculator = require('./atsScoreCalculator');
+const { prisma } = require('../utils/db');
 const {
   updateTaskProgress,
   updateTaskStatus,
@@ -49,42 +52,44 @@ async function processResumeGeneration(job) {
     // Notify task started
     socketIO.notifyTaskStarted(userId, taskId, 'RESUME_GENERATION');
 
+    // Get base resume data
+    let baseResume = null;
+    if (baseResumeId) {
+      baseResume = await prisma.baseResume.findFirst({
+        where: { id: baseResumeId, userId }
+      });
+    }
+
+    const resumeData = baseResume?.data || {};
+
     // Step 1: Analyze job description (25% progress)
     await updateTaskProgress(taskId, 25, 'Analyzing job description...');
     socketIO.notifyTaskProgress(userId, taskId, 25, 'Analyzing job description...');
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing
 
-    // TODO: Call actual AI service to analyze JD
-    const jdAnalysis = {
-      keywords: ['JavaScript', 'React', 'Node.js', 'AWS'],
-      requiredSkills: ['Frontend Development', 'Backend Development'],
-      experienceLevel: 'Senior',
-      industry: 'Technology'
-    };
+    const jdAnalysis = await aiService.analyzeJobDescription(jobDescription);
+    logger.debug('Job description analyzed', { keywords: jdAnalysis.keywords });
 
     // Step 2: Tailor resume (50% progress)
     await updateTaskProgress(taskId, 50, 'Tailoring resume content...');
     socketIO.notifyTaskProgress(userId, taskId, 50, 'Tailoring resume content...');
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // TODO: Call actual AI service to tailor resume
-    const tailoredResume = {
-      // Placeholder - will be actual tailored resume
-      message: 'Resume tailored successfully'
-    };
+    const tailoringResult = await aiService.tailorResume(resumeData, jobDescription, {
+      tone: job.data.tone || 'professional',
+      length: job.data.length || 'medium'
+    });
+
+    const tailoredResume = tailoringResult.resume;
+    logger.debug('Resume tailored', { changes: tailoringResult.changes });
 
     // Step 3: Calculate ATS score (75% progress)
     await updateTaskProgress(taskId, 75, 'Calculating ATS score...');
     socketIO.notifyTaskProgress(userId, taskId, 75, 'Calculating ATS score...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // TODO: Calculate actual ATS score
-    const atsScore = 92;
-    const atsBreakdown = {
-      keywordMatch: 95,
-      formatScore: 90,
-      experienceMatch: 91
-    };
+    const atsResult = await atsCalculator.calculateScore(tailoredResume, jobDescription);
+    const atsScore = atsResult.score;
+    const atsBreakdown = atsResult.breakdown;
+
+    logger.debug('ATS score calculated', { score: atsScore });
 
     // Step 4: Save results (100% progress)
     await updateTaskProgress(taskId, 100, 'Saving results...');
@@ -94,6 +99,12 @@ async function processResumeGeneration(job) {
       data: tailoredResume,
       atsScore,
       atsBreakdown,
+      jdAnalysis,
+      changes: tailoringResult.changes,
+      matchedKeywords: atsResult.matchedKeywords,
+      missingKeywords: atsResult.missingKeywords,
+      suggestions: atsResult.suggestions,
+      tokensUsed: (jdAnalysis.tokensUsed || 0) + (tailoringResult.tokensUsed || 0),
       outputFiles: [] // TODO: Generate and save PDF/DOCX files
     };
 
@@ -124,29 +135,52 @@ async function processResumeGeneration(job) {
  * Process COVER_LETTER_GENERATION task
  */
 async function processCoverLetterGeneration(job) {
-  const { taskId, userId, jobDescription, jobTitle, company } = job.data;
+  const { taskId, userId, jobDescription, jobTitle, company, baseResumeId } = job.data;
 
   try {
     logger.info('Processing cover letter generation', { taskId, userId });
 
+    socketIO.notifyTaskStarted(userId, taskId, 'COVER_LETTER_GENERATION');
+
+    // Get base resume data
+    let baseResume = null;
+    if (baseResumeId) {
+      baseResume = await prisma.baseResume.findFirst({
+        where: { id: baseResumeId, userId }
+      });
+    }
+
+    const resumeData = baseResume?.data || {};
+
     await updateTaskProgress(taskId, 25, 'Researching company...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    socketIO.notifyTaskProgress(userId, taskId, 25, 'Researching company...');
+
+    const companyResearch = await aiService.researchCompany(company);
 
     await updateTaskProgress(taskId, 50, 'Drafting cover letter...');
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    socketIO.notifyTaskProgress(userId, taskId, 50, 'Drafting cover letter...');
 
-    await updateTaskProgress(taskId, 75, 'Personalizing content...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const coverLetterResult = await aiService.generateCoverLetter(
+      resumeData,
+      jobDescription,
+      company,
+      jobTitle,
+      job.data.tone || 'professional'
+    );
 
-    // TODO: Call actual AI service
+    await updateTaskProgress(taskId, 75, 'Finalizing...');
+    socketIO.notifyTaskProgress(userId, taskId, 75, 'Finalizing...');
+
     const coverLetter = {
-      content: `Cover letter for ${jobTitle} at ${company}`,
-      // Full content will be generated by AI
+      content: coverLetterResult.content,
+      company,
+      jobTitle
     };
 
     const results = {
       data: coverLetter,
-      atsScore: 88,
+      companyResearch,
+      tokensUsed: (companyResearch.tokensUsed || 0) + (coverLetterResult.tokensUsed || 0),
       outputFiles: []
     };
 
@@ -175,27 +209,19 @@ async function processCompanyResearch(job) {
   try {
     logger.info('Processing company research', { taskId, userId, company });
 
+    socketIO.notifyTaskStarted(userId, taskId, 'COMPANY_RESEARCH');
+
     await updateTaskProgress(taskId, 25, 'Gathering company information...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    socketIO.notifyTaskProgress(userId, taskId, 25, 'Gathering company information...');
 
-    await updateTaskProgress(taskId, 50, 'Analyzing recent news...');
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const research = await aiService.researchCompany(company);
 
-    await updateTaskProgress(taskId, 75, 'Compiling culture insights...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // TODO: Call actual research APIs (Clearbit, LinkedIn, etc.)
-    const research = {
-      company,
-      overview: 'Company overview...',
-      recentNews: [],
-      culture: 'Culture insights...',
-      keyPeople: [],
-      funding: null
-    };
+    await updateTaskProgress(taskId, 75, 'Compiling insights...');
+    socketIO.notifyTaskProgress(userId, taskId, 75, 'Compiling insights...');
 
     const results = {
       data: research,
+      tokensUsed: research.tokensUsed || 0,
       outputFiles: []
     };
 
@@ -219,31 +245,37 @@ async function processCompanyResearch(job) {
  * Process INTERVIEW_PREP task
  */
 async function processInterviewPrep(job) {
-  const { taskId, userId, jobDescription, company } = job.data;
+  const { taskId, userId, jobDescription, company, baseResumeId } = job.data;
 
   try {
     logger.info('Processing interview prep', { taskId, userId });
 
+    socketIO.notifyTaskStarted(userId, taskId, 'INTERVIEW_PREP');
+
+    // Get base resume data
+    let baseResume = null;
+    if (baseResumeId) {
+      baseResume = await prisma.baseResume.findFirst({
+        where: { id: baseResumeId, userId }
+      });
+    }
+
+    const resumeData = baseResume?.data || {};
+
     await updateTaskProgress(taskId, 25, 'Analyzing job requirements...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    socketIO.notifyTaskProgress(userId, taskId, 25, 'Analyzing job requirements...');
 
     await updateTaskProgress(taskId, 50, 'Generating interview questions...');
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    socketIO.notifyTaskProgress(userId, taskId, 50, 'Generating interview questions...');
 
-    await updateTaskProgress(taskId, 75, 'Preparing answer guides...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const prepMaterial = await aiService.generateInterviewPrep(jobDescription, resumeData, company);
 
-    // TODO: Call actual AI service
-    const prepMaterial = {
-      commonQuestions: [],
-      technicalQuestions: [],
-      behavioralQuestions: [],
-      companySpecificQuestions: [],
-      answerGuides: {}
-    };
+    await updateTaskProgress(taskId, 75, 'Finalizing materials...');
+    socketIO.notifyTaskProgress(userId, taskId, 75, 'Finalizing materials...');
 
     const results = {
       data: prepMaterial,
+      tokensUsed: prepMaterial.tokensUsed || 0,
       outputFiles: []
     };
 
