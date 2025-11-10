@@ -9,13 +9,8 @@ const socketIO = require('../utils/socketIOServer');
 const aiService = require('./aiService');
 const atsCalculator = require('./atsScoreCalculator');
 const { prisma } = require('../utils/db');
-const {
-  updateTaskProgress,
-  updateTaskStatus,
-  saveTaskResults,
-  addHistoryEntry,
-  updateMetrics
-} = require('./aiAgentService');
+// Import as namespace to avoid circular dependency issues
+const aiAgentService = require('./aiAgentService');
 
 // Initialize Redis-backed queue
 const aiAgentQueue = new Queue('ai-agent-tasks', {
@@ -63,14 +58,14 @@ async function processResumeGeneration(job) {
     const resumeData = baseResume?.data || {};
 
     // Step 1: Analyze job description (25% progress)
-    await updateTaskProgress(taskId, 25, 'Analyzing job description...');
+    await aiAgentService.updateTaskProgress(taskId, 25, 'Analyzing job description...');
     socketIO.notifyTaskProgress(userId, taskId, 25, 'Analyzing job description...');
 
     const jdAnalysis = await aiService.analyzeJobDescription(jobDescription);
     logger.debug('Job description analyzed', { keywords: jdAnalysis.keywords });
 
     // Step 2: Tailor resume (50% progress)
-    await updateTaskProgress(taskId, 50, 'Tailoring resume content...');
+    await aiAgentService.updateTaskProgress(taskId, 50, 'Tailoring resume content...');
     socketIO.notifyTaskProgress(userId, taskId, 50, 'Tailoring resume content...');
 
     const tailoringResult = await aiService.tailorResume(resumeData, jobDescription, {
@@ -82,7 +77,7 @@ async function processResumeGeneration(job) {
     logger.debug('Resume tailored', { changes: tailoringResult.changes });
 
     // Step 3: Calculate ATS score (75% progress)
-    await updateTaskProgress(taskId, 75, 'Calculating ATS score...');
+    await aiAgentService.updateTaskProgress(taskId, 75, 'Calculating ATS score...');
     socketIO.notifyTaskProgress(userId, taskId, 75, 'Calculating ATS score...');
 
     const atsResult = await atsCalculator.calculateScore(tailoredResume, jobDescription);
@@ -92,7 +87,7 @@ async function processResumeGeneration(job) {
     logger.debug('ATS score calculated', { score: atsScore });
 
     // Step 4: Save results (100% progress)
-    await updateTaskProgress(taskId, 100, 'Saving results...');
+    await aiAgentService.updateTaskProgress(taskId, 100, 'Saving results...');
     socketIO.notifyTaskProgress(userId, taskId, 100, 'Saving results...');
 
     const results = {
@@ -108,21 +103,21 @@ async function processResumeGeneration(job) {
       outputFiles: [] // TODO: Generate and save PDF/DOCX files
     };
 
-    await saveTaskResults(taskId, results);
-    await updateTaskStatus(taskId, 'COMPLETED');
+    await aiAgentService.saveTaskResults(taskId, results);
+    await aiAgentService.updateTaskStatus(taskId, 'COMPLETED');
 
     // Notify completion via WebSocket
     socketIO.notifyTaskCompleted(userId, taskId, results);
 
     // Update metrics
-    await updateMetrics(userId, 'RESUME_GENERATION', { atsScore });
+    await aiAgentService.updateMetrics(userId, 'RESUME_GENERATION', { atsScore });
 
     logger.info('Resume generation completed', { taskId, atsScore });
 
     return { success: true, results };
   } catch (error) {
     logger.error('Resume generation failed', { error: error.message, taskId });
-    await updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+    await aiAgentService.updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
 
     // Notify failure via WebSocket
     socketIO.notifyTaskFailed(userId, taskId, error.message);
@@ -152,12 +147,12 @@ async function processCoverLetterGeneration(job) {
 
     const resumeData = baseResume?.data || {};
 
-    await updateTaskProgress(taskId, 25, 'Researching company...');
+    await aiAgentService.updateTaskProgress(taskId, 25, 'Researching company...');
     socketIO.notifyTaskProgress(userId, taskId, 25, 'Researching company...');
 
     const companyResearch = await aiService.researchCompany(company);
 
-    await updateTaskProgress(taskId, 50, 'Drafting cover letter...');
+    await aiAgentService.updateTaskProgress(taskId, 50, 'Drafting cover letter...');
     socketIO.notifyTaskProgress(userId, taskId, 50, 'Drafting cover letter...');
 
     const coverLetterResult = await aiService.generateCoverLetter(
@@ -168,7 +163,7 @@ async function processCoverLetterGeneration(job) {
       job.data.tone || 'professional'
     );
 
-    await updateTaskProgress(taskId, 75, 'Finalizing...');
+    await aiAgentService.updateTaskProgress(taskId, 75, 'Finalizing...');
     socketIO.notifyTaskProgress(userId, taskId, 75, 'Finalizing...');
 
     const coverLetter = {
@@ -184,18 +179,24 @@ async function processCoverLetterGeneration(job) {
       outputFiles: []
     };
 
-    await updateTaskProgress(taskId, 100, 'Finalizing...');
-    await saveTaskResults(taskId, results);
-    await updateTaskStatus(taskId, 'COMPLETED');
+    await aiAgentService.updateTaskProgress(taskId, 100, 'Finalizing...');
+    socketIO.notifyTaskProgress(userId, taskId, 100, 'Finalizing...');
+    await aiAgentService.saveTaskResults(taskId, results);
+    await aiAgentService.updateTaskStatus(taskId, 'COMPLETED');
 
-    await updateMetrics(userId, 'COVER_LETTER_GENERATION', {});
+    await aiAgentService.updateMetrics(userId, 'COVER_LETTER_GENERATION', {});
 
+    // Notify completion via WebSocket
+    socketIO.notifyTaskCompleted(userId, taskId, results);
     logger.info('Cover letter generation completed', { taskId });
 
     return { success: true, results };
   } catch (error) {
     logger.error('Cover letter generation failed', { error: error.message, taskId });
-    await updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+    await aiAgentService.updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+
+    // Notify failure via WebSocket
+    socketIO.notifyTaskFailed(userId, taskId, error.message);
     throw error;
   }
 }
@@ -211,12 +212,12 @@ async function processCompanyResearch(job) {
 
     socketIO.notifyTaskStarted(userId, taskId, 'COMPANY_RESEARCH');
 
-    await updateTaskProgress(taskId, 25, 'Gathering company information...');
+    await aiAgentService.updateTaskProgress(taskId, 25, 'Gathering company information...');
     socketIO.notifyTaskProgress(userId, taskId, 25, 'Gathering company information...');
 
     const research = await aiService.researchCompany(company);
 
-    await updateTaskProgress(taskId, 75, 'Compiling insights...');
+    await aiAgentService.updateTaskProgress(taskId, 75, 'Compiling insights...');
     socketIO.notifyTaskProgress(userId, taskId, 75, 'Compiling insights...');
 
     const results = {
@@ -225,18 +226,24 @@ async function processCompanyResearch(job) {
       outputFiles: []
     };
 
-    await updateTaskProgress(taskId, 100, 'Completed');
-    await saveTaskResults(taskId, results);
-    await updateTaskStatus(taskId, 'COMPLETED');
+    await aiAgentService.updateTaskProgress(taskId, 100, 'Completed');
+    socketIO.notifyTaskProgress(userId, taskId, 100, 'Completed');
+    await aiAgentService.saveTaskResults(taskId, results);
+    await aiAgentService.updateTaskStatus(taskId, 'COMPLETED');
 
-    await updateMetrics(userId, 'COMPANY_RESEARCH', {});
+    await aiAgentService.updateMetrics(userId, 'COMPANY_RESEARCH', {});
 
+    // Notify completion via WebSocket
+    socketIO.notifyTaskCompleted(userId, taskId, results);
     logger.info('Company research completed', { taskId });
 
     return { success: true, results };
   } catch (error) {
     logger.error('Company research failed', { error: error.message, taskId });
-    await updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+    await aiAgentService.updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+
+    // Notify failure via WebSocket
+    socketIO.notifyTaskFailed(userId, taskId, error.message);
     throw error;
   }
 }
@@ -262,15 +269,15 @@ async function processInterviewPrep(job) {
 
     const resumeData = baseResume?.data || {};
 
-    await updateTaskProgress(taskId, 25, 'Analyzing job requirements...');
+    await aiAgentService.updateTaskProgress(taskId, 25, 'Analyzing job requirements...');
     socketIO.notifyTaskProgress(userId, taskId, 25, 'Analyzing job requirements...');
 
-    await updateTaskProgress(taskId, 50, 'Generating interview questions...');
+    await aiAgentService.updateTaskProgress(taskId, 50, 'Generating interview questions...');
     socketIO.notifyTaskProgress(userId, taskId, 50, 'Generating interview questions...');
 
     const prepMaterial = await aiService.generateInterviewPrep(jobDescription, resumeData, company);
 
-    await updateTaskProgress(taskId, 75, 'Finalizing materials...');
+    await aiAgentService.updateTaskProgress(taskId, 75, 'Finalizing materials...');
     socketIO.notifyTaskProgress(userId, taskId, 75, 'Finalizing materials...');
 
     const results = {
@@ -279,18 +286,24 @@ async function processInterviewPrep(job) {
       outputFiles: []
     };
 
-    await updateTaskProgress(taskId, 100, 'Completed');
-    await saveTaskResults(taskId, results);
-    await updateTaskStatus(taskId, 'COMPLETED');
+    await aiAgentService.updateTaskProgress(taskId, 100, 'Completed');
+    socketIO.notifyTaskProgress(userId, taskId, 100, 'Completed');
+    await aiAgentService.saveTaskResults(taskId, results);
+    await aiAgentService.updateTaskStatus(taskId, 'COMPLETED');
 
-    await updateMetrics(userId, 'INTERVIEW_PREP', {});
+    await aiAgentService.updateMetrics(userId, 'INTERVIEW_PREP', {});
 
+    // Notify completion via WebSocket
+    socketIO.notifyTaskCompleted(userId, taskId, results);
     logger.info('Interview prep completed', { taskId });
 
     return { success: true, results };
   } catch (error) {
     logger.error('Interview prep failed', { error: error.message, taskId });
-    await updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+    await aiAgentService.updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+
+    // Notify failure via WebSocket
+    socketIO.notifyTaskFailed(userId, taskId, error.message);
     throw error;
   }
 }

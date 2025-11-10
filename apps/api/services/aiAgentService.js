@@ -227,6 +227,7 @@ async function checkBatchUsageLimits(userId, batchSize) {
 
 /**
  * Create a new AI agent task
+ * Uses atomic transaction to prevent TOCTOU race conditions on usage limits
  * @param {string} userId - User ID
  * @param {object} taskData - Task data
  * @param {object} options - Optional parameters
@@ -234,35 +235,99 @@ async function checkBatchUsageLimits(userId, batchSize) {
  */
 async function createTask(userId, taskData, options = {}) {
   try {
-    // Check usage limits (unless skipped for bulk operations)
-    if (!options.skipUsageCheck) {
-      await checkUsageLimits(userId);
+    // For bulk operations, skip usage check (already done atomically for the batch)
+    if (options.skipUsageCheck) {
+      const task = await prisma.aIAgentTask.create({
+        data: {
+          userId,
+          type: taskData.type,
+          jobTitle: taskData.jobTitle,
+          company: taskData.company,
+          jobUrl: taskData.jobUrl,
+          jobDescription: taskData.jobDescription,
+          baseResumeId: taskData.baseResumeId,
+          tone: taskData.tone || 'professional',
+          length: taskData.length || 'medium',
+          batchId: taskData.batchId || null,
+          totalSteps: 4,
+          currentStep: 'Queued'
+        }
+      });
+
+      await enqueueTask(task);
+      logger.info('Created AI agent task', { userId, taskId: task.id, type: task.type, batchId: task.batchId });
+      return task;
     }
 
-    // Create the task
-    const task = await prisma.aIAgentTask.create({
-      data: {
-        userId,
-        type: taskData.type,
-        jobTitle: taskData.jobTitle,
-        company: taskData.company,
-        jobUrl: taskData.jobUrl,
-        jobDescription: taskData.jobDescription,
-        baseResumeId: taskData.baseResumeId,
-        tone: taskData.tone || 'professional',
-        length: taskData.length || 'medium',
-        batchId: taskData.batchId || null,
-        totalSteps: 4, // Default: analyze, generate, score, save
-        currentStep: 'Queued'
+    // Atomic transaction: check limit, create task, and increment counter
+    const task = await prisma.$transaction(async (tx) => {
+      const now = new Date();
+
+      // Get user with subscription and usage info
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: {
+          subscriptionTier: true,
+          aiAgentsRunsCount: true,
+          aiAgentsRunsResetAt: true
+        }
+      });
+
+      if (!user) {
+        throw new Error('User not found');
       }
+
+      // Monthly limits by tier
+      const limits = { FREE: 5, PRO: 50, PREMIUM: 999999 };
+      const monthlyLimit = limits[user.subscriptionTier] || limits.FREE;
+      const resetDate = user.aiAgentsRunsResetAt ? new Date(user.aiAgentsRunsResetAt) : null;
+
+      // Check if needs reset
+      if (!resetDate || now > resetDate) {
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            aiAgentsRunsCount: 0,
+            aiAgentsRunsResetAt: nextMonth
+          }
+        });
+        // After reset, count is 0, so continue
+      } else {
+        // Check if limit exceeded
+        if (user.aiAgentsRunsCount >= monthlyLimit) {
+          const error = new Error(`Monthly AI agent task limit (${monthlyLimit}) exceeded. Upgrade your plan for more tasks.`);
+          error.code = 'USAGE_LIMIT_EXCEEDED';
+          throw error;
+        }
+      }
+
+      // Atomically increment counter
+      await tx.user.update({
+        where: { id: userId },
+        data: { aiAgentsRunsCount: { increment: 1 } }
+      });
+
+      // Create task within same transaction
+      return await tx.aIAgentTask.create({
+        data: {
+          userId,
+          type: taskData.type,
+          jobTitle: taskData.jobTitle,
+          company: taskData.company,
+          jobUrl: taskData.jobUrl,
+          jobDescription: taskData.jobDescription,
+          baseResumeId: taskData.baseResumeId,
+          tone: taskData.tone || 'professional',
+          length: taskData.length || 'medium',
+          batchId: taskData.batchId || null,
+          totalSteps: 4,
+          currentStep: 'Queued'
+        }
+      });
     });
 
-    // Increment usage counter (unless skipped for bulk operations)
-    if (!options.skipUsageCheck) {
-      await incrementUsageCounter(userId);
-    }
-
-    // Enqueue the task for processing
+    // Enqueue the task for processing (outside transaction)
     await enqueueTask(task);
 
     logger.info('Created AI agent task', {

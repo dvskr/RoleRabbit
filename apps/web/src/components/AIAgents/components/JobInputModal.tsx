@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, FileText, Mail, Briefcase, Users } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 
@@ -56,21 +56,34 @@ export const JobInputModal: React.FC<JobInputModalProps> = ({
   const { theme } = useTheme();
   const colors = theme?.colors;
 
-  const [formData, setFormData] = useState<JobInputData>({
-    taskType: taskType.toUpperCase().replace('-', '_'),
-    jobTitle: '',
-    company: '',
-    jobUrl: '',
-    jobDescription: '',
-    tone: 'professional',
-    length: 'medium',
-  });
+  // Memoize default form data based on taskType
+  const defaultFormData = useMemo(
+    () => ({
+      taskType: taskType.toUpperCase().replace('-', '_'),
+      jobTitle: '',
+      company: '',
+      jobUrl: '',
+      jobDescription: '',
+      tone: 'professional',
+      length: 'medium',
+    }),
+    [taskType]
+  );
 
+  const [formData, setFormData] = useState<JobInputData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const config = taskTypeConfig[taskType];
   const Icon = config.icon;
+
+  // Reset form when modal opens or taskType changes
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(defaultFormData);
+      setErrors({});
+    }
+  }, [isOpen, defaultFormData]);
 
   if (!isOpen || !colors) return null;
 
@@ -102,16 +115,8 @@ export const JobInputModal: React.FC<JobInputModalProps> = ({
     try {
       await onSubmit(formData);
       onClose();
-      // Reset form
-      setFormData({
-        taskType: taskType.toUpperCase().replace('-', '_'),
-        jobTitle: '',
-        company: '',
-        jobUrl: '',
-        jobDescription: '',
-        tone: 'professional',
-        length: 'medium',
-      });
+      // Reset form to default
+      setFormData(defaultFormData);
     } catch (error) {
       console.error('Error submitting task:', error);
     } finally {

@@ -80,7 +80,8 @@ export const QuickActions: React.FC = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create task');
+        const errorMessage = errorData.error || errorData.message || 'Failed to create task';
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
