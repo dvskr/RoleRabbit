@@ -3,15 +3,16 @@
 import React, { useEffect, useState } from 'react';
 import { Award, Globe, Trash2, Edit2, X, Plus, GraduationCap, ArrowLeft } from 'lucide-react';
 import { UserData, Skill, Certification, Education } from '../types/profile';
-import { 
-  sanitizeSkills, 
-  sanitizeCertifications, 
-  sanitizeLanguages, 
+import {
+  sanitizeSkills,
+  sanitizeCertifications,
+  sanitizeLanguages,
   sanitizeEducation,
   normalizeToArray
 } from '../utils/dataSanitizer';
 import { useTheme } from '../../../contexts/ThemeContext';
 import FormField from '../components/FormField';
+import { TagSection } from '../components/TagSection';
 
 interface SkillsTabProps {
   userData: UserData;
@@ -210,160 +211,19 @@ export default function SkillsTab({
       <div className="space-y-8">
 
         {/* Technical Skills */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Technical Skills
-            </h3>
-            {isEditing && sanitizedSkills.length === 0 && (
-              <span className="text-sm" style={{ color: colors.secondaryText }}>
-                Add your first skill to get started
-              </span>
-            )}
-          </div>
-          
-          {sanitizedSkills.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
-              {sanitizedSkills.map((skill, index) => {
-                return (
-                  <div 
-                    key={index} 
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group flex-shrink-0"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      maxWidth: '100%',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
-                  >
-                    <span 
-                      className="font-medium text-sm break-words"
-                      style={{ 
-                        color: colors.primaryText,
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
-                        hyphens: 'auto',
-                      }}
-                    >
-                      {skill.name}
-                    </span>
-                    {isEditing && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removeSkill(index);
-                        }}
-                        className="opacity-70 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
-                        style={{ 
-                          color: colors.errorRed,
-                          background: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = colors.badgeErrorBg;
-                          e.currentTarget.style.opacity = '1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.opacity = '0.7';
-                        }}
-                        aria-label={`Remove ${skill.name}`}
-                        title={`Remove ${skill.name}`}
-                        type="button"
-                      >
-                        <X size={14} strokeWidth={2.5} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
-              <Award size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
-              <p>No skills added yet</p>
-            </div>
-          )}
-          
-          {isEditing && (
-            <div className="flex gap-3">
-              <input
-                id="add-skill-input"
-                name="add-skill-input"
-                type="text"
-                placeholder="Add skills (comma-separated: Python, JavaScript, React or single: Python)"
-                className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const target = e.target as HTMLInputElement;
-                    const skillInput = target.value.trim();
-                    if (skillInput) {
-                      addSkill(skillInput);
-                      target.value = '';
-                    }
-                  }
-                }}
-              />
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const input = document.getElementById('add-skill-input') as HTMLInputElement;
-                  if (input && input.value.trim()) {
-                    addSkill(input.value.trim());
-                    input.value = '';
-                  }
-                }}
-                className="px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                style={{
-                  background: colors.primaryBlue,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlueHover || colors.primaryBlue;
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlue;
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <Plus size={18} className="inline mr-1" />
-                Add
-              </button>
-            </div>
-          )}
-        </div>
+        <TagSection
+          title="Technical Skills"
+          items={sanitizedSkills}
+          isEditing={isEditing}
+          colors={colors}
+          onAdd={addSkill}
+          onRemove={removeSkill}
+          inputId="add-skill-input"
+          inputPlaceholder="Add skills (comma-separated: Python, JavaScript, React or single: Python)"
+          emptyIcon={Award}
+          emptyMessage="No skills added yet"
+          emptyHint="Add your first skill to get started"
+        />
 
         {/* Certifications */}
         <div 
@@ -646,160 +506,19 @@ export default function SkillsTab({
         </div>
 
         {/* Languages */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
-              Languages
-            </h3>
-            {isEditing && languages.length === 0 && (
-              <span className="text-sm" style={{ color: colors.secondaryText }}>
-                Add your first language to get started
-              </span>
-            )}
-          </div>
-          
-          {languages.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mb-6" style={{ maxWidth: '100%' }}>
-              {languages.map((lang, index) => {
-                return (
-                  <div 
-                    key={index} 
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all group flex-shrink-0"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `1px solid ${colors.border}`,
-                      maxWidth: '100%',
-                      wordBreak: 'break-word',
-                      overflowWrap: 'break-word',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = colors.borderFocused;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = colors.border;
-                    }}
-                  >
-                    <span 
-                      className="font-medium text-sm break-words"
-                      style={{ 
-                        color: colors.primaryText,
-                        wordBreak: 'break-word',
-                        overflowWrap: 'break-word',
-                        hyphens: 'auto',
-                      }}
-                    >
-                      {lang.name}
-                    </span>
-                    {isEditing && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removeLanguage(index);
-                        }}
-                        className="opacity-70 group-hover:opacity-100 transition-opacity ml-1 p-0.5 rounded flex-shrink-0"
-                        style={{ 
-                          color: colors.errorRed,
-                          background: 'transparent'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = colors.badgeErrorBg;
-                          e.currentTarget.style.opacity = '1';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.opacity = '0.7';
-                        }}
-                        aria-label={`Remove ${lang.name}`}
-                        title={`Remove ${lang.name}`}
-                        type="button"
-                      >
-                        <X size={14} strokeWidth={2.5} />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
-              <Globe size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
-              <p>No languages added yet</p>
-            </div>
-          )}
-          
-          {isEditing && (
-            <div className="flex gap-3">
-              <input
-                id="add-language-input"
-                name="add-language-input"
-                type="text"
-                placeholder="Add languages (comma-separated: English, Spanish, French or single: English)"
-                className="flex-1 px-4 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: colors.inputBackground,
-                  border: `1px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = colors.borderFocused;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = colors.border;
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const target = e.target as HTMLInputElement;
-                    const langInput = target.value.trim();
-                    if (langInput) {
-                      addLanguage(langInput);
-                      target.value = '';
-                    }
-                  }
-                }}
-              />
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const input = document.getElementById('add-language-input') as HTMLInputElement;
-                  if (input && input.value.trim()) {
-                    addLanguage(input.value.trim());
-                    input.value = '';
-                  }
-                }}
-                className="px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                style={{
-                  background: colors.primaryBlue,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlueHover || colors.primaryBlue;
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = colors.primaryBlue;
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <Plus size={18} className="inline mr-1" />
-                Add
-              </button>
-            </div>
-          )}
-        </div>
+        <TagSection
+          title="Languages"
+          items={languages}
+          isEditing={isEditing}
+          colors={colors}
+          onAdd={addLanguage}
+          onRemove={removeLanguage}
+          inputId="add-language-input"
+          inputPlaceholder="Add languages (comma-separated: English, Spanish, French or single: English)"
+          emptyIcon={Globe}
+          emptyMessage="No languages added yet"
+          emptyHint="Add your first language to get started"
+        />
 
         {/* Education */}
         <div 
