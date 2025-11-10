@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Download, FileText } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useAIAgentsContext } from '../index';
+import {
+  generatePDF,
+  generateDOCX,
+  generateCoverLetterPDF,
+  generateCoverLetterDOCX,
+} from '../utils/documentGenerator';
 
 interface PreviewModalProps {
   isOpen: boolean;
@@ -19,19 +26,61 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
 }) => {
   const { theme } = useTheme();
   const colors = theme?.colors;
+  const { showSuccess, showError } = useAIAgentsContext();
+  const [isDownloading, setIsDownloading] = useState(false);
 
   if (!isOpen || !colors || !data) return null;
 
-  const handleDownloadPDF = () => {
-    // TODO: Integrate with PDF generation service
-    console.log('Download PDF - to be implemented');
-    alert('PDF download will be implemented in the next phase');
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    try {
+      const filename = `${title.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+
+      if (type === 'resume') {
+        await generatePDF(data, filename);
+        showSuccess('Resume PDF downloaded successfully!');
+      } else if (type === 'cover-letter') {
+        const content = typeof data === 'string' ? data : data.content || JSON.stringify(data);
+        await generateCoverLetterPDF(content, filename);
+        showSuccess('Cover letter PDF downloaded successfully!');
+      } else {
+        // For research/interview-prep, convert to text and generate PDF
+        const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        await generateCoverLetterPDF(content, filename);
+        showSuccess('Document downloaded as PDF!');
+      }
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      showError('Failed to download PDF. Make sure your browser allows downloads.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
-  const handleDownloadDOCX = () => {
-    // TODO: Integrate with DOCX generation service
-    console.log('Download DOCX - to be implemented');
-    alert('DOCX download will be implemented in the next phase');
+  const handleDownloadDOCX = async () => {
+    setIsDownloading(true);
+    try {
+      const filename = `${title.replace(/\s+/g, '-').toLowerCase()}.docx`;
+
+      if (type === 'resume') {
+        await generateDOCX(data, filename);
+        showSuccess('Resume DOCX downloaded successfully!');
+      } else if (type === 'cover-letter') {
+        const content = typeof data === 'string' ? data : data.content || JSON.stringify(data);
+        await generateCoverLetterDOCX(content, filename);
+        showSuccess('Cover letter DOCX downloaded successfully!');
+      } else {
+        // For research/interview-prep
+        const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        await generateCoverLetterDOCX(content, filename);
+        showSuccess('Document downloaded as DOCX!');
+      }
+    } catch (error) {
+      console.error('Error downloading DOCX:', error);
+      showError('Failed to download DOCX. Make sure your browser allows downloads.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const renderResumePreview = (resumeData: any) => {
@@ -265,27 +314,33 @@ export const PreviewModal: React.FC<PreviewModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownloadPDF}
+              disabled={isDownloading}
               className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
               style={{
-                background: colors.badgePurpleBg,
-                color: colors.badgePurpleText,
+                background: isDownloading ? colors.inputBackground : colors.badgePurpleBg,
+                color: isDownloading ? colors.secondaryText : colors.badgePurpleText,
                 border: `1px solid ${colors.badgePurpleText}`,
+                opacity: isDownloading ? 0.6 : 1,
+                cursor: isDownloading ? 'not-allowed' : 'pointer',
               }}
             >
               <Download size={16} />
-              PDF
+              {isDownloading ? 'Downloading...' : 'PDF'}
             </button>
             <button
               onClick={handleDownloadDOCX}
+              disabled={isDownloading}
               className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
               style={{
                 background: colors.inputBackground,
                 border: `1px solid ${colors.border}`,
                 color: colors.primaryText,
+                opacity: isDownloading ? 0.6 : 1,
+                cursor: isDownloading ? 'not-allowed' : 'pointer',
               }}
             >
               <Download size={16} />
-              DOCX
+              {isDownloading ? 'Downloading...' : 'DOCX'}
             </button>
             <button
               onClick={onClose}

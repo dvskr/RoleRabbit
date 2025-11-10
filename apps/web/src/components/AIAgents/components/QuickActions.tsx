@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { FileText, Search, BookOpen, Mail } from 'lucide-react';
+import { FileText, Search, BookOpen, Mail, Upload } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { JobInputModal, JobInputData } from './JobInputModal';
+import { BulkProcessingModal } from './BulkProcessingModal';
 import { useAIAgentsContext } from '../index';
 
 interface QuickAction {
@@ -48,6 +49,7 @@ export const QuickActions: React.FC = () => {
   const colors = theme?.colors;
   const { showSuccess, showError, refreshActiveTasks } = useAIAgentsContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedTaskType, setSelectedTaskType] = useState<QuickAction['taskType']>('resume');
 
   if (!colors) return null;
@@ -122,6 +124,28 @@ export const QuickActions: React.FC = () => {
             </button>
           );
         })}
+
+        {/* Bulk Processing Button */}
+        <button
+          onClick={() => setIsBulkModalOpen(true)}
+          className="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+          style={{
+            background: colors.badgeYellowBg,
+            border: `1px solid ${colors.badgeYellowText}`,
+            color: colors.badgeYellowText,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+          title="Process multiple jobs at once"
+          aria-label="Bulk Processing"
+        >
+          <Upload size={14} />
+          Bulk Process
+        </button>
       </div>
 
       <JobInputModal
@@ -129,6 +153,11 @@ export const QuickActions: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         taskType={selectedTaskType}
         onSubmit={handleSubmitTask}
+      />
+
+      <BulkProcessingModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
       />
     </>
   );
