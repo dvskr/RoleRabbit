@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   X,
   CheckCircle,
@@ -51,13 +51,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   const [previewData, setPreviewData] = useState<any>(null);
   const [previewType, setPreviewType] = useState<'resume' | 'cover-letter' | 'research' | 'interview-prep'>('resume');
 
-  useEffect(() => {
-    if (isOpen && taskId) {
-      fetchTaskDetails();
-    }
-  }, [isOpen, taskId]);
-
-  const fetchTaskDetails = async () => {
+  const fetchTaskDetails = useCallback(async () => {
     if (!taskId) return;
 
     setIsLoading(true);
@@ -82,7 +76,13 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [taskId]);
+
+  useEffect(() => {
+    if (isOpen && taskId) {
+      fetchTaskDetails();
+    }
+  }, [isOpen, taskId, fetchTaskDetails]);
 
   if (!isOpen || !colors) return null;
 
