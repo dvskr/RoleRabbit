@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { UserCircle, Mail, Phone, MapPin, AlertCircle, Linkedin, Github, Link2, Globe, ExternalLink } from 'lucide-react';
+import { UserCircle, Mail, Phone, MapPin, AlertCircle, Linkedin, Github, Link2, Globe } from 'lucide-react';
 import FormField from '../components/FormField';
 import ProfilePicture from '../components/ProfilePicture';
+import { SocialLinkField } from '../components/SocialLinkField';
 import { UserData } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { normalizeUrl } from '../../../utils/urlHelpers';
 
 interface ProfileTabProps {
   userData: UserData;
@@ -169,192 +169,52 @@ export default function ProfileTab({
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
-              <label className="block text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
-                <Linkedin size={16} style={{ color: colors.secondaryText }} />
-                LinkedIn
-              </label>
-              {isEditing ? (
-                <FormField
-                  id="profile-linkedin"
-                  name="linkedin"
-                  label=""
-                  type="url"
-                  value={userData.linkedin || ''}
-                  onChange={(value) => onUserDataChange({ linkedin: value })}
-                  disabled={false}
-                  placeholder="https://linkedin.com/in/yourname"
-                />
-              ) : userData.linkedin ? (
-                <a
-                  href={normalizeUrl(userData.linkedin) || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryBlue,
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.primaryBlue;
-                    e.currentTarget.style.background = colors.badgeInfoBg;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                    e.currentTarget.style.background = colors.inputBackground;
-                  }}
-                >
-                  <span className="flex-1 truncate">{userData.linkedin}</span>
-                  <ExternalLink size={14} />
-                </a>
-              ) : (
-                <div className="px-4 py-3 rounded-xl text-sm" style={{ background: colors.inputBackground, border: `1px solid ${colors.border}`, color: colors.tertiaryText }}>
-                  No LinkedIn URL provided
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
-                <Github size={16} style={{ color: colors.secondaryText }} />
-                GitHub
-              </label>
-              {isEditing ? (
-                <FormField
-                  id="profile-github"
-                  name="github"
-                  label=""
-                  type="url"
-                  value={userData.github || ''}
-                  onChange={(value) => onUserDataChange({ github: value })}
-                  disabled={false}
-                  placeholder="https://github.com/username"
-                />
-              ) : userData.github ? (
-                <a
-                  href={normalizeUrl(userData.github) || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryBlue,
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.primaryBlue;
-                    e.currentTarget.style.background = colors.badgeInfoBg;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                    e.currentTarget.style.background = colors.inputBackground;
-                  }}
-                >
-                  <span className="flex-1 truncate">{userData.github}</span>
-                  <ExternalLink size={14} />
-                </a>
-              ) : (
-                <div className="px-4 py-3 rounded-xl text-sm" style={{ background: colors.inputBackground, border: `1px solid ${colors.border}`, color: colors.tertiaryText }}>
-                  No GitHub URL provided
-                </div>
-              )}
-            </div>
+            <SocialLinkField
+              label="LinkedIn"
+              icon={Linkedin}
+              value={userData.linkedin}
+              isEditing={isEditing}
+              colors={colors}
+              onChange={(value) => onUserDataChange({ linkedin: value })}
+              placeholder="https://linkedin.com/in/yourname"
+              fieldId="profile-linkedin"
+              fieldName="linkedin"
+            />
+            <SocialLinkField
+              label="GitHub"
+              icon={Github}
+              value={userData.github}
+              isEditing={isEditing}
+              colors={colors}
+              onChange={(value) => onUserDataChange({ github: value })}
+              placeholder="https://github.com/username"
+              fieldId="profile-github"
+              fieldName="github"
+            />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div>
-              <label className="block text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
-                <Link2 size={16} style={{ color: colors.secondaryText }} />
-                Portfolio URL
-              </label>
-              {isEditing ? (
-                <FormField
-                  id="profile-portfolio"
-                  name="portfolio"
-                  label=""
-                  type="url"
-                  value={userData.portfolio || ''}
-                  onChange={(value) => onUserDataChange({ portfolio: value })}
-                  disabled={false}
-                  placeholder="https://yourportfolio.com"
-                />
-              ) : userData.portfolio ? (
-                <a
-                  href={normalizeUrl(userData.portfolio) || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryBlue,
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.primaryBlue;
-                    e.currentTarget.style.background = colors.badgeInfoBg;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                    e.currentTarget.style.background = colors.inputBackground;
-                  }}
-                >
-                  <span className="flex-1 truncate">{userData.portfolio}</span>
-                  <ExternalLink size={14} />
-                </a>
-              ) : (
-                <div className="px-4 py-3 rounded-xl text-sm" style={{ background: colors.inputBackground, border: `1px solid ${colors.border}`, color: colors.tertiaryText }}>
-                  No Portfolio URL provided
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: colors.primaryText }}>
-                <Globe size={16} style={{ color: colors.secondaryText }} />
-                Personal Website
-              </label>
-              {isEditing ? (
-                <FormField
-                  id="profile-website"
-                  name="website"
-                  label=""
-                  type="url"
-                  value={userData.website || ''}
-                  onChange={(value) => onUserDataChange({ website: value })}
-                  disabled={false}
-                  placeholder="https://yourwebsite.com"
-                />
-              ) : userData.website ? (
-                <a
-                  href={normalizeUrl(userData.website) || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 hover:shadow-lg"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                    color: colors.primaryBlue,
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.primaryBlue;
-                    e.currentTarget.style.background = colors.badgeInfoBg;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                    e.currentTarget.style.background = colors.inputBackground;
-                  }}
-                >
-                  <span className="flex-1 truncate">{userData.website}</span>
-                  <ExternalLink size={14} />
-                </a>
-              ) : (
-                <div className="px-4 py-3 rounded-xl text-sm" style={{ background: colors.inputBackground, border: `1px solid ${colors.border}`, color: colors.tertiaryText }}>
-                  No Personal Website URL provided
-                </div>
-              )}
-            </div>
+            <SocialLinkField
+              label="Portfolio URL"
+              icon={Link2}
+              value={userData.portfolio}
+              isEditing={isEditing}
+              colors={colors}
+              onChange={(value) => onUserDataChange({ portfolio: value })}
+              placeholder="https://yourportfolio.com"
+              fieldId="profile-portfolio"
+              fieldName="portfolio"
+            />
+            <SocialLinkField
+              label="Personal Website"
+              icon={Globe}
+              value={userData.website}
+              isEditing={isEditing}
+              colors={colors}
+              onChange={(value) => onUserDataChange({ website: value })}
+              placeholder="https://yourwebsite.com"
+              fieldId="profile-website"
+              fieldName="website"
+            />
           </div>
         </div>
 
