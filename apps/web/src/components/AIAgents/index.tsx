@@ -1,16 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAIAgentsState, useAIChat } from './hooks';
-import { 
-  AgentHeader, 
-  TabNavigation, 
-  ChatTab, 
-  ActiveTasksTab, 
-  CapabilitiesTab, 
-  HistoryTab 
+import {
+  AgentHeader,
+  TabNavigation,
+  ChatTab,
+  ActiveTasksTab,
+  CapabilitiesTab,
+  HistoryTab
 } from './components';
+import { useToast, ToastContainer } from './components/Toast';
+
+// Context for sharing toast and refresh functions across components
+interface AIAgentsContextType {
+  showSuccess: (message: string) => void;
+  showError: (message: string) => void;
+  showInfo: (message: string) => void;
+  refreshActiveTasks: () => Promise<void>;
+}
+
+const AIAgentsContext = createContext<AIAgentsContextType | null>(null);
+
+export const useAIAgentsContext = () => {
+  const context = useContext(AIAgentsContext);
+  if (!context) {
+    throw new Error('useAIAgentsContext must be used within AIAgents component');
+  }
+  return context;
+};
 
 export default function AIAgents() {
   const { theme } = useTheme();
@@ -40,6 +59,7 @@ export default function AIAgents() {
       chatMessage,
       setChatMessage,
       activeTasksCount,
+      refreshActiveTasks,
     } = useAIAgentsState();
 
     const { handleSendMessage } = useAIChat({
@@ -49,45 +69,59 @@ export default function AIAgents() {
       setChatMessages,
     });
 
+    const { toasts, showSuccess, showError, showInfo, removeToast } = useToast();
+
+    const contextValue: AIAgentsContextType = {
+      showSuccess,
+      showError,
+      showInfo,
+      refreshActiveTasks,
+    };
+
     return (
-      <div className="h-full flex flex-col" style={{ background: colors.background }}>
-        <AgentHeader 
-          isAgentEnabled={isAgentEnabled}
-          setIsAgentEnabled={setIsAgentEnabled}
-        />
+      <AIAgentsContext.Provider value={contextValue}>
+        <div className="h-full flex flex-col" style={{ background: colors.background }}>
+          <AgentHeader
+            isAgentEnabled={isAgentEnabled}
+            setIsAgentEnabled={setIsAgentEnabled}
+          />
 
-        <TabNavigation 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          activeTasksCount={activeTasksCount}
-        />
+          <TabNavigation
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            activeTasksCount={activeTasksCount}
+          />
 
-        <div className="flex-1 overflow-hidden flex">
-          {activeTab === 'chat' && (
-            <ChatTab
-              chatMessages={chatMessages}
-              chatMessage={chatMessage}
-              setChatMessage={setChatMessage}
-              onSendMessage={handleSendMessage}
-            />
-          )}
+          <div className="flex-1 overflow-hidden flex">
+            {activeTab === 'chat' && (
+              <ChatTab
+                chatMessages={chatMessages}
+                chatMessage={chatMessage}
+                setChatMessage={setChatMessage}
+                onSendMessage={handleSendMessage}
+              />
+            )}
 
-          {activeTab === 'active-tasks' && (
-            <ActiveTasksTab activeTasks={activeTasks} />
-          )}
+            {activeTab === 'active-tasks' && (
+              <ActiveTasksTab activeTasks={activeTasks} />
+            )}
 
-          {activeTab === 'capabilities' && (
-            <CapabilitiesTab 
-              capabilities={capabilities}
-              onToggleCapability={toggleCapability}
-            />
-          )}
+            {activeTab === 'capabilities' && (
+              <CapabilitiesTab
+                capabilities={capabilities}
+                onToggleCapability={toggleCapability}
+              />
+            )}
 
-          {activeTab === 'history' && (
-            <HistoryTab historyTasks={historyTasks} />
-          )}
+            {activeTab === 'history' && (
+              <HistoryTab historyTasks={historyTasks} />
+            )}
+          </div>
+
+          {/* Toast Notifications */}
+          <ToastContainer toasts={toasts} onRemove={removeToast} />
         </div>
-      </div>
+      </AIAgentsContext.Provider>
     );
   } catch (error) {
     console.error('Critical error in AIAgents:', error);

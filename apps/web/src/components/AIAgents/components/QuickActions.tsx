@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileText, Search, BookOpen, Mail } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { JobInputModal, JobInputData } from './JobInputModal';
+import { useAIAgentsContext } from '../index';
 
 interface QuickAction {
   label: string;
@@ -45,6 +46,7 @@ const quickActions: QuickAction[] = [
 export const QuickActions: React.FC = () => {
   const { theme } = useTheme();
   const colors = theme?.colors;
+  const { showSuccess, showError, refreshActiveTasks } = useAIAgentsContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTaskType, setSelectedTaskType] = useState<QuickAction['taskType']>('resume');
 
@@ -75,16 +77,19 @@ export const QuickActions: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create task');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create task');
       }
 
       const result = await response.json();
       console.log('Task created:', result);
 
-      // TODO: Show success notification and refresh active tasks
+      // Show success and refresh tasks
+      showSuccess(`Task created successfully! Your ${data.taskType.toLowerCase().replace('_', ' ')} is being processed.`);
+      await refreshActiveTasks();
     } catch (error) {
       console.error('Error creating task:', error);
-      // TODO: Show error notification
+      showError(error instanceof Error ? error.message : 'Failed to create task. Please try again.');
     }
   };
 

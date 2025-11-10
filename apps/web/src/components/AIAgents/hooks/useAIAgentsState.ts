@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TabType, ActiveTask, Capability, HistoryTask, ChatMessage } from '../types';
 import {
   MOCK_CAPABILITIES,
   INITIAL_CHAT_MESSAGE
 } from '../constants/mockData';
+import { useWebSocket } from './useWebSocket';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Map backend task to frontend ActiveTask type
 function mapBackendTaskToActiveTask(task: any): ActiveTask {
@@ -98,6 +100,8 @@ function mapSettingsToCapabilities(settings: any): Capability[] {
 }
 
 export function useAIAgentsState() {
+  const { user } = useAuth();
+
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     // Initialize from URL if available
     if (typeof window !== 'undefined') {
@@ -123,6 +127,65 @@ export function useAIAgentsState() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([INITIAL_CHAT_MESSAGE]);
   const [chatMessage, setChatMessage] = useState('');
   const activeTasksCount = activeTasks.filter(task => task.status === 'in-progress').length;
+
+  // Refresh function for tasks
+  const refreshActiveTasks = useCallback(async () => {
+    try {
+      const tasksRes = await fetch('/api/ai-agent/tasks/active', {
+        credentials: 'include'
+      });
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json();
+        if (tasksData.success && Array.isArray(tasksData.tasks)) {
+          setActiveTasks(tasksData.tasks.map(mapBackendTaskToActiveTask));
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing tasks:', error);
+    }
+  }, []);
+
+  // WebSocket event handlers
+  const handleTaskProgress = useCallback((data: any) => {
+    console.log('Task progress update:', data);
+    setActiveTasks(prev => prev.map(task =>
+      task.id === data.taskId
+        ? { ...task, progress: data.progress, title: data.currentStep || task.title }
+        : task
+    ));
+  }, []);
+
+  const handleTaskCompleted = useCallback((data: any) => {
+    console.log('Task completed:', data);
+    // Refresh tasks to get updated data
+    refreshActiveTasks();
+    // Switch to active-tasks tab to show completion
+    setActiveTab('active-tasks');
+  }, [refreshActiveTasks]);
+
+  const handleTaskFailed = useCallback((data: any) => {
+    console.log('Task failed:', data);
+    refreshActiveTasks();
+  }, [refreshActiveTasks]);
+
+  const handleTaskStarted = useCallback((data: any) => {
+    console.log('Task started:', data);
+    refreshActiveTasks();
+  }, [refreshActiveTasks]);
+
+  const handleTaskCancelled = useCallback((data: any) => {
+    console.log('Task cancelled:', data);
+    refreshActiveTasks();
+  }, [refreshActiveTasks]);
+
+  // Initialize WebSocket connection
+  useWebSocket(user?.id || null, {
+    onTaskProgress: handleTaskProgress,
+    onTaskCompleted: handleTaskCompleted,
+    onTaskFailed: handleTaskFailed,
+    onTaskStarted: handleTaskStarted,
+    onTaskCancelled: handleTaskCancelled,
+  });
 
   // Fetch initial data
   useEffect(() => {
@@ -265,6 +328,7 @@ export function useAIAgentsState() {
     setChatMessage,
     activeTasksCount,
     toggleCapability,
+    refreshActiveTasks,
     isLoading
   };
 }
