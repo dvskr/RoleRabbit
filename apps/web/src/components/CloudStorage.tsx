@@ -67,6 +67,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleEditFile,
     handleRefresh,
     handleShareWithUser,
+    handleRemoveShare,
     handleAddComment,
     handleStarFile,
     handleArchiveFile,
@@ -151,6 +152,105 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     setShowDeleted((prev) => !prev);
     setSelectedFolderId(null);
   }, [setShowDeleted, setSelectedFolderId]);
+
+  const handleDeleteWithToast = useCallback(
+    async (fileId: string) => {
+      try {
+        await handleDeleteFile(fileId, showDeleted);
+        success('File moved to recycle bin');
+      } catch (err: any) {
+        error(`Failed to delete file: ${err.message || 'Unknown error'}`);
+        logger.error('Failed to delete file:', err);
+      }
+    },
+    [handleDeleteFile, showDeleted, success, error]
+  );
+
+  const handleAddCommentWithToast = useCallback(
+    async (fileId: string, content: string) => {
+      try {
+        await handleAddComment(fileId, content);
+        success('Comment added successfully');
+      } catch (err: any) {
+        error(`Failed to add comment: ${err.message || 'Unknown error'}`);
+      }
+    },
+    [handleAddComment, success, error]
+  );
+
+  const handleShareWithUserWithToast = useCallback(
+    async (fileId: string, email: string, permission: any, expiresAt?: Date, maxDownloads?: number) => {
+      try {
+        const response = await handleShareWithUser(fileId, email, permission, expiresAt, maxDownloads);
+
+        // Check if email was sent successfully
+        if (response?.emailSent) {
+          success(`File shared successfully with ${email}. Email notification sent!`);
+        } else if (response?.warning) {
+          // Email failed but share was created
+          error(`⚠️ ${response.warning}`);
+        } else {
+          // Success but no email status
+          success(`File shared successfully with ${email}.`);
+        }
+      } catch (err: any) {
+        const errorMsg = err?.message || err?.error || 'Unknown error';
+        error(`Failed to share file: ${errorMsg}`);
+        logger.error('Failed to share file:', err);
+      }
+    },
+    [handleShareWithUser, success, error]
+  );
+
+  const handleRemoveShareWithToast = useCallback(
+    async (fileId: string, shareId: string) => {
+      try {
+        await handleRemoveShare(fileId, shareId);
+        success('Share access removed');
+      } catch (err: any) {
+        error(`Failed to remove share: ${err.message || 'Unknown error'}`);
+      }
+    },
+    [handleRemoveShare, success, error]
+  );
+
+  const handleMoveWithToast = useCallback(
+    async (fileId: string, folderId: string | null) => {
+      try {
+        await handleMoveFile(fileId, folderId);
+        success('File moved successfully');
+      } catch (err: any) {
+        error(`Failed to move file: ${err.message || 'Unknown error'}`);
+      }
+    },
+    [handleMoveFile, success, error]
+  );
+
+  const handleUploadClick = useCallback(() => {
+    if (!showDeleted) {
+      setShowUploadModal(true);
+    }
+  }, [showDeleted, setShowUploadModal]);
+
+  const handleCreateFolderConfirm = useCallback(
+    (folderName: string) => {
+      handleCreateFolder(folderName);
+      closeCreateFolderModal();
+    },
+    [handleCreateFolder, closeCreateFolderModal]
+  );
+
+  const handleRenameFolderConfirm = useCallback(
+    (folderId: string, newName: string) => {
+      handleRenameFolder(folderId, newName);
+      closeRenameFolderModal();
+    },
+    [handleRenameFolder, closeRenameFolderModal]
+  );
+
+  const handleCloseUploadModal = useCallback(() => {
+    setShowUploadModal(false);
+  }, [setShowUploadModal]);
 
   const activeFiles = useMemo(
     () => files.filter((file) => !file.deletedAt),
@@ -247,70 +347,20 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               onFileSelect={handleFileSelect}
               onDownload={handleDownloadFileWrapper}
               onShare={handleShareFile}
-              onDelete={async (fileId) => {
-                try {
-                  await handleDeleteFile(fileId, showDeleted);
-                  success('File moved to recycle bin');
-                } catch (err: any) {
-                  error(`Failed to delete file: ${err.message || 'Unknown error'}`);
-                  logger.error('Failed to delete file:', err);
-                }
-              }}
+              onDelete={handleDeleteWithToast}
               onRestore={handleRestoreFile}
               onPermanentlyDelete={handlePermanentlyDeleteFile}
               onEdit={handleEditFileWrapper}
               onStar={handleStarFile}
               onArchive={handleArchiveFile}
-              onAddComment={async (fileId, content) => {
-                try {
-                  await handleAddComment(fileId, content);
-                  success('Comment added successfully');
-                } catch (err: any) {
-                  error(`Failed to add comment: ${err.message || 'Unknown error'}`);
-                }
-              }}
-              onShareWithUser={async (fileId, email, permission, expiresAt?, maxDownloads?) => {
-                try {
-                  const response = await handleShareWithUser(fileId, email, permission, expiresAt, maxDownloads);
-                  
-                  // Check if email was sent successfully
-                  if (response?.emailSent) {
-                  success(`File shared successfully with ${email}. Email notification sent!`);
-                  } else if (response?.warning) {
-                    // Email failed but share was created
-                    error(`⚠️ ${response.warning}`);
-                  } else {
-                    // Success but no email status
-                    success(`File shared successfully with ${email}.`);
-                  }
-                  // Clear the email field after successful share so user can add another
-                  // The modal will stay open for adding more shares
-                } catch (err: any) {
-                  const errorMsg = err?.message || err?.error || 'Unknown error';
-                  error(`Failed to share file: ${errorMsg}`);
-                  logger.error('Failed to share file:', err);
-                }
-              }}
-              onRemoveShare={async (fileId, shareId) => {
-                try {
-                  await handleRemoveShare(fileId, shareId);
-                  success('Share access removed');
-                } catch (err: any) {
-                  error(`Failed to remove share: ${err.message || 'Unknown error'}`);
-                }
-              }}
-              onMove={async (fileId, folderId) => {
-                try {
-                  await handleMoveFile(fileId, folderId);
-                  success('File moved successfully');
-                } catch (err: any) {
-                  error(`Failed to move file: ${err.message || 'Unknown error'}`);
-                }
-              }}
+              onAddComment={handleAddCommentWithToast}
+              onShareWithUser={handleShareWithUserWithToast}
+              onRemoveShare={handleRemoveShareWithToast}
+              onMove={handleMoveWithToast}
               folders={folders}
               showDeleted={showDeleted}
               colors={colors}
-              onUpload={showDeleted ? () => {} : () => setShowUploadModal(true)}
+              onUpload={handleUploadClick}
               activeTab={activeTab}
               onTabChange={setActiveTab}
               filesCount={activeFiles.length}
@@ -326,10 +376,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
       <CreateFolderModal
         isOpen={showCreateFolderModal}
         onClose={closeCreateFolderModal}
-        onConfirm={(folderName) => {
-          handleCreateFolder(folderName);
-          closeCreateFolderModal();
-        }}
+        onConfirm={handleCreateFolderConfirm}
         colors={colors}
       />
 
@@ -338,10 +385,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           isOpen={showRenameFolderModal}
           onClose={closeRenameFolderModal}
           folder={folderToRename}
-          onConfirm={(folderId, newName) => {
-            handleRenameFolder(folderId, newName);
-            closeRenameFolderModal();
-          }}
+          onConfirm={handleRenameFolderConfirm}
           colors={colors}
         />
       )}
@@ -349,7 +393,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
       {activeTab === 'files' && (
         <UploadModal
           isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
+          onClose={handleCloseUploadModal}
           onUpload={handleUploadFile}
           activeFolderId={selectedFolderId}
         />

@@ -203,7 +203,7 @@ const FileCard = React.memo(function FileCard({
   });
 
   const actionButtonBaseStyle: React.CSSProperties = {
-    color: colors.secondaryText,
+    color: colors.colors.secondaryText,
     background: colors.inputBackground,
     border: `1px solid ${colors.border}`,
     padding: '0.55rem',
@@ -241,19 +241,15 @@ const FileCard = React.memo(function FileCard({
 
 
   const renderGridView = () => {
-    // Dark theme colors matching the design
-    const darkBg = '#1A202C';
-    const blueAccent = '#4285F4';
-    const lightText = '#FFFFFF';
-    const secondaryText = '#E2E8F0';
+    // Use theme colors for consistency
     
     return (
-      <div 
+      <div
         className="group rounded-xl p-5 transition-all duration-300 w-full"
         style={{
-          background: darkBg,
-          border: `1px solid ${isSelected ? blueAccent : '#2D3748'}`,
-          boxShadow: isSelected ? `0 0 0 2px ${blueAccent}40` : 'none',
+          background: colors.cardBackground,
+          border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
+          boxShadow: isSelected ? `0 0 0 2px ${colors.primaryBlue}40` : 'none',
           maxWidth: '340px',
           minWidth: '280px',
         }}
@@ -262,13 +258,13 @@ const FileCard = React.memo(function FileCard({
         <div className="mb-4">
           <div className="flex items-start gap-4">
             {/* Blue Square Icon */}
-            <div 
+            <div
               className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
               style={{
-                background: blueAccent,
+                background: colors.primaryBlue,
               }}
             >
-              <FileText size={24} color={lightText} />
+              <FileText size={24} color={colors.primaryText} />
             </div>
 
             {/* File Name and Resume Button Section */}
@@ -291,17 +287,17 @@ const FileCard = React.memo(function FileCard({
                   }}
                       className="font-bold text-lg w-full px-2 py-1 rounded-lg focus:outline-none"
                   style={{
-                        color: lightText,
-                        background: '#2D3748',
-                        border: `2px solid ${blueAccent}`,
+                        color: colors.primaryText,
+                        background: colors.inputBackground,
+                        border: `2px solid ${colors.primaryBlue}`,
                   }}
                   autoFocus
                   disabled={isSaving}
                 />
               ) : (
-                <h3 
+                <h3
                       className="font-bold text-lg break-words"
-                      style={{ color: lightText }}
+                      style={{ color: colors.primaryText }}
                       title={file.name}
                 >
                   {file.name}
@@ -317,14 +313,14 @@ const FileCard = React.memo(function FileCard({
                         onClick={() => onRestore?.(file.id)}
                         className="w-6 h-6 rounded flex items-center justify-center transition-colors"
                         style={{
-                          color: '#48BB78',
-                          background: '#2D3748',
+                          color: colors.successGreen,
+                          background: colors.inputBackground,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#22543D';
+                          e.currentTarget.style.background = colors.badgeSuccessBg;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#2D3748';
+                          e.currentTarget.style.background = colors.inputBackground;
                         }}
                         title="Restore"
                       >
@@ -334,14 +330,14 @@ const FileCard = React.memo(function FileCard({
                         onClick={() => onPermanentlyDelete?.(file.id)}
                         className="w-6 h-6 rounded flex items-center justify-center transition-colors"
                         style={{
-                          color: '#F56565',
-                          background: '#2D3748',
+                          color: colors.errorRed,
+                          background: colors.inputBackground,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#742A2A';
+                          e.currentTarget.style.background = colors.badgeErrorBg;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#2D3748';
+                          e.currentTarget.style.background = colors.inputBackground;
                         }}
                         title="Permanently Delete"
                       >
@@ -354,14 +350,14 @@ const FileCard = React.memo(function FileCard({
                       <button
                         className="w-6 h-6 rounded flex items-center justify-center transition-colors"
                         style={{
-                          color: file.isStarred ? '#F6AD55' : secondaryText,
-                          background: '#2D3748',
+                          color: file.isStarred ? colors.warningYellow : colors.colors.secondaryText,
+                          background: colors.inputBackground,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#4A5568';
+                          e.currentTarget.style.background = colors.hoverBackgroundStrong;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#2D3748';
+                          e.currentTarget.style.background = colors.inputBackground;
                         }}
                         onClick={() => {
                           if (onStar) {
@@ -376,23 +372,23 @@ const FileCard = React.memo(function FileCard({
                       <button
                         className="w-6 h-6 rounded flex items-center justify-center transition-colors"
                         style={{
-                          color: secondaryText,
-                          background: '#2D3748',
+                          color: colors.colors.secondaryText,
+                          background: colors.inputBackground,
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#4A5568';
+                          e.currentTarget.style.background = colors.hoverBackgroundStrong;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = '#2D3748';
+                          e.currentTarget.style.background = colors.inputBackground;
                         }}
                         onClick={() => onSelect(file.id)}
                         title="Select file"
                       >
-                        <div 
+                        <div
                           className="w-4 h-4 rounded border"
                           style={{
-                            borderColor: isSelected ? blueAccent : '#4A5568',
-                            background: isSelected ? blueAccent : 'transparent',
+                            borderColor: isSelected ? colors.primaryBlue : colors.border,
+                            background: isSelected ? colors.primaryBlue : 'transparent',
                           }}
                         />
                       </button>
@@ -407,8 +403,8 @@ const FileCard = React.memo(function FileCard({
                   <button
                     className="px-3 py-1 rounded text-sm font-medium transition-colors"
                     style={{
-                      background: blueAccent,
-                      color: lightText,
+                      background: colors.primaryBlue,
+                      color: colors.primaryText,
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.opacity = '0.9';
@@ -433,9 +429,9 @@ const FileCard = React.memo(function FileCard({
                     onChange={(e) => setEditingType(e.target.value as ResumeFile['type'])}
                     className="text-xs px-2 py-1 rounded focus:outline-none"
                     style={{
-                        background: '#2D3748',
-                        color: lightText,
-                        border: `1px solid ${blueAccent}`,
+                        background: colors.inputBackground,
+                        color: colors.primaryText,
+                        border: `1px solid ${colors.primaryBlue}`,
                     }}
                   >
                     {FILE_TYPE_OPTIONS.map((option) => (
@@ -449,8 +445,8 @@ const FileCard = React.memo(function FileCard({
                     disabled={isSaving || !editingName.trim()}
                     className="p-1.5 rounded transition-colors"
                     style={{
-                        color: isSaving || !editingName.trim() ? '#718096' : '#48BB78',
-                        background: isSaving || !editingName.trim() ? 'transparent' : '#22543D',
+                        color: isSaving || !editingName.trim() ? colors.tertiaryText : colors.successGreen,
+                        background: isSaving || !editingName.trim() ? 'transparent' : colors.badgeSuccessBg,
                     }}
                     title="Save (Ctrl/Cmd + Enter)"
                   >
@@ -461,17 +457,17 @@ const FileCard = React.memo(function FileCard({
                     disabled={isSaving}
                     className="p-1.5 rounded transition-colors"
                     style={{
-                        color: secondaryText,
+                        color: colors.secondaryText,
                     }}
                     onMouseEnter={(e) => {
                       if (!isSaving) {
-                          e.currentTarget.style.color = '#F56565';
-                          e.currentTarget.style.background = '#742A2A';
+                          e.currentTarget.style.color = colors.errorRed;
+                          e.currentTarget.style.background = colors.badgeErrorBg;
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSaving) {
-                          e.currentTarget.style.color = secondaryText;
+                          e.currentTarget.style.color = colors.secondaryText;
                         e.currentTarget.style.background = 'transparent';
                       }
                     }}
@@ -490,21 +486,21 @@ const FileCard = React.memo(function FileCard({
         <div className="mb-4 space-y-1">
           <div 
             className="flex items-center gap-2 text-sm"
-            style={{ color: secondaryText }}
+            style={{ color: colors.secondaryText }}
           >
             <span>{formattedDateTime}</span>
-            <span style={{ color: '#718096' }}>({relativeUpdated})</span>
+            <span style={{ color: colors.tertiaryText }}>({relativeUpdated})</span>
           </div>
           <div 
             className="flex items-center gap-2 text-sm"
-            style={{ color: secondaryText }}
+            style={{ color: colors.secondaryText }}
           >
             <span>{formattedSize}</span>
             {file.comments && file.comments.length > 0 && (
               <>
-                <span style={{ color: '#718096' }}>•</span>
+                <span style={{ color: colors.tertiaryText }}>•</span>
                 <div className="flex items-center gap-1">
-                  <MessageCircle size={14} style={{ color: secondaryText }} />
+                  <MessageCircle size={14} style={{ color: colors.secondaryText }} />
                   <span>{file.comments.length} {file.comments.length === 1 ? 'comment' : 'comments'}</span>
                 </div>
               </>
@@ -530,11 +526,11 @@ const FileCard = React.memo(function FileCard({
                     }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                     style={{
-                      color: secondaryText,
+                      color: colors.secondaryText,
                       background: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#2D3748';
+                      e.currentTarget.style.background = colors.inputBackground;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';
@@ -561,11 +557,11 @@ const FileCard = React.memo(function FileCard({
                       }}
                       className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors w-full"
                       style={{
-                        color: secondaryText,
+                        color: colors.secondaryText,
                         background: 'transparent',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#2D3748';
+                        e.currentTarget.style.background = colors.inputBackground;
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
@@ -595,11 +591,11 @@ const FileCard = React.memo(function FileCard({
                     }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                     style={{
-                      color: secondaryText,
+                      color: colors.secondaryText,
                       background: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#2D3748';
+                      e.currentTarget.style.background = colors.inputBackground;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';
@@ -626,12 +622,12 @@ const FileCard = React.memo(function FileCard({
                 }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                 style={{
-                      color: comments.showComments ? blueAccent : secondaryText,
-                      background: comments.showComments ? '#2D3748' : 'transparent',
+                      color: comments.showComments ? colors.primaryBlue : colors.secondaryText,
+                      background: comments.showComments ? colors.inputBackground : 'transparent',
                 }}
                     onMouseEnter={(e) => {
                       if (!comments.showComments) {
-                        e.currentTarget.style.background = '#2D3748';
+                        e.currentTarget.style.background = colors.inputBackground;
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -656,12 +652,12 @@ const FileCard = React.memo(function FileCard({
                   onClick={handleStartEdit}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                   style={{
-                      color: isEditing ? blueAccent : secondaryText,
-                      background: isEditing ? '#2D3748' : 'transparent',
+                      color: isEditing ? colors.primaryBlue : colors.secondaryText,
+                      background: isEditing ? colors.inputBackground : 'transparent',
                   }}
                   onMouseEnter={(e) => {
                     if (!isEditing) {
-                        e.currentTarget.style.background = '#2D3748';
+                        e.currentTarget.style.background = colors.inputBackground;
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -686,11 +682,11 @@ const FileCard = React.memo(function FileCard({
                     }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                     style={{
-                      color: secondaryText,
+                      color: colors.secondaryText,
                       background: 'transparent',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#2D3748';
+                      e.currentTarget.style.background = colors.inputBackground;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';
@@ -713,11 +709,11 @@ const FileCard = React.memo(function FileCard({
                 }}
                     className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
                 style={{
-                      color: '#F56565',
+                      color: colors.errorRed,
                       background: 'transparent',
                 }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#742A2A';
+                      e.currentTarget.style.background = colors.badgeErrorBg;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = 'transparent';

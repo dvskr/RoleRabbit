@@ -15,15 +15,6 @@ interface FilesTabsBarProps {
   credentialsCount: number;
   onUpload: () => void;
   colors?: any;
-}
-
-interface FilesTabsBarProps {
-  activeTab: TabType;
-  onTabChange: (tab: TabType) => void;
-  filesCount: number;
-  credentialsCount: number;
-  onUpload: () => void;
-  colors?: any;
   showDeleted?: boolean; // Add showDeleted prop
 }
 
