@@ -5,6 +5,7 @@ import { Briefcase, Plus, Trash2, Edit2, X, Calendar, MapPin, Building2, FileTex
 import FormField from '../components/FormField';
 import { UserData, WorkExperience, Project } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { sanitizeWorkExperiences, sanitizeProjects, normalizeToArray } from '../utils/dataSanitizer';
 
 interface ProfessionalTabProps {
   userData: UserData;
@@ -19,167 +20,11 @@ export default function ProfessionalTab({
 }: ProfessionalTabProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  
+
   const VALID_PROJECT_TYPES: WorkExperience['projectType'][] = ['Client Project', 'Full-time', 'Part-time', 'Contract', 'Freelance', 'Consulting', 'Internship'];
 
-  const cleanTechnologyString = (value: unknown): string => {
-    if (value === null || value === undefined) return '';
-    let tech = String(value).trim();
-    if (!tech) return '';
-
-    // Remove surrounding brackets
-    tech = tech.replace(/^\[|\]$/g, '').trim();
-
-    // Normalize escaped quotes
-    tech = tech.replace(/\\"/g, '"').replace(/\\'/g, "'");
-
-    // Remove wrapping quotes repeatedly
-    const removeWrappingQuotes = (input: string): string => {
-      let result = input.trim();
-      while (
-        (result.startsWith('"') && result.endsWith('"')) ||
-        (result.startsWith("'") && result.endsWith("'"))
-      ) {
-        result = result.substring(1, result.length - 1).trim();
-      }
-      return result;
-    };
-
-    tech = removeWrappingQuotes(tech);
-
-    // Remove trailing commas or stray brackets
-    tech = tech.replace(/^,+|,+$/g, '').replace(/^\[|\]$/g, '').trim();
-
-    return tech;
-  };
-
-  const normalizeTechnologiesField = (raw: unknown): string[] => {
-    if (!raw) return [];
-
-    const collect = (values: unknown[]): string[] =>
-      values
-        .map((item) => cleanTechnologyString(item))
-        .filter((item) => item.length > 0);
-
-    if (Array.isArray(raw)) {
-      return collect(raw);
-    }
-
-    if (raw && typeof raw === 'object') {
-      const values = Object.keys(raw)
-        .sort((a, b) => {
-          const aNum = Number(a);
-          const bNum = Number(b);
-          if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
-            return aNum - bNum;
-          }
-          return a.localeCompare(b);
-        })
-        .map((key) => (raw as Record<string, unknown>)[key]);
-      return collect(values);
-    }
-
-    if (typeof raw === 'string') {
-      const trimmed = raw.trim();
-      if (!trimmed) return [];
-
-      // Try JSON first
-      if (trimmed.startsWith('[')) {
-        try {
-          const parsed = JSON.parse(trimmed.replace(/"\s+"/g, '", "'));
-          if (Array.isArray(parsed)) {
-            return collect(parsed);
-          }
-        } catch {
-          // Fall back to manual split below
-        }
-      }
-
-      return collect(trimmed.split(',').map((item) => item.trim()));
-    }
-
-    return collect([raw]);
-  };
-
-  const normalizeWorkExperiences = (experiences: unknown): WorkExperience[] => {
-    if (!experiences) return [];
-
-    const toArray = (input: unknown): unknown[] => {
-      if (!input) return [];
-      if (Array.isArray(input)) return input;
-      if (typeof input === 'string') {
-        try {
-          const parsed = JSON.parse(input);
-          return toArray(parsed);
-        } catch {
-          return [];
-        }
-      }
-      if (input instanceof Map) {
-        return Array.from(input.values());
-      }
-      if (typeof input === 'object') {
-        return Object.values(input);
-      }
-      return [];
-    };
-
-    const items = toArray(experiences);
-
-    return items.map((exp: unknown) => {
-      if (!exp || typeof exp !== 'object') {
-        return {
-          id: `exp-${Date.now()}-${Math.random()}`,
-          company: '',
-          role: '',
-          location: '',
-          startDate: '',
-          endDate: '',
-          isCurrent: false,
-          description: '',
-          technologies: [],
-          projectType: 'Full-time' as const
-        } as WorkExperience;
-      }
-      
-      const expObj = exp as Record<string, unknown>;
-      const id = (expObj.id || expObj._id || expObj.uuid || expObj.tempId || `exp-${Date.now()}-${Math.random()}`) as string;
-      const rawEndDate = (expObj.endDate ?? expObj.end ?? '') as string | null | undefined;
-      const normalizedEndDateValue = typeof rawEndDate === 'string' ? rawEndDate.trim() : rawEndDate;
-      const startDate = (expObj.startDate ?? expObj.start ?? '') as string;
-      const isCurrent = Boolean(expObj.isCurrent) || normalizedEndDateValue === '' || normalizedEndDateValue === null || normalizedEndDateValue === 'Present';
-      const normalizeProjectType = (value: unknown): WorkExperience['projectType'] => {
-        if (typeof value === 'string') {
-          const match = VALID_PROJECT_TYPES.find(
-            (type) => type.toLowerCase() === value.toLowerCase()
-          );
-          if (match) {
-            return match;
-          }
-        }
-        return 'Full-time';
-      };
-      const projectType = normalizeProjectType(expObj.projectType ?? expObj.type);
-
-      // Normalize technologies array
-      const technologies = normalizeTechnologiesField(expObj.technologies);
-
-      return {
-        id,
-        company: (expObj.company as string) || '',
-        role: (expObj.role as string) || (expObj.title as string) || '',
-        location: (expObj.location as string) || '',
-        startDate,
-        endDate: isCurrent ? '' : (normalizedEndDateValue || ''),
-        isCurrent,
-        description: (expObj.description as string) || '',
-        technologies,
-        projectType
-      } as WorkExperience;
-    });
-  };
-  
-  const workExperiences = normalizeWorkExperiences(userData.workExperiences);
+  // Use sanitizer functions from dataSanitizer utility
+  const workExperiences = sanitizeWorkExperiences(userData.workExperiences, { keepDrafts: true });
 
   const createEmptyExperience = (): WorkExperience => ({
     id: `exp-${Date.now()}-${Math.random()}`,
@@ -298,103 +143,19 @@ export default function ProfessionalTab({
     }
   };
 
-  // Normalize projects array
-  // Note: We don't trim values here to preserve spaces during editing
-  // Trimming should only happen when saving/validating, not during user input
-  const normalizeProjects = (projects: unknown): Project[] => {
-    if (!projects) return [];
-    if (Array.isArray(projects)) {
-      return projects.map((proj: unknown) => {
-        if (!proj || typeof proj !== 'object') {
-          return {
-            id: `proj-${Date.now()}-${Math.random()}`,
-            title: '',
-            description: '',
-            technologies: [],
-            date: ''
-          } as Project;
-        }
-        
-        const projObj = proj as Record<string, unknown>;
-        
-        return {
-          id: (projObj.id || projObj._id || projObj.uuid || projObj.tempId || `proj-${Date.now()}-${Math.random()}`) as string,
-          title: (typeof projObj.title === 'string' ? projObj.title : '') as string,
-          description: (typeof projObj.description === 'string' ? projObj.description : '') as string,
-          technologies: (() => {
-            if (!projObj.technologies) return [];
-            if (Array.isArray(projObj.technologies)) {
-            // Ensure all items are strings and filter out empty values
-              return projObj.technologies
-                .map((t: unknown) => String(t || '').trim())
-                .filter((t: string) => t.length > 0 && t !== 'null' && t !== 'undefined');
-            }
-            if (typeof projObj.technologies === 'string') {
-              const techStr = projObj.technologies.trim();
-            if (!techStr) return [];
-            
-            // Check if it looks like a stringified array with escaped quotes: [\"React\" \"TypeScript\"]
-            if (techStr.startsWith('[') && techStr.includes('\\"')) {
-              try {
-                // Handle pattern like: [\"React\" \"TypeScript\" \"Python\"]
-                // Replace escaped quotes and add commas between items
-                let cleaned = techStr.replace(/\\"/g, '"');
-                // If there are spaces between quoted items but no commas, add them
-                cleaned = cleaned.replace(/"\s+"/g, '", "');
-                const parsed = JSON.parse(cleaned);
-                if (Array.isArray(parsed)) {
-                  return parsed
-                    .map((t: unknown) => String(t || '').trim())
-                    .filter((t: string) => t.length > 0);
-                }
-              } catch {
-                // Try alternative: split by space and clean each item
-                try {
-                  const items = techStr
-                    .replace(/^\[|\]$/g, '') // Remove brackets
-                    .split(/\s+/) // Split by whitespace
-                    .map((item: string) => item.replace(/\\"/g, '').replace(/^"|"$/g, '').trim())
-                    .filter((item: string) => item.length > 0);
-                  if (items.length > 0) {
-                    return items;
-                  }
-                } catch {
-                  // Fall through to other parsing methods
-                }
-              }
-            }
-            
-            // Try to parse as JSON first (handles JSON array strings like '["React", "TypeScript"]')
-            try {
-              const parsed = JSON.parse(techStr);
-              if (Array.isArray(parsed)) {
-                return parsed
-                  .map((t: any) => String(t || '').trim())
-                  .filter((t: string) => t.length > 0);
-              }
-            } catch {
-              // Not JSON, treat as comma-separated string
-            }
-            
-            // Split by comma for comma-separated strings
-            return techStr
-              .split(',')
-              .map((t: string) => t.trim().replace(/^["\[]|["\]]$/g, '').trim())
-              .filter((t: string) => t.length > 0);
-          }
-          return [];
-        })(),
-            date: (typeof projObj.date === 'string' ? projObj.date : '') as string,
-            link: (typeof projObj.link === 'string' ? projObj.link : '') as string,
-            github: (typeof projObj.github === 'string' ? projObj.github : '') as string,
-            media: Array.isArray(projObj.media) ? (projObj.media as unknown[]) : []
-          } as Project;
-        });
+  // Use sanitizer function for projects
+  const projects = sanitizeProjects(userData.projects || [], { keepDrafts: true }) as Project[];
+
+  // Simple helper for parsing comma-separated technologies from user input
+  const normalizeTechnologiesField = (input: string[] | string): string[] => {
+    if (Array.isArray(input)) {
+      return input.map(t => String(t || '').trim()).filter(t => t.length > 0);
+    }
+    if (typeof input === 'string') {
+      return input.split(',').map(t => t.trim()).filter(t => t.length > 0);
     }
     return [];
   };
-
-  const projects = normalizeProjects(userData.projects || []);
 
   // Project management functions
   const addProject = () => {

@@ -6,22 +6,7 @@ import FormField from '../components/FormField';
 import ProfilePicture from '../components/ProfilePicture';
 import { UserData } from '../types/profile';
 import { useTheme } from '../../../contexts/ThemeContext';
-
-// Helper function to normalize URL for display and clicking
-const normalizeUrl = (url: string | null | undefined): string | null => {
-  if (!url || !url.trim()) return null;
-  const trimmed = url.trim();
-  // If it already has a protocol, return as is
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  // If it starts with //, assume https
-  if (trimmed.startsWith('//')) {
-    return `https:${trimmed}`;
-  }
-  // Otherwise, prepend https://
-  return `https://${trimmed}`;
-};
+import { normalizeUrl } from '../../../utils/urlHelpers';
 
 interface ProfileTabProps {
   userData: UserData;
