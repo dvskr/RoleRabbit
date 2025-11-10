@@ -94,6 +94,7 @@ export const QuickActions: React.FC = () => {
     } catch (error) {
       console.error('Error creating task:', error);
       showError(error instanceof Error ? error.message : 'Failed to create task. Please try again.');
+      throw error; // Re-throw so modal stays open on failure
     }
   };
 
