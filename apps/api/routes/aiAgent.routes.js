@@ -353,6 +353,51 @@ module.exports = async function aiAgentRoutes(fastify) {
   });
 
   /**
+   * POST /api/ai-agent/tasks/interview-prep
+   * Create an interview preparation task
+   */
+  fastify.post('/api/ai-agent/tasks/interview-prep', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { jobDescription, jobTitle, company, baseResumeId } = request.body;
+
+      if (!jobDescription || !company) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Job description and company are required'
+        });
+      }
+
+      const taskData = {
+        type: 'INTERVIEW_PREP',
+        jobDescription,
+        jobTitle,
+        company,
+        baseResumeId
+      };
+
+      const task = await createTask(userId, taskData);
+
+      return reply.status(201).send({
+        success: true,
+        task
+      });
+    } catch (error) {
+      if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+        return reply.status(403).send({
+          success: false,
+          error: error.message
+        });
+      }
+      logger.error('Failed to create interview prep task', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to create interview prep task'
+      });
+    }
+  });
+
+  /**
    * POST /api/ai-agent/tasks/bulk-apply
    * Create bulk job application tasks with proper validation and error handling
    */

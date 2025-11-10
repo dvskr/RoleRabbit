@@ -121,11 +121,43 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to start bulk processing');
+        throw new Error(errorData.error || errorData.message || 'Failed to start bulk processing');
       }
 
       const result = await response.json();
-      showSuccess(`Started bulk processing ${jobs.length} jobs! Track progress in Active Tasks.`);
+
+      // Enhanced feedback based on API response
+      if (result.summary) {
+        const { total, successful, failed } = result.summary;
+
+        if (failed > 0) {
+          // Partial success - show warning with details
+          const failureDetails = result.failures?.map((f: any) =>
+            `• Job ${f.index} (${f.company} - ${f.jobTitle}): ${f.error}`
+          ).join('\n') || '';
+
+          console.group('❌ Bulk Processing - Partial Failure');
+          console.warn(`${successful} of ${total} jobs started successfully`);
+          console.warn(`${failed} job${failed !== 1 ? 's' : ''} failed:`);
+          if (result.failures) {
+            console.table(result.failures);
+          }
+          console.groupEnd();
+
+          // Show user-friendly warning
+          showError(
+            `Started ${successful} of ${total} jobs. ${failed} failed. ` +
+            `Check console (F12) for details or try those jobs individually.`
+          );
+        } else {
+          // Full success
+          showSuccess(`All ${successful} job${successful !== 1 ? 's' : ''} started successfully! Track progress in Active Tasks.`);
+        }
+      } else {
+        // Fallback for legacy response format
+        showSuccess(`Started bulk processing ${jobs.length} jobs! Track progress in Active Tasks.`);
+      }
+
       await refreshActiveTasks();
       onClose();
 
