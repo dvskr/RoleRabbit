@@ -302,6 +302,7 @@ fastify.register(require('./routes/baseResume.routes'));
 fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));
+fastify.register(require('./routes/aiAgent.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {

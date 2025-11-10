@@ -5,9 +5,10 @@ import { ActiveTask } from '../types';
 
 interface TaskCardProps {
   task: ActiveTask;
+  onClick?: () => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
   const { theme } = useTheme();
   const colors = theme?.colors;
 
@@ -17,16 +18,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
   return (
     <div
-      className="rounded-lg p-4 transition-all"
+      className="rounded-lg p-4 transition-all cursor-pointer"
       style={{
         background: colors.cardBackground,
         border: `1px solid ${colors.border}`,
       }}
+      onClick={onClick}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = colors.borderFocused;
+        e.currentTarget.style.transform = 'translateY(-2px)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = colors.border;
+        e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
       <div className="flex items-start justify-between mb-3">
