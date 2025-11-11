@@ -2,7 +2,7 @@
  * Dashboard helper functions for tab metadata
  */
 
-import { HomeIcon, FolderOpen, Briefcase, MessageSquare, Mail, FileText, Globe, LayoutTemplate, UserIcon, Sparkles } from 'lucide-react';
+import { HomeIcon, FolderOpen, Briefcase, MessageSquare, Mail, FileText, Globe, LayoutTemplate, UserIcon, Sparkles, Zap } from 'lucide-react';
 import type { DashboardTab } from '../constants/dashboard.constants';
 
 export function getDashboardTabTitle(tab: DashboardTab): string {
@@ -19,6 +19,7 @@ export function getDashboardTabTitle(tab: DashboardTab): string {
     case 'dashboard': return 'Dashboard';
     case 'ai-agents':
     case 'agents': return 'AI Agents';
+    case 'ai-auto-apply': return 'AI Auto Apply';
     default: return 'RoleReady';
   }
 }
@@ -37,6 +38,7 @@ export function getDashboardTabSubtitle(tab: DashboardTab): string | undefined {
     case 'profile': return 'Manage your profile settings';
     case 'ai-agents':
     case 'agents': return 'AI-powered assistants';
+    case 'ai-auto-apply': return 'Automate job applications with AI';
     default: return undefined;
   }
 }
@@ -55,6 +57,7 @@ export function getDashboardTabIcon(tab: DashboardTab) {
     case 'profile': return UserIcon;
     case 'agents':
     case 'ai-agents': return Sparkles;
+    case 'ai-auto-apply': return Zap;
     default: return undefined;
   }
 }
@@ -73,16 +76,18 @@ export function getDashboardTabIconColor(tab: DashboardTab): string {
     case 'profile': return 'text-slate-600';
     case 'agents':
     case 'ai-agents': return 'text-purple-600';
+    case 'ai-auto-apply': return 'text-yellow-600';
     default: return 'text-blue-600';
   }
 }
 
 export function shouldHidePageHeader(tab: DashboardTab): boolean {
-  return tab === 'profile' || 
-         tab === 'storage' || 
-         tab === 'portfolio' || 
-         tab === 'cover-letter' || 
-         tab === 'agents' || 
-         tab === 'ai-agents';
+  return tab === 'profile' ||
+         tab === 'storage' ||
+         tab === 'portfolio' ||
+         tab === 'cover-letter' ||
+         tab === 'agents' ||
+         tab === 'ai-agents' ||
+         tab === 'ai-auto-apply';
 }
 

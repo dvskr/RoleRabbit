@@ -33,6 +33,7 @@ const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 const AIAgents = dynamic(() => import('../../components/AIAgents/index'), { ssr: false });
+const AIAutoApply = dynamic(() => import('../../components/AIAutoApply'), { ssr: false });
 import {
   ResumeData,
   CustomSection,
@@ -859,7 +860,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             fallback={
               <div className="h-full flex items-center justify-center">
                 <div className="text-center">
-                  <p className="text-red-600 mb-4">Error loading AI Auto-Apply</p>
+                  <p className="text-red-600 mb-4">Error loading AI Agents</p>
                   <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
                     Refresh Page
                   </button>
@@ -868,6 +869,23 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             }
           >
             <AIAgents />
+          </ErrorBoundary>
+        );
+      case 'ai-auto-apply':
+        return (
+          <ErrorBoundary
+            fallback={
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-600 mb-4">Error loading AI Auto Apply</p>
+                  <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">
+                    Refresh Page
+                  </button>
+                </div>
+              </div>
+            }
+          >
+            <AIAutoApply />
           </ErrorBoundary>
         );
       default:

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight, Zap, Sparkles } from 'lucide-react';
 import { RabbitLogo, RabbitLogoWithText } from '../ui/RabbitLogo';
 import { useTheme } from '../../contexts/ThemeContext';
 import NavigationItem from './NavigationItem';
@@ -63,7 +63,8 @@ export default function SidebarNew({
     {
       title: 'APPLY',
       items: [
-        { id: 'agents', icon: Bot, label: 'AI Auto-Apply' },
+        { id: 'ai-auto-apply', icon: Zap, label: 'AI Auto Apply' },
+        { id: 'agents', icon: Sparkles, label: 'AI Agents' },
         { id: 'tracker', icon: Briefcase, label: 'Job Tracker' },
       ],
     },

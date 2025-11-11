@@ -6,7 +6,7 @@ export const DEFAULT_TAB = 'dashboard' as const;
 export const DEFAULT_TEMPLATE_ID = 'ats-classic' as const;
 export const DEFAULT_ADDED_TEMPLATES = ['ats-classic', 'ats-modern'] as const;
 
-export type DashboardTab = 
+export type DashboardTab =
   | 'dashboard'
   | 'profile'
   | 'storage'
@@ -19,7 +19,8 @@ export type DashboardTab =
   | 'cover-letter'
   | 'portfolio'
   | 'ai-agents'
-  | 'agents';  // Alias for ai-agents (legacy support)
+  | 'agents'  // Alias for ai-agents (legacy support)
+  | 'ai-auto-apply';
 
 export const DASHBOARD_TABS: DashboardTab[] = [
   'dashboard',
@@ -33,6 +34,7 @@ export const DASHBOARD_TABS: DashboardTab[] = [
   'cover-letter',
   'portfolio',
   'ai-agents',
+  'ai-auto-apply',
 ];
 
 export const DEFAULT_SIDEBAR_STATE = false;
