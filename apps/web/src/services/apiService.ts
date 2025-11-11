@@ -42,6 +42,10 @@ class ApiService {
 
   /**
    * Generic fetch wrapper with error handling and retry logic
+   * @param endpoint - API endpoint to call
+   * @param options - Fetch options (can include signal for cancellation)
+   * @param retryCount - Internal retry counter
+   * @param skipRetry - Skip retry logic (for token refresh)
    */
   private async request<T>(
     endpoint: string,
@@ -397,12 +401,15 @@ class ApiService {
 
   /**
    * Upload storage file
+   * @param formData - Form data containing the file
+   * @param signal - Optional AbortSignal for cancellation
    */
-  async uploadStorageFile(formData: FormData): Promise<any> {
+  async uploadStorageFile(formData: FormData, signal?: AbortSignal): Promise<any> {
     const response = await fetch(`${this.baseUrl}/api/storage/files/upload`, {
       method: 'POST',
       body: formData,
       credentials: 'include',
+      signal,
     });
 
     if (!response.ok) {
@@ -415,6 +422,9 @@ class ApiService {
 
   /**
    * Get cloud storage files
+   * @param folderId - Optional folder ID to filter by
+   * @param includeDeleted - Include deleted files
+   * @param options - Additional options including signal for cancellation
    */
   async getCloudFiles(
     folderId?: string,
@@ -423,6 +433,7 @@ class ApiService {
       limit?: number;
       cursor?: string;
       include?: string;
+      signal?: AbortSignal;
     }
   ): Promise<any> {
     const params = new URLSearchParams();
@@ -438,16 +449,20 @@ class ApiService {
     return this.request(endpoint, {
       method: 'GET',
       credentials: 'include',
+      signal: options?.signal,
     });
   }
 
   /**
    * Download cloud file
+   * @param fileId - File ID to download
+   * @param signal - Optional AbortSignal for cancellation
    */
-  async downloadCloudFile(fileId: string): Promise<Blob> {
+  async downloadCloudFile(fileId: string, signal?: AbortSignal): Promise<Blob> {
     const response = await fetch(`${this.baseUrl}/api/storage/files/${fileId}/download`, {
       method: 'GET',
       credentials: 'include',
+      signal,
     });
 
     if (!response.ok) {
@@ -460,22 +475,29 @@ class ApiService {
 
   /**
    * Update cloud file
+   * @param fileId - File ID to update
+   * @param updates - Update payload
+   * @param signal - Optional AbortSignal for cancellation
    */
-  async updateCloudFile(fileId: string, updates: any): Promise<any> {
+  async updateCloudFile(fileId: string, updates: any, signal?: AbortSignal): Promise<any> {
     return this.request(`/api/storage/files/${fileId}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
       credentials: 'include',
+      signal,
     });
   }
 
   /**
    * Delete cloud file (soft delete)
+   * @param fileId - File ID to delete
+   * @param signal - Optional AbortSignal for cancellation
    */
-  async deleteCloudFile(fileId: string): Promise<any> {
+  async deleteCloudFile(fileId: string, signal?: AbortSignal): Promise<any> {
     return this.request(`/api/storage/files/${fileId}`, {
       method: 'DELETE',
       credentials: 'include',
+      signal,
     });
   }
 
