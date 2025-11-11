@@ -902,4 +902,95 @@ module.exports = async function aiAgentRoutes(fastify) {
       });
     }
   });
+
+  // ============================================
+  // JOB SCRAPING ROUTES
+  // ============================================
+
+  /**
+   * POST /api/ai-agent/scrape-job
+   * Scrape job details from a URL
+   */
+  fastify.post('/api/ai-agent/scrape-job', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const { url } = request.body;
+
+      if (!url) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Job URL is required'
+        });
+      }
+
+      // Import job scraper service
+      const jobScraper = require('../services/jobScrapers');
+
+      // Scrape job
+      const result = await jobScraper.scrapeJobFromUrl(url);
+
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          error: result.error
+        });
+      }
+
+      return reply.send({
+        success: true,
+        platform: result.platform,
+        job: result.data
+      });
+
+    } catch (error) {
+      logger.error('Job scraping failed', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to scrape job details'
+      });
+    }
+  });
+
+  /**
+   * POST /api/ai-agent/scrape-jobs-bulk
+   * Scrape multiple jobs from URLs
+   */
+  fastify.post('/api/ai-agent/scrape-jobs-bulk', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const { urls } = request.body;
+
+      if (!Array.isArray(urls) || urls.length === 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Array of URLs is required'
+        });
+      }
+
+      if (urls.length > 20) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Maximum 20 URLs can be scraped at once'
+        });
+      }
+
+      // Import job scraper service
+      const jobScraper = require('../services/jobScrapers');
+
+      // Scrape all jobs
+      const result = await jobScraper.scrapeMultipleJobs(urls);
+
+      return reply.send({
+        success: true,
+        jobs: result.successful.map(r => r.data),
+        failures: result.failed,
+        summary: result.summary
+      });
+
+    } catch (error) {
+      logger.error('Bulk job scraping failed', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to scrape jobs'
+      });
+    }
+  });
 };
