@@ -70,7 +70,7 @@ const formatBytes = (bytes?: number): string => {
   return `${value.toFixed(precision)} ${STORAGE_UNITS[index]}`;
 };
 
-export const FolderSidebar: React.FC<FolderSidebarProps> = ({
+const FolderSidebarComponent: React.FC<FolderSidebarProps> = ({
   folders,
   selectedFolderId,
   showDeleted,
@@ -380,4 +380,6 @@ export const FolderSidebar: React.FC<FolderSidebarProps> = ({
   );
 };
 
-export default RedesignedFolderSidebar;
+// Memoize component to prevent unnecessary re-renders
+export const FolderSidebar = React.memo(FolderSidebarComponent);
+export default FolderSidebar;

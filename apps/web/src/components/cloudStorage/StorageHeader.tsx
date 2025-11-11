@@ -11,7 +11,7 @@ interface StorageHeaderProps {
   colors?: any;
 }
 
-export const StorageHeader: React.FC<StorageHeaderProps> = ({
+const StorageHeaderComponent: React.FC<StorageHeaderProps> = ({
   storageInfo,
   onRefresh,
   colors,
@@ -74,4 +74,6 @@ export const StorageHeader: React.FC<StorageHeaderProps> = ({
   );
 };
 
-export default RedesignedStorageHeader;
+// Memoize component to prevent unnecessary re-renders
+export const StorageHeader = React.memo(StorageHeaderComponent);
+export default StorageHeader;

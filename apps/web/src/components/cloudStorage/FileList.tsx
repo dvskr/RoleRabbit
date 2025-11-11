@@ -130,7 +130,7 @@ interface FileListProps {
   credentialsCount: number;
 }
 
-export const FileList: React.FC<FileListProps> = ({
+const FileListComponent: React.FC<FileListProps> = ({
   files,
   isLoading = false,
   searchTerm,
@@ -382,4 +382,6 @@ export const FileList: React.FC<FileListProps> = ({
   );
 };
 
-export default RedesignedFileList;
+// Memoize component to prevent unnecessary re-renders
+export const FileList = React.memo(FileListComponent);
+export default FileList;
