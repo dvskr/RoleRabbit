@@ -928,3 +928,25 @@ model AIAgentMetrics {
   @@index([userId, date])
   @@map("ai_agent_metrics")
 }
+
+model JobBoardSession {
+  id       String @id @default(cuid())
+  userId   Int
+  platform String // linkedin, indeed, etc.
+
+  // Encrypted session data
+  sessionData String @db.Text // Encrypted cookies and storage data
+  iv          String // Initialization vector for encryption
+  authTag     String // Authentication tag for AES-GCM
+
+  // Metadata
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
+  @@index([platform])
+  @@index([expiresAt])
+  @@map("job_board_sessions")
+}
