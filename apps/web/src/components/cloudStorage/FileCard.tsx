@@ -46,6 +46,9 @@ import {
   ShareModal,
   CommentsModal,
   FilePreviewModal,
+  FileCardHeader,
+  FileCardActions,
+  FileCardMetadata,
 } from './fileCard/components';
 import { MoveFileModal } from './MoveFileModal';
 
@@ -255,258 +258,45 @@ const FileCard = React.memo(function FileCard({
         }}
       >
         {/* Top Section - Header */}
-        <div className="mb-4">
-          <div className="flex items-start gap-4">
-            {/* Blue Square Icon */}
-            <div
-              className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{
-                background: colors.primaryBlue,
-              }}
-            >
-              <FileText size={24} color={colors.primaryText} />
-            </div>
+        <FileCardHeader
+          file={file}
+          isEditing={isEditing}
+          editingName={editingName}
+          isSaving={isSaving}
+          isSelected={isSelected}
+          showDeleted={showDeleted}
+          colors={colors}
+          onEditingNameChange={setEditingName}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
+          onRestore={onRestore}
+          onPermanentlyDelete={onPermanentlyDelete}
+          onStar={onStar}
+          onSelect={onSelect}
+        />
 
-            {/* File Name and Resume Button Section */}
-            <div className="flex-1 min-w-0">
-              {/* File Name Row */}
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex-1 min-w-0">
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      handleSaveEdit();
-                    } else if (e.key === 'Escape') {
-                      handleCancelEdit();
-                    }
-                  }}
-                      className="font-bold text-lg w-full px-2 py-1 rounded-lg focus:outline-none"
-                  style={{
-                        color: colors.primaryText,
-                        background: colors.inputBackground,
-                        border: `2px solid ${colors.primaryBlue}`,
-                  }}
-                  autoFocus
-                  disabled={isSaving}
-                />
-              ) : (
-                <h3
-                      className="font-bold text-lg break-words"
-                      style={{ color: colors.primaryText }}
-                      title={file.name}
-                >
-                  {file.name}
-                </h3>
-              )}
-                </div>
-
-                {/* Top Right Icons - Star and Square */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {showDeleted && file.deletedAt ? (
-                    <>
-                      <button
-                        onClick={() => onRestore?.(file.id)}
-                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
-                        style={{
-                          color: colors.successGreen,
-                          background: colors.inputBackground,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = colors.badgeSuccessBg;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = colors.inputBackground;
-                        }}
-                        title="Restore"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-                      <button
-                        onClick={() => onPermanentlyDelete?.(file.id)}
-                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
-                        style={{
-                          color: colors.errorRed,
-                          background: colors.inputBackground,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = colors.badgeErrorBg;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = colors.inputBackground;
-                        }}
-                        title="Permanently Delete"
-                      >
-                        <Trash size={14} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {/* Star Icon */}
-                      <button
-                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
-                        style={{
-                          color: file.isStarred ? colors.warningYellow : colors.colors.secondaryText,
-                          background: colors.inputBackground,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = colors.inputBackground;
-                        }}
-                        onClick={() => {
-                          if (onStar) {
-                            onStar(file.id);
-                          }
-                        }}
-                        title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
-                      >
-                        <Star size={14} className={file.isStarred ? 'fill-current' : ''} />
-                      </button>
-                      {/* Square Icon (Checkbox/Menu) */}
-                      <button
-                        className="w-6 h-6 rounded flex items-center justify-center transition-colors"
-                        style={{
-                          color: colors.colors.secondaryText,
-                          background: colors.inputBackground,
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = colors.hoverBackgroundStrong;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = colors.inputBackground;
-                        }}
-                        onClick={() => onSelect(file.id)}
-                        title="Select file"
-                      >
-                        <div
-                          className="w-4 h-4 rounded border"
-                          style={{
-                            borderColor: isSelected ? colors.primaryBlue : colors.border,
-                            background: isSelected ? colors.primaryBlue : 'transparent',
-                          }}
-                        />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Resume Button and Edit Controls - Directly below file name */}
-              <div className="flex items-center gap-2">
-                {!isEditing && (
-                  <button
-                    className="px-3 py-1 rounded text-sm font-medium transition-colors"
-                    style={{
-                      background: colors.primaryBlue,
-                      color: colors.primaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '0.9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                    }}
-                    onClick={() => {
-                      if (onEdit && file.type === 'resume') {
-                        // Navigate to resume editor or handle resume action
-                      }
-                    }}
-                  >
-                    Resume
-                  </button>
-                )}
-
-                {isEditing && (
-                  <div className="flex items-center gap-2">
-                  <select
-                    value={editingType}
-                    onChange={(e) => setEditingType(e.target.value as ResumeFile['type'])}
-                    className="text-xs px-2 py-1 rounded focus:outline-none"
-                    style={{
-                        background: colors.inputBackground,
-                        color: colors.primaryText,
-                        border: `1px solid ${colors.primaryBlue}`,
-                    }}
-                  >
-                    {FILE_TYPE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {formatTypeLabel(option)}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={isSaving || !editingName.trim()}
-                    className="p-1.5 rounded transition-colors"
-                    style={{
-                        color: isSaving || !editingName.trim() ? colors.tertiaryText : colors.successGreen,
-                        background: isSaving || !editingName.trim() ? 'transparent' : colors.badgeSuccessBg,
-                    }}
-                    title="Save (Ctrl/Cmd + Enter)"
-                  >
-                    <Check size={14} />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="p-1.5 rounded transition-colors"
-                    style={{
-                        color: colors.secondaryText,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSaving) {
-                          e.currentTarget.style.color = colors.errorRed;
-                          e.currentTarget.style.background = colors.badgeErrorBg;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSaving) {
-                          e.currentTarget.style.color = colors.secondaryText;
-                        e.currentTarget.style.background = 'transparent';
-                      }
-                    }}
-                    title="Cancel (Esc)"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-            </div>
-          </div>
-        </div>
+        {/* Resume Button and Edit Controls */}
+        <FileCardActions
+          file={file}
+          isEditing={isEditing}
+          editingType={editingType}
+          isSaving={isSaving}
+          editingName={editingName}
+          colors={colors}
+          onEditingTypeChange={setEditingType}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={handleCancelEdit}
+          onEdit={onEdit}
+        />
 
         {/* Middle Section - Metadata */}
-        <div className="mb-4 space-y-1">
-          <div 
-            className="flex items-center gap-2 text-sm"
-            style={{ color: colors.secondaryText }}
-          >
-            <span>{formattedDateTime}</span>
-            <span style={{ color: colors.tertiaryText }}>({relativeUpdated})</span>
-          </div>
-          <div 
-            className="flex items-center gap-2 text-sm"
-            style={{ color: colors.secondaryText }}
-          >
-            <span>{formattedSize}</span>
-            {file.comments && file.comments.length > 0 && (
-              <>
-                <span style={{ color: colors.tertiaryText }}>•</span>
-                <div className="flex items-center gap-1">
-                  <MessageCircle size={14} style={{ color: colors.secondaryText }} />
-                  <span>{file.comments.length} {file.comments.length === 1 ? 'comment' : 'comments'}</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+        <FileCardMetadata
+          formattedDateTime={formattedDateTime}
+          relativeUpdated={relativeUpdated}
+          formattedSize={formattedSize}
+          commentsCount={file.comments?.length || 0}
+          colors={colors}
+        />
 
         {/* Bottom Section - Actions Grid */}
             {!showDeleted && (
