@@ -84,6 +84,20 @@ export default function ApplyToJobForm({ onSuccess, onError }: ApplyToJobFormPro
         throw new Error(`No active credentials found for ${detectedPlatform}`);
       }
 
+      // Load user profile data for auto-filling
+      let userProfile: any = {};
+      try {
+        const profileData = await fetch('/api/user/profile', {
+          credentials: 'include'
+        });
+        if (profileData.ok) {
+          const json = await profileData.json();
+          userProfile = json.profile || {};
+        }
+      } catch (err) {
+        console.warn('Could not load user profile, using defaults');
+      }
+
       // Prepare application data
       const applicationData: ApplyToJobData = {
         credentialId: selectedCredentialId,
@@ -92,7 +106,13 @@ export default function ApplyToJobForm({ onSuccess, onError }: ApplyToJobFormPro
         company,
         jobDescription: jobDescription || undefined,
         userData: {
-          email: credentials.find(c => c.id === selectedCredentialId)?.email || ''
+          firstName: userProfile.firstName || '',
+          lastName: userProfile.lastName || '',
+          email: userProfile.email || credentials.find(c => c.id === selectedCredentialId)?.email || '',
+          phone: userProfile.phone || '',
+          linkedin: userProfile.linkedinUrl || '',
+          github: userProfile.githubUrl || '',
+          portfolio: userProfile.portfolioUrl || ''
         }
       };
 

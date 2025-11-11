@@ -4,14 +4,16 @@
  */
 
 import React, { useState } from 'react';
-import { Zap, Settings, BarChart3, FileText, Layers } from 'lucide-react';
+import { Zap, Settings, BarChart3, FileText, Layers, User, Sliders } from 'lucide-react';
 import JobBoardCredentials from './components/JobBoardCredentials';
 import ApplyToJobForm from './components/ApplyToJobForm';
 import ApplicationDashboard from './components/ApplicationDashboard';
 import BulkApplicationForm from './components/BulkApplicationForm';
+import ProfileSettings from './components/ProfileSettings';
+import AutomationSettings from './components/AutomationSettings';
 import { useTheme } from '../../contexts/ThemeContext';
 
-type Tab = 'apply' | 'bulk' | 'dashboard' | 'credentials';
+type Tab = 'apply' | 'bulk' | 'dashboard' | 'credentials' | 'profile' | 'settings';
 
 export default function AIAutoApply() {
   const [activeTab, setActiveTab] = useState<Tab>('apply');
@@ -22,7 +24,9 @@ export default function AIAutoApply() {
     { id: 'apply' as Tab, label: 'Apply to Job', icon: Zap },
     { id: 'bulk' as Tab, label: 'Bulk Apply', icon: Layers },
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: BarChart3 },
-    { id: 'credentials' as Tab, label: 'Credentials', icon: Settings }
+    { id: 'credentials' as Tab, label: 'Credentials', icon: FileText },
+    { id: 'profile' as Tab, label: 'Profile', icon: User },
+    { id: 'settings' as Tab, label: 'Automation', icon: Sliders }
   ];
 
   return (
@@ -81,6 +85,10 @@ export default function AIAutoApply() {
         {activeTab === 'dashboard' && <ApplicationDashboard />}
 
         {activeTab === 'credentials' && <JobBoardCredentials />}
+
+        {activeTab === 'profile' && <ProfileSettings />}
+
+        {activeTab === 'settings' && <AutomationSettings />}
       </div>
 
       {/* Footer Info */}
