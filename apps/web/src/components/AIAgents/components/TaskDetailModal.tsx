@@ -120,6 +120,34 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleExport = async (format: 'pdf' | 'docx' | 'txt') => {
+    if (!task?.id) return;
+
+    try {
+      // Show loading state (could be added with useState)
+      const url = `/api/ai-agent/tasks/${task.id}/export/${format}`;
+      const response = await fetch(url, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Create download
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${task.company || 'resume'}_${task.jobTitle || 'untitled'}.${format}`;
+      a.click();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error(`Failed to export as ${format}:`, error);
+      // Could show error toast here
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -352,7 +380,8 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 <div className="space-y-4">
                   {task.resultData ? (
                     <>
-                      <div className="flex gap-3 mb-4">
+                      <div className="space-y-3 mb-4">
+                        {/* Preview Button */}
                         <button
                           onClick={() => {
                             const type = task.type.includes('RESUME') ? 'resume' :
@@ -362,7 +391,7 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                             setPreviewData(task.resultData.data || task.resultData);
                             setIsPreviewOpen(true);
                           }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all w-full"
                           style={{
                             background: colors.badgePurpleBg,
                             color: colors.badgePurpleText,
@@ -372,18 +401,111 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                           <Eye size={16} />
                           Preview
                         </button>
-                        <button
-                          onClick={handleDownload}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+
+                        {/* Export Buttons */}
+                        <div
+                          className="p-4 rounded-lg"
                           style={{
-                            background: colors.inputBackground,
+                            background: colors.background,
                             border: `1px solid ${colors.border}`,
-                            color: colors.primaryText,
                           }}
                         >
-                          <Download size={16} />
-                          Download JSON
-                        </button>
+                          <h4
+                            className="text-sm font-semibold mb-3"
+                            style={{ color: colors.primaryText }}
+                          >
+                            Export Resume
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => handleExport('pdf')}
+                              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm"
+                              style={{
+                                background: colors.badgeRedBg,
+                                color: colors.badgeRedText,
+                                border: `1px solid ${colors.badgeRedText}`,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeRedText;
+                                e.currentTarget.style.color = 'white';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = colors.badgeRedBg;
+                                e.currentTarget.style.color = colors.badgeRedText;
+                              }}
+                            >
+                              <Download size={14} />
+                              PDF
+                            </button>
+
+                            <button
+                              onClick={() => handleExport('docx')}
+                              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm"
+                              style={{
+                                background: colors.badgeBlueBg,
+                                color: colors.badgeBlueText,
+                                border: `1px solid ${colors.badgeBlueText}`,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeBlueText;
+                                e.currentTarget.style.color = 'white';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = colors.badgeBlueBg;
+                                e.currentTarget.style.color = colors.badgeBlueText;
+                              }}
+                            >
+                              <Download size={14} />
+                              DOCX
+                            </button>
+
+                            <button
+                              onClick={() => handleExport('txt')}
+                              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm"
+                              style={{
+                                background: colors.badgeGreenBg,
+                                color: colors.badgeGreenText,
+                                border: `1px solid ${colors.badgeGreenText}`,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.badgeGreenText;
+                                e.currentTarget.style.color = 'white';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = colors.badgeGreenBg;
+                                e.currentTarget.style.color = colors.badgeGreenText;
+                              }}
+                            >
+                              <Download size={14} />
+                              TXT
+                            </button>
+
+                            <button
+                              onClick={handleDownload}
+                              className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-all text-sm"
+                              style={{
+                                background: colors.inputBackground,
+                                color: colors.secondaryText,
+                                border: `1px solid ${colors.border}`,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = colors.border;
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = colors.inputBackground;
+                              }}
+                            >
+                              <Download size={14} />
+                              JSON
+                            </button>
+                          </div>
+                          <p
+                            className="text-xs mt-2"
+                            style={{ color: colors.secondaryText }}
+                          >
+                            PDF and DOCX are ready for job applications
+                          </p>
+                        </div>
                       </div>
 
                       <div

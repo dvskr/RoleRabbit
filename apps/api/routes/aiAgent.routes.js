@@ -731,4 +731,175 @@ module.exports = async function aiAgentRoutes(fastify) {
       });
     }
   });
+
+  // ============================================
+  // EXPORT ROUTES
+  // ============================================
+
+  /**
+   * POST /api/ai-agent/tasks/:id/export
+   * Export task result to PDF, DOCX, or TXT
+   */
+  fastify.post('/api/ai-agent/tasks/:id/export', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const taskId = request.params.id;
+      const { format = 'pdf' } = request.body;
+
+      // Validate format
+      if (!['pdf', 'docx', 'txt'].includes(format.toLowerCase())) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid format. Supported formats: pdf, docx, txt'
+        });
+      }
+
+      // Verify task belongs to user
+      const task = await prisma.aIAgentTask.findFirst({
+        where: { id: taskId, userId }
+      });
+
+      if (!task) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Task not found'
+        });
+      }
+
+      if (task.status !== 'COMPLETED') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Task must be completed before exporting'
+        });
+      }
+
+      // Import resumeExporter service
+      const resumeExporter = require('../services/resumeExporter');
+
+      // Export and save
+      const storageFile = await resumeExporter.exportAndSaveResume(taskId, format);
+
+      return reply.send({
+        success: true,
+        file: {
+          id: storageFile.id,
+          name: storageFile.name,
+          size: storageFile.size,
+          mimeType: storageFile.mimeType,
+          downloadUrl: `/api/storage/files/${storageFile.id}/download`
+        }
+      });
+
+    } catch (error) {
+      logger.error('Failed to export task result', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to export resume'
+      });
+    }
+  });
+
+  /**
+   * GET /api/ai-agent/tasks/:id/export/:format
+   * Export and directly download task result
+   */
+  fastify.get('/api/ai-agent/tasks/:id/export/:format', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const taskId = request.params.id;
+      const format = request.params.format.toLowerCase();
+
+      // Validate format
+      if (!['pdf', 'docx', 'txt'].includes(format)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid format. Supported formats: pdf, docx, txt'
+        });
+      }
+
+      // Verify task belongs to user
+      const task = await prisma.aIAgentTask.findFirst({
+        where: { id: taskId, userId },
+        include: { user: true }
+      });
+
+      if (!task) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Task not found'
+        });
+      }
+
+      if (task.status !== 'COMPLETED') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Task must be completed before exporting'
+        });
+      }
+
+      // Import services
+      const resumeExporter = require('../services/resumeExporter');
+      const path = require('path');
+      const fs = require('fs');
+
+      // Create temp file
+      const tempDir = path.join(__dirname, '../temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      const timestamp = Date.now();
+      const filename = `resume_${task.company || 'untitled'}_${timestamp}.${format}`;
+      const tempPath = path.join(tempDir, filename);
+
+      const resumeData = task.resultData?.data;
+      if (!resumeData) {
+        return reply.status(400).send({
+          success: false,
+          error: 'No resume data available'
+        });
+      }
+
+      // Export based on format
+      let filePath;
+      switch (format) {
+        case 'pdf':
+          filePath = await resumeExporter.exportToPDF(resumeData, tempPath);
+          break;
+        case 'docx':
+          filePath = await resumeExporter.exportToDOCX(resumeData, tempPath);
+          break;
+        case 'txt':
+          filePath = await resumeExporter.exportToPlainText(resumeData, tempPath);
+          break;
+      }
+
+      // Set appropriate headers
+      const mimeTypes = {
+        pdf: 'application/pdf',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        txt: 'text/plain'
+      };
+
+      reply.header('Content-Type', mimeTypes[format]);
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+
+      // Stream file
+      const fileStream = fs.createReadStream(filePath);
+
+      fileStream.on('end', () => {
+        // Clean up temp file after streaming
+        fs.unlinkSync(filePath);
+      });
+
+      return reply.send(fileStream);
+
+    } catch (error) {
+      logger.error('Failed to download exported resume', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to export resume'
+      });
+    }
+  });
 };
