@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { logger } from '../../utils/logger';
@@ -20,7 +20,7 @@ interface UploadModalProps {
   activeFolderId?: string | null;
 }
 
-export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId }: UploadModalProps) {
+const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onUpload, activeFolderId }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
   const [fileName, setFileName] = useState('');
@@ -42,14 +42,14 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
     'document',
   ];
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFileName('');
     setFileType('resume');
     setSelectedFile(null);
     setErrorMessage(null);
-  };
+  }, []);
 
-  const handleUpload = async () => {
+  const handleUpload = useCallback(async () => {
     if (!selectedFile) {
       setErrorMessage('Please choose a file to upload.');
       return;
@@ -80,9 +80,9 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
     } finally {
     setIsUploading(false);
     }
-  };
+  }, [selectedFile, fileName, fileType, activeFolderId, onUpload, resetForm]);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -98,13 +98,18 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
     } else {
       setFileType('document');
     }
-  };
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    onClose();
+  }, [resetForm, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
       resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, resetForm]);
 
   if (!isOpen) return null;
 
@@ -148,10 +153,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             </div>
           </div>
           <button
-            onClick={() => {
-              resetForm();
-              onClose();
-            }}
+            onClick={handleClose}
             className="p-1.5 transition-colors"
             style={{ color: colors.secondaryText }}
             onMouseEnter={(e) => {
@@ -305,10 +307,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
           style={{ borderTop: `1px solid ${colors.border}` }}
         >
           <button
-            onClick={() => {
-              resetForm();
-              onClose();
-            }}
+            onClick={handleClose}
             disabled={isUploading}
             className="px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50"
             style={{
@@ -374,4 +373,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
       </div>
     </div>
   );
-}
+};
+
+// Memoize component to prevent unnecessary re-renders
+export default React.memo(UploadModal);
