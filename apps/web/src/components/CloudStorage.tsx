@@ -337,6 +337,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           ) : (
             <FileList
               files={filteredFiles}
+              isLoading={isLoading}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               filterType={filterType}

@@ -3,6 +3,7 @@ export { default as UploadModal } from './UploadModal';
 export { default as CredentialManager } from './CredentialManager';
 export { LoadingState } from './LoadingState';
 export { EmptyFilesState } from './EmptyFilesState';
+export { FileCardSkeleton } from './FileCardSkeleton';
 export { CreateFolderModal } from './CreateFolderModal';
 export { RenameFolderModal } from './RenameFolderModal';
 

@@ -5,6 +5,7 @@ import { Filter, Upload, Trash2, Search } from 'lucide-react';
 import { ResumeFile, FileType, SortBy } from '../../types/cloudStorage';
 import FileCard from './FileCard';
 import { EmptyFilesState } from './EmptyFilesState';
+import { FileCardSkeleton } from './FileCardSkeleton';
 import { useTheme } from '../../contexts/ThemeContext';
 import { TabType } from './types';
 
@@ -96,6 +97,7 @@ export const FilesTabsBar: React.FC<FilesTabsBarProps> = ({
 
 interface FileListProps {
   files: ResumeFile[];
+  isLoading?: boolean;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   filterType: FileType;
@@ -130,6 +132,7 @@ interface FileListProps {
 
 export const FileList: React.FC<FileListProps> = ({
   files,
+  isLoading = false,
   searchTerm,
   onSearchChange,
   filterType,
@@ -183,6 +186,15 @@ export const FileList: React.FC<FileListProps> = ({
   };
 
   const content = useMemo(() => {
+    // Show skeleton while loading
+    if (isLoading) {
+      return (
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))' }}>
+          <FileCardSkeleton count={6} />
+        </div>
+      );
+    }
+
     if (files.length === 0) {
       return (
         <EmptyFilesState
@@ -223,6 +235,7 @@ export const FileList: React.FC<FileListProps> = ({
     );
   }, [
     files,
+    isLoading,
     filterType,
     onAddComment,
     onDelete,
