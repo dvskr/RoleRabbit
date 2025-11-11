@@ -333,7 +333,7 @@ const FileCard = React.memo(function FileCard({
                       closeAllStates('preview');
                       setShowPreviewModal(true);
                     }}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{
                       color: colors.secondaryText,
                       background: 'transparent',
@@ -345,9 +345,9 @@ const FileCard = React.memo(function FileCard({
                       e.currentTarget.style.background = 'transparent';
                     }}
                     title="View"
-                    aria-label="Preview file"
+                    aria-label={`Preview ${file.name}`}
                   >
-                    <Eye size={20} />
+                    <Eye size={20} aria-hidden="true" />
                     <span className="text-xs">View</span>
                   </button>
                 )}
@@ -364,7 +364,7 @@ const FileCard = React.memo(function FileCard({
                           setShowDownloadFormat(true);
                         }
                       }}
-                      className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors w-full"
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                       style={{
                         color: colors.secondaryText,
                         background: 'transparent',
@@ -376,9 +376,9 @@ const FileCard = React.memo(function FileCard({
                         e.currentTarget.style.background = 'transparent';
                       }}
                       title="Download"
-                      aria-label="Download file"
+                      aria-label={`Download ${file.name}`}
                     >
-                      <Download size={20} />
+                      <Download size={20} aria-hidden="true" />
                       <span className="text-xs">Download</span>
                     </button>
                     {showDownloadFormat && (
@@ -398,7 +398,7 @@ const FileCard = React.memo(function FileCard({
                       closeAllStates('share');
                       fileSharing.setShowShareModal(true);
                     }}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{
                       color: colors.secondaryText,
                       background: 'transparent',
@@ -410,9 +410,9 @@ const FileCard = React.memo(function FileCard({
                       e.currentTarget.style.background = 'transparent';
                     }}
                     title="Share"
-                    aria-label="Share file"
+                    aria-label={`Share ${file.name}`}
                   >
-                    <Share2 size={20} />
+                    <Share2 size={20} aria-hidden="true" />
                     <span className="text-xs">Share</span>
                   </button>
             )}
@@ -429,7 +429,7 @@ const FileCard = React.memo(function FileCard({
                     comments.setShowComments(true);
                   }
                 }}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                 style={{
                       color: comments.showComments ? colors.primaryBlue : colors.secondaryText,
                       background: comments.showComments ? colors.inputBackground : 'transparent',
@@ -445,9 +445,9 @@ const FileCard = React.memo(function FileCard({
                       }
                     }}
                     title="Comment"
-                aria-label="Toggle comments"
+                aria-label={`Toggle comments on ${file.name}`}
               >
-                    <MessageCircle size={20} />
+                    <MessageCircle size={20} aria-hidden="true" />
                     <span className="text-xs">Comment</span>
               </button>
             )}
@@ -459,7 +459,7 @@ const FileCard = React.memo(function FileCard({
                 {canEdit(userPermission) && (
                 <button
                   onClick={handleStartEdit}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{
                       color: isEditing ? colors.primaryBlue : colors.secondaryText,
                       background: isEditing ? colors.inputBackground : 'transparent',
@@ -475,9 +475,10 @@ const FileCard = React.memo(function FileCard({
                     }
                   }}
                     title="Edit"
+                  aria-label={`Edit ${file.name}`}
                   disabled={isSaving}
                 >
-                    <Edit size={20} />
+                    <Edit size={20} aria-hidden="true" />
                     <span className="text-xs">Edit</span>
                 </button>
                 )}
@@ -489,7 +490,7 @@ const FileCard = React.memo(function FileCard({
                       closeAllStates('move');
                       setShowMoveModal(true);
                     }}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                     style={{
                       color: colors.secondaryText,
                       background: 'transparent',
@@ -501,9 +502,9 @@ const FileCard = React.memo(function FileCard({
                       e.currentTarget.style.background = 'transparent';
                     }}
                     title="Move"
-                    aria-label="Move file"
+                    aria-label={`Move ${file.name} to another folder`}
                   >
-                    <Folder size={20} />
+                    <Folder size={20} aria-hidden="true" />
                     <span className="text-xs">Move</span>
                   </button>
             )}
@@ -516,7 +517,7 @@ const FileCard = React.memo(function FileCard({
                     await onDelete(file.id);
                   }
                 }}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors"
+                    className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
                 style={{
                       color: colors.errorRed,
                       background: 'transparent',
@@ -528,9 +529,9 @@ const FileCard = React.memo(function FileCard({
                       e.currentTarget.style.background = 'transparent';
                     }}
                 title="Delete"
-                aria-label="Delete file"
+                aria-label={`Delete ${file.name}`}
               >
-                    <Trash2 size={20} />
+                    <Trash2 size={20} aria-hidden="true" />
                     <span className="text-xs">Delete</span>
               </button>
             )}
