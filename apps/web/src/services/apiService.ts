@@ -416,14 +416,25 @@ class ApiService {
   /**
    * Get cloud storage files
    */
-  async getCloudFiles(folderId?: string, includeDeleted?: boolean): Promise<any> {
+  async getCloudFiles(
+    folderId?: string,
+    includeDeleted?: boolean,
+    options?: {
+      limit?: number;
+      cursor?: string;
+      include?: string;
+    }
+  ): Promise<any> {
     const params = new URLSearchParams();
     if (folderId) params.append('folderId', folderId);
     if (includeDeleted) params.append('includeDeleted', 'true');
-    
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.cursor) params.append('cursor', options.cursor);
+    if (options?.include) params.append('include', options.include);
+
     const queryString = params.toString();
     const endpoint = queryString ? `/api/storage/files?${queryString}` : '/api/storage/files';
-    
+
     return this.request(endpoint, {
       method: 'GET',
       credentials: 'include',

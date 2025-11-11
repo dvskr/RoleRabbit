@@ -36,18 +36,35 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const [files, setFiles] = useState<ResumeFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [storageInfo, setStorageInfo] = useState({ usedGB: 0, limitGB: 0, percentage: 0 });
+  const [pagination, setPagination] = useState<{
+    hasMore: boolean;
+    nextCursor: string | null;
+    limit: number;
+  }>({
+    hasMore: false,
+    nextCursor: null,
+    limit: 50,
+  });
 
-  const loadFilesFromAPI = useCallback(async (includeDeleted: boolean = false) => {
-    setIsLoading(true);
+  const loadFilesFromAPI = useCallback(async (includeDeleted: boolean = false, reset: boolean = true) => {
+    if (reset) {
+      setIsLoading(true);
+    }
+
     try {
       logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, ')');
-      const response = await apiService.getCloudFiles(undefined, includeDeleted);
-      logger.info('📥 API response:', { 
-        filesCount: response?.files?.length || 0,
-        success: response?.success
+      const response = await apiService.getCloudFiles(undefined, includeDeleted, {
+        limit: pagination.limit,
+        cursor: reset ? undefined : pagination.nextCursor || undefined,
       });
-      
+      logger.info('📥 API response:', {
+        filesCount: response?.files?.length || 0,
+        success: response?.success,
+        hasMore: response?.pagination?.hasMore
+      });
+
       if (response && response.files) {
         const formattedFiles = (response.files as ResumeFile[]).map(file => ({
           ...file,
@@ -65,13 +82,27 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
           folderId: file.folderId || null, // Ensure null instead of undefined
           deletedAt: file.deletedAt || null, // Ensure null instead of undefined
         }));
-        setFiles(formattedFiles);
-        logger.info(`✅ Loaded ${formattedFiles.length} files from API`);
+
+        // Reset or append files based on 'reset' parameter
+        setFiles(prev => reset ? formattedFiles : [...prev, ...formattedFiles]);
+
+        // Update pagination state
+        if (response.pagination) {
+          setPagination({
+            hasMore: response.pagination.hasMore || false,
+            nextCursor: response.pagination.nextCursor || null,
+            limit: response.pagination.limit || 50,
+          });
+        }
+
+        logger.info(`✅ Loaded ${formattedFiles.length} files from API (total: ${reset ? formattedFiles.length : files.length + formattedFiles.length})`);
       } else {
         logger.warn('⚠️ No files in API response');
-        setFiles([]);
+        if (reset) {
+          setFiles([]);
+        }
       }
-      
+
       if (response?.storage) {
         setStorageInfo(response.storage);
         onStorageUpdate?.(response.storage);
@@ -79,11 +110,29 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     } catch (error: any) {
       logger.error('❌ Failed to load files from API:', error);
       logger.error('Error details:', error.message);
-      setFiles([]);
+      if (reset) {
+        setFiles([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (reset) {
+        setIsLoading(false);
+      }
     }
-  }, [onStorageUpdate]);
+  }, [onStorageUpdate, pagination.limit, pagination.nextCursor, files.length]);
+
+  // Load more files (for infinite scroll)
+  const loadMoreFiles = useCallback(async (includeDeleted: boolean = false) => {
+    if (!pagination.hasMore || isLoadingMore) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    try {
+      await loadFilesFromAPI(includeDeleted, false); // Don't reset, append
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [pagination.hasMore, isLoadingMore, loadFilesFromAPI]);
 
   const handleFileSelect = useCallback((fileId: string) => {
     setSelectedFiles(prev => 
@@ -515,7 +564,11 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     handleEditFile,
     handleRefresh,
     handleStarFile,
-    handleArchiveFile
+    handleArchiveFile,
+    // Pagination support for infinite scroll
+    pagination,
+    isLoadingMore,
+    loadMoreFiles,
   };
 };
 
