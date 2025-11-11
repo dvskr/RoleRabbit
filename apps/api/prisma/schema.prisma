@@ -564,6 +564,10 @@ model User {
   aiAgentMetrics      AIAgentMetrics[]     @relation("AIAgentMetrics")
   jobBoardCredentials JobBoardCredential[] @relation("JobBoardCredentials")
   jobApplications     JobApplication[]     @relation("JobApplications")
+  workflows           Workflow[]           @relation("Workflows")
+  workflowExecutions  WorkflowExecution[]  @relation("WorkflowExecutions")
+  workflowSchedules   WorkflowSchedule[]   @relation("WorkflowSchedules")
+  workflowWebhooks    WorkflowWebhook[]    @relation("WorkflowWebhooks")
 
   @@index([email])
   @@index([provider, providerId])
@@ -1093,4 +1097,268 @@ model ApplicationStatusHistory {
   @@index([applicationId])
   @@index([createdAt])
   @@map("application_status_history")
+}
+
+// =============================================================================
+// WORKFLOW AUTOMATION SYSTEM
+// =============================================================================
+
+enum WorkflowTriggerType {
+  MANUAL
+  SCHEDULE
+  WEBHOOK
+  EVENT
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum WorkflowExecutionStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum WorkflowNodeType {
+  // Triggers
+  TRIGGER_MANUAL
+  TRIGGER_SCHEDULE
+  TRIGGER_WEBHOOK
+  TRIGGER_EVENT
+  
+  // AI Agents
+  AI_AGENT_ANALYZE
+  AI_AGENT_CHAT
+  
+  // Auto Apply
+  AUTO_APPLY_SINGLE
+  AUTO_APPLY_BULK
+  
+  // Resume
+  RESUME_GENERATE
+  RESUME_TAILOR
+  
+  // Cover Letter
+  COVER_LETTER_GENERATE
+  
+  // Job Tracker
+  JOB_TRACKER_ADD
+  JOB_TRACKER_UPDATE
+  
+  // Job Search
+  JOB_SEARCH
+  COMPANY_RESEARCH
+  
+  // Communication
+  EMAIL_SEND
+  NOTIFICATION_SEND
+  WEBHOOK_CALL
+  HTTP_REQUEST
+  
+  // Logic
+  CONDITION_IF
+  CONDITION_SWITCH
+  LOOP_FOR_EACH
+  
+  // Timing
+  WAIT_DELAY
+  WAIT_UNTIL
+  
+  // Data Manipulation
+  MERGE_DATA
+  SPLIT_DATA
+  TRANSFORM_DATA
+  FILTER_DATA
+  
+  // Storage
+  DATABASE_QUERY
+  FILE_READ
+  FILE_WRITE
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  icon        String?
+  color       String?
+
+  // Trigger configuration
+  triggerType   WorkflowTriggerType @default(MANUAL)
+  triggerConfig Json?
+
+  // Workflow definition (nodes and connections)
+  nodes       Json @default("[]") // Array of WorkflowNode
+  connections Json @default("[]") // Array of {from: nodeId, to: nodeId, ...}
+
+  // Status
+  status           WorkflowStatus @default(DRAFT)
+  isTemplate       Boolean        @default(false)
+  templateCategory String?
+
+  // Execution settings
+  maxConcurrentExecutions Int?    @default(1)
+  timeoutSeconds          Int?    @default(300)
+  retryOnFailure          Boolean @default(true)
+  maxRetries              Int?    @default(3)
+
+  // Statistics
+  totalExecutions      Int       @default(0)
+  successfulExecutions Int       @default(0)
+  failedExecutions     Int       @default(0)
+  lastExecutedAt       DateTime?
+
+  // Metadata
+  tags     String[]
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User                 @relation("Workflows", fields: [userId], references: [id], onDelete: Cascade)
+  executions WorkflowExecution[]
+  schedules  WorkflowSchedule[]
+  webhooks   WorkflowWebhook[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([isTemplate])
+  @@index([userId, status])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id         String   @id @default(cuid())
+  workflowId String
+  userId     String
+
+  // Execution details
+  status      WorkflowExecutionStatus @default(QUEUED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int? // milliseconds
+
+  // Input/Output
+  input  Json?
+  output Json?
+  error  Json?
+
+  // Node execution tracking
+  currentNodeId  String?
+  completedNodes String[] @default([])
+  failedNodes    String[] @default([])
+
+  // Metadata
+  triggeredBy String? // 'manual', 'schedule', 'webhook', 'event'
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow                 @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User                     @relation("WorkflowExecutions", fields: [userId], references: [id], onDelete: Cascade)
+  logs     WorkflowExecutionLog[]
+
+  @@index([workflowId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@index([workflowId, status])
+  @@map("workflow_executions")
+}
+
+model WorkflowExecutionLog {
+  id          String           @id @default(cuid())
+  executionId String
+  nodeId      String
+  nodeName    String?
+  nodeType    WorkflowNodeType
+
+  // Log details
+  level   String @default("info") // info, warn, error, debug
+  message String @db.Text
+  data    Json?
+
+  // Timing
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int? // milliseconds
+
+  // Status
+  success Boolean?
+  error   Json?
+
+  createdAt DateTime @default(now())
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([createdAt])
+  @@map("workflow_execution_logs")
+}
+
+model WorkflowSchedule {
+  id         String  @id @default(cuid())
+  workflowId String
+  userId     String
+
+  // Schedule configuration
+  cronExpression String
+  timezone       String  @default("UTC")
+  enabled        Boolean @default(true)
+
+  // Next execution
+  nextRunAt DateTime?
+  lastRunAt DateTime?
+
+  // Limits
+  maxRuns       Int? // NULL = unlimited
+  runsCompleted Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation("WorkflowSchedules", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([nextRunAt])
+  @@index([enabled])
+  @@map("workflow_schedules")
+}
+
+model WorkflowWebhook {
+  id         String  @id @default(cuid())
+  workflowId String
+  userId     String
+
+  // Webhook config
+  webhookUrl String  @unique
+  secret     String
+  enabled    Boolean @default(true)
+
+  // Security
+  allowedIps   String[]
+  requiresAuth Boolean  @default(false)
+
+  // Statistics
+  totalCalls   Int       @default(0)
+  lastCalledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation("WorkflowWebhooks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([enabled])
+  @@map("workflow_webhooks")
 }
