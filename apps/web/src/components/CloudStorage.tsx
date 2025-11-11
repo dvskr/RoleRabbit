@@ -18,6 +18,7 @@ import { RedesignedFolderSidebar } from './cloudStorage/RedesignedFolderSidebar'
 import { RedesignedFileList, FilesTabsBar } from './cloudStorage/RedesignedFileList';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from './common/Toast';
+import { ErrorBoundary } from './common/ErrorBoundary';
 import { logger } from '../utils/logger';
 
 export default function CloudStorage({ onClose }: CloudStorageProps) {
@@ -278,11 +279,12 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
   }
 
   return (
-    <div
-      className="h-full flex flex-col overflow-hidden min-h-0"
-      style={{ background: colors.background }}
-      data-testid="cloud-storage-root"
-    >
+    <ErrorBoundary onError={(error) => logger.error('CloudStorage error:', error)}>
+      <div
+        className="h-full flex flex-col overflow-hidden min-h-0"
+        style={{ background: colors.background }}
+        data-testid="cloud-storage-root"
+      >
       <RedesignedStorageHeader
         storageInfo={storageInfo}
         onRefresh={handleRefresh}
@@ -398,6 +400,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           activeFolderId={selectedFolderId}
         />
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
