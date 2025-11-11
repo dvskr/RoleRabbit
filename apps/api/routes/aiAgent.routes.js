@@ -410,6 +410,54 @@ module.exports = async function aiAgentRoutes(fastify) {
   });
 
   /**
+   * POST /api/ai-agent/tasks/job-application
+   * Create a job application task (auto-apply to job)
+   */
+  fastify.post('/api/ai-agent/tasks/job-application', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { jobUrl, jobTitle, company, jobDescription, platform, credentialId, baseResumeId } = request.body;
+
+      if (!jobUrl || !platform) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Job URL and platform are required'
+        });
+      }
+
+      const taskData = {
+        type: 'JOB_APPLICATION',
+        jobUrl,
+        jobTitle,
+        company,
+        jobDescription,
+        platform,
+        credentialId,
+        baseResumeId
+      };
+
+      const task = await createTask(userId, taskData);
+
+      return reply.status(201).send({
+        success: true,
+        task
+      });
+    } catch (error) {
+      if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+        return reply.status(403).send({
+          success: false,
+          error: error.message
+        });
+      }
+      logger.error('Failed to create job application task', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to create job application task'
+      });
+    }
+  });
+
+  /**
    * POST /api/ai-agent/tasks/bulk-apply
    * Create bulk job application tasks with proper validation and error handling
    */
@@ -990,6 +1038,134 @@ module.exports = async function aiAgentRoutes(fastify) {
       return reply.status(500).send({
         success: false,
         error: error.message || 'Failed to scrape jobs'
+      });
+    }
+  });
+
+  /**
+   * POST /api/ai-agent/tasks/:id/execute-application
+   * Execute a job application task
+   */
+  fastify.post('/api/ai-agent/tasks/:id/execute-application', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { id } = request.params;
+
+      // Verify task belongs to user
+      const task = await prisma.aIAgentTask.findFirst({
+        where: {
+          id,
+          userId
+        }
+      });
+
+      if (!task) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Task not found'
+        });
+      }
+
+      if (task.type !== 'JOB_APPLICATION') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Task is not a job application task'
+        });
+      }
+
+      // Import orchestrator
+      const orchestrator = require('../services/jobApplicationOrchestrator');
+
+      // Execute the application
+      const result = await orchestrator.processAIAgentTask(id);
+
+      return reply.send({
+        success: true,
+        task: result.task,
+        application: result.application,
+        result: result.result
+      });
+
+    } catch (error) {
+      logger.error('Failed to execute job application', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to execute job application'
+      });
+    }
+  });
+
+  /**
+   * POST /api/ai-agent/apply-to-jobs-bulk
+   * Apply to multiple jobs in bulk (actual applications, not just tasks)
+   */
+  fastify.post('/api/ai-agent/apply-to-jobs-bulk', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { applications, maxConcurrent = 1 } = request.body;
+
+      if (!Array.isArray(applications) || applications.length === 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Applications array is required'
+        });
+      }
+
+      if (applications.length > 20) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Maximum 20 applications can be processed at once'
+        });
+      }
+
+      // Validate each application
+      for (let i = 0; i < applications.length; i++) {
+        const app = applications[i];
+        if (!app.jobUrl || !app.platform || !app.credentialId) {
+          return reply.status(400).send({
+            success: false,
+            error: `Application ${i + 1}: Missing required fields (jobUrl, platform, credentialId)`
+          });
+        }
+      }
+
+      // Generate batch ID
+      const batchId = `batch_${Date.now()}_${userId.slice(0, 8)}`;
+
+      // Add userId to each application
+      const applicationsWithUser = applications.map(app => ({
+        ...app,
+        userId,
+        batchId
+      }));
+
+      // Import orchestrator
+      const orchestrator = require('../services/jobApplicationOrchestrator');
+
+      // Process applications
+      const result = await orchestrator.applyToMultipleJobs(applicationsWithUser, {
+        userId,
+        batchId,
+        maxConcurrent
+      });
+
+      return reply.send({
+        success: true,
+        batchId,
+        summary: {
+          total: result.total,
+          successful: result.successful,
+          failed: result.failed
+        },
+        results: result.results,
+        errors: result.errors
+      });
+
+    } catch (error) {
+      logger.error('Bulk job application failed', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to process bulk applications'
       });
     }
   });
