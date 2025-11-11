@@ -24,14 +24,7 @@ export const EditableCardActions: React.FC<EditableCardActionsProps> = ({
       <button
         type="button"
         onClick={onEdit}
-        className="p-2 rounded-lg transition-all"
-        style={{ color: colors.primaryBlue }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = colors.badgeInfoBg;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
+        className="p-2 rounded-lg transition-all text-theme-primary-blue hover:bg-theme-badge-info-bg"
         title={editLabel}
         aria-label={editLabel}
       >
@@ -40,14 +33,7 @@ export const EditableCardActions: React.FC<EditableCardActionsProps> = ({
       <button
         type="button"
         onClick={onDelete}
-        className="p-2 rounded-lg transition-all"
-        style={{ color: colors.errorRed }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = colors.badgeErrorBg;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
+        className="p-2 rounded-lg transition-all text-theme-error hover:bg-theme-badge-error-bg"
         title={deleteLabel}
         aria-label={deleteLabel}
       >

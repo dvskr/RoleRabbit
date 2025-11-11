@@ -36,19 +36,12 @@ export default function ProfileTab({
         />
 
         {/* Enhanced Basic Information */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
+        <div
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg bg-theme-card-bg border border-theme-border"
         >
           <div className="flex items-center gap-2 mb-6">
-            <UserCircle size={24} style={{ color: colors.primaryBlue }} />
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
+            <UserCircle size={24} className="text-theme-primary-blue" />
+            <h3 className="text-xl font-semibold text-theme-primary-text">
               Basic Information
             </h3>
           </div>
@@ -65,7 +58,7 @@ export default function ProfileTab({
                 placeholder="Enter your first name"
               />
               {!userData.firstName && isEditing && (
-                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.errorRed }}>
+                <p className="text-xs mt-1 flex items-center gap-1 text-theme-error">
                   <AlertCircle size={12} />
                   Required field
                 </p>
@@ -82,7 +75,7 @@ export default function ProfileTab({
                 placeholder="Enter your last name"
               />
               {!userData.lastName && isEditing && (
-                <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.errorRed }}>
+                <p className="text-xs mt-1 flex items-center gap-1 text-theme-error">
                   <AlertCircle size={12} />
                   Required field
                 </p>
@@ -97,7 +90,7 @@ export default function ProfileTab({
                 name="email"
                 label={
                   <span className="flex items-center gap-2">
-                    <Mail size={16} style={{ color: colors.secondaryText }} />
+                    <Mail size={16} className="text-theme-secondary-text" />
                     Login Email (Username)
                   </span>
                 }
@@ -107,7 +100,7 @@ export default function ProfileTab({
                 disabled={true}
                 placeholder="Login email"
               />
-              <p className="text-xs mt-1 flex items-center gap-1" style={{ color: colors.secondaryText }}>
+              <p className="text-xs mt-1 flex items-center gap-1 text-theme-secondary-text">
                 <AlertCircle size={12} />
                 This is your login email and cannot be changed
               </p>
@@ -118,7 +111,7 @@ export default function ProfileTab({
                 name="personalEmail"
                 label={
                   <span className="flex items-center gap-2">
-                    <Mail size={16} style={{ color: colors.secondaryText }} />
+                    <Mail size={16} className="text-theme-secondary-text" />
                     Personal Email
                   </span>
                 }
@@ -128,7 +121,7 @@ export default function ProfileTab({
                 disabled={!isEditing}
                 placeholder="Enter your personal/contact email"
               />
-              <p className="text-xs mt-1" style={{ color: colors.secondaryText }}>
+              <p className="text-xs mt-1 text-theme-secondary-text">
                 Optional: Your personal or contact email (different from login email)
               </p>
             </div>
@@ -140,7 +133,7 @@ export default function ProfileTab({
                 name="phone"
                 label={
                   <span className="flex items-center gap-2">
-                    <Phone size={16} style={{ color: colors.secondaryText }} />
+                    <Phone size={16} className="text-theme-secondary-text" />
                     Phone Number
                   </span>
                 }
@@ -157,7 +150,7 @@ export default function ProfileTab({
                 name="location"
                 label={
                   <span className="flex items-center gap-2">
-                    <MapPin size={16} style={{ color: colors.secondaryText }} />
+                    <MapPin size={16} className="text-theme-secondary-text" />
                     Location
                   </span>
                 }

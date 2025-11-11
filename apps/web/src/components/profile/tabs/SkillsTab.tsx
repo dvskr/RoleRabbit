@@ -226,18 +226,11 @@ export default function SkillsTab({
         />
 
         {/* Certifications */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
+        <div
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg bg-theme-card-bg border border-theme-border"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
+            <h3 className="text-xl font-semibold text-theme-primary-text">
               Certifications
             </h3>
             {isEditing && (
@@ -248,11 +241,7 @@ export default function SkillsTab({
                   e.stopPropagation();
                   addCertification();
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg"
-                style={{
-                  background: colors.primaryBlue,
-                  color: 'white',
-                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-primary-blue text-white"
               >
                 <Plus size={16} />
                 Add Certification
@@ -268,26 +257,20 @@ export default function SkillsTab({
               const certId = cert.id || `temp-cert-${index}`;
               
               return (
-                <div 
-                  key={certId} 
-                  className="p-5 rounded-xl transition-all"
-                  style={{
-                    background: colors.cardBackground,
-                    border: `1px solid ${isEditingCert ? colors.border : colors.border}`,
-                    boxShadow: isEditingCert ? '0 0 0 1px rgba(255,255,255,0.04)' : undefined,
-                  }}
+                <div
+                  key={certId}
+                  className="p-5 rounded-xl transition-all bg-theme-card-bg border border-theme-border"
                 >
                   {isEditingCert ? (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Award size={18} style={{ color: colors.badgeWarningText }} />
-                          <h4 className="font-semibold" style={{ color: colors.primaryText }}>Edit Certification</h4>
+                          <Award size={18} className="text-theme-warning" />
+                          <h4 className="font-semibold text-theme-primary-text">Edit Certification</h4>
                         </div>
                         <button
                           onClick={() => setEditingCertId(null)}
-                          className="p-1 rounded"
-                          style={{ color: colors.secondaryText }}
+                          className="p-1 rounded text-theme-secondary-text"
                         >
                           <X size={16} />
                         </button>
@@ -351,12 +334,7 @@ export default function SkillsTab({
                             e.stopPropagation();
                             setEditingCertId(null);
                           }}
-                          className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          style={{
-                            background: colors.inputBackground,
-                            color: colors.secondaryText,
-                            border: `1px solid ${colors.border}`,
-                          }}
+                          className="flex-1 px-4 py-2 rounded-lg flex items-center justify-center gap-2 bg-theme-input-bg text-theme-secondary-text border border-theme-border"
                         >
                           <ArrowLeft size={14} />
                           Back
@@ -368,68 +346,47 @@ export default function SkillsTab({
                             e.stopPropagation();
                             removeCertification(index);
                           }}
-                          className="px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                          style={{
-                            background: colors.errorRed,
-                            color: 'white',
-                          }}
+                          className="px-4 py-2 rounded-lg flex items-center justify-center gap-2 bg-theme-error text-white"
                         >
                           <Trash2 size={14} />
                           Delete
                         </button>
                       </div>
-                      <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                      <p className="text-xs mt-2 pt-2 border-t text-theme-secondary-text border-theme-border">
                         Changes will be saved when you click "Save" in the header
                       </p>
                     </div>
                   ) : (
                     <div className="flex items-start gap-4">
-                      <div 
-                        className="p-2 rounded-lg flex-shrink-0"
-                        style={{
-                          background: colors.inputBackground,
-                          border: `1px solid ${colors.border}`,
-                        }}
+                      <div
+                        className="p-2 rounded-lg flex-shrink-0 bg-theme-input-bg border border-theme-border"
                       >
-                        <Award size={20} style={{ color: colors.primaryText }} />
+                        <Award size={20} className="text-theme-primary-text" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h4 
-                              className="font-semibold mb-1"
-                              style={{ color: colors.primaryText }}
-                            >
+                            <h4 className="font-semibold mb-1 text-theme-primary-text">
                               {cert.name || 'Untitled Certification'}
                             </h4>
-                            <p 
-                              className="text-sm mb-2"
-                              style={{ color: colors.secondaryText }}
-                            >
+                            <p className="text-sm mb-2 text-theme-secondary-text">
                               {cert.issuer || 'Issuer not specified'}
                             </p>
                             <div className="flex flex-wrap items-center gap-3">
-                              <span 
-                                className="text-xs"
-                                style={{ color: colors.tertiaryText }}
-                              >
+                              <span className="text-xs text-theme-tertiary-text">
                                 Issued: {cert.date || 'Not specified'}
                               </span>
                               {cert.expiryDate && (
-                                <span 
-                                  className="text-xs"
-                                  style={{ color: colors.tertiaryText }}
-                                >
+                                <span className="text-xs text-theme-tertiary-text">
                                   Expires: {cert.expiryDate}
                                 </span>
                               )}
                               {cert.credentialUrl && (
-                                <a 
-                                  href={cert.credentialUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-xs hover:underline flex items-center gap-1"
-                                  style={{ color: colors.primaryBlue }}
+                                <a
+                                  href={cert.credentialUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs hover:underline flex items-center gap-1 text-theme-primary-blue"
                                 >
                                   View Credential
                                 </a>
@@ -440,14 +397,7 @@ export default function SkillsTab({
                             <div className="flex items-center gap-1 flex-shrink-0">
                               <button
                                 onClick={() => setEditingCertId(index)}
-                                className="p-2 rounded-lg transition-colors"
-                                style={{ color: colors.primaryBlue }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = colors.badgeInfoBg;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent';
-                                }}
+                                className="p-2 rounded-lg transition-colors text-theme-primary-blue hover:bg-theme-badge-info-bg"
                                 aria-label="Edit certification"
                                 title="Edit certification"
                               >
@@ -455,14 +405,7 @@ export default function SkillsTab({
                               </button>
                               <button
                                 onClick={() => removeCertification(index)}
-                                className="p-2 rounded-lg transition-colors"
-                                style={{ color: colors.errorRed }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = colors.badgeErrorBg;
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent';
-                                }}
+                                className="p-2 rounded-lg transition-colors text-theme-error hover:bg-theme-badge-error-bg"
                                 aria-label="Remove certification"
                                 title="Remove certification"
                               >
@@ -477,10 +420,10 @@ export default function SkillsTab({
                 </div>
               );
             })}
-            
+
             {certifications.length === 0 && (
-              <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
-                <Award size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
+              <div className="text-center py-8 text-theme-tertiary-text">
+                <Award size={48} className="mx-auto mb-4 text-theme-tertiary-text opacity-50" />
                 <p>No certifications added yet</p>
                 {isEditing && (
                   <button
@@ -490,11 +433,7 @@ export default function SkillsTab({
                       e.stopPropagation();
                       addCertification();
                     }}
-                    className="mt-4 px-6 py-3 rounded-xl"
-                    style={{
-                      background: colors.primaryBlue,
-                      color: 'white',
-                    }}
+                    className="mt-4 px-6 py-3 rounded-xl bg-theme-primary-blue text-white"
                   >
                     <Plus size={16} className="inline mr-2" />
                     Add Your First Certification
@@ -521,18 +460,11 @@ export default function SkillsTab({
         />
 
         {/* Education */}
-        <div 
-          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"
-          style={{
-            background: colors.cardBackground,
-            border: `1px solid ${colors.border}`,
-          }}
+        <div
+          className="backdrop-blur-sm rounded-2xl p-8 shadow-lg bg-theme-card-bg border border-theme-border"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 
-              className="text-xl font-semibold"
-              style={{ color: colors.primaryText }}
-            >
+            <h3 className="text-xl font-semibold text-theme-primary-text">
               Education
             </h3>
             {isEditing && (
@@ -543,17 +475,7 @@ export default function SkillsTab({
                   e.stopPropagation();
                   addEducation();
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg"
-                style={{
-                  background: colors.primaryBlue,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-theme-primary-blue text-white hover:opacity-90"
               >
                 <Plus size={16} />
                 Add Education
@@ -562,8 +484,8 @@ export default function SkillsTab({
           </div>
 
           {education.length === 0 ? (
-            <div className="text-center py-8" style={{ color: colors.tertiaryText }}>
-              <GraduationCap size={48} className="mx-auto mb-4" style={{ color: colors.tertiaryText, opacity: 0.5 }} />
+            <div className="text-center py-8 text-theme-tertiary-text">
+              <GraduationCap size={48} className="mx-auto mb-4 text-theme-tertiary-text opacity-50" />
               <p>No education entries added yet</p>
               {isEditing && (
                 <button
@@ -573,17 +495,7 @@ export default function SkillsTab({
                     e.stopPropagation();
                     addEducation();
                   }}
-                  className="mt-4 px-6 py-3 rounded-xl"
-                  style={{
-                    background: colors.primaryBlue,
-                    color: 'white',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
+                  className="mt-4 px-6 py-3 rounded-xl bg-theme-primary-blue text-white hover:opacity-90"
                 >
                   <Plus size={16} className="inline mr-2" />
                   Add Your First Education
@@ -603,11 +515,9 @@ export default function SkillsTab({
                 return (
                   <div
                     key={entryId}
-                    className="p-6 rounded-xl transition-all"
-                    style={{
-                      background: colors.cardBackground,
-                      border: `1px solid ${isEditingEducation ? colors.primaryBlue : colors.border}`,
-                    }}
+                    className={`p-6 rounded-xl transition-all bg-theme-card-bg border ${
+                      isEditingEducation ? 'border-theme-primary-blue' : 'border-theme-border'
+                    }`}
                   >
                     {isEditingEducation ? (
                       <div className="space-y-4">
@@ -717,17 +627,13 @@ export default function SkillsTab({
                               e.stopPropagation();
                               removeEducation(entryId);
                             }}
-                            className="px-4 py-2 rounded-lg flex items-center justify-center gap-2"
-                            style={{
-                              background: colors.errorRed,
-                              color: 'white',
-                            }}
+                            className="px-4 py-2 rounded-lg flex items-center justify-center gap-2 bg-theme-error text-white"
                           >
                             <Trash2 size={14} />
                             Delete
                           </button>
                         </div>
-                        <p className="text-xs mt-2 pt-2 border-t" style={{ color: colors.secondaryText, borderColor: colors.border }}>
+                        <p className="text-xs mt-2 pt-2 border-t text-theme-secondary-text border-theme-border">
                           Changes will be saved when you click "Save" in the header
                         </p>
                       </div>
@@ -735,14 +641,14 @@ export default function SkillsTab({
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0 space-y-3">
                           <div>
-                            <h4 className="font-semibold" style={{ color: colors.primaryText }}>
+                            <h4 className="font-semibold text-theme-primary-text">
                               {edu.institution || 'Institution not specified'}
                             </h4>
-                            <p className="text-sm" style={{ color: colors.secondaryText }}>
+                            <p className="text-sm text-theme-secondary-text">
                               {degreeField || 'Degree information not provided'}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-3 text-xs" style={{ color: colors.tertiaryText }}>
+                          <div className="flex flex-wrap gap-3 text-xs text-theme-tertiary-text">
                             <span>
                               {dateRange || 'Dates not specified'}
                             </span>
@@ -757,7 +663,7 @@ export default function SkillsTab({
                             )}
                           </div>
                           {edu.description && (
-                            <p className="text-sm" style={{ color: colors.secondaryText }}>
+                            <p className="text-sm text-theme-secondary-text">
                               {edu.description}
                             </p>
                           )}
@@ -767,14 +673,7 @@ export default function SkillsTab({
                             <button
                               type="button"
                               onClick={() => setEditingEducationId(entryId)}
-                              className="p-2 rounded-lg transition-colors"
-                              style={{ color: colors.primaryBlue }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = colors.badgeInfoBg;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                              }}
+                              className="p-2 rounded-lg transition-colors text-theme-primary-blue hover:bg-theme-badge-info-bg"
                               aria-label="Edit education"
                               title="Edit education"
                             >
@@ -783,14 +682,7 @@ export default function SkillsTab({
                             <button
                               type="button"
                               onClick={() => removeEducation(entryId)}
-                              className="p-2 rounded-lg transition-colors"
-                              style={{ color: colors.errorRed }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = colors.badgeErrorBg;
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                              }}
+                              className="p-2 rounded-lg transition-colors text-theme-error hover:bg-theme-badge-error-bg"
                               aria-label="Remove education"
                               title="Remove education"
                             >
