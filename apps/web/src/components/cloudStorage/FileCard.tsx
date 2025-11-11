@@ -319,9 +319,9 @@ const FileCard = React.memo(function FileCard({
 
         {/* Bottom Section - Actions Grid */}
             {!showDeleted && (
-          <div 
+          <div
             className="pt-4 mt-4"
-            style={{ borderTop: `1px solid #2D3748` }}
+            style={{ borderTop: `1px solid ${colors.border}` }}
           >
             <div className="flex flex-col gap-3">
               {/* Row 1: View, Download, Share, Comment */}
