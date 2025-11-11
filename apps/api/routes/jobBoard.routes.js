@@ -6,6 +6,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
+const puppeteerService = require('../services/browserAutomation/puppeteerService');
 
 // Encryption configuration
 const ALGORITHM = 'aes-256-gcm';
@@ -853,6 +854,242 @@ module.exports = async function (fastify, opts) {
       reply.status(500).send({
         success: false,
         message: 'Failed to retrieve application statistics'
+      });
+    }
+  });
+
+  // ============================================
+  // LINKEDIN EASY APPLY AUTOMATION
+  // ============================================
+
+  const linkedinService = require('../services/jobBoards/linkedinService');
+
+  /**
+   * Apply to LinkedIn job using Easy Apply
+   * POST /api/job-board/linkedin/easy-apply
+   */
+  fastify.post('/api/job-board/linkedin/easy-apply', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const {
+        credentialId,
+        jobUrl,
+        jobTitle,
+        company,
+        jobDescription,
+        resumeFileId,
+        coverLetterFileId,
+        userData
+      } = request.body;
+
+      // Validate required fields
+      if (!credentialId || !jobUrl) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Credential ID and job URL are required'
+        });
+      }
+
+      // Get resume file path if provided
+      let resumePath = null;
+      if (resumeFileId) {
+        const resumeFile = await prisma.storageFile.findFirst({
+          where: {
+            id: resumeFileId,
+            userId
+          }
+        });
+
+        if (resumeFile) {
+          resumePath = resumeFile.storagePath;
+        }
+      }
+
+      // Create application record
+      const application = await prisma.jobApplication.create({
+        data: {
+          userId,
+          credentialId,
+          jobTitle: jobTitle || 'Unknown',
+          company: company || 'Unknown',
+          jobUrl,
+          jobDescription,
+          platform: 'LINKEDIN',
+          status: 'DRAFT',
+          resumeFileId,
+          coverLetterFileId,
+          isAutoApplied: true,
+          applicationMethod: 'easy_apply'
+        }
+      });
+
+      // Create initial status history
+      await prisma.applicationStatusHistory.create({
+        data: {
+          applicationId: application.id,
+          status: 'DRAFT',
+          notes: 'Application initiated via Easy Apply automation'
+        }
+      });
+
+      logger.info('Starting LinkedIn Easy Apply automation', {
+        userId,
+        applicationId: application.id,
+        jobUrl
+      });
+
+      // Apply to job
+      const result = await linkedinService.applyToJob(userId, credentialId, jobUrl, {
+        ...userData,
+        resumePath
+      });
+
+      // Update application status
+      await prisma.jobApplication.update({
+        where: { id: application.id },
+        data: {
+          status: result.verified ? 'SUBMITTED' : 'DRAFT',
+          appliedAt: result.verified ? new Date() : null,
+          lastStatusUpdate: new Date(),
+          metadata: {
+            automationResult: result,
+            steps: result.steps
+          }
+        }
+      });
+
+      // Add status history
+      await prisma.applicationStatusHistory.create({
+        data: {
+          applicationId: application.id,
+          status: result.verified ? 'SUBMITTED' : 'DRAFT',
+          notes: result.verified
+            ? `Application submitted successfully via Easy Apply (${result.steps} steps)`
+            : 'Application submission could not be verified',
+          metadata: result
+        }
+      });
+
+      logger.info('LinkedIn Easy Apply completed', {
+        userId,
+        applicationId: application.id,
+        success: result.success,
+        verified: result.verified
+      });
+
+      reply.send({
+        success: true,
+        message: result.verified
+          ? 'Application submitted successfully'
+          : 'Application process completed but submission could not be verified',
+        application: {
+          id: application.id,
+          status: result.verified ? 'SUBMITTED' : 'DRAFT',
+          appliedAt: result.verified ? new Date() : null
+        },
+        automationResult: result
+      });
+
+    } catch (error) {
+      logger.error('LinkedIn Easy Apply failed', { error: error.message });
+
+      reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to apply to job',
+        error: error.message
+      });
+    }
+  });
+
+  /**
+   * Test LinkedIn credential (login test)
+   * POST /api/job-board/linkedin/test-credential
+   */
+  fastify.post('/api/job-board/linkedin/test-credential', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { credentialId } = request.body;
+
+      if (!credentialId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Credential ID is required'
+        });
+      }
+
+      // Get credential
+      const credential = await prisma.jobBoardCredential.findFirst({
+        where: {
+          id: credentialId,
+          userId,
+          platform: 'LINKEDIN'
+        }
+      });
+
+      if (!credential) {
+        return reply.status(404).send({
+          success: false,
+          message: 'LinkedIn credential not found'
+        });
+      }
+
+      // Test login
+      const browser = await puppeteerService.getBrowser();
+      const page = await puppeteerService.createStealthPage(browser);
+
+      try {
+        await linkedinService.login(page, credential);
+
+        // Update credential
+        await prisma.jobBoardCredential.update({
+          where: { id: credentialId },
+          data: {
+            isConnected: true,
+            lastConnectedAt: new Date(),
+            verificationStatus: 'verified',
+            lastVerified: new Date(),
+            connectionError: null
+          }
+        });
+
+        await page.close();
+        await puppeteerService.releaseBrowser(browser);
+
+        reply.send({
+          success: true,
+          message: 'LinkedIn credential verified successfully'
+        });
+
+      } catch (loginError) {
+        await page.close();
+        await puppeteerService.releaseBrowser(browser);
+
+        // Update credential with error
+        await prisma.jobBoardCredential.update({
+          where: { id: credentialId },
+          data: {
+            isConnected: false,
+            verificationStatus: 'failed',
+            connectionError: loginError.message
+          }
+        });
+
+        reply.status(401).send({
+          success: false,
+          message: 'LinkedIn credential verification failed',
+          error: loginError.message
+        });
+      }
+
+    } catch (error) {
+      logger.error('Credential test failed', { error: error.message });
+      reply.status(500).send({
+        success: false,
+        message: 'Failed to test credential'
       });
     }
   });
