@@ -8,6 +8,7 @@ import { ResumeFile } from '../../../types/cloudStorage';
 import { SharePermission } from '../types';
 import { MODAL_OVERLAY_STYLE, SHARE_MODAL, SHARE_PERMISSIONS } from '../constants';
 import { getPermissionColor } from '../fileCardHelpers';
+import { logger } from '../../../../utils/logger';
 
 interface ShareModalProps {
   file: ResumeFile;
@@ -35,7 +36,7 @@ interface ShareModalProps {
   onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
 }
 
-export const ShareModal: React.FC<ShareModalProps> = ({
+const ShareModalComponent: React.FC<ShareModalProps> = ({
   file,
   colors,
   theme,
@@ -122,7 +123,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                 if (e.key === 'Enter' && fileSharing.shareEmail.trim() && !fileSharing.isSharing && !fileSharing.shareSuccess && fileSharing.handleShareSubmit) {
                   e.preventDefault();
                   fileSharing.handleShareSubmit().catch((error) => {
-                    console.error('Share error:', error);
+                    logger.error('Share error:', error);
                   });
                 }
               }}
@@ -390,7 +391,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
                               try {
                                 await onRemoveShare(file.id, share.id);
                               } catch (err) {
-                                console.error('Failed to remove share:', err);
+                                logger.error('Failed to remove share:', err);
                               }
                             }
                           }}
@@ -437,40 +438,40 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('Share button clicked', {
+              logger.debug('Share button clicked', {
                 email: fileSharing.shareEmail,
                 isSharing: fileSharing.isSharing,
                 shareSuccess: fileSharing.shareSuccess,
                 hasHandler: !!fileSharing.handleShareSubmit
               });
-              
+
               if (!fileSharing.shareEmail.trim()) {
-                console.warn('Cannot share: email is empty');
+                logger.warn('Cannot share: email is empty');
                 return;
               }
-              
+
               if (fileSharing.isSharing) {
-                console.warn('Cannot share: already in progress');
+                logger.warn('Cannot share: already in progress');
                 return;
               }
-              
+
               if (fileSharing.shareSuccess) {
-                console.warn('Cannot share: success state active');
+                logger.warn('Cannot share: success state active');
                 return;
               }
-              
+
               if (!fileSharing.handleShareSubmit) {
-                console.error('Cannot share: handleShareSubmit is not defined');
+                logger.error('Cannot share: handleShareSubmit is not defined');
                 return;
               }
-              
+
               try {
                 // handleShareSubmit calls onShareWithUser which is wrapped in CloudStorage with error handling
                 await fileSharing.handleShareSubmit();
               } catch (error: any) {
                 // Error is already handled by parent component (CloudStorage) via onShareWithUser wrapper
                 // This catch prevents unhandled promise rejection
-                console.error('Share error in button (handled by parent):', error);
+                logger.error('Share error in button (handled by parent):', error);
               }
             }}
             disabled={!fileSharing.shareEmail?.trim() || fileSharing.isSharing || fileSharing.shareSuccess || !fileSharing.handleShareSubmit}
@@ -529,3 +530,5 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   );
 };
 
+// Memoize component to prevent unnecessary re-renders
+export const ShareModal = React.memo(ShareModalComponent);

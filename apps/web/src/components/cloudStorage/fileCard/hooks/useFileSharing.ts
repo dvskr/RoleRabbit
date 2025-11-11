@@ -23,23 +23,21 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
   const [shareSuccess, setShareSuccess] = useState(false);
 
   const handleShareSubmit = async (): Promise<void> => {
-    console.log('handleShareSubmit called', { shareEmail, isSharing, fileId });
-    
+    logger.debug('handleShareSubmit called', { shareEmail, isSharing, fileId });
+
     if (!shareEmail.trim()) {
       logger.warn('Cannot share: email is empty');
-      console.error('Share failed: email is empty');
       return;
     }
 
     if (isSharing) {
       logger.warn('Cannot share: already sharing');
-      console.error('Share failed: already in progress');
       return;
     }
 
     setIsSharing(true);
     setShareSuccess(false);
-    console.log('Starting share process...');
+    logger.debug('Starting share process...');
 
     try {
       const expiresAt = shareExpiresAt ? new Date(shareExpiresAt).toISOString() : undefined;
@@ -53,7 +51,7 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
         maxDownloads: maxDownloadsCount
       });
       
-      console.log('Calling onShareWithUser with:', {
+      logger.debug('Calling onShareWithUser with:', {
         fileId,
         email: shareEmail.trim(),
         permission: sharePermission,
@@ -62,14 +60,14 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
       });
 
       await onShareWithUser(
-        fileId, 
-        shareEmail.trim(), 
+        fileId,
+        shareEmail.trim(),
         sharePermission,
         expiresAt,
         maxDownloadsCount
       );
-      
-      console.log('Share successful!');
+
+      logger.info('Share successful!');
       
       // Show success state
       setShareSuccess(true);
@@ -87,7 +85,6 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
         setShareSuccess(false);
       }, 2000);
     } catch (error: any) {
-      console.error('Share submission failed:', error);
       logger.error('Share submission failed:', error);
       setShareSuccess(false);
       setIsSharing(false);
