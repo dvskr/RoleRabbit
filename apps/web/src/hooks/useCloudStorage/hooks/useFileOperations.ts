@@ -260,66 +260,68 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   }, [onStorageUpdate, loadFilesFromAPI]);
 
   const handleEditFile = useCallback(async (fileId: string, updates: Partial<Pick<ResumeFile, 'name' | 'type' | 'description' | 'isStarred' | 'isArchived' | 'folderId'>>, showDeleted: boolean = false) => {
+    const updatePayload: Record<string, any> = {};
+
+    if (updates.name !== undefined) {
+      updatePayload.name = updates.name;
+    }
+
+    if (updates.type !== undefined) {
+      updatePayload.type = updates.type;
+    }
+
+    if (updates.description !== undefined) {
+      updatePayload.description = updates.description;
+    }
+
+    if (updates.isStarred !== undefined) {
+      updatePayload.isStarred = updates.isStarred;
+    }
+
+    if (updates.isArchived !== undefined) {
+      updatePayload.isArchived = updates.isArchived;
+    }
+
+    if (updates.folderId !== undefined) {
+      updatePayload.folderId = updates.folderId;
+    }
+
+    // Store previous state for rollback
+    let previousFile: ResumeFile | undefined;
+
+    // Optimistic update - update UI immediately
+    setFiles(prev => prev.map(file => {
+      if (file.id === fileId) {
+        previousFile = file;
+        return {
+          ...file,
+          ...updatePayload,
+        } as ResumeFile;
+      }
+      return file;
+    }));
+
     try {
-      const updatePayload: Record<string, any> = {};
-
-      if (updates.name !== undefined) {
-        updatePayload.name = updates.name;
-      }
-
-      if (updates.type !== undefined) {
-        updatePayload.type = updates.type;
-      }
-
-      if (updates.description !== undefined) {
-        updatePayload.description = updates.description;
-      }
-
-      if (updates.isStarred !== undefined) {
-        updatePayload.isStarred = updates.isStarred;
-      }
-
-      if (updates.isArchived !== undefined) {
-        updatePayload.isArchived = updates.isArchived;
-      }
-
-      if (updates.folderId !== undefined) {
-        updatePayload.folderId = updates.folderId;
-      }
-
       await apiService.updateCloudFile(fileId, updatePayload);
+      logger.info(`✅ File updated: ${fileId}`, updatePayload);
 
-      // Update local state with new references to trigger re-render
-      setFiles(prev => prev.map(file => {
-        if (file.id === fileId) {
-          return {
-            ...file,
-            ...updatePayload,
-          } as ResumeFile;
-        }
-        return file;
-      }));
-      
-      logger.info(`✅ File updated locally: ${fileId}`, updatePayload);
-
-      // Refresh from API to ensure consistency with server - respect showDeleted state
+      // Refresh from API to ensure consistency with server
       setTimeout(() => {
         loadFilesFromAPI(showDeleted).catch(error => {
           logger.warn('Failed to refresh files after edit:', error);
         });
-      }, 100); // Reduced delay for faster feedback
+      }, 100);
     } catch (error) {
       logger.error('Failed to update file:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => {
-        if (file.id === fileId) {
-          return {
-            ...file,
-            ...updates,
-          } as ResumeFile;
-        }
-        return file;
-      }));
+
+      // Rollback optimistic update on error
+      if (previousFile) {
+        setFiles(prev => prev.map(file =>
+          file.id === fileId ? previousFile! : file
+        ));
+      }
+
+      throw error; // Re-throw so UI can show error message
     }
   }, [loadFilesFromAPI]);
 
@@ -358,22 +360,30 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const handleArchiveFile = useCallback(async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
     if (!file) return;
-    
+
+    const newArchivedState = !file.isArchived;
+
+    // Optimistic update - update UI immediately
+    setFiles(prev => prev.map(f =>
+      f.id === fileId
+        ? { ...f, isArchived: newArchivedState }
+        : f
+    ));
+
     try {
-      await apiService.updateCloudFile(fileId, { isArchived: !file.isArchived });
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, isArchived: !file.isArchived }
-          : file
-      ));
+      await apiService.updateCloudFile(fileId, { isArchived: newArchivedState });
+      logger.info(`✅ File archive status toggled: ${fileId}`);
     } catch (error) {
       logger.error('Failed to toggle archive status:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, isArchived: !file.isArchived }
-          : file
+
+      // Revert optimistic update on error
+      setFiles(prev => prev.map(f =>
+        f.id === fileId
+          ? { ...f, isArchived: !newArchivedState }
+          : f
       ));
+
+      throw error; // Re-throw so UI can show error message
     }
   }, [files]);
 
@@ -411,51 +421,77 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
 
   // Restore deleted file from recycle bin
   const handleRestoreFile = useCallback(async (fileId: string) => {
+    // Store previous state for rollback
+    let previousDeletedAt: string | null | undefined;
+
+    // Optimistic update - remove deletedAt immediately
+    setFiles(prev => prev.map(file => {
+      if (file.id === fileId) {
+        previousDeletedAt = file.deletedAt;
+        return { ...file, deletedAt: null };
+      }
+      return file;
+    }));
+
     try {
       await apiService.restoreCloudFile(fileId);
       logger.info(`✅ File restored from recycle bin: ${fileId}`);
-      
-      // Update local state to remove deletedAt
-      setFiles(prev => prev.map(file => 
-        file.id === fileId ? { ...file, deletedAt: null } : file
-      ));
-      
+
       // Reload files from API to ensure consistency
       try {
         await loadFilesFromAPI(false);
       } catch (err) {
-          logger.error('Failed to reload files after restore:', err);
+        logger.error('Failed to reload files after restore:', err);
       }
     } catch (error) {
       logger.error('Failed to restore file:', error);
+
+      // Rollback optimistic update on error
+      if (previousDeletedAt !== undefined) {
+        setFiles(prev => prev.map(file =>
+          file.id === fileId ? { ...file, deletedAt: previousDeletedAt! } : file
+        ));
+      }
+
       throw error; // Re-throw so UI can show error message
     }
   }, [loadFilesFromAPI]);
 
   // Permanently delete file
   const handlePermanentlyDeleteFile = useCallback(async (fileId: string) => {
+    // Store file for rollback
+    let deletedFile: ResumeFile | undefined;
+
+    // Optimistic update - remove from UI immediately
+    setFiles(prev => {
+      deletedFile = prev.find(file => file.id === fileId);
+      return prev.filter(file => file.id !== fileId);
+    });
+
     try {
       const response = await apiService.permanentlyDeleteCloudFile(fileId);
       logger.info(`✅ File permanently deleted: ${fileId}`);
-      
-      // Remove from local state
-      setFiles(prev => prev.filter(file => file.id !== fileId));
-      
+
       // Update storage quota if provided
       if (response?.storage && onStorageUpdate) {
         onStorageUpdate(response.storage);
       }
-      
-      // Reload files from API to ensure consistency (use showDeleted from closure or default to true since we're in recycle bin)
+
+      // Reload files from API to ensure consistency
       try {
         await loadFilesFromAPI(true);
       } catch (err) {
-          logger.error('Failed to reload files after permanent delete:', err);
+        logger.error('Failed to reload files after permanent delete:', err);
       }
     } catch (error) {
       logger.error('Failed to permanently delete file:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.filter(file => file.id !== fileId));
+
+      // Rollback optimistic update on error
+      if (deletedFile) {
+        setFiles(prev => [...prev, deletedFile!]);
+      }
+
+      throw error; // Re-throw so UI can show error message
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
