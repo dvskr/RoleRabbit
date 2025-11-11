@@ -387,16 +387,66 @@ export const useCloudStorage = () => {
   const storageInfo: StorageInfo = useMemo(() => storageInfoState, [storageInfoState]);
 
   // Wrapper for handleSelectAll to use filteredFiles
-  const handleSelectAll = () => {
+  const handleSelectAll = useCallback(() => {
     fileOps.handleSelectAll(filteredFiles);
-  };
+  }, [fileOps, filteredFiles]);
 
   // Wrapper for handleUploadFile to close modal
-  const handleUploadFile = async (fileData: Parameters<typeof fileOps.handleUploadFile>[0]) => {
+  const handleUploadFile = useCallback(async (fileData: Parameters<typeof fileOps.handleUploadFile>[0]) => {
     await fileOps.handleUploadFile(fileData, () => {
       setShowUploadModal(false);
     });
-  };
+  }, [fileOps, setShowUploadModal]);
+
+  // Wrapper for handleDeleteFile with showDeleted
+  const handleDeleteFile = useCallback((fileId: string) => {
+    return fileOps.handleDeleteFile(fileId, showDeleted);
+  }, [fileOps, showDeleted]);
+
+  // Wrapper for handleEditFile with showDeleted
+  const handleEditFile = useCallback((fileId: string, updates: any) => {
+    return fileOps.handleEditFile(fileId, updates, showDeleted);
+  }, [fileOps, showDeleted]);
+
+  // Comprehensive refresh handler
+  const handleRefresh = useCallback(async () => {
+    try {
+      // Refresh files (respect current showDeleted state)
+      await fileOps.handleRefresh(showDeleted);
+      // Refresh folders
+      await loadFolders();
+      // Refresh storage info
+      await refreshStorageInfo();
+      // Refresh credentials
+      try {
+        const [credentialsRes, remindersRes] = await Promise.all([
+          apiService.getCredentials(),
+          apiService.getExpiringCredentials(90)
+        ]);
+
+        if (credentialsRes && credentialsRes.credentials) {
+          setCredentials(credentialsRes.credentials);
+        }
+
+        if (remindersRes && remindersRes.reminders) {
+          const reminders: CredentialReminder[] = remindersRes.reminders.map((cred: any) => ({
+            id: cred.id,
+            credentialId: cred.credentialId,
+            credentialName: cred.name,
+            expirationDate: cred.expirationDate,
+            reminderDate: new Date().toISOString(),
+            isSent: false,
+            priority: cred.priority || 'medium' as 'high' | 'medium' | 'low'
+          }));
+          setCredentialReminders(reminders);
+        }
+      } catch (credError) {
+        logger.warn('Failed to refresh credentials:', credError);
+      }
+    } catch (error) {
+      logger.error('Failed to refresh storage data:', error);
+    }
+  }, [fileOps, showDeleted, loadFolders, refreshStorageInfo, setCredentials, setCredentialReminders]);
 
   return {
     // State
@@ -435,51 +485,14 @@ export const useCloudStorage = () => {
     handleFileSelect: fileOps.handleFileSelect,
     handleSelectAll,
     handleDeleteFiles: fileOps.handleDeleteFiles,
-    handleDeleteFile: (fileId: string) => fileOps.handleDeleteFile(fileId, showDeleted),
+    handleDeleteFile,
     handleRestoreFile: fileOps.handleRestoreFile,
     handlePermanentlyDeleteFile: fileOps.handlePermanentlyDeleteFile,
     handleDownloadFile: fileOps.handleDownloadFile,
     handleShareFile: fileOps.handleShareFile,
     handleUploadFile,
-    handleEditFile: (fileId: string, updates: any) => fileOps.handleEditFile(fileId, updates, showDeleted),
-    handleRefresh: async () => {
-      try {
-        // Refresh files (respect current showDeleted state)
-        await fileOps.handleRefresh(showDeleted);
-        // Refresh folders
-        await loadFolders();
-        // Refresh storage info
-        await refreshStorageInfo();
-        // Refresh credentials
-        try {
-          const [credentialsRes, remindersRes] = await Promise.all([
-            apiService.getCredentials(),
-            apiService.getExpiringCredentials(90)
-          ]);
-          
-          if (credentialsRes && credentialsRes.credentials) {
-            setCredentials(credentialsRes.credentials);
-          }
-          
-          if (remindersRes && remindersRes.reminders) {
-            const reminders: CredentialReminder[] = remindersRes.reminders.map((cred: any) => ({
-              id: cred.id,
-              credentialId: cred.credentialId,
-              credentialName: cred.name,
-              expirationDate: cred.expirationDate,
-              reminderDate: new Date().toISOString(),
-              isSent: false,
-              priority: cred.priority || 'medium' as 'high' | 'medium' | 'low'
-            }));
-            setCredentialReminders(reminders);
-          }
-        } catch (credError) {
-          logger.warn('Failed to refresh credentials:', credError);
-        }
-      } catch (error) {
-        logger.error('Failed to refresh storage data:', error);
-      }
-    },
+    handleEditFile,
+    handleRefresh,
     handleStarFile: fileOps.handleStarFile,
     handleArchiveFile: fileOps.handleArchiveFile,
     handleMoveFile,

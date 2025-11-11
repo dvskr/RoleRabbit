@@ -780,18 +780,63 @@ const FileCard = React.memo(function FileCard({
   );
 }, (prevProps, nextProps) => {
   // Check if any relevant properties changed
-  return prevProps.file.id === nextProps.file.id &&
-         prevProps.file.name === nextProps.file.name &&
-         prevProps.file.type === nextProps.file.type &&
-         prevProps.file.isStarred === nextProps.file.isStarred &&
-         prevProps.file.isArchived === nextProps.file.isArchived &&
-         prevProps.file.deletedAt === nextProps.file.deletedAt &&
-         prevProps.file.folderId === nextProps.file.folderId &&
-         prevProps.isSelected === nextProps.isSelected &&
-         prevProps.showDeleted === nextProps.showDeleted &&
-         (prevProps.file.comments?.length || 0) === (nextProps.file.comments?.length || 0) &&
-         (prevProps.file.sharedWith?.length || 0) === (nextProps.file.sharedWith?.length || 0) &&
-         prevProps.folders.length === nextProps.folders.length; // Check if folders list changed
+  // Basic property checks
+  if (prevProps.file.id !== nextProps.file.id ||
+      prevProps.file.name !== nextProps.file.name ||
+      prevProps.file.type !== nextProps.file.type ||
+      prevProps.file.isStarred !== nextProps.file.isStarred ||
+      prevProps.file.isArchived !== nextProps.file.isArchived ||
+      prevProps.file.deletedAt !== nextProps.file.deletedAt ||
+      prevProps.file.folderId !== nextProps.file.folderId ||
+      prevProps.isSelected !== nextProps.isSelected ||
+      prevProps.showDeleted !== nextProps.showDeleted) {
+    return false; // Props changed, re-render
+  }
+
+  // Check comments array - both length AND content
+  const prevComments = prevProps.file.comments || [];
+  const nextComments = nextProps.file.comments || [];
+  if (prevComments.length !== nextComments.length) {
+    return false;
+  }
+  // Check if comment IDs are the same (shallow check for performance)
+  if (prevComments.length > 0) {
+    const prevCommentIds = prevComments.map((c: any) => c.id).join(',');
+    const nextCommentIds = nextComments.map((c: any) => c.id).join(',');
+    if (prevCommentIds !== nextCommentIds) {
+      return false;
+    }
+  }
+
+  // Check sharedWith array - both length AND content
+  const prevShared = prevProps.file.sharedWith || [];
+  const nextShared = nextProps.file.sharedWith || [];
+  if (prevShared.length !== nextShared.length) {
+    return false;
+  }
+  // Check if share IDs are the same (shallow check for performance)
+  if (prevShared.length > 0) {
+    const prevShareIds = prevShared.map((s: any) => s.id).join(',');
+    const nextShareIds = nextShared.map((s: any) => s.id).join(',');
+    if (prevShareIds !== nextShareIds) {
+      return false;
+    }
+  }
+
+  // Check folders array - both length AND content
+  if (prevProps.folders.length !== nextProps.folders.length) {
+    return false;
+  }
+  // Check if folder IDs are the same
+  if (prevProps.folders.length > 0) {
+    const prevFolderIds = prevProps.folders.map(f => f.id).join(',');
+    const nextFolderIds = nextProps.folders.map(f => f.id).join(',');
+    if (prevFolderIds !== nextFolderIds) {
+      return false;
+    }
+  }
+
+  return true; // No changes, skip re-render
 });
 
 export default FileCard;
