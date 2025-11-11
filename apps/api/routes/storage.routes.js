@@ -11,6 +11,13 @@ const { checkFilePermission, getUserFilePermission } = require('../utils/filePer
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
 const redisService = require('../utils/redis');
+const {
+  validateEmail,
+  validatePermission,
+  validateExpirationDate,
+  validateMaxDownloads,
+  escapeHtml
+} = require('../utils/fileValidation');
 
 /**
  * Register all storage routes with Fastify instance
@@ -1106,20 +1113,16 @@ async function storageRoutes(fastify, options) {
 
       const fileId = request.params.id;
 
-      // Check if file exists and belongs to user
-      const file = await prisma.storageFile.findFirst({
-        where: {
-          id: fileId,
-          userId
-        }
-      });
-
-      if (!file) {
-        return reply.status(404).send({
-          error: 'Not Found',
-          message: 'File not found or you do not have permission to delete it'
+      // Check permission to permanently delete file (requires admin permission - only owner can delete)
+      const permissionCheck = await checkFilePermission(userId, fileId, 'delete');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'You do not have permission to permanently delete this file. Only file owners can delete files.'
         });
       }
+
+      const file = permissionCheck.file;
 
       // Delete file from storage
       try {
@@ -1130,33 +1133,52 @@ async function storageRoutes(fastify, options) {
         // Continue with database delete even if storage delete fails
       }
 
-      // Permanently delete from database
-      await prisma.storageFile.delete({
-        where: { id: fileId }
+      // Permanently delete from database with cascade delete for related data
+      await prisma.$transaction(async (tx) => {
+        // Delete file shares (user-to-user shares)
+        await tx.fileShare.deleteMany({
+          where: { fileId }
+        });
+
+        // Delete share links (public/email shares)
+        await tx.shareLink.deleteMany({
+          where: { fileId }
+        });
+
+        // Delete comments
+        await tx.comment.deleteMany({
+          where: { fileId }
+        });
+
+        // Delete file activities (audit log entries)
+        await tx.fileActivity.deleteMany({
+          where: { fileId }
+        });
+
+        // Finally, delete the file itself
+        await tx.storageFile.delete({
+          where: { id: fileId }
+        });
       });
 
       logger.info(`✅ File permanently deleted: ${fileId}`);
 
-      // Update storage quota
+      // Update storage quota atomically to prevent race conditions
       try {
-        const quota = await prisma.storageQuota.findUnique({
-          where: { userId }
-        });
+        const fileSize = Number(file.size);
 
-        if (quota) {
-          const currentUsed = Number(quota.usedBytes);
-          const fileSize = Number(file.size);
-          const newUsed = Math.max(0, currentUsed - fileSize);
+        // Use atomic update with raw SQL to prevent race conditions
+        // This ensures the quota is decremented atomically without read-then-update
+        await prisma.$executeRaw`
+          UPDATE "StorageQuota"
+          SET "usedBytes" = CASE
+            WHEN "usedBytes" >= ${BigInt(fileSize)} THEN "usedBytes" - ${BigInt(fileSize)}
+            ELSE 0
+          END
+          WHERE "userId" = ${userId}
+        `;
 
-          await prisma.storageQuota.update({
-            where: { userId },
-            data: {
-              usedBytes: BigInt(newUsed)
-            }
-          });
-
-          logger.info(`✅ Storage quota updated: ${newUsed} bytes used`);
-        }
+        logger.info(`✅ Storage quota atomically decremented by ${fileSize} bytes`);
       } catch (quotaError) {
         logger.warn('⚠️ Failed to update storage quota:', quotaError.message);
       }
@@ -1274,12 +1296,45 @@ async function storageRoutes(fastify, options) {
       const fileId = request.params.id;
       const { userEmail, permission = 'view', expiresAt, maxDownloads } = request.body || {};
 
-      if (!userEmail) {
+      // Validate email
+      const emailValidation = validateEmail(userEmail);
+      if (!emailValidation.valid) {
         return reply.status(400).send({
           error: 'Bad Request',
-          message: 'userEmail is required'
+          message: emailValidation.error
         });
       }
+      const sanitizedEmail = emailValidation.sanitized;
+
+      // Validate permission
+      const permissionValidation = validatePermission(permission);
+      if (!permissionValidation.valid) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: permissionValidation.error
+        });
+      }
+      const sanitizedPermission = permissionValidation.sanitized;
+
+      // Validate expiration date (if provided)
+      const expirationValidation = validateExpirationDate(expiresAt);
+      if (!expirationValidation.valid) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: expirationValidation.error
+        });
+      }
+      const sanitizedExpiresAt = expirationValidation.sanitized;
+
+      // Validate maxDownloads (if provided)
+      const maxDownloadsValidation = validateMaxDownloads(maxDownloads);
+      if (!maxDownloadsValidation.valid) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: maxDownloadsValidation.error
+        });
+      }
+      const sanitizedMaxDownloads = maxDownloadsValidation.sanitized;
 
       // Check if file exists and belongs to user
       const file = await prisma.storageFile.findFirst({
@@ -1299,7 +1354,7 @@ async function storageRoutes(fastify, options) {
 
       // Find the shared user (if exists)
       let sharedUser = await prisma.user.findUnique({
-        where: { email: userEmail.toLowerCase() }
+        where: { email: sanitizedEmail }
       });
 
       // Get the file owner's info for email
@@ -1311,14 +1366,34 @@ async function storageRoutes(fastify, options) {
       // Create share record - use user ID if exists, otherwise use email as identifier
       let share;
       if (sharedUser) {
+        // Check for duplicate share
+        const existingShare = await prisma.fileShare.findFirst({
+          where: {
+            fileId,
+            sharedWith: sharedUser.id
+          }
+        });
+
+        if (existingShare) {
+          return reply.status(409).send({
+            error: 'Conflict',
+            message: 'This file is already shared with this user. You can update the existing share instead.',
+            existingShare: {
+              id: existingShare.id,
+              permission: existingShare.permission,
+              expiresAt: existingShare.expiresAt?.toISOString() || null
+            }
+          });
+        }
+
         // User exists - create share with user ID
         share = await prisma.fileShare.create({
           data: {
             fileId,
             userId,
             sharedWith: sharedUser.id,
-            permission,
-            expiresAt: expiresAt ? new Date(expiresAt) : null
+            permission: sanitizedPermission,
+            expiresAt: sanitizedExpiresAt
           },
           include: {
             recipient: {
@@ -1345,9 +1420,9 @@ async function storageRoutes(fastify, options) {
             fileId,
             userId,
             token: shareToken,
-            permission: permission || 'view',
-            expiresAt: expiresAt ? new Date(expiresAt) : null,
-            maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
+            permission: sanitizedPermission,
+            expiresAt: sanitizedExpiresAt,
+            maxDownloads: sanitizedMaxDownloads,
             password: null // Password protection can be added later
           }
         });
@@ -1384,16 +1459,16 @@ async function storageRoutes(fastify, options) {
               </div>
               <div class="content">
                 <p>Hello,</p>
-                <p><strong>${fileOwner?.name || 'Someone'}</strong> has shared a file with you.</p>
+                <p><strong>${escapeHtml(fileOwner?.name || 'Someone')}</strong> has shared a file with you.</p>
                 <div class="file-info">
-                  <p><strong>File:</strong> ${file.name}</p>
-                  <p><strong>Permission:</strong> ${permission}</p>
-                  ${expiresAt ? `<p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleString()}</p>` : ''}
+                  <p><strong>File:</strong> ${escapeHtml(file.name)}</p>
+                  <p><strong>Permission:</strong> ${escapeHtml(sanitizedPermission)}</p>
+                  ${sanitizedExpiresAt ? `<p><strong>Expires:</strong> ${escapeHtml(sanitizedExpiresAt.toLocaleString())}</p>` : ''}
                 </div>
                 <p>
-                  <a href="${shareUrl}" class="button">View File</a>
+                  <a href="${escapeHtml(shareUrl)}" class="button">View File</a>
                 </p>
-                <p>Or copy this link: <a href="${shareUrl}">${shareUrl}</a></p>
+                <p>Or copy this link: <a href="${escapeHtml(shareUrl)}">${escapeHtml(shareUrl)}</a></p>
                 <p>If you didn't expect this file, you can safely ignore this email.</p>
                 <p>Best regards,<br>The RoleReady Team</p>
               </div>
@@ -1407,13 +1482,13 @@ async function storageRoutes(fastify, options) {
         
         try {
           await sendEmail({
-            to: userEmail,
-            subject: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you`,
+            to: sanitizedEmail,
+            subject: `${escapeHtml(fileOwner?.name || 'Someone')} shared "${escapeHtml(file.name)}" with you`,
             html: emailHtml,
             text: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you. View it here: ${shareUrl}`,
             isSecurityEmail: false
           });
-          logger.info(`✅ Share email sent to ${userEmail}`);
+          logger.info(`✅ Share email sent to ${sanitizedEmail}`);
           emailSent = true;
         } catch (err) {
           logger.error('Failed to send share email:', err);
@@ -1437,7 +1512,7 @@ async function storageRoutes(fastify, options) {
         });
       }
 
-      logger.info(`✅ File shared: ${fileId} with ${userEmail}`);
+      logger.info(`✅ File shared: ${fileId} with ${sanitizedEmail}`);
 
       // Send email notification to existing user
       let emailSent = false;
@@ -1474,15 +1549,15 @@ async function storageRoutes(fastify, options) {
                 <h1>File Shared with You</h1>
               </div>
               <div class="content">
-                <p>Hello ${sharedUser.name || userEmail},</p>
-                <p><strong>${fileOwner?.name || 'Someone'}</strong> has shared a file with you.</p>
+                <p>Hello ${escapeHtml(sharedUser.name || sanitizedEmail)},</p>
+                <p><strong>${escapeHtml(fileOwner?.name || 'Someone')}</strong> has shared a file with you.</p>
                 <div class="file-info">
-                  <p><strong>File:</strong> ${file.name}</p>
-                  <p><strong>Permission:</strong> ${permission}</p>
-                  ${expiresAt ? `<p><strong>Expires:</strong> ${new Date(expiresAt).toLocaleString()}</p>` : ''}
+                  <p><strong>File:</strong> ${escapeHtml(file.name)}</p>
+                  <p><strong>Permission:</strong> ${escapeHtml(sanitizedPermission)}</p>
+                  ${sanitizedExpiresAt ? `<p><strong>Expires:</strong> ${escapeHtml(sanitizedExpiresAt.toLocaleString())}</p>` : ''}
                 </div>
                 <p>
-                  <a href="${fileUrl}" class="button">View File</a>
+                  <a href="${escapeHtml(fileUrl)}" class="button">View File</a>
                 </p>
                 <p>If you didn't expect this file, you can safely ignore this email.</p>
                 <p>Best regards,<br>The RoleReady Team</p>
@@ -1494,13 +1569,13 @@ async function storageRoutes(fastify, options) {
 
         try {
           await sendEmail({
-            to: userEmail,
-            subject: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you`,
+            to: sanitizedEmail,
+            subject: `${escapeHtml(fileOwner?.name || 'Someone')} shared "${escapeHtml(file.name)}" with you`,
             html: emailHtml,
             text: `${fileOwner?.name || 'Someone'} shared "${file.name}" with you. View it here: ${fileUrl}`,
             isSecurityEmail: false
           });
-          logger.info(`✅ Share email sent to ${userEmail}`);
+          logger.info(`✅ Share email sent to ${sanitizedEmail}`);
           emailSent = true;
         } catch (err) {
           logger.error('Failed to send share email:', err);
@@ -1531,7 +1606,7 @@ async function storageRoutes(fastify, options) {
           id: share.id,
           fileId: share.fileId,
           sharedWith: share.sharedWith,
-          sharedWithEmail: userEmail,
+          sharedWithEmail: sanitizedEmail,
           permission: share.permission,
           expiresAt: share.expiresAt?.toISOString() || null,
           createdAt: share.createdAt.toISOString()

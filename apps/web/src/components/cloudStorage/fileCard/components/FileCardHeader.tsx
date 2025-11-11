@@ -106,9 +106,10 @@ export const FileCardHeader: React.FC<FileCardHeaderProps> = ({
                     onMouseLeave={(e) => {
                       e.currentTarget.style.background = colors.inputBackground;
                     }}
+                    aria-label={`Restore ${file.name}`}
                     title="Restore"
                   >
-                    <RotateCcw size={14} />
+                    <RotateCcw size={14} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => onPermanentlyDelete?.(file.id)}
@@ -125,9 +126,10 @@ export const FileCardHeader: React.FC<FileCardHeaderProps> = ({
                       e.currentTarget.style.color = colors.errorRed;
                       e.currentTarget.style.background = colors.inputBackground;
                     }}
+                    aria-label={`Permanently delete ${file.name}`}
                     title="Permanently Delete"
                   >
-                    <Trash size={14} />
+                    <Trash size={14} aria-hidden="true" />
                   </button>
                 </>
               ) : (
@@ -150,9 +152,10 @@ export const FileCardHeader: React.FC<FileCardHeaderProps> = ({
                         onStar(file.id);
                       }
                     }}
+                    aria-label={file.isStarred ? `Unstar ${file.name}` : `Star ${file.name}`}
                     title={file.isStarred ? 'Remove from starred' : 'Add to starred'}
                   >
-                    <Star size={14} className={file.isStarred ? 'fill-current' : ''} />
+                    <Star size={14} className={file.isStarred ? 'fill-current' : ''} aria-hidden="true" />
                   </button>
                   {/* Square Icon (Checkbox/Menu) */}
                   <button
@@ -168,6 +171,7 @@ export const FileCardHeader: React.FC<FileCardHeaderProps> = ({
                       e.currentTarget.style.background = colors.inputBackground;
                     }}
                     onClick={() => onSelect(file.id)}
+                    aria-label={isSelected ? `Deselect ${file.name}` : `Select ${file.name}`}
                     title="Select file"
                   >
                     <div
@@ -176,6 +180,7 @@ export const FileCardHeader: React.FC<FileCardHeaderProps> = ({
                         borderColor: isSelected ? colors.primaryBlue : colors.border,
                         background: isSelected ? colors.primaryBlue : 'transparent',
                       }}
+                      aria-hidden="true"
                     >
                       {isSelected && <Check size={12} color={colors.primaryText} />}
                     </div>

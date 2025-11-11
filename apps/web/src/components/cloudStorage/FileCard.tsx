@@ -243,12 +243,30 @@ const FileCard = React.memo(function FileCard({
   };
 
 
+  // Keyboard navigation handler
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Enter or Space to toggle selection
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (onSelect) {
+        onSelect(file.id);
+      }
+    }
+  };
+
   const renderGridView = () => {
     // Use theme colors for consistency
-    
+    const fileSize = file.sizeBytes !== undefined
+      ? formatFileSize(file.sizeBytes)
+      : (typeof file.size === 'string' ? file.size : '—');
+    const lastModified = formatRelativeTime(file.updatedAt || file.lastModified || '');
+
     return (
       <div
-        className="group rounded-xl p-5 transition-all duration-300 w-full"
+        role="article"
+        tabIndex={0}
+        aria-label={`File: ${file.name}, ${fileSize}, last modified ${lastModified}${isSelected ? ', selected' : ''}`}
+        className="group rounded-xl p-5 transition-all duration-300 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         style={{
           background: colors.cardBackground,
           border: `1px solid ${isSelected ? colors.primaryBlue : colors.border}`,
@@ -256,6 +274,7 @@ const FileCard = React.memo(function FileCard({
           maxWidth: '340px',
           minWidth: '280px',
         }}
+        onKeyDown={handleKeyDown}
       >
         {/* Top Section - Header */}
         <FileCardHeader
