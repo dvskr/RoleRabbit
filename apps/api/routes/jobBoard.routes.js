@@ -1093,4 +1093,240 @@ module.exports = async function (fastify, opts) {
       });
     }
   });
+
+  // ============================================
+  // INDEED QUICK APPLY AUTOMATION
+  // ============================================
+
+  const indeedService = require('../services/jobBoards/indeedService');
+
+  /**
+   * Apply to Indeed job using Quick Apply
+   * POST /api/job-board/indeed/quick-apply
+   */
+  fastify.post('/api/job-board/indeed/quick-apply', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const {
+        credentialId,
+        jobUrl,
+        jobTitle,
+        company,
+        jobDescription,
+        resumeFileId,
+        coverLetterFileId,
+        userData
+      } = request.body;
+
+      // Validate required fields
+      if (!credentialId || !jobUrl) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Credential ID and job URL are required'
+        });
+      }
+
+      // Get resume file path if provided
+      let resumePath = null;
+      if (resumeFileId) {
+        const resumeFile = await prisma.storageFile.findFirst({
+          where: {
+            id: resumeFileId,
+            userId
+          }
+        });
+
+        if (resumeFile) {
+          resumePath = resumeFile.storagePath;
+        }
+      }
+
+      // Create application record
+      const application = await prisma.jobApplication.create({
+        data: {
+          userId,
+          credentialId,
+          jobTitle: jobTitle || 'Unknown',
+          company: company || 'Unknown',
+          jobUrl,
+          jobDescription,
+          platform: 'INDEED',
+          status: 'DRAFT',
+          resumeFileId,
+          coverLetterFileId,
+          isAutoApplied: true,
+          applicationMethod: 'quick_apply'
+        }
+      });
+
+      // Create initial status history
+      await prisma.applicationStatusHistory.create({
+        data: {
+          applicationId: application.id,
+          status: 'DRAFT',
+          notes: 'Application initiated via Quick Apply automation'
+        }
+      });
+
+      logger.info('Starting Indeed Quick Apply automation', {
+        userId,
+        applicationId: application.id,
+        jobUrl
+      });
+
+      // Apply to job
+      const result = await indeedService.applyToJob(userId, credentialId, jobUrl, {
+        ...userData,
+        resumePath
+      });
+
+      // Update application status
+      await prisma.jobApplication.update({
+        where: { id: application.id },
+        data: {
+          status: result.verified ? 'SUBMITTED' : 'DRAFT',
+          appliedAt: result.verified ? new Date() : null,
+          lastStatusUpdate: new Date(),
+          metadata: {
+            automationResult: result,
+            steps: result.steps
+          }
+        }
+      });
+
+      // Add status history
+      await prisma.applicationStatusHistory.create({
+        data: {
+          applicationId: application.id,
+          status: result.verified ? 'SUBMITTED' : 'DRAFT',
+          notes: result.verified
+            ? `Application submitted successfully via Quick Apply (${result.steps} steps)`
+            : 'Application submission could not be verified',
+          metadata: result
+        }
+      });
+
+      logger.info('Indeed Quick Apply completed', {
+        userId,
+        applicationId: application.id,
+        success: result.success,
+        verified: result.verified
+      });
+
+      reply.send({
+        success: true,
+        message: result.verified
+          ? 'Application submitted successfully'
+          : 'Application process completed but submission could not be verified',
+        application: {
+          id: application.id,
+          status: result.verified ? 'SUBMITTED' : 'DRAFT',
+          appliedAt: result.verified ? new Date() : null
+        },
+        automationResult: result
+      });
+
+    } catch (error) {
+      logger.error('Indeed Quick Apply failed', { error: error.message });
+
+      reply.status(500).send({
+        success: false,
+        message: error.message || 'Failed to apply to job',
+        error: error.message
+      });
+    }
+  });
+
+  /**
+   * Test Indeed credential (login test)
+   * POST /api/job-board/indeed/test-credential
+   */
+  fastify.post('/api/job-board/indeed/test-credential', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { credentialId } = request.body;
+
+      if (!credentialId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Credential ID is required'
+        });
+      }
+
+      // Get credential
+      const credential = await prisma.jobBoardCredential.findFirst({
+        where: {
+          id: credentialId,
+          userId,
+          platform: 'INDEED'
+        }
+      });
+
+      if (!credential) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Indeed credential not found'
+        });
+      }
+
+      // Test login
+      const browser = await puppeteerService.getBrowser();
+      const page = await puppeteerService.createStealthPage(browser);
+
+      try {
+        await indeedService.login(page, credential);
+
+        // Update credential
+        await prisma.jobBoardCredential.update({
+          where: { id: credentialId },
+          data: {
+            isConnected: true,
+            lastConnectedAt: new Date(),
+            verificationStatus: 'verified',
+            lastVerified: new Date(),
+            connectionError: null
+          }
+        });
+
+        await page.close();
+        await puppeteerService.releaseBrowser(browser);
+
+        reply.send({
+          success: true,
+          message: 'Indeed credential verified successfully'
+        });
+
+      } catch (loginError) {
+        await page.close();
+        await puppeteerService.releaseBrowser(browser);
+
+        // Update credential with error
+        await prisma.jobBoardCredential.update({
+          where: { id: credentialId },
+          data: {
+            isConnected: false,
+            verificationStatus: 'failed',
+            connectionError: loginError.message
+          }
+        });
+
+        reply.status(401).send({
+          success: false,
+          message: 'Indeed credential verification failed',
+          error: loginError.message
+        });
+      }
+
+    } catch (error) {
+      logger.error('Credential test failed', { error: error.message });
+      reply.status(500).send({
+        success: false,
+        message: 'Failed to test credential'
+      });
+    }
+  });
 };
