@@ -259,7 +259,8 @@ export const useCloudStorage = () => {
       unsubscribeShareRemoved();
       unsubscribeCommentAdded();
     };
-  }, [user?.id, showDeleted, setFiles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, showDeleted]); // setFiles is stable and not needed in deps (all updates use functional form)
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
