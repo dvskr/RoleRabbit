@@ -400,7 +400,20 @@ const start = async () => {
     if (!dbConnected) {
       logger.error('❌ Failed to connect to database after multiple attempts. Server will continue but database operations may fail.');
     }
-    
+
+    // Initialize Redis for caching
+    try {
+      const redisService = require('./utils/redis');
+      const redisConnected = await redisService.connect();
+      if (redisConnected) {
+        logger.info('✅ Redis cache connected successfully');
+      } else {
+        logger.warn('⚠️ Redis connection failed. Caching will be disabled but server will continue.');
+      }
+    } catch (redisError) {
+      logger.warn('⚠️ Redis initialization failed (server will continue without caching):', redisError.message);
+    }
+
     fastify.get('/metrics', async (request, reply) => {
       reply.header('Content-Type', metrics.register.contentType);
       return metrics.register.metrics();
@@ -460,6 +473,16 @@ async function shutdown(signal) {
   try {
     await fastify.close();
     await disconnectDB();
+
+    // Disconnect Redis
+    try {
+      const redisService = require('./utils/redis');
+      await redisService.disconnect();
+      logger.info('✅ Redis disconnected');
+    } catch (redisError) {
+      logger.warn('⚠️ Error disconnecting Redis:', redisError.message);
+    }
+
     logger.info('✅ Server shut down gracefully');
     process.exit(0);
   } catch (error) {

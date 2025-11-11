@@ -10,6 +10,7 @@ const { validateFileUpload, validateFileType } = require('../utils/storageValida
 const { checkFilePermission, getUserFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
+const redisService = require('../utils/redis');
 
 /**
  * Register all storage routes with Fastify instance
@@ -109,6 +110,23 @@ async function storageRoutes(fastify, options) {
         where.folderId = folderId;
       }
       // If folderId not provided, don't add folder filter - return all files
+
+      // Check cache first (only for non-search queries as they change frequently)
+      if (!search) {
+        const cacheKey = redisService.generateFilesCacheKey(userId, {
+          folderId,
+          includeDeleted,
+          type,
+          limit,
+          cursor
+        });
+
+        const cachedData = await redisService.get(cacheKey);
+        if (cachedData) {
+          logger.info(`✅ Cache HIT for user ${userId} files`);
+          return reply.send(cachedData);
+        }
+      }
 
       // Build conditional includes object (only load requested relations)
       const includeClause = {};
@@ -276,8 +294,8 @@ async function storageRoutes(fastify, options) {
         logger.warn('Failed to fetch storage quota:', error.message);
       }
 
-      // Return response with pagination metadata
-      return reply.send({
+      // Prepare response
+      const responseData = {
         success: true,
         files: formattedFiles,
         storage: storageInfo,
@@ -290,7 +308,24 @@ async function storageRoutes(fastify, options) {
           limit,
           returnedCount: formattedFiles.length
         }
-      });
+      };
+
+      // Cache the response (only for non-search queries, 5 min TTL)
+      if (!search) {
+        const cacheKey = redisService.generateFilesCacheKey(userId, {
+          folderId,
+          includeDeleted,
+          type,
+          limit,
+          cursor
+        });
+
+        await redisService.set(cacheKey, responseData, 300); // 5 minutes
+        logger.info(`✅ Cache SET for user ${userId} files`);
+      }
+
+      // Return response
+      return reply.send(responseData);
 
     } catch (error) {
       logger.error('Error fetching files:', error);
@@ -615,6 +650,9 @@ async function storageRoutes(fastify, options) {
         socketIOServer.notifyFileCreated(userId, fileMetadata);
       }
 
+      // Invalidate user's file cache
+      await redisService.invalidateUserFiles(userId);
+
           reply.status(201).send({
             success: true,
             file: {
@@ -763,6 +801,9 @@ async function storageRoutes(fastify, options) {
         socketIOServer.notifyFileUpdated(userId, formattedFile, updates);
       }
 
+      // Invalidate user's file cache
+      await redisService.invalidateUserFiles(userId);
+
       return reply.send({
         success: true,
         file: formattedFile
@@ -818,6 +859,9 @@ async function storageRoutes(fastify, options) {
       if (socketIOServer.isInitialized()) {
         socketIOServer.notifyFileDeleted(userId, fileId, false);
       }
+
+      // Invalidate user's file cache
+      await redisService.invalidateUserFiles(userId);
 
       return reply.send({
         success: true,
@@ -899,6 +943,9 @@ async function storageRoutes(fastify, options) {
         socketIOServer.notifyFileRestored(userId, restoredFile);
       }
 
+      // Invalidate user's file cache
+      await redisService.invalidateUserFiles(userId);
+
       return reply.send({
         success: true,
         message: 'File restored from recycle bin',
@@ -952,6 +999,9 @@ async function storageRoutes(fastify, options) {
               folderId: null
             }, { folderId: null });
           }
+
+          // Invalidate user's file cache
+          await redisService.invalidateUserFiles(userId);
 
           return reply.send({
             success: true,
@@ -1018,6 +1068,9 @@ async function storageRoutes(fastify, options) {
       if (socketIOServer.isInitialized()) {
         socketIOServer.notifyFileUpdated(userId, formattedFile, { folderId: updatedFile.folderId });
       }
+
+      // Invalidate user's file cache
+      await redisService.invalidateUserFiles(userId);
 
       return reply.send({
         success: true,
@@ -1107,6 +1160,9 @@ async function storageRoutes(fastify, options) {
       } catch (quotaError) {
         logger.warn('⚠️ Failed to update storage quota:', quotaError.message);
       }
+
+      // Invalidate user's file cache
+      await redisService.invalidateUserFiles(userId);
 
       return reply.send({
         success: true,
@@ -1869,6 +1925,9 @@ async function storageRoutes(fastify, options) {
 
       logger.info(`✅ Folder created: ${folder.id} - ${folder.name}`);
 
+      // Invalidate user's file cache (folders affect file queries)
+      await redisService.invalidateUserFiles(userId);
+
       return reply.send({
         success: true,
         folder: {
@@ -1931,6 +1990,9 @@ async function storageRoutes(fastify, options) {
       });
 
       logger.info(`✅ Folder updated: ${folderId}`);
+
+      // Invalidate user's file cache (folder names appear in file queries)
+      await redisService.invalidateUserFiles(userId);
 
       return reply.send({
         success: true,
@@ -2000,6 +2062,9 @@ async function storageRoutes(fastify, options) {
       });
 
       logger.info(`✅ Folder deleted: ${folderId}`);
+
+      // Invalidate user's file cache (files were moved to root)
+      await redisService.invalidateUserFiles(userId);
 
       return reply.send({
         success: true,
