@@ -10,17 +10,21 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   message = DEFAULT_LOADING_MESSAGE 
 }) => {
   return (
-    <div 
+    <div
       className="w-full h-full flex items-center justify-center"
       style={{ background: colors.background }}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
     >
       <div className="text-center">
-        <div 
+        <div
           className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
           style={{
             borderColor: colors.primaryBlue,
             borderTopColor: 'transparent',
           }}
+          aria-hidden="true"
         />
         <p style={{ color: colors.secondaryText }}>{message}</p>
       </div>

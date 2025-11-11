@@ -62,6 +62,8 @@ export const FilesTabsBar: React.FC<FilesTabsBarProps> = ({
                 color:
                   activeTab === tab.key ? palette.primaryBlue : palette.secondaryText,
               }}
+              aria-live="polite"
+              aria-atomic="true"
             >
               {tab.count}
             </span>

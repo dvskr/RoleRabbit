@@ -1183,6 +1183,27 @@ async function storageRoutes(fastify, options) {
         logger.warn('⚠️ Failed to update storage quota:', quotaError.message);
       }
 
+      // Create audit log for permanent deletion (store before file is deleted)
+      try {
+        await prisma.fileActivity.create({
+          data: {
+            fileId,
+            userId,
+            action: 'PERMANENTLY_DELETED',
+            details: JSON.stringify({
+              fileName: file.name,
+              fileSize: Number(file.size),
+              fileType: file.type,
+              deletedAt: new Date().toISOString()
+            })
+          }
+        });
+        logger.info(`✅ Audit log created for permanent deletion: ${fileId}`);
+      } catch (auditError) {
+        logger.warn('⚠️ Failed to create audit log:', auditError.message);
+        // Don't fail the deletion if audit logging fails
+      }
+
       // Invalidate user's file cache
       await redisService.invalidateUserFiles(userId);
 
@@ -1598,6 +1619,27 @@ async function storageRoutes(fastify, options) {
             createdAt: share.createdAt.toISOString()
           }
         });
+      }
+
+      // Create audit log for file sharing
+      try {
+        await prisma.fileActivity.create({
+          data: {
+            fileId,
+            userId,
+            action: 'SHARED',
+            details: JSON.stringify({
+              sharedWith: sanitizedEmail,
+              permission: sanitizedPermission,
+              expiresAt: sanitizedExpiresAt?.toISOString() || null,
+              shareType: sharedUser ? 'user' : 'link'
+            })
+          }
+        });
+        logger.info(`✅ Audit log created for file share: ${fileId}`);
+      } catch (auditError) {
+        logger.warn('⚠️ Failed to create audit log:', auditError.message);
+        // Don't fail the share if audit logging fails
       }
 
       return reply.send({

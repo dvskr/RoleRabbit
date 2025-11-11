@@ -109,13 +109,15 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
 
         <div className="space-y-3">
           <div>
-            <label 
+            <label
+              htmlFor={`share-email-${file.id}`}
               className="block text-sm font-medium mb-2"
               style={{ color: colors.primaryText }}
             >
               {SHARE_MODAL.SHARE_WITH_LABEL}
             </label>
             <input
+              id={`share-email-${file.id}`}
               type="email"
               value={fileSharing.shareEmail}
               onChange={(e) => fileSharing.setShareEmail(e.target.value)}
@@ -140,6 +142,8 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = colors.border;
               }}
+              aria-required="true"
+              aria-invalid={!fileSharing.shareEmail.trim() && fileSharing.shareEmail.length > 0 ? "true" : "false"}
             />
             {fileSharing.shareSuccess && (
               <div 
@@ -164,13 +168,15 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
           </div>
 
           <div>
-            <label 
+            <label
+              htmlFor={`share-permission-${file.id}`}
               className="block text-sm font-medium mb-2"
               style={{ color: colors.primaryText }}
             >
               {SHARE_MODAL.PERMISSION_LABEL}
             </label>
             <select
+              id={`share-permission-${file.id}`}
               value={fileSharing.sharePermission}
               onChange={(e) => fileSharing.setSharePermission(e.target.value as SharePermission)}
               className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
@@ -186,6 +192,7 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = colors.border;
               }}
+              aria-label="Select permission level for sharing"
             >
               <option value="view" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>{SHARE_PERMISSIONS.VIEW}</option>
               <option value="comment" style={{ background: theme.mode === 'dark' ? '#1a1625' : '#ffffff', color: theme.mode === 'dark' ? '#cbd5e1' : '#1e293b' }}>{SHARE_PERMISSIONS.COMMENT}</option>
@@ -207,13 +214,15 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
             </h3>
             
             <div>
-              <label 
+              <label
+                htmlFor={`share-expires-${file.id}`}
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.primaryText }}
               >
                 {SHARE_MODAL.EXPIRATION_LABEL}
               </label>
                   <input
+                    id={`share-expires-${file.id}`}
                     type="datetime-local"
                     value={fileSharing.shareExpiresAt}
                     onChange={(e) => fileSharing.setShareExpiresAt(e.target.value)}
@@ -231,8 +240,10 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
                     onBlur={(e) => {
                       e.currentTarget.style.borderColor = colors.border;
                     }}
+                    aria-describedby={`share-expires-help-${file.id}`}
                   />
-              <p 
+              <p
+                id={`share-expires-help-${file.id}`}
                 className="text-xs mt-1"
                 style={{ color: colors.tertiaryText }}
               >
@@ -241,13 +252,15 @@ const ShareModalComponent: React.FC<ShareModalProps> = ({
             </div>
 
             <div>
-              <label 
+              <label
+                htmlFor={`share-max-downloads-${file.id}`}
                 className="block text-sm font-medium mb-2"
                 style={{ color: colors.primaryText }}
               >
                 {SHARE_MODAL.MAX_DOWNLOADS_LABEL}
               </label>
               <input
+                id={`share-max-downloads-${file.id}`}
                 type="number"
                 value={fileSharing.maxDownloads}
                 onChange={(e) => fileSharing.setMaxDownloads(e.target.value)}
