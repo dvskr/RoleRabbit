@@ -19,7 +19,7 @@ import {
   MoreVertical,
   FileText
 } from 'lucide-react';
-import { ResumeFile } from '../../types/cloudStorage';
+import { ResumeFile, FileComment, SharePermission as SharePermissionType } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -611,8 +611,8 @@ const FileCard = React.memo(function FileCard({
   }
   // Check if comment IDs are the same (shallow check for performance)
   if (prevComments.length > 0) {
-    const prevCommentIds = prevComments.map((c: any) => c.id).join(',');
-    const nextCommentIds = nextComments.map((c: any) => c.id).join(',');
+    const prevCommentIds = prevComments.map((c: FileComment) => c.id).join(',');
+    const nextCommentIds = nextComments.map((c: FileComment) => c.id).join(',');
     if (prevCommentIds !== nextCommentIds) {
       return false;
     }
@@ -626,8 +626,8 @@ const FileCard = React.memo(function FileCard({
   }
   // Check if share IDs are the same (shallow check for performance)
   if (prevShared.length > 0) {
-    const prevShareIds = prevShared.map((s: any) => s.id).join(',');
-    const nextShareIds = nextShared.map((s: any) => s.id).join(',');
+    const prevShareIds = prevShared.map((s: SharePermissionType) => s.id).join(',');
+    const nextShareIds = nextShared.map((s: SharePermissionType) => s.id).join(',');
     if (prevShareIds !== nextShareIds) {
       return false;
     }
