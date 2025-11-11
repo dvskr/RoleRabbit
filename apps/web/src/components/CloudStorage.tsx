@@ -13,9 +13,9 @@ import { useFolderModals } from './cloudStorage/hooks';
 import { LoadingState } from './cloudStorage/LoadingState';
 import { CreateFolderModal } from './cloudStorage/CreateFolderModal';
 import { RenameFolderModal } from './cloudStorage/RenameFolderModal';
-import { RedesignedStorageHeader } from './cloudStorage/RedesignedStorageHeader';
-import { RedesignedFolderSidebar } from './cloudStorage/RedesignedFolderSidebar';
-import { RedesignedFileList, FilesTabsBar } from './cloudStorage/RedesignedFileList';
+import { StorageHeader } from './cloudStorage/StorageHeader';
+import { FolderSidebar } from './cloudStorage/FolderSidebar';
+import { FileList, FilesTabsBar } from './cloudStorage/FileList';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from './common/Toast';
 import { ErrorBoundary } from './common/ErrorBoundary';
@@ -285,14 +285,14 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
         style={{ background: colors.background }}
         data-testid="cloud-storage-root"
       >
-      <RedesignedStorageHeader
+      <StorageHeader
         storageInfo={storageInfo}
         onRefresh={handleRefresh}
         colors={colors}
       />
 
       <div className="flex-1 min-h-0 overflow-hidden flex px-6 pt-6 pb-6 gap-6">
-        <RedesignedFolderSidebar
+        <FolderSidebar
           folders={folders || []}
           selectedFolderId={selectedFolderId}
           showDeleted={showDeleted}
@@ -335,7 +335,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               </div>
             </>
           ) : (
-            <RedesignedFileList
+            <FileList
               files={filteredFiles}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}

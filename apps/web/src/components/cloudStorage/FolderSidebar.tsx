@@ -30,7 +30,7 @@ interface QuickFilters {
   recent?: boolean;
 }
 
-interface RedesignedFolderSidebarProps {
+interface FolderSidebarProps {
   folders: SidebarFolder[];
   selectedFolderId: string | null;
   showDeleted: boolean;
@@ -70,7 +70,7 @@ const formatBytes = (bytes?: number): string => {
   return `${value.toFixed(precision)} ${STORAGE_UNITS[index]}`;
 };
 
-export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = ({
+export const FolderSidebar: React.FC<FolderSidebarProps> = ({
   folders,
   selectedFolderId,
   showDeleted,

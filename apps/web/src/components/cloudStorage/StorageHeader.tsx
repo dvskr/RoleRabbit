@@ -5,13 +5,13 @@ import { RefreshCcw, Cloud } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { StorageInfo } from '../../types/cloudStorage';
 
-interface RedesignedStorageHeaderProps {
+interface StorageHeaderProps {
   storageInfo: StorageInfo;
   onRefresh: () => void;
   colors?: any;
 }
 
-export const RedesignedStorageHeader: React.FC<RedesignedStorageHeaderProps> = ({
+export const StorageHeader: React.FC<StorageHeaderProps> = ({
   storageInfo,
   onRefresh,
   colors,

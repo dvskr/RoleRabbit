@@ -94,7 +94,7 @@ export const FilesTabsBar: React.FC<FilesTabsBarProps> = ({
   );
 };
 
-interface RedesignedFileListProps {
+interface FileListProps {
   files: ResumeFile[];
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -128,7 +128,7 @@ interface RedesignedFileListProps {
   credentialsCount: number;
 }
 
-export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
+export const FileList: React.FC<FileListProps> = ({
   files,
   searchTerm,
   onSearchChange,

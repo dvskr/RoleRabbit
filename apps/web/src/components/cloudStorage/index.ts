@@ -17,8 +17,8 @@ export type {
   LoadingStateProps,
 } from './types';
 
-// Redesigned components
-export { RedesignedStorageHeader } from './RedesignedStorageHeader';
+// Storage components
+export { StorageHeader } from './StorageHeader';
 export { StorageStatsCards } from './StorageStatsCards';
-export { RedesignedFolderSidebar } from './RedesignedFolderSidebar';
-export { RedesignedFileList, FilesTabsBar } from './RedesignedFileList';
+export { FolderSidebar } from './FolderSidebar';
+export { FileList, FilesTabsBar } from './FileList';
