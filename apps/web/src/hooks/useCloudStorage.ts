@@ -9,6 +9,7 @@ import { useCredentialOperations } from './useCloudStorage/hooks/useCredentialOp
 import { useFolderOperations } from './useCloudStorage/hooks/useFolderOperations';
 import { useCloudIntegration } from './useCloudStorage/hooks/useCloudIntegration';
 import { useAccessTracking } from './useCloudStorage/hooks/useAccessTracking';
+import { useDebounce } from './useDebounce';
 import { logger } from '../utils/logger';
 import apiService from '../services/apiService';
 import { webSocketService } from '../services/webSocketService';
@@ -262,6 +263,7 @@ export const useCloudStorage = () => {
 
   // UI state
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Debounce search for better performance
   const [filterType, setFilterType] = useState<FileType>('all');
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -355,30 +357,30 @@ export const useCloudStorage = () => {
   const filteredFiles = useMemo(() => {
     logger.debug('Filtering cloud storage files', {
       totalFiles: files.length,
-      searchTerm,
+      searchTerm: debouncedSearchTerm,
       filterType,
       sortBy,
       selectedFolderId,
       showDeleted,
       quickFilters
     });
-    
+
     const result = filterAndSortFiles(files, {
-      searchTerm,
+      searchTerm: debouncedSearchTerm,
       filterType,
       sortBy,
       selectedFolderId,
       showDeleted,
       quickFilters
     });
-    
+
     logger.debug('Filtered cloud storage files result', {
       filteredCount: result.length,
       totalFiles: files.length
     });
-    
+
     return result;
-  }, [files, searchTerm, filterType, sortBy, selectedFolderId, showDeleted, quickFilters]);
+  }, [files, debouncedSearchTerm, filterType, sortBy, selectedFolderId, showDeleted, quickFilters]);
 
   useEffect(() => {
     refreshStorageInfo();
