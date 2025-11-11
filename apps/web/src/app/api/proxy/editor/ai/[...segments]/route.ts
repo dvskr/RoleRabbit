@@ -34,7 +34,44 @@ async function forwardRequest(request: NextRequest, params: { segments?: string[
     init.body = bodyText;
   }
 
-  const backendResponse = await fetch(targetUrl, init);
+  let backendResponse: Response;
+  try {
+    backendResponse = await fetch(targetUrl, init);
+  } catch (error: any) {
+    console.error('AI proxy request failed', {
+      targetUrl,
+      method: request.method,
+      error: error?.message,
+      code: error?.code
+    });
+
+    const origin = request.headers.get('origin') || DEFAULT_ORIGIN;
+    const status =
+      error?.name === 'AbortError' || error?.code === 'UND_ERR_CONNECT_TIMEOUT'
+        ? 504
+        : error?.code === 'UND_ERR_SOCKET' || error?.code === 'ECONNREFUSED'
+          ? 502
+          : 500;
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unable to reach the AI service. Please try again shortly.',
+        code: 'AI_PROXY_NETWORK_FAILURE',
+        details: {
+          message: error?.message,
+          code: error?.code ?? null
+        }
+      },
+      {
+        status,
+        headers: {
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Credentials': 'true'
+        }
+      }
+    );
+  }
   const responseHeaders = new Headers();
 
   backendResponse.headers.forEach((value, key) => {

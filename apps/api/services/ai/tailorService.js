@@ -22,91 +22,8 @@ const {
 } = require('./promptBuilder');
 const { scoreResumeAgainstJob } = require('../ats/atsScoringService');
 const logger = require('../../utils/logger');
-
-/**
- * Normalize resume data to ensure arrays are arrays and not objects with numeric keys
- */
-function normalizeResumeData(data) {
-  if (!data || typeof data !== 'object') return data;
-  
-  const normalized = JSON.parse(JSON.stringify(data));
-  
-  // Normalize metadata.sectionOrder
-  if (normalized.metadata?.sectionOrder && typeof normalized.metadata.sectionOrder === 'object' && !Array.isArray(normalized.metadata.sectionOrder)) {
-    normalized.metadata.sectionOrder = Object.values(normalized.metadata.sectionOrder);
-  }
-  
-  // Normalize skills
-  if (normalized.skills) {
-    if (normalized.skills.technical && typeof normalized.skills.technical === 'object' && !Array.isArray(normalized.skills.technical)) {
-      normalized.skills.technical = Object.values(normalized.skills.technical);
-    }
-    if (normalized.skills.soft && typeof normalized.skills.soft === 'object' && !Array.isArray(normalized.skills.soft)) {
-      normalized.skills.soft = Object.values(normalized.skills.soft);
-    }
-    if (normalized.skills.tools && typeof normalized.skills.tools === 'object' && !Array.isArray(normalized.skills.tools)) {
-      normalized.skills.tools = Object.values(normalized.skills.tools);
-    }
-  }
-  
-  // Normalize experience
-  if (normalized.experience && typeof normalized.experience === 'object' && !Array.isArray(normalized.experience)) {
-    normalized.experience = Object.values(normalized.experience);
-  }
-  if (Array.isArray(normalized.experience)) {
-    normalized.experience = normalized.experience.map(exp => {
-      if (exp.bullets && typeof exp.bullets === 'object' && !Array.isArray(exp.bullets)) {
-        exp.bullets = Object.values(exp.bullets);
-      }
-      if (exp.responsibilities && typeof exp.responsibilities === 'object' && !Array.isArray(exp.responsibilities)) {
-        exp.responsibilities = Object.values(exp.responsibilities);
-      }
-      if (exp.technologies && typeof exp.technologies === 'object' && !Array.isArray(exp.technologies)) {
-        exp.technologies = Object.values(exp.technologies);
-      }
-      return exp;
-    });
-  }
-  
-  // Normalize projects
-  if (normalized.projects && typeof normalized.projects === 'object' && !Array.isArray(normalized.projects)) {
-    normalized.projects = Object.values(normalized.projects);
-  }
-  if (Array.isArray(normalized.projects)) {
-    normalized.projects = normalized.projects.map(proj => {
-      if (proj.technologies && typeof proj.technologies === 'object' && !Array.isArray(proj.technologies)) {
-        proj.technologies = Object.values(proj.technologies);
-      }
-      if (proj.bullets && typeof proj.bullets === 'object' && !Array.isArray(proj.bullets)) {
-        proj.bullets = Object.values(proj.bullets);
-      }
-      if (proj.skills && typeof proj.skills === 'object' && !Array.isArray(proj.skills)) {
-        proj.skills = Object.values(proj.skills);
-      }
-      return proj;
-    });
-  }
-  
-  // Normalize education
-  if (normalized.education && typeof normalized.education === 'object' && !Array.isArray(normalized.education)) {
-    normalized.education = Object.values(normalized.education);
-  }
-  if (Array.isArray(normalized.education)) {
-    normalized.education = normalized.education.map(edu => {
-      if (edu.bullets && typeof edu.bullets === 'object' && !Array.isArray(edu.bullets)) {
-        edu.bullets = Object.values(edu.bullets);
-      }
-      return edu;
-    });
-  }
-  
-  // Normalize certifications
-  if (normalized.certifications && typeof normalized.certifications === 'object' && !Array.isArray(normalized.certifications)) {
-    normalized.certifications = Object.values(normalized.certifications);
-  }
-  
-  return normalized;
-}
+const { normalizeResumeData } = require('@roleready/resume-normalizer');
+const { jsonrepair } = require('jsonrepair');
 
 function parseJsonResponse(rawText, description) {
   if (!rawText) {
@@ -128,7 +45,16 @@ function parseJsonResponse(rawText, description) {
       jsonLength: jsonString.length,
       jsonPreview: jsonString.substring(0, 200)
     });
-    return JSON.parse(jsonString);
+    try {
+      return JSON.parse(jsonString);
+    } catch (parseError) {
+      logger.warn(`Failed to parse ${description} JSON, attempting jsonrepair`, {
+        error: parseError.message,
+        jsonPreview: jsonString.substring(0, 200)
+      });
+      const repaired = jsonrepair(jsonString);
+      return JSON.parse(repaired);
+    }
   } catch (error) {
     logger.error(`Failed to parse ${description} response`, {
       error: error.message,

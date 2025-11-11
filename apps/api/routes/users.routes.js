@@ -441,7 +441,7 @@ function normalizeCertificationInput(certificationsInput) {
  * Register all user routes with Fastify instance
  * @param {FastifyInstance} fastify - Fastify instance
  */
-async function userRoutes(fastify, options) {
+async function userRoutes(fastify, _options) {
   // Get user profile
   /**
    * GET /api/users/profile
@@ -834,7 +834,7 @@ async function userRoutes(fastify, options) {
     
     // Collect User fields - only include known fields from the schema
     for (const field of userFields) {
-      if (updates.hasOwnProperty(field)) {
+      if (Object.prototype.hasOwnProperty.call(updates, field)) {
         // Skip empty strings for name and email (required fields)
         if ((field === 'name' || field === 'email') && updates[field] === '') {
           continue;
@@ -846,14 +846,14 @@ async function userRoutes(fastify, options) {
     
     // Collect UserProfile fields - only include known fields from the schema
     for (const field of profileFields) {
-      if (updates.hasOwnProperty(field)) {
+      if (Object.prototype.hasOwnProperty.call(updates, field)) {
         // Convert empty strings to null for optional profile fields
         profileUpdateData[field] = updates[field] === '' ? null : updates[field];
       }
     }
 
     // Validate personalEmail if provided (must be valid email format if not empty)
-    if (profileUpdateData.hasOwnProperty('personalEmail') && profileUpdateData.personalEmail) {
+    if (Object.prototype.hasOwnProperty.call(profileUpdateData, 'personalEmail') && profileUpdateData.personalEmail) {
       if (!validateEmail(profileUpdateData.personalEmail)) {
         reply.status(400).send({ error: 'Invalid personal email format' });
         return;
@@ -912,7 +912,7 @@ async function userRoutes(fastify, options) {
     
     try {
       // Use a transaction to ensure all updates happen atomically and faster
-      const result = await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         // Get or create UserProfile first (needed for workExperiences and skills)
         let userProfile = await tx.userProfile.findUnique({
           where: { userId: userId }
@@ -1069,26 +1069,27 @@ async function userRoutes(fastify, options) {
           try {
             await tx.education.deleteMany({ where: { profileId: profileId } });
             if (normalizedEducation.length > 0) {
-              const result = await tx.education.createMany({
-              data: normalizedEducation.map(edu => ({
-                profileId: profileId,
-                institution: (edu.institution || '').trim(),
-                degree: edu.degree ? (edu.degree.trim() || null) : null,
-                field: edu.field ? (edu.field.trim() || null) : null,
-                startDate: edu.startDate ? (edu.startDate.trim() || null) : null,
-                endDate: edu.endDate ? (edu.endDate.trim() || null) : null,
-                gpa: edu.gpa ? (edu.gpa.trim() || null) : null,
-                honors: edu.honors ? (edu.honors.trim() || null) : null,
-                location: edu.location ? (edu.location.trim() || null) : null,
-                description: edu.description ? (edu.description.trim() || null) : null
-              }))
-            });
-            
-              // Verify education was saved
-              const verifyEducation = await tx.education.findMany({
-                where: { profileId: profileId }
+              const { count: educationInserted } = await tx.education.createMany({
+                data: normalizedEducation.map(edu => ({
+                  profileId: profileId,
+                  institution: (edu.institution || '').trim(),
+                  degree: edu.degree ? (edu.degree.trim() || null) : null,
+                  field: edu.field ? (edu.field.trim() || null) : null,
+                  startDate: edu.startDate ? (edu.startDate.trim() || null) : null,
+                  endDate: edu.endDate ? (edu.endDate.trim() || null) : null,
+                  gpa: edu.gpa ? (edu.gpa.trim() || null) : null,
+                  honors: edu.honors ? (edu.honors.trim() || null) : null,
+                  location: edu.location ? (edu.location.trim() || null) : null,
+                  description: edu.description ? (edu.description.trim() || null) : null
+                }))
               });
-            } else {
+              if (educationInserted !== normalizedEducation.length) {
+                logger.warn('Mismatch inserting education records', {
+                  expected: normalizedEducation.length,
+                  inserted: educationInserted,
+                  profileId
+                });
+              }
             }
           } catch (eduError) {
             console.error('Error saving education:', eduError);
@@ -1152,8 +1153,8 @@ async function userRoutes(fastify, options) {
           try {
             await tx.project.deleteMany({ where: { profileId: profileId } });
             if (normalizedProjects.length > 0) {
-              const result = await tx.project.createMany({
-              data: normalizedProjects.map(proj => {
+              const { count: projectsInserted } = await tx.project.createMany({
+                data: normalizedProjects.map(proj => {
                 // Serialize technologies array to JSON string for database storage
                 let technologiesJson = null;
                 if (proj.technologies) {
@@ -1197,13 +1198,14 @@ async function userRoutes(fastify, options) {
                   github: proj.github ? (proj.github.trim() || null) : null
                 };
               })
-            });
-            
-              // Verify projects were saved
-              const verifyProjects = await tx.project.findMany({
-                where: { profileId: profileId }
               });
-            } else {
+              if (projectsInserted !== normalizedProjects.length) {
+                logger.warn('Mismatch inserting project records', {
+                  expected: normalizedProjects.length,
+                  inserted: projectsInserted,
+                  profileId
+                });
+              }
             }
           } catch (projError) {
             console.error('Error saving projects:', projError);
@@ -1242,19 +1244,20 @@ async function userRoutes(fastify, options) {
           try {
             await tx.language.deleteMany({ where: { profileId: profileId } });
             if (normalizedLanguages.length > 0) {
-              const result = await tx.language.createMany({
-              data: normalizedLanguages.map(lang => ({
-                profileId: profileId,
-                name: (lang.name || '').trim(),
-                proficiency: lang.proficiency ? (lang.proficiency.trim() || 'Native') : 'Native'
-              }))
-            });
-            
-              // Verify languages were saved
-              const verifyLanguages = await tx.language.findMany({
-                where: { profileId: profileId }
+              const { count: languagesInserted } = await tx.language.createMany({
+                data: normalizedLanguages.map(lang => ({
+                  profileId: profileId,
+                  name: (lang.name || '').trim(),
+                  proficiency: lang.proficiency ? (lang.proficiency.trim() || 'Native') : 'Native'
+                }))
               });
-            } else {
+              if (languagesInserted !== normalizedLanguages.length) {
+                logger.warn('Mismatch inserting language records', {
+                  expected: normalizedLanguages.length,
+                  inserted: languagesInserted,
+                  profileId
+                });
+              }
             }
           } catch (langError) {
             console.error('Error saving languages:', langError);
@@ -1307,14 +1310,10 @@ async function userRoutes(fastify, options) {
           // Note: Cleanup happens outside transaction to avoid blocking
         }
         
-        // Return profileId for use after transaction
-        return { profileId, updatedUser };
       }, {
         timeout: 30000, // 30 second timeout for transaction
         isolationLevel: 'ReadCommitted' // Use ReadCommitted for better performance
       });
-      
-      const { profileId, updatedUser } = result;
       
       // Cleanup unused skills outside transaction (non-blocking)
       if (skills !== undefined) {
@@ -1327,6 +1326,9 @@ async function userRoutes(fastify, options) {
             }
           });
           if (cleanupResult.count > 0) {
+            logger.info('Removed unused skills from dictionary', {
+              removed: cleanupResult.count
+            });
           }
         } catch (cleanupError) {
           console.error('Failed to clean up unused skills from dictionary:', cleanupError);
@@ -1577,8 +1579,20 @@ async function userRoutes(fastify, options) {
                 try {
                   technologies = JSON.parse(techStr);
                 } catch {
-                  // If not JSON, try splitting by comma
-                  technologies = techStr.split(',').map(t => t.trim().replace(/^["\[]|["\]]$/g, '')).filter(t => t.length > 0);
+                  // If not JSON, try splitting by comma and remove surrounding brackets/quotes
+                  technologies = techStr
+                    .split(',')
+                    .map((t) => {
+                      let cleaned = t.trim();
+                      while (cleaned.startsWith('[') || cleaned.startsWith('"')) {
+                        cleaned = cleaned.slice(1).trim();
+                      }
+                      while (cleaned.endsWith(']') || cleaned.endsWith('"')) {
+                        cleaned = cleaned.slice(0, -1).trim();
+                      }
+                      return cleaned;
+                    })
+                    .filter((t) => t.length > 0);
                 }
               }
               
@@ -2058,7 +2072,7 @@ async function userRoutes(fastify, options) {
     try {
       const userId = request.user.userId;
       const currentSessionId = request.cookies.session_id;
-      const { deactivateAllUserSessions, deactivateSession } = require('../utils/sessionManager');
+      const { deactivateAllUserSessions } = require('../utils/sessionManager');
       
       // Deactivate all sessions
       await deactivateAllUserSessions(userId);

@@ -3,7 +3,6 @@
  * Provides utilities for testing API endpoints and database operations
  */
 
-const { PrismaClient } = require('@prisma/client');
 const logger = require('./logger');
 
 /**

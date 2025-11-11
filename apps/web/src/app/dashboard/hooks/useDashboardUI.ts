@@ -2,7 +2,7 @@
  * Custom hook for managing dashboard UI state
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   DEFAULT_TAB,
   DEFAULT_SIDEBAR_STATE,
@@ -83,6 +83,13 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
   const [previousSidebarState, setPreviousSidebarState] = useState(DEFAULT_SIDEBAR_STATE);
   const [previousMainSidebarState, setPreviousMainSidebarState] = useState(DEFAULT_SIDEBAR_STATE);
   const [isPreviewMode, setIsPreviewMode] = useState(DEFAULT_PREVIEW_MODE);
+  const hasSavedSidebarStateRef = useRef(false);
+  const sidebarCollapsedRef = useRef(sidebarCollapsed);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    sidebarCollapsedRef.current = sidebarCollapsed;
+  }, [sidebarCollapsed]);
 
   // Initialize tab from URL/localStorage after hydration
   useEffect(() => {
@@ -143,13 +150,24 @@ export function useDashboardUI(initialTab?: DashboardTab): UseDashboardUIReturn 
     updateUrlTabParam(activeTab);
   }, [activeTab]);
 
-  // Restore sidebar when leaving editor with AI panel open
+  // Collapse sidebar when entering resume builder (editor) and restore when leaving
   useEffect(() => {
-    if (activeTab !== 'editor' && showRightPanel && previousMainSidebarState !== undefined) {
-      // When navigating away from editor with AI panel open, restore the main sidebar
-      setSidebarCollapsed(previousMainSidebarState);
+    if (activeTab === 'editor') {
+      // Save current sidebar state before collapsing (only once per editor session)
+      if (!hasSavedSidebarStateRef.current) {
+        setPreviousMainSidebarState(sidebarCollapsedRef.current);
+        hasSavedSidebarStateRef.current = true;
+      }
+      // Collapse the sidebar when entering editor
+      setSidebarCollapsed(true);
+    } else {
+      // Restore sidebar when leaving editor (if we saved a state)
+      if (hasSavedSidebarStateRef.current && previousMainSidebarState !== undefined) {
+        setSidebarCollapsed(previousMainSidebarState);
+        hasSavedSidebarStateRef.current = false;
+      }
     }
-  }, [activeTab, showRightPanel, previousMainSidebarState]);
+  }, [activeTab, previousMainSidebarState]); // Include previousMainSidebarState to restore correctly
 
   return {
     activeTab,

@@ -214,39 +214,7 @@ async function validateProfileAPI() {
     
     // 5. Validate field mappings
     console.log('\n5️⃣ Validating field mappings...');
-    
-    const fieldMappings = {
-      workExperiences: {
-        company: 'company',
-        role: 'role',
-        location: 'location',
-        startDate: 'startDate',
-        endDate: 'endDate',
-        isCurrent: 'isCurrent',
-        description: 'description',
-        projectType: 'projectType'
-      },
-      certifications: {
-        name: 'name',
-        issuer: 'issuer',
-        date: 'date',
-        expiryDate: 'expiryDate',
-        credentialUrl: 'credentialUrl'
-      },
-      education: {
-        institution: 'institution',
-        degree: 'degree',
-        field: 'field',
-        startDate: 'startDate',
-        endDate: 'endDate',
-        gpa: 'gpa',
-        honors: 'honors',
-        location: 'location',
-        description: 'description'
-      }
-    };
-    
-    console.log('✅ Field mappings validated');
+    console.log('   Field mappings defined for validation.');
     
     // 6. Test data transformation logic
     console.log('\n6️⃣ Testing data transformation...');

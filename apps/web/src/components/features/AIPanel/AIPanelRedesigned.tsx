@@ -1,9 +1,31 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { AIPanelProps } from './types/AIPanel.types';
+import { AIPanelProps, ApplyChangesHandlerDeps } from './types/AIPanel.types';
 import { ChevronDown, ChevronUp, X, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+
+export const createApplyChangesHandler =
+  ({ confirmTailorChanges, analyzeJobDescription, setApplyError, setBeforeScore }: ApplyChangesHandlerDeps) =>
+  async () => {
+    if (!confirmTailorChanges) {
+      return;
+    }
+    setApplyError(null);
+    try {
+      const success = await confirmTailorChanges();
+      if (!success) {
+        setApplyError('Failed to save tailored changes. Please try again.');
+        return;
+      }
+      setBeforeScore(null);
+      await analyzeJobDescription?.();
+    } catch (error: any) {
+      const message =
+        typeof error?.message === 'string' ? error.message : 'Failed to save tailored changes. Please try again.';
+      setApplyError(message);
+    }
+  };
 
 export default function AIPanelRedesigned({
   showRightPanel,
@@ -31,14 +53,18 @@ export default function AIPanelRedesigned({
   onGenerateCoverLetter,
   onGeneratePortfolio,
   isGeneratingCoverLetter,
-  isGeneratingPortfolio
+  isGeneratingPortfolio,
+  onConfirmTailorChanges,
+  isSavingResume = false
 }: AIPanelProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
 
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
+  const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [beforeScore, setBeforeScore] = useState<number | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   // Calculate score color and label
   const getScoreColor = (score: number) => {
@@ -73,6 +99,7 @@ export default function AIPanelRedesigned({
   const handleRunAnalysis = async () => {
     setBeforeScore(null);
     setTailorResult?.(null);
+    setApplyError(null);
     await onAnalyzeJobDescription?.();
   };
 
@@ -80,8 +107,20 @@ export default function AIPanelRedesigned({
     if (typeof matchScore?.overall === 'number') {
       setBeforeScore(matchScore.overall);
     }
+    setApplyError(null);
     await onTailorResume?.();
   };
+
+  const handleApplyChanges = useCallback(
+    () =>
+      createApplyChangesHandler({
+        confirmTailorChanges: onConfirmTailorChanges,
+        analyzeJobDescription: onAnalyzeJobDescription,
+        setApplyError,
+        setBeforeScore,
+      })(),
+    [onConfirmTailorChanges, onAnalyzeJobDescription, setApplyError, setBeforeScore]
+  );
 
   const topMissingSkills = useMemo(() => {
     return effectiveMissingKeywords.slice(0, 5);
@@ -102,6 +141,31 @@ export default function AIPanelRedesigned({
     tailorResult?.ats?.before?.overall ??
     matchScore?.overall ??
     null;
+
+  const diffPreviewLimit = 20;
+  const diffPreviewEntries = useMemo(
+    () => (tailorResult?.diff ?? []).slice(0, diffPreviewLimit),
+    [tailorResult]
+  );
+
+  useEffect(() => {
+    setShowDiffPreview(false);
+  }, [tailorResult]);
+
+  const formatDiffValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return '—';
+    }
+    if (typeof value === 'string') {
+      return value || '—';
+    }
+    try {
+      const serialized = JSON.stringify(value, null, 2);
+      return serialized ?? '—';
+    } catch (_error) {
+      return String(value);
+    }
+  };
 
   if (!showRightPanel) return null;
 
@@ -428,16 +492,86 @@ export default function AIPanelRedesigned({
 
             {/* Changes Summary */}
             {tailorResult.diff && tailorResult.diff.length > 0 && (
-              <div className="space-y-1">
-                <div className="text-xs font-medium" style={{ color: '#065f46' }}>
-                  Changes Made:
-                </div>
-                <div className="text-xs" style={{ color: '#065f46' }}>
-                  • Modified {tailorResult.diff.length} sections
-                </div>
-                {tailorResult.recommendedKeywords && tailorResult.recommendedKeywords.length > 0 && (
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <div className="text-xs font-medium" style={{ color: '#065f46' }}>
+                    Changes Made:
+                  </div>
                   <div className="text-xs" style={{ color: '#065f46' }}>
-                    • Added {tailorResult.recommendedKeywords.length} keywords
+                    • Modified {tailorResult.diff.length} {tailorResult.diff.length === 1 ? 'section' : 'sections'}
+                  </div>
+                  {tailorResult.recommendedKeywords && tailorResult.recommendedKeywords.length > 0 && (
+                    <div className="text-xs" style={{ color: '#065f46' }}>
+                      • Added {tailorResult.recommendedKeywords.length}{' '}
+                      {tailorResult.recommendedKeywords.length === 1 ? 'keyword' : 'keywords'}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowDiffPreview((current) => !current)}
+                  className="w-full py-2 px-3 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                  style={{
+                    background: '#ffffff',
+                    color: '#047857',
+                    border: '1px solid rgba(4, 120, 87, 0.2)',
+                  }}
+                >
+                  {showDiffPreview ? 'Hide Detailed Changes' : 'View Detailed Changes'}
+                  {showDiffPreview ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+                {showDiffPreview && (
+                  <div
+                    className="space-y-3 p-3 rounded-md"
+                    style={{
+                      background: '#ecfdf5',
+                      border: '1px solid rgba(5, 150, 105, 0.25)',
+                      maxHeight: '240px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {diffPreviewEntries.map((entry, index) => (
+                      <div
+                        key={`${entry.path}-${index}`}
+                        className="space-y-2 text-xs"
+                        style={{ color: '#065f46' }}
+                      >
+                        <div className="font-semibold break-words">{entry.path || 'Unknown path'}</div>
+                        <div className="grid grid-cols-1 gap-2">
+                          <div>
+                            <div className="uppercase tracking-wide text-[10px] font-semibold opacity-70">
+                              Before
+                            </div>
+                            <pre
+                              className="mt-1 text-[11px] leading-snug whitespace-pre-wrap break-words border rounded-md p-2 bg-white/70"
+                              style={{ borderColor: 'rgba(5, 150, 105, 0.15)', color: '#064e3b' }}
+                            >
+                              {formatDiffValue(entry.before)}
+                            </pre>
+                          </div>
+                          <div>
+                            <div className="uppercase tracking-wide text-[10px] font-semibold opacity-70">
+                              After
+                            </div>
+                            <pre
+                              className="mt-1 text-[11px] leading-snug whitespace-pre-wrap break-words border rounded-md p-2 bg-white"
+                              style={{ borderColor: 'rgba(5, 150, 105, 0.25)', color: '#047857' }}
+                            >
+                              {formatDiffValue(entry.after)}
+                            </pre>
+                          </div>
+                        </div>
+                        {typeof entry.confidence === 'number' && (
+                          <div className="text-[10px] uppercase opacity-70">
+                            Confidence: {(entry.confidence * 100).toFixed(0)}%
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {tailorResult.diff.length > diffPreviewEntries.length && (
+                      <div className="text-[11px]" style={{ color: '#047857' }}>
+                        Showing first {diffPreviewEntries.length} of {tailorResult.diff.length} changes.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -445,17 +579,19 @@ export default function AIPanelRedesigned({
 
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  // Apply changes to resume
-                  if (tailorResult.tailoredResume) {
-                    // This should trigger the resume update
-                    console.log('Applying tailored resume');
-                  }
-                }}
-                className="flex-1 py-2 px-4 rounded-lg font-medium text-white"
+                onClick={handleApplyChanges}
+                disabled={isSavingResume}
+                className="flex-1 py-2 px-4 rounded-lg font-medium text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ background: '#10b981' }}
               >
-                Apply Changes
+                {isSavingResume ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Apply Changes'
+                )}
               </button>
               <button
                 onClick={() => setTailorResult?.(null)}
@@ -468,6 +604,12 @@ export default function AIPanelRedesigned({
                 Dismiss
               </button>
             </div>
+            {applyError && (
+              <div className="flex items-start gap-2 mt-2 text-xs" style={{ color: '#b91c1c' }}>
+                <AlertCircle className="w-4 h-4 mt-0.5" />
+                <span>{applyError}</span>
+              </div>
+            )}
           </div>
         )}
 

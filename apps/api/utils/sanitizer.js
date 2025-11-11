@@ -73,7 +73,7 @@ function sanitizeEmail(email) {
   return email
     .trim()
     .toLowerCase()
-    .replace(/[<>\"'%;()&+]/g, '') // Remove dangerous characters
+    .replace(/[<>'"%;()&+]/g, '') // Remove dangerous characters
     .substring(0, 254); // Email max length
 }
 
@@ -154,7 +154,7 @@ function sanitizeJSON(jsonString) {
  * Create sanitization middleware
  */
 function sanitizationMiddleware() {
-  return async (request, reply) => {
+  return async (request, _reply) => {
     // Sanitize request body
     if (request.body) {
       request.body = sanitizeObject(request.body);

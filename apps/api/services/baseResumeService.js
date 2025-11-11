@@ -3,12 +3,28 @@ const logger = require('../utils/logger');
 const { Prisma } = require('@prisma/client');
 const cacheManager = require('../utils/cacheManager');
 const { CACHE_NAMESPACES } = require('../utils/cacheKeys');
+const { normalizeResumeData } = require('@roleready/resume-normalizer');
 
 const PLAN_LIMITS = {
   FREE: { maxSlots: 1 },
   PRO: { maxSlots: 5 },
-  PREMIUM: { maxSlots: 10 }
+  PREMIUM: { maxSlots: 5 }
 };
+
+function normalizeResumePayload(data) {
+  if (data === undefined) {
+    return undefined;
+  }
+  if (!data || typeof data !== 'object') {
+    return {};
+  }
+  try {
+    return normalizeResumeData(data);
+  } catch (error) {
+    logger.warn('Failed to normalize resume data before persistence', { error: error.message });
+    return data;
+  }
+}
 
 function getPlanLimits(user) {
   const tier = (user.subscriptionTier || 'FREE').toUpperCase();
@@ -65,11 +81,13 @@ async function updateBaseResume({
     }
   }
 
+  const preparedData = normalizeResumePayload(data);
+
   const updatedResume = await prisma.baseResume.update({
     where: { id: baseResumeId },
     data: {
       ...(name ? { name } : {}),
-      ...(data !== undefined ? { data } : {}),
+      ...(preparedData !== undefined ? { data: preparedData } : {}),
       ...(formatting !== undefined ? { formatting } : {}),
       ...(metadata !== undefined ? { metadata } : {}),
       lastAIAccessedAt: new Date()
@@ -177,12 +195,14 @@ async function createBaseResume({ userId, name, data, formatting, metadata }) {
     throw error;
   }
 
+  const preparedData = normalizeResumePayload(data);
+
   const resume = await prisma.baseResume.create({
     data: {
       userId,
       slotNumber,
       name: name || `Resume ${slotNumber}`,
-      data: data || {},
+      data: preparedData ?? {},
       formatting: formatting || {},
       metadata: metadata || {}
     }

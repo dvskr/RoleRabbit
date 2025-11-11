@@ -15,7 +15,8 @@
     "migrate:profile-pictures": "node scripts/migrate-profile-pictures.js",
     "test:security": "node test-security-endpoints.js",
     "test:migrations": "node prisma/migrations/test-migrations.js",
-    "check:otp": "node scripts/check-otp-tokens.js"
+    "check:otp": "node scripts/check-otp-tokens.js",
+    "cache:refresh:resume": "node scripts/refreshResumeCache.js"
   },
   "dependencies": {
     "@fastify/compress": "^8.1.0",
@@ -51,6 +52,7 @@
     "nodemailer": "^7.0.10",
     "openai": "^6.7.0",
     "pdf-parse": "^2.2.2",
+    "jsonrepair": "^3.6.0",
     "pdfkit": "^0.17.2",
     "pino-pretty": "^13.1.2",
     "prisma": "^5.7.0",
@@ -61,7 +63,9 @@
     "speakeasy": "^2.0.0",
     "winston": "^3.18.3",
     "ws": "^8.18.3",
-    "prom-client": "^15.0.0"
+    "prom-client": "^15.0.0",
+    "@roleready/editor-ai-schemas": "file:../../packages/editor-ai-schemas",
+    "@roleready/resume-normalizer": "file:../../packages/resume-normalizer"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

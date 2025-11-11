@@ -3,10 +3,8 @@ const logger = require('../../utils/logger');
 const { extractSkillsWithAI, semanticSkillMatching, analyzeSkillQuality } = require('./aiSkillExtractor');
 const { withCache } = require('./atsCache');
 const { 
-  extractTechnicalSkills, 
   analyzeResume: legacyAnalyzeResume,
-  analyzeJobDescription: legacyAnalyzeJobDescription,
-  ALL_TECHNICAL_SKILLS 
+  analyzeJobDescription: legacyAnalyzeJobDescription
 } = require('./atsScoringService');
 
 /**
@@ -32,6 +30,11 @@ const SCORING_WEIGHTS = {
   education: 0.05,             // Formal education (5%)
   format: 0.05                 // Resume structure (5%)
 };
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const ENABLE_SKILL_QUALITY_ANALYSIS =
+  (process.env.AI_ATS_ENABLE_SKILL_QUALITY || '').toLowerCase() === 'true';
 
 /**
  * Main world-class ATS scoring function
@@ -127,29 +130,29 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
         quality: semanticResults.quality_score
       });
       
-      // Analyze quality of TOP matched skills (top 5 to save costs)
-      const topMatches = semanticResults.matches
-        .filter(m => m.match && m.confidence > 0.7)
-        .slice(0, 5);
-      
-      // Process quality analysis with rate limiting to avoid OpenAI API issues
-      const qualityPromises = topMatches.map((match, index) => 
-        new Promise(async (resolve) => {
-          // Add delay between API calls to avoid rate limits
-          await new Promise(r => setTimeout(r, index * 500));
-          
+      if (ENABLE_SKILL_QUALITY_ANALYSIS) {
+        // Analyze quality of TOP matched skills (top 5 to save costs)
+        const topMatches = semanticResults.matches
+          .filter(m => m.match && m.confidence > 0.7)
+          .slice(0, 5);
+
+        // Process quality analysis with rate limiting to avoid OpenAI API issues
+        const qualityTasks = topMatches.map((match, index) => (async () => {
+          await delay(index * 500);
+
           try {
             const quality = await analyzeSkillQuality(match.job_skill, resumeText);
             skillQualityScores[match.job_skill] = quality;
           } catch (error) {
             logger.warn(`⚠️  Quality analysis failed for ${match.job_skill}`, { error: error.message });
           }
-          resolve();
-        })
-      );
-      
-      // Wait for all quality analyses to complete
-      await Promise.all(qualityPromises);
+        })());
+
+        // Wait for all quality analyses to complete
+        await Promise.all(qualityTasks);
+      } else {
+        logger.info('🔕 Skill quality analysis disabled (AI_ATS_ENABLE_SKILL_QUALITY not set to true)');
+      }
       
     } catch (error) {
       logger.warn('⚠️  Semantic matching failed, using dictionary fallback', { error: error.message });
@@ -196,9 +199,7 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
   
   const recommendations = generateRecommendations({
     scores,
-    jobAnalysis,
     resumeAnalysis,
-    semanticResults,
     skillQualityScores
   });
 
@@ -456,7 +457,7 @@ function calculateWorldClassScores({ jobAnalysis, resumeAnalysis, semanticResult
 /**
  * Generate actionable recommendations
  */
-function generateRecommendations({ scores, jobAnalysis, resumeAnalysis, semanticResults, skillQualityScores }) {
+function generateRecommendations({ scores, resumeAnalysis, skillQualityScores }) {
   const strengths = [];
   const improvements = [];
   const actionableTips = [];
@@ -565,19 +566,6 @@ function hashJobDescription(jobDescription) {
     .createHash('md5')
     .update(jobDescription.trim())
     .digest('hex');
-}
-
-function normalizeArrayField(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === 'object') {
-    return Object.keys(value)
-      .filter((key) => Object.prototype.hasOwnProperty.call(value, key))
-      .sort((a, b) => Number(a) - Number(b))
-      .map((key) => value[key])
-      .filter(Boolean);
-  }
-  return [];
 }
 
 module.exports = {

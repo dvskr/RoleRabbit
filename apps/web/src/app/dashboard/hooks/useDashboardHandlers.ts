@@ -21,7 +21,11 @@ import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 import { validateResumeData, sanitizeResumeData } from '../../../utils/validation';
 import { formatErrorForDisplay } from '../../../utils/errorMessages';
-import { mapEditorStateToBasePayload, BaseResumeRecord } from '../../../utils/resumeMapper';
+import {
+  mapEditorStateToBasePayload,
+  BaseResumeRecord,
+  normalizedDataToResumeData,
+} from '../../../utils/resumeMapper';
 import { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../../../types/ai';
 
 const buildATSFromScore = (
@@ -129,6 +133,7 @@ export interface UseDashboardHandlersParams {
   tailorEditMode: string;
   selectedTone: string;
   selectedLength: string;
+  tailorResult: TailorResult | null;
   setTailorResult: (result: TailorResult | null) => void;
   setIsTailoring: (value: boolean) => void;
   setCoverLetterDraft: (draft: CoverLetterDraft | null) => void;
@@ -160,10 +165,33 @@ export interface UseDashboardHandlersReturn {
   generatePortfolioDraft: () => Promise<any | null>;
   
   // Other
-  saveResume: () => void;
+  saveResume: () => Promise<boolean>;
+  confirmTailorResult: () => Promise<boolean>;
   undo: () => void;
   redo: () => void;
 }
+
+export interface ConfirmTailorResultOptions {
+  tailorResult: TailorResult | null;
+  saveResume: () => Promise<boolean>;
+  clearTailorResult: () => void;
+}
+
+export const applyTailoredResumeChanges = async ({
+  tailorResult,
+  saveResume,
+  clearTailorResult,
+}: ConfirmTailorResultOptions): Promise<boolean> => {
+  if (!tailorResult) {
+    return false;
+  }
+
+  const success = await saveResume();
+  if (success) {
+    clearTailorResult();
+  }
+  return success;
+};
 
 /**
  * Hook for dashboard handler functions
@@ -244,6 +272,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     tailorEditMode,
     selectedTone,
     selectedLength,
+    tailorResult,
     setTailorResult,
     setIsTailoring,
     setCoverLetterDraft,
@@ -388,7 +417,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     if (!jobDescription.trim()) {
       return null;
     }
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       logger.warn('ATS analysis blocked - no active resume id');
       setSaveError('Select a resume slot before running ATS analysis.');
       return null;
@@ -400,7 +430,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsAnalyzing(true);
     try {
       const response = await apiService.runATSCheck({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription
       });
       const analysis: ATSAnalysisResult | null = response?.analysis ?? null;
@@ -432,6 +462,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     jobDescription,
     currentResumeId,
+    resumeData,
     isAnalyzing,
     setIsAnalyzing,
     setMatchScore,
@@ -443,7 +474,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const applyAIRecommendations = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before applying recommendations.');
       return null;
     }
@@ -454,7 +486,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
 
     try {
       const response = await apiService.applyAIRecommendations({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription,
         focusAreas: aiRecommendations?.length ? ['summary', 'experience', 'skills'] : undefined,
         tone: writingTone
@@ -486,6 +518,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     currentResumeId,
     jobDescription,
+    resumeData,
     aiRecommendations,
     writingTone,
     applyBaseResume,
@@ -496,7 +529,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const tailorResumeForJob = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before tailoring.');
       return null;
     }
@@ -509,7 +543,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsTailoring(true);
     try {
       const response = await apiService.tailorResume({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription,
         mode: tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL',
         tone: selectedTone,
@@ -517,17 +551,18 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       });
 
       if (response?.tailoredResume) {
+        const tailoredEditorData = normalizedDataToResumeData(response.tailoredResume as any);
         let mergedResume: ResumeData | null = null;
 
         setResumeData((previous) => {
-          const merged = mergeTailoredResume(previous, response.tailoredResume as ResumeData);
+          const merged = mergeTailoredResume(previous, tailoredEditorData);
           const deduped = removeDuplicateResumeEntries(merged).data;
           mergedResume = deduped;
           return deduped;
         });
 
         if (!mergedResume) {
-          const merged = mergeTailoredResume(resumeData, response.tailoredResume as ResumeData);
+          const merged = mergeTailoredResume(resumeData, tailoredEditorData);
           mergedResume = removeDuplicateResumeEntries(merged).data;
         }
 
@@ -573,6 +608,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     currentResumeId,
     jobDescription,
+    resumeData,
     tailorEditMode,
     selectedTone,
     selectedLength,
@@ -588,7 +624,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const generateCoverLetterDraft = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before generating a cover letter.');
       return null;
     }
@@ -601,7 +638,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsGeneratingCoverLetter(true);
     try {
       const response = await apiService.generateCoverLetter({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription,
         tone: selectedTone
       });
@@ -635,6 +672,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     currentResumeId,
     jobDescription,
+    resumeData,
     selectedTone,
     setCoverLetterDraft,
     setSaveError,
@@ -642,7 +680,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const generatePortfolioDraft = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before generating a portfolio outline.');
       return null;
     }
@@ -651,7 +690,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsGeneratingPortfolio(true);
     try {
       const response = await apiService.generatePortfolio({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         tone: selectedTone
       });
 
@@ -681,22 +720,23 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     }
   }, [
     currentResumeId,
+    resumeData,
     selectedTone,
     setPortfolioDraft,
     setSaveError,
     setIsGeneratingPortfolio
   ]);
 
-  const saveResume = useCallback(async () => {
+  const saveResume = useCallback(async (): Promise<boolean> => {
     if (isSaving) {
-      return;
+      return false;
     }
 
     if (!hasChanges && currentResumeId) {
       setSaveError(null);
       setLastSavedAt(new Date());
-       setHasChanges(false);
-      return;
+      setHasChanges(false);
+      return true;
     }
 
     // Pre-save validation
@@ -704,9 +744,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     if (!validation.isValid) {
       const errorMessages = Object.values(validation.errors).join(', ');
       setSaveError(`Validation failed: ${errorMessages}. Please fix these errors before saving.`);
-      setIsSaving(false);
       logger.warn('Resume save validation failed:', validation.errors);
-      return;
+      return false;
     }
 
     setIsSaving(true);
@@ -775,6 +814,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         setLastSavedAt(new Date());
         setHasChanges(false);
       }
+      return true;
     } catch (error: any) {
       logger.error('Failed to save resume:', error);
       const friendlyError = formatErrorForDisplay(error, {
@@ -782,6 +822,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         feature: 'resume builder',
       });
       setSaveError(friendlyError);
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -813,6 +854,14 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsSaving,
   ]);
 
+  const confirmTailorResult = useCallback(() => {
+    return applyTailoredResumeChanges({
+      tailorResult,
+      saveResume,
+      clearTailorResult: () => setTailorResult(null),
+    });
+  }, [tailorResult, saveResume, setTailorResult]);
+
   const undo = useCallback(() => {
     resumeHelpers.undo(history, historyIndex, setHistoryIndex, setResumeData);
   }, [history, historyIndex, setHistoryIndex, setResumeData]);
@@ -840,6 +889,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     generateCoverLetterDraft,
     generatePortfolioDraft,
     saveResume,
+    confirmTailorResult,
     undo,
     redo,
   };

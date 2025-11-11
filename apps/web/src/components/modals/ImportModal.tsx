@@ -1,11 +1,18 @@
 'use client';
 
+/* eslint-disable jsx-a11y/control-has-associated-label */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { X, Upload, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
+import { X, Upload, RefreshCw, Trash2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useBaseResumes } from '../../hooks/useBaseResumes';
 import { useToasts } from '../Toast';
 import apiService from '../../services/apiService';
+import type {
+  ResumeApplyContext,
+  ResumeApplySuccessPayload,
+  ResumeApplyErrorPayload,
+} from '../../hooks/useResumeApplyIndicator';
 
 interface ImportModalProps {
   showImportModal: boolean;
@@ -21,12 +28,23 @@ interface ImportModalProps {
   slotsUsed?: number;
   maxSlots?: number;
   onResumeApplied?: (resumeId: string, resumeRecord?: any) => void;
+  onApplyStart?: (payload: ResumeApplyContext) => void;
+  onApplySuccess?: (payload: ResumeApplySuccessPayload) => void;
+  onApplyError?: (payload: ResumeApplyErrorPayload) => void;
+  onApplyComplete?: (payload: ResumeApplyContext) => void;
 }
+
+type UseBaseResumesReturn = ReturnType<typeof useBaseResumes>;
+type BaseResume = UseBaseResumesReturn['resumes'][number];
 
 export default function ImportModal({
   showImportModal,
   setShowImportModal,
   onResumeApplied,
+  onApplyStart,
+  onApplySuccess,
+  onApplyError,
+  onApplyComplete,
 }: ImportModalProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -40,7 +58,8 @@ export default function ImportModal({
     refresh,
     createResume,
     activateResume,
-    deleteResume
+    deleteResume,
+    upsertResume
   } = useBaseResumes();
 
   // Local selection (defaults to currently active)
@@ -48,9 +67,16 @@ export default function ImportModal({
   // Track pending files that should be parsed on Apply
   const [pendingFiles, setPendingFiles] = useState<Record<string, File | undefined>>({});
   useEffect(() => {
-    if (!showImportModal) return;
+    if (!showImportModal) {
+      // Reset states when modal closes
+      setActivatingId(null);
+      return;
+    }
+    // Sync selectedId with activeId when modal opens
     setSelectedId((prev) => prev || activeId || null);
-  }, [showImportModal, activeId]);
+    // Refresh resumes to ensure latest active state
+    refresh({ showSpinner: false });
+  }, [showImportModal, activeId, refresh]);
 
   // File inputs for per-slot upload/replace
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -59,27 +85,127 @@ export default function ImportModal({
   }, []);
 
   const maxSlots = useMemo(() => limits?.maxSlots ?? 5, [limits?.maxSlots]);
-  const filledCount = resumes?.length ?? 0;
+
+  const sortedResumes = useMemo(() => {
+    if (!resumes) {
+      return [];
+    }
+    return [...resumes].sort((a, b) => {
+      const slotA = typeof a.slotNumber === 'number' && a.slotNumber > 0 ? a.slotNumber : Number.MAX_SAFE_INTEGER;
+      const slotB = typeof b.slotNumber === 'number' && b.slotNumber > 0 ? b.slotNumber : Number.MAX_SAFE_INTEGER;
+      if (slotA !== slotB) {
+        return slotA - slotB;
+      }
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+  }, [resumes]);
+
+  const totalSlotsUsed = sortedResumes.length;
+  const availableSlots = Math.max(maxSlots - totalSlotsUsed, 0);
+
+  const getDisplaySlotNumber = useCallback((resume: BaseResume, index: number) => {
+    if (typeof resume.slotNumber === 'number' && resume.slotNumber > 0) {
+      return resume.slotNumber;
+    }
+    return index + 1;
+  }, []);
   // When Apply is clicked with an empty slot, prompt for file and auto-apply after selection
   // Track the most recently staged resume id (helps when user clicks Apply quickly)
   const [lastStagedId, setLastStagedId] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState<boolean>(false);
+  // Track which resume is currently being activated (for loading state)
+  const [activatingId, setActivatingId] = useState<string | null>(null);
 
   const handleChooseFile = useCallback((slot: number) => {
     const ref = fileInputRefs.current[slot];
     if (ref) ref.click();
   }, []);
 
-  const pendingCount = useMemo(() => Object.keys(pendingFiles).length, [pendingFiles]);
-  const canApply = useMemo(() => {
+  const validateResumeData = useCallback((data: any): boolean => {
+    const inspect = (value: any, depth = 0): boolean => {
+      if (value === null || value === undefined) {
+        return false;
+      }
+
+      if (typeof value === 'string') {
+        if (!value.trim()) {
+          return false;
+        }
+        if (depth > 2) {
+          return true;
+        }
+        try {
+          const parsed = JSON.parse(value);
+          return inspect(parsed, depth + 1);
+        } catch {
+      return true;
+    }
+      }
+
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+
+      if (typeof value === 'object') {
+        if (value.resumeData && inspect(value.resumeData, depth + 1)) {
+      return true;
+    }
+        return Object.keys(value).length > 0;
+      }
+
+      return false;
+    };
+
+    return inspect(data);
+  }, []);
+
+  const activeResume = useMemo(() => {
+    if (!activeId) {
+      return null;
+    }
+    return resumes.find((r) => r.id === activeId) || null;
+  }, [resumes, activeId]);
+
+  const targetResumeId = useMemo(() => {
     if (selectedId) {
-      return true;
+      return selectedId;
     }
-    if (pendingCount > 0) {
-      return true;
+    return activeId || null;
+  }, [selectedId, activeId]);
+
+  const targetResume = useMemo(() => {
+    if (!targetResumeId) {
+      return null;
     }
-    return false;
-  }, [selectedId, pendingCount]);
+    return resumes.find((r) => r.id === targetResumeId) || null;
+  }, [resumes, targetResumeId]);
+
+  const stagedFileForTarget = useMemo(() => {
+    if (!targetResumeId) {
+      return null;
+    }
+    const candidate = pendingFiles[targetResumeId];
+    return candidate instanceof File ? candidate : null;
+  }, [targetResumeId, pendingFiles]);
+
+  const targetResumeHasData = useMemo(() => {
+    if (!targetResume) {
+      return false;
+    }
+    return validateResumeData(targetResume.data);
+  }, [targetResume, validateResumeData]);
+
+  const applyHelperMessage = useMemo(() => {
+    if (!targetResumeId) {
+      return 'Select or activate a resume slot before using Parse & Apply.';
+    }
+    if (!stagedFileForTarget && !targetResumeHasData) {
+      return 'Upload a resume file or ensure the selected resume has data.';
+    }
+    return null;
+  }, [targetResumeId, stagedFileForTarget, targetResumeHasData]);
 
   const uploadToCreate = useCallback(async (file: File) => {
     const nameFromFile = file.name.replace(/\.[^.]+$/, '');
@@ -92,7 +218,6 @@ export default function ImportModal({
       if (created?.id) {
         // Mark this new slot as pending parse
         setPendingFiles(prev => ({ ...prev, [created.id]: file }));
-        await refresh();
         setSelectedId(created.id);
         setLastStagedId(created.id);
         showToast('Uploaded. Will parse on Apply.', 'info', 4000);
@@ -102,7 +227,7 @@ export default function ImportModal({
     } catch (createErr: any) {
       showToast(createErr?.message || 'Failed to create resume slot', 'error', 6000);
     }
-  }, [createResume, refresh, showToast]);
+  }, [createResume, showToast]);
 
   const markReplacePending = useCallback(async (resumeId: string, file: File) => {
     // Defer parsing until Apply; keep current data visible
@@ -131,45 +256,19 @@ export default function ImportModal({
           fileHash: parsed?.fileHash ?? null
         }
       });
-      await refresh();
+      if (response?.resume) {
+        upsertResume(response.resume);
+      }
       showToast('Resume parsed and updated', 'success', 3000);
       return response?.resume ?? null;
     } catch (err: any) {
       showToast(err?.message || 'Failed to parse and replace resume', 'error', 6000);
       throw err;
     }
-  }, [refresh, showToast]);
+  }, [upsertResume, showToast]);
 
   // Parse, create a new slot, activate it, and close
-  const parseCreateAndActivate = useCallback(async (file: File) => {
-    try {
-      const parsed: any = await apiService.parseResumeFile(file);
-      const structured =
-        parsed?.structuredResume ||
-        parsed?.structuredData ||
-        parsed?.data ||
-        parsed?.resume ||
-        {};
-      const nameFromFile = file.name.replace(/\.[^.]+$/, '');
-      const created = await createResume({
-        name: nameFromFile,
-        data: structured,
-        metadata: parsed?.metadata || {
-          parseConfidence: parsed?.confidence ?? null,
-          parseMethod: parsed?.method ?? null,
-          fileHash: parsed?.fileHash ?? null
-        }
-      });
-      if (created?.id) {
-        await refresh();
-        await activateResume(created.id);
-        setSelectedId(created.id);
-        showToast('Parsed and applied new resume', 'success', 4000);
-    }
-    } catch (err: any) {
-      showToast(err?.message || 'Failed to parse and create resume', 'error', 6000);
-    }
-  }, [createResume, activateResume, refresh, showToast, setShowImportModal]);
+  // (removed unused callback)
 
   const onFileChange = useCallback(async (slot: number, resumeId: string | null, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -185,12 +284,75 @@ export default function ImportModal({
     } else {
       await uploadToCreate(file);
     }
-  }, [markReplacePending, uploadToCreate, parseAndReplace, activateResume, parseCreateAndActivate, setShowImportModal]);
+  }, [selectedId, markReplacePending, uploadToCreate]);
 
-  // Select for apply (no immediate activation)
-  const handleSelectForApply = useCallback((id: string) => {
-    setSelectedId(id);
-  }, []);
+  // Direct activation handler - parses any staged file and activates the resume
+  const handleActivateResume = useCallback(async (resumeId: string) => {
+    if (activatingId && activatingId !== resumeId) {
+      showToast('Please wait for the current activation to finish.', 'info', 3000);
+      return;
+    }
+    if (activatingId === resumeId) {
+      return;
+    }
+
+    const resume = resumes.find(r => r.id === resumeId);
+    if (!resume) {
+      showToast('Resume not found. Please refresh and try again.', 'error', 4000);
+      return;
+    }
+
+    if (resume.isActive) {
+      showToast('This resume is already active', 'info', 3000);
+      return;
+    }
+
+    setActivatingId(resumeId);
+    setSelectedId(resumeId);
+
+    try {
+      let updatedRecord: any = resume;
+      const pendingFile = pendingFiles[resumeId];
+
+      if (pendingFile instanceof File && pendingFile.size > 0) {
+        showToast('File staged. Activate this resume, then use Parse & Apply to process the new upload.', 'info', 5000);
+      } else if (!validateResumeData(resume.data)) {
+        showToast('Activate this slot after uploading a resume or using Parse & Apply.', 'info', 4000);
+      }
+
+      await activateResume(resumeId);
+
+      // Ensure we have the latest version of the resume record for callback consumers
+      let latestRecord = updatedRecord;
+      if (!latestRecord || !validateResumeData(latestRecord?.data)) {
+        try {
+          const fetched = await apiService.getBaseResume(resumeId);
+          latestRecord = fetched?.resume ?? latestRecord;
+        } catch (fetchErr: any) {
+          // If fetching fails, fall back to whatever data we already have
+          latestRecord = latestRecord ?? resume;
+        }
+      }
+
+      if (onResumeApplied && latestRecord) {
+        try {
+          await onResumeApplied(resumeId, latestRecord);
+        } catch (callbackErr) {
+          // Ignore callback errors – activation already succeeded
+        }
+      }
+
+      if (latestRecord) {
+        upsertResume(latestRecord);
+      }
+
+      showToast('Resume activated successfully', 'success', 3000);
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to activate resume', 'error', 6000);
+    } finally {
+      setActivatingId(null);
+    }
+  }, [activatingId, resumes, pendingFiles, validateResumeData, parseAndReplace, activateResume, showToast, onResumeApplied, upsertResume]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -200,8 +362,9 @@ export default function ImportModal({
       // If the deleted one was selected, clear selection
       setSelectedId(prev => (prev === id ? null : prev));
       setPendingFiles(prev => {
-        const { [id]: _omit, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[id];
+        return next;
       });
     } catch (err: any) {
       showToast(err?.message || 'Failed to delete resume', 'error', 6000);
@@ -216,224 +379,343 @@ export default function ImportModal({
       showToast('Upload or select a resume slot before applying.', 'info', 4000);
       return;
     }
-    const stagedIds = Object.keys(pendingFiles || {});
-    let effectiveId = selectedId;
-    const hasPendingForSelected = effectiveId ? pendingFiles[effectiveId] instanceof File : false;
-    if (!hasPendingForSelected) {
-      if (lastStagedId && pendingFiles[lastStagedId] instanceof File) {
-        effectiveId = lastStagedId;
-        setSelectedId(lastStagedId);
-      } else if (stagedIds.length === 1) {
-        effectiveId = stagedIds[0];
-        setSelectedId(stagedIds[0]);
-      }
-    }
-    if (!effectiveId) {
-      showToast('Upload or select a resume slot before applying.', 'info', 4000);
+
+    if (!targetResumeId) {
+      showToast('Select a resume slot first, then use Parse & Apply.', 'info', 5000);
       return;
     }
-    if (process.env.NODE_ENV !== 'production') {
-      console.info('[ImportModal] Applying resume', {
-        selectedId,
-        effectiveId,
-        pendingKeys: Object.keys(pendingFiles || {}),
-        hasPending: Boolean(effectiveId && pendingFiles?.[effectiveId])
-      });
+
+    const effectiveId = targetResumeId;
+    const stagedFile = stagedFileForTarget;
+    const hasPendingForTarget = Boolean(stagedFile);
+    const hasExistingData = targetResumeHasData;
+    const resumeContext = targetResume || activeResume || null;
+
+    if (selectedId !== effectiveId) {
+      setSelectedId(effectiveId);
     }
+
+    if (hasPendingForTarget) {
+      showToast('Parsing staged resume file and applying it to the editor...', 'info', 3000);
+    } else if (hasExistingData) {
+      showToast('Applying the selected resume data to the editor...', 'info', 3000);
+    } else {
+      showToast('Fetching the latest parsed resume data from the server...', 'info', 4000);
+    }
+
+    const applyContext: ResumeApplyContext = {
+      resumeId: effectiveId,
+      source: hasPendingForTarget ? 'file' : 'existing',
+    };
+
     setIsApplying(true);
-    let updatedRecord: any = null;
+    onApplyStart?.(applyContext);
+
+    let updatedRecord: any = hasExistingData ? resumeContext : null;
+
     try {
-      // If a file is pending for the selected resume, parse and update first
-      const pending = pendingFiles[effectiveId];
-      if (process.env.NODE_ENV !== 'production') {
-        console.info('[ImportModal] Pending file info', {
-          effectiveId,
-          pendingType: pending ? pending.constructor?.name : null,
-          pendingSize: pending instanceof File ? pending.size : null
-        });
-      }
-      if (pending && pending instanceof File && pending.size > 0) {
+      if (hasPendingForTarget && stagedFile instanceof File && stagedFile.size > 0) {
         try {
-          const parsed: any = await apiService.parseResumeFile(pending);
-          if (process.env.NODE_ENV !== 'production') {
-            console.info('[ImportModal] Parsed payload', parsed);
+          const parsed: any = await apiService.parseResumeFile(stagedFile);
+          const updated = await parseAndReplace(effectiveId, stagedFile, parsed);
+          if (updated) {
+            updatedRecord = updated;
           }
-          updatedRecord = await parseAndReplace(effectiveId, pending, parsed);
-          setPendingFiles(prev => {
-            const { [effectiveId]: _omit, ...rest } = prev;
-            return rest;
-          });
-          await refresh();
         } catch (parseErr: any) {
-          showToast(parseErr?.message || 'Failed to parse pending file', 'error', 6000);
-          setIsApplying(false);
+          const message = parseErr?.message || 'Failed to parse pending file';
+          showToast(message, 'error', 6000);
+          onApplyError?.({ ...applyContext, message });
           return;
-        }
-      } else {
-        if (process.env.NODE_ENV !== 'production') {
-          console.info('[ImportModal] No pending file; applying existing data', { effectiveId });
         }
 
-        try {
-          const fetched = await apiService.getBaseResume(effectiveId);
-          updatedRecord = fetched?.resume ?? null;
-          if (!updatedRecord) {
-            showToast('No parsed data found for this slot yet. Upload a resume to parse it.', 'info', 5000);
-            setIsApplying(false);
+        setPendingFiles(prev => {
+          const next = { ...prev };
+          delete next[effectiveId];
+          return next;
+        });
+      } else {
+        if (!updatedRecord) {
+          try {
+            const fetched = await apiService.getBaseResume(effectiveId);
+            updatedRecord = fetched?.resume ?? null;
+          } catch (fallbackErr: any) {
+            const message = fallbackErr?.message || 'Failed to load resume data. Please upload the file again.';
+            showToast(message, 'error', 6000);
+            onApplyError?.({ ...applyContext, message });
             return;
           }
-          const dataObj: any = updatedRecord?.data || {};
-          const hasContent =
-            (dataObj.resumeData && Object.keys(dataObj.resumeData).length > 0) ||
-            (Object.keys(dataObj || {}).length > 0);
-          if (!hasContent) {
-            showToast('Parsed data not found. Upload the resume again to re-parse.', 'info', 5000);
-            setIsApplying(false);
-            return;
-          }
-          // updatedRecord has content, continue to activate and apply
-        } catch (fallbackErr: any) {
-          showToast(fallbackErr?.message || 'Failed to load resume data. Please upload the file again.', 'error', 6000);
-          setIsApplying(false);
+        }
+
+        if (!updatedRecord || !validateResumeData(updatedRecord?.data)) {
+          const message = 'No parsed resume data found for the active slot. Upload the resume again to parse it.';
+          showToast(message, 'info', 5000);
+          onApplyError?.({ ...applyContext, message });
           return;
         }
       }
+
       await activateResume(effectiveId);
-      // Always fetch the latest record after activation to ensure we have fresh data
+      await refresh({ showSpinner: false });
+
       let appliedRecord: any = null;
       try {
         const fetched = await apiService.getBaseResume(effectiveId);
         appliedRecord = fetched?.resume ?? null;
-        if (process.env.NODE_ENV !== 'production') {
-          console.info('[ImportModal] Fetched applied resume', { id: appliedRecord?.id, hasData: !!appliedRecord?.data });
-        }
-      } catch (fetchErr) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn('[ImportModal] Failed to fetch applied resume', fetchErr);
-        }
-        // Fallback to the updatedRecord if fetch fails
+      } catch (fetchErr: any) {
         appliedRecord = updatedRecord;
       }
+
+      if (!appliedRecord || !validateResumeData(appliedRecord?.data)) {
+        appliedRecord = updatedRecord;
+      }
+
+      if (appliedRecord) {
+        upsertResume(appliedRecord);
+      }
+
       if (onResumeApplied) {
         try {
-          if (process.env.NODE_ENV !== 'production') {
-            console.info('[ImportModal] Calling onResumeApplied', { resumeId: effectiveId, hasRecord: !!appliedRecord });
-          }
-          onResumeApplied(effectiveId, appliedRecord ?? undefined);
+          await onResumeApplied(effectiveId, appliedRecord ?? undefined);
         } catch (callbackErr) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.error('[ImportModal] onResumeApplied callback threw an error', callbackErr);
-          }
-          showToast('Resume applied but failed to load into editor. Please refresh the page.', 'error', 6000);
+          const message = 'Resume applied but failed to load into editor. Please refresh the page.';
+          showToast(message, 'error', 6000);
+          onApplyError?.({ ...applyContext, message });
+          return;
         }
       }
+
       showToast('Applied base resume', 'success', 3000);
       setShowImportModal(false);
       setLastStagedId(null);
+
+      onApplySuccess?.({ ...applyContext, resumeRecord: appliedRecord ?? undefined });
     } catch (err: any) {
-      showToast(err?.message || 'Failed to apply base resume', 'error', 6000);
+      const message = err?.message || 'Failed to apply base resume';
+      showToast(message, 'error', 6000);
+      onApplyError?.({ ...applyContext, message });
     } finally {
+      onApplyComplete?.(applyContext);
       setIsApplying(false);
     }
-  }, [selectedId, lastStagedId, pendingFiles, resumes, parseAndReplace, refresh, activateResume, showToast, setShowImportModal, onResumeApplied, isApplying, showImportModal]);
+  }, [
+    isApplying,
+    showImportModal,
+    targetResumeId,
+    stagedFileForTarget,
+    targetResumeHasData,
+    targetResume,
+    activeResume,
+    validateResumeData,
+    selectedId,
+    parseAndReplace,
+    activateResume,
+    showToast,
+    setShowImportModal,
+    refresh,
+    onResumeApplied,
+    upsertResume,
+    onApplyStart,
+    onApplySuccess,
+    onApplyError,
+    onApplyComplete,
+  ]);
 
-  const renderSlot = (slotNumber: number) => {
-    const resume = resumes.find(r => r.slotNumber === slotNumber);
-    const isSelected = resume ? selectedId === resume.id : false;
-    const borderColor = isSelected ? colors.activeBlueText : colors.border;
-    const hoverBg = theme.mode === 'light' ? '#fafafa' : colors.hoverBackground;
+  const renderResumeSlot = (resume: BaseResume, index: number) => {
+    const displayIndex = index + 1;
+    const slotNumber = getDisplaySlotNumber(resume, index);
+    const isOverflowSlot = displayIndex > maxSlots;
+    const isSelected = selectedId === resume.id;
+    const isActive = resume.isActive;
+    const borderColor = isActive
+      ? colors.successGreen
+      : isSelected
+        ? colors.activeBlueText
+        : colors.border;
+    const borderWidth = isActive ? '3px' : '2px';
+    const overflowBadge =
+      isOverflowSlot || (typeof resume.slotNumber === 'number' && resume.slotNumber > maxSlots);
 
-    if (resume) {
-      return (
-        <div
-          key={slotNumber}
-          className="rounded-xl p-4 mb-3 flex items-start justify-between cursor-pointer"
-          onClick={() => setSelectedId(resume.id)}
-          style={{
-            border: `2px solid ${borderColor}`,
-            background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <div
-              className="h-9 w-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
-              style={{ background: colors.activeBlueText }}
-              title={`Slot ${slotNumber}`}
-            >
-              {slotNumber}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="font-semibold" style={{ color: colors.primaryText }}>
-                  {resume.name || `Resume ${slotNumber}`}
-                </div>
-                {resume.isActive && (
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full"
-                    style={{
-                      background: colors.badgeInfoBg,
-                      color: colors.badgeInfoText,
-                      border: `1px solid ${colors.badgeInfoBorder}`
-                    }}
-                  >
-                    Active
-                  </span>
-                )}
-              </div>
-              {resume.createdAt && (
-                <div className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
-                  {new Date(resume.createdAt).toLocaleDateString()}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              className="p-2 rounded-lg"
-              title="Select for Apply"
-              aria-label="Select for Apply"
-              onClick={(e) => { e.stopPropagation(); handleSelectForApply(resume.id); }}
-              style={{ color: colors.activeBlueText }}
-            >
-              <CheckCircle2 size={18} />
-            </button>
-            <button
-              className="p-2 rounded-lg"
-              title="Replace from file"
-              aria-label="Replace from file"
-              onClick={(e) => { e.stopPropagation(); handleChooseFile(slotNumber); }}
-              style={{ color: colors.secondaryText }}
-            >
-              <RefreshCw size={18} />
-            </button>
-            <button
-              className="p-2 rounded-lg"
-              title="Delete"
-              aria-label="Delete"
-              onClick={(e) => { e.stopPropagation(); handleDelete(resume.id); }}
-              style={{ color: colors.errorRed }}
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-          <input
-            type="file"
-            ref={setFileRef(slotNumber)}
-            onChange={(e) => onFileChange(slotNumber, resume.id, e)}
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-          />
-        </div>
-      );
-    }
-
-    // Empty slot
     return (
       <div
-        key={slotNumber}
+        key={resume.id}
+        data-testid={`resume-slot-${displayIndex}`}
+        className="rounded-xl p-4 mb-3 flex items-start justify-between transition-all"
+        style={{
+          border: `${borderWidth} solid ${borderColor}`,
+          background: isActive
+            ? theme.mode === 'light'
+              ? '#f0fdf4'
+              : `${colors.badgeInfoBg}20`
+            : theme.mode === 'light'
+              ? '#ffffff'
+              : colors.cardBackground,
+          boxShadow: isActive ? `0 0 0 1px ${colors.successGreen}40` : 'none'
+        }}
+      >
+        <div
+          className="flex items-start gap-3 flex-1 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onClick={() => setSelectedId(resume.id)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setSelectedId(resume.id);
+            }
+          }}
+        >
+          <div
+            className="h-9 w-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
+            style={{
+              background: overflowBadge ? colors.badgeWarningBg : colors.activeBlueText,
+              color: overflowBadge ? colors.badgeWarningText : '#ffffff'
+            }}
+            title={`Slot ${slotNumber}`}
+          >
+            {slotNumber}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="font-semibold" style={{ color: colors.primaryText }}>
+                {resume.name || `Resume ${slotNumber}`}
+              </div>
+              {resume.isActive && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: colors.badgeInfoBg,
+                    color: colors.badgeInfoText,
+                    border: `1px solid ${colors.badgeInfoBorder}`
+                  }}
+                >
+                  Active
+                </span>
+              )}
+              {overflowBadge && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: colors.badgeWarningBg,
+                    color: colors.badgeWarningText,
+                    border: `1px solid ${colors.badgeWarningBorder}`
+                  }}
+                >
+                  Legacy Slot
+                </span>
+              )}
+            </div>
+            {resume.createdAt && (
+              <div className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
+                {new Date(resume.createdAt).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="relative inline-flex items-center transition-all focus:outline-none"
+            title={
+              resume.isActive
+                ? 'Currently active'
+                : activatingId === resume.id
+                  ? 'Activating...'
+                  : 'Activate resume'
+            }
+            aria-label={resume.isActive ? 'Currently active' : 'Activate resume'}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (resume.isActive || activatingId === resume.id) {
+                return;
+              }
+              handleActivateResume(resume.id);
+            }}
+            disabled={activatingId === resume.id}
+            style={{
+              opacity: activatingId === resume.id || resume.isActive ? 0.6 : 1,
+              cursor: resume.isActive ? 'default' : 'pointer'
+            }}
+          >
+            {activatingId === resume.id ? (
+              <div className="w-11 h-6 flex items-center justify-center">
+                <RefreshCw size={16} className="animate-spin" style={{ color: colors.activeBlueText }} />
+              </div>
+            ) : (
+              <div
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out ${
+                  resume.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+                style={{
+                  backgroundColor: resume.isActive
+                    ? colors.successGreen
+                    : theme.mode === 'light'
+                      ? '#d1d5db'
+                      : '#4b5563'
+                }}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
+                    resume.isActive ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                  style={{
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  }}
+                />
+              </div>
+            )}
+          </button>
+          <button
+            className="p-2 rounded-lg"
+            title="Replace from file"
+            aria-label="Replace from file"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleChooseFile(displayIndex);
+            }}
+            style={{ color: colors.secondaryText }}
+          >
+            <RefreshCw size={18} />
+          </button>
+          <button
+            className="p-2 rounded-lg"
+            title="Delete"
+            aria-label="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(resume.id);
+            }}
+            style={{ color: colors.errorRed }}
+          >
+            <Trash2 size={18} />
+          </button>
+        </div>
+        {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
+        <input
+          type="file"
+          ref={setFileRef(displayIndex)}
+          onChange={(e) => onFileChange(displayIndex, resume.id, e)}
+          accept=".pdf,.doc,.docx"
+          className="hidden"
+          aria-hidden="true"
+          aria-label="Hidden resume file input"
+          tabIndex={-1}
+        />
+      </div>
+    );
+  };
+
+  const renderEmptySlot = (index: number) => {
+    const displayIndex = totalSlotsUsed + index + 1;
+
+    return (
+      <div
+        key={`empty-slot-${displayIndex}`}
+        data-testid={`resume-slot-${displayIndex}`}
         className="rounded-xl p-4 mb-3 flex items-center gap-3 cursor-pointer"
-        onClick={() => handleChooseFile(slotNumber)}
-        onKeyDown={(e) => { if (e.key === 'Enter') handleChooseFile(slotNumber); }}
+        onClick={() => handleChooseFile(displayIndex)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleChooseFile(displayIndex);
+        }}
         role="button"
         tabIndex={0}
         style={{
@@ -441,7 +723,7 @@ export default function ImportModal({
           background: theme.mode === 'light' ? '#fafafa' : colors.cardBackground
         }}
         title="Click to upload resume"
-        aria-label={`Upload resume to slot ${slotNumber}`}
+        aria-label={`Upload resume to slot ${displayIndex}`}
       >
         <div
           className="h-9 w-9 rounded-xl flex items-center justify-center"
@@ -451,15 +733,22 @@ export default function ImportModal({
         </div>
         <div>
           <div className="font-medium" style={{ color: colors.secondaryText }}>
-            Click to upload resume <span className="font-normal" style={{ color: colors.tertiaryText }}>(PDF, DOC, DOCX)</span>
+            Click to upload resume{' '}
+            <span className="font-normal" style={{ color: colors.tertiaryText }}>
+              (PDF, DOC, DOCX)
+            </span>
           </div>
         </div>
+        {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
         <input
           type="file"
-          ref={setFileRef(slotNumber)}
-          onChange={(e) => onFileChange(slotNumber, null, e)}
+          ref={setFileRef(displayIndex)}
+          onChange={(e) => onFileChange(displayIndex, null, e)}
           accept=".pdf,.doc,.docx"
           className="hidden"
+          aria-hidden="true"
+          aria-label="Hidden resume file input"
+          tabIndex={-1}
         />
       </div>
     );
@@ -507,20 +796,27 @@ export default function ImportModal({
           </button>
         </div>
         
-        <p className="mb-4 text-sm" style={{ color: colors.secondaryText }}>
-          Upload up to {maxSlots} resumes. Activate one to use as your base resume.
-        </p>
+        <div className="mb-4 space-y-1 text-sm" style={{ color: colors.secondaryText }}>
+          <p>Upload up to {maxSlots} resumes. Activate one to use as your base resume.</p>
+          {totalSlotsUsed > maxSlots && (
+            <p className="text-xs" style={{ color: colors.warningYellow }}>
+              You currently have {totalSlotsUsed} resumes saved from a previous plan. You can still activate or delete them, but new uploads are limited to {maxSlots} slots until you upgrade or clear space.
+            </p>
+          )}
+        </div>
 
-        {Array.from({ length: maxSlots }, (_, idx) => renderSlot(idx + 1))}
+        {sortedResumes.map((resume, idx) => renderResumeSlot(resume, idx))}
+        {availableSlots > 0 &&
+          Array.from({ length: availableSlots }, (_, idx) => renderEmptySlot(idx))}
 
         <div className="mt-4 flex items-center justify-between">
           <div>
             <div className="text-sm" style={{ color: colors.tertiaryText }}>
-              {filledCount} of {maxSlots} slots filled
+              {totalSlotsUsed} of {maxSlots} slots filled
             </div>
-            {!canApply && (
+            {applyHelperMessage && (
               <div className="text-xs mt-1" style={{ color: colors.errorRed }}>
-                Upload or select a resume slot before applying.
+                {applyHelperMessage}
               </div>
             )}
           </div>
@@ -539,7 +835,8 @@ export default function ImportModal({
               type="button"
               onClick={handleApply}
               disabled={isApplying}
-              className="inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed"
+              className={`inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isApplying ? 'bg-blue-400 cursor-not-allowed opacity-70' : 'bg-blue-600 hover:bg-blue-500'}`}
+              title={!activeId ? 'Activate a resume first using the toggle switch' : (isApplying ? 'Parsing...' : 'Parse and apply the active resume')}
             >
               {isApplying ? 'Parsing…' : 'Parse & Apply'}
                   </button>

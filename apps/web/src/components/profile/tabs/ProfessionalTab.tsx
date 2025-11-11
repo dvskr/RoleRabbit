@@ -497,7 +497,7 @@ export default function ProfessionalTab({
 
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       {/* Professional Bio Section */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-3">

@@ -3,8 +3,6 @@
  */
 
 describe('API Server', () => {
-  let server;
-
   beforeAll(async () => {
     // Start server for testing
     // server = await startServer();

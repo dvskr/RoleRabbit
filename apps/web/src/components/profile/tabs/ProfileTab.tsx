@@ -40,7 +40,7 @@ export default function ProfileTab({
   const colors = theme.colors;
 
   return (
-    <div className="max-w-5xl">
+    <div className="w-full">
       <div className="space-y-4">
         {/* Enhanced Profile Picture */}
         <ProfilePicture

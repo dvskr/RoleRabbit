@@ -237,7 +237,7 @@ export default function PreferencesTab({
   };
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="space-y-8">
         {/* Combined Account & Security and Notification Preferences Section */}
         <SecurityCard colors={colors} title="Account & Security">
