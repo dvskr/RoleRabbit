@@ -35,6 +35,25 @@ enum GeneratedDocType {
   OTHER
 }
 
+enum AIAgentTaskType {
+  RESUME_GENERATION
+  COVER_LETTER_GENERATION
+  JOB_APPLICATION
+  COMPANY_RESEARCH
+  INTERVIEW_PREP
+  BULK_PROCESSING
+  JOB_TRACKER_UPDATE
+  COLD_EMAIL
+}
+
+enum AIAgentTaskStatus {
+  QUEUED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
 model Certification {
   id        String @id @default(cuid())
   profileId String
@@ -514,6 +533,11 @@ model User {
   aiDrafts            AIDraft[]
   resumeCacheEntries  ResumeCache[]
   activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
+  aiAgentTasks        AIAgentTask[]        @relation("AIAgentTasks")
+  aiAgentSettings     AIAgentSettings?     @relation("AIAgentSettings")
+  aiAgentHistory      AIAgentHistory[]     @relation("AIAgentHistory")
+  aiAgentConversations AIAgentConversation[] @relation("AIAgentConversations")
+  aiAgentMetrics      AIAgentMetrics[]     @relation("AIAgentMetrics")
 
   @@index([email])
   @@index([provider, providerId])
@@ -730,4 +754,179 @@ model AIDraft {
   @@index([baseResumeId])
   @@index([expiresAt])
   @@map("ai_drafts")
+}
+
+// ============================================
+// AI AGENT MODELS
+// ============================================
+
+model AIAgentTask {
+  id     String             @id @default(cuid())
+  userId String
+  type   AIAgentTaskType
+  status AIAgentTaskStatus @default(QUEUED)
+
+  // Progress tracking
+  progress      Int     @default(0) // 0-100
+  currentStep   String? // Human-readable current step
+  totalSteps    Int?    // Total number of steps
+  completedStep Int?    // Current step number
+
+  // Job details
+  jobTitle       String?
+  company        String?
+  jobUrl         String?
+  jobDescription String? @db.Text
+
+  // Configuration
+  baseResumeId String? // Which base resume to use
+  tone         String? @default("professional")
+  length       String? @default("medium")
+  batchId      String? // Correlation ID for bulk operations
+
+  // Results
+  resultData   Json? // Generated resume, cover letter, etc.
+  atsScore     Int?
+  atsBreakdown Json? // Detailed ATS score breakdown
+  outputFiles  Json? // Array of generated file paths
+
+  // Error handling
+  errorMessage String? @db.Text
+  retryCount   Int     @default(0)
+  maxRetries   Int     @default(3)
+
+  // Timestamps
+  queuedAt    DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation("AIAgentTasks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([type])
+  @@index([batchId])
+  @@map("ai_agent_tasks")
+}
+
+model AIAgentSettings {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Master toggle
+  isEnabled Boolean @default(true)
+
+  // Capability toggles
+  autoFillEnabled        Boolean @default(true)
+  multiResumeEnabled     Boolean @default(true)
+  bulkProcessingEnabled  Boolean @default(true)
+  jobTrackerEnabled      Boolean @default(true)
+  coldEmailEnabled       Boolean @default(false)
+  interviewPrepEnabled   Boolean @default(true)
+  companyResearchEnabled Boolean @default(true)
+
+  // Preferences
+  defaultTone            String @default("professional") // professional, casual, enthusiastic
+  defaultLength          String @default("medium") // concise, medium, detailed
+  maxConcurrentTasks     Int    @default(3)
+  autoAddToJobTracker    Boolean @default(true)
+  notifyOnTaskComplete   Boolean @default(true)
+  notifyOnTaskFail       Boolean @default(true)
+
+  // Advanced settings
+  atsScoreThreshold      Int     @default(80) // Minimum ATS score to accept
+  autoRetryFailedTasks   Boolean @default(true)
+  saveAllGeneratedResumes Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("AIAgentSettings", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ai_agent_settings")
+}
+
+model AIAgentHistory {
+  id     String @id @default(cuid())
+  userId String
+
+  // Task summary
+  taskType AIAgentTaskType
+  taskIds  String[] @default([]) // IDs of tasks in this batch
+  summary  String // "5 resumes generated for different JDs"
+  count    Int    @default(1)
+
+  // Metadata
+  status      String // "Completed successfully", "Partially failed"
+  metadata    Json? // Additional data about the batch
+  completedAt DateTime @default(now())
+
+  user User @relation("AIAgentHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@index([taskType])
+  @@map("ai_agent_history")
+}
+
+model AIAgentConversation {
+  id     String @id @default(cuid())
+  userId String
+
+  // Messages stored as JSON array
+  // [{sender: 'user'|'ai', message: string, timestamp: string, suggestedActions?: []}]
+  messages Json @default("[]")
+
+  // Context
+  isActive Boolean @default(true)
+  context  Json? // Store context like current job, company, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("AIAgentConversations", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Note: Partial unique index (userId where isActive=true) created in migration
+  // to allow only one active conversation per user, but unlimited archived ones
+  @@index([userId, isActive])
+  @@index([updatedAt])
+  @@map("ai_agent_conversations")
+}
+
+model AIAgentMetrics {
+  id     String @id @default(cuid())
+  userId String
+
+  // Daily metrics
+  date DateTime @db.Date
+
+  // Task counts
+  resumesGenerated     Int @default(0)
+  coverLettersCreated  Int @default(0)
+  applicationsSubmitted Int @default(0)
+  companiesResearched  Int @default(0)
+  emailsSent           Int @default(0)
+  interviewPrepsCreated Int @default(0)
+
+  // Performance metrics
+  tasksCompleted  Int @default(0)
+  tasksFailed     Int @default(0)
+  averageAtsScore Float?
+  totalTimeSpent  Int @default(0) // In seconds
+
+  // AI usage
+  aiTokensUsed Int     @default(0)
+  aiCostUsd    Decimal @default(0) @db.Decimal(12, 4)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("AIAgentMetrics", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("ai_agent_metrics")
 }
