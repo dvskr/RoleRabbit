@@ -7,6 +7,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const NodeRegistry = require('./nodeRegistry');
 const { logger } = require('../../utils/logger');
+const socketIO = require('../../utils/socketIOServer');
 
 class WorkflowExecutor {
   constructor() {
@@ -82,6 +83,9 @@ class WorkflowExecutor {
 
     this.activeExecutions.set(execution.id, context);
 
+    // Notify workflow execution queued
+    socketIO.notifyWorkflowQueued(userId, execution.id, workflowId, workflow.name);
+
     // Start execution (async)
     this._executeAsync(context).catch(err => {
       logger.error(`Workflow execution error: ${execution.id}`, err);
@@ -107,6 +111,14 @@ class WorkflowExecutor {
           startedAt: new Date()
         }
       });
+
+      // Notify workflow started
+      socketIO.notifyWorkflowStarted(
+        context.userId,
+        context.executionId,
+        context.workflowId,
+        context.workflow.name
+      );
 
       // Execute nodes
       const result = await this._executeNodes(context);
@@ -136,6 +148,15 @@ class WorkflowExecutor {
           lastExecutedAt: new Date()
         }
       });
+
+      // Notify workflow completed
+      socketIO.notifyWorkflowCompleted(
+        context.userId,
+        context.executionId,
+        context.workflowId,
+        result,
+        duration
+      );
 
       logger.info(`Workflow execution completed: ${context.executionId} in ${duration}ms`);
 
@@ -170,6 +191,15 @@ class WorkflowExecutor {
           lastExecutedAt: new Date()
         }
       });
+
+      // Notify workflow failed
+      socketIO.notifyWorkflowFailed(
+        context.userId,
+        context.executionId,
+        context.workflowId,
+        error.message,
+        context.currentNodeId
+      );
 
       // Retry if configured
       if (context.workflow.retryOnFailure && !context.retryAttempt) {
@@ -235,6 +265,15 @@ class WorkflowExecutor {
       startTime: new Date()
     });
 
+    // Notify node started
+    socketIO.notifyWorkflowNodeStarted(
+      context.userId,
+      executionId,
+      nodeId,
+      node.name || node.label,
+      node.type
+    );
+
     try {
       // Get node executor from registry
       const nodeExecutor = this.nodeRegistry.getNodeExecutor(node.type);
@@ -263,6 +302,16 @@ class WorkflowExecutor {
       // Mark as completed
       context.completedNodes.push(nodeId);
 
+      // Notify node completed
+      socketIO.notifyWorkflowNodeCompleted(
+        context.userId,
+        executionId,
+        nodeId,
+        node.name || node.label,
+        result,
+        duration
+      );
+
       return result;
 
     } catch (error) {
@@ -280,6 +329,15 @@ class WorkflowExecutor {
 
       // Mark as failed
       context.failedNodes.push(nodeId);
+
+      // Notify node failed
+      socketIO.notifyWorkflowNodeFailed(
+        context.userId,
+        executionId,
+        nodeId,
+        node.name || node.label,
+        error.message
+      );
 
       throw error;
     }
@@ -408,7 +466,7 @@ class WorkflowExecutor {
   /**
    * Cancel execution
    */
-  async cancelExecution(executionId) {
+  async cancelExecution(executionId, userId) {
     const context = this.activeExecutions.get(executionId);
 
     if (context) {
@@ -423,6 +481,27 @@ class WorkflowExecutor {
         completedAt: new Date()
       }
     });
+
+    // Notify workflow cancelled
+    if (context) {
+      socketIO.notifyWorkflowCancelled(
+        context.userId,
+        executionId,
+        context.workflowId
+      );
+    } else if (userId) {
+      // If we don't have context, use provided userId
+      const execution = await prisma.workflowExecution.findUnique({
+        where: { id: executionId }
+      });
+      if (execution) {
+        socketIO.notifyWorkflowCancelled(
+          userId,
+          executionId,
+          execution.workflowId
+        );
+      }
+    }
 
     return { success: true, message: 'Execution cancelled' };
   }
