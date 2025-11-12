@@ -7,7 +7,7 @@ const fastify = require('fastify')({
   keepAliveTimeout: 65000, // 65 seconds for keep-alive  
   connectionTimeout: 10000, // 10 second connection timeout
   logger: {
-    level: 'info',
+    level: process.env.FASTIFY_LOG_LEVEL || 'warn', // Changed from 'info' to 'warn' to reduce verbosity
     stream: {
       write: (msg) => {
         if (!msg) return;
@@ -30,6 +30,7 @@ const fastify = require('fastify')({
         }
         
         // Write all other log messages normally
+        // With level set to 'warn', only warnings and errors will be logged
         process.stdout.write(msg);
       }
     },
@@ -83,44 +84,21 @@ const logger = require('./utils/logger');
 const metrics = require('./observability/metrics');
 
 // Security utilities
-const { sanitizeInput, getRateLimitConfig } = require('./utils/security');
-
-// Validation utilities
-const { 
-  validateEmail, 
-  validatePassword, 
-  validateRequired, 
-  validateLength
-} = require('./utils/validation');
+const { sanitizeInput } = require('./utils/security');
 
 // Database connection
 const { connectDB, disconnectDB } = require('./utils/db');
-
-// Authentication
-const { registerUser, authenticateUser, getUserById, resetUserPassword } = require('./auth');
-const { createRefreshToken, verifyRefreshToken, deleteAllUserRefreshTokens } = require('./utils/refreshToken');
-const { createSession, getUserSessions, deactivateAllUserSessions, deactivateSession } = require('./utils/sessionManager');
-const { createPasswordResetToken, verifyPasswordResetToken } = require('./utils/passwordReset');
-
-// Email service (auth emails only)
-const { sendEmail, sendWelcomeEmail, sendPasswordResetEmail } = require('./utils/emailService');
-
-// WebSocket Server
-const WebSocketServer = require('./utils/websocketServer');
 
 // Socket.IO Server
 const socketIOServer = require('./utils/socketIOServer');
 
 // Health Check utilities
 const {
-  getHealthStatus,
-  isHealthy
+  getHealthStatus
 } = require('./utils/healthCheck');
 
 // API Versioning utilities
 const {
-  getVersion,
-  validateVersion,
   getVersionInfo
 } = require('./utils/versioning');
 
@@ -151,7 +129,8 @@ fastify.register(require('@fastify/cors'), {
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  strictPreflight: false
 });
 
 // Register rate limiting globally
@@ -197,29 +176,31 @@ fastify.register(require('@fastify/multipart'), {
 });
 
 // Hook to make cookie token available for jwtVerify (runs after cookies are parsed)
-fastify.addHook('preHandler', async (request, reply) => {
+fastify.addHook('preHandler', async (request, _reply) => {
   // If we have a cookie token but no Authorization header, set it so jwtVerify can use it
   const cookieToken = request.cookies?.auth_token;
   const authHeader = request.headers.authorization;
   
   if (cookieToken && !authHeader) {
     request.headers.authorization = `Bearer ${cookieToken}`;
-    // Debug log (development only)
-    if (process.env.NODE_ENV !== 'production') {
-      const logger = require('./utils/logger');
-      logger.debug(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
-    }
+    // Debug log (development only) - disabled by default to reduce log noise
+    // Uncomment the line below if you need to debug auth issues
+    // if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_AUTH === 'true') {
+    //   const logger = require('./utils/logger');
+    //   logger.debug(`[Auth Hook] Set Authorization header from cookie for ${request.method} ${request.url}`);
+    // }
   } else if (!cookieToken && !authHeader) {
-    // Debug log (development only)
-    if (process.env.NODE_ENV !== 'production' && !request.url.includes('/health') && !request.url.includes('/api/status')) {
-      const logger = require('./utils/logger');
-      logger.debug(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
-    }
+    // Debug log (development only) - disabled by default to reduce log noise
+    // Uncomment the line below if you need to debug auth issues
+    // if (process.env.NODE_ENV !== 'production' && process.env.DEBUG_AUTH === 'true' && !request.url.includes('/health') && !request.url.includes('/api/status')) {
+    //   const logger = require('./utils/logger');
+    //   logger.debug(`[Auth Hook] No auth token found for ${request.method} ${request.url}`);
+    // }
   }
 });
 
 // Add request body sanitization hook
-fastify.addHook('preValidation', async (request, reply) => {
+fastify.addHook('preValidation', async (request, _reply) => {
   // Sanitize request body if it exists
   if (request.body && typeof request.body === 'object') {
     request.body = sanitizeInput(request.body);
@@ -231,7 +212,7 @@ fastify.addHook('preValidation', async (request, reply) => {
   }
   
   // Apply additional sanitization
-  sanitizationMiddleware()(request, reply);
+  sanitizationMiddleware()(request, _reply);
 });
 
 // Hook to handle response completion and ensure proper serialization
@@ -254,7 +235,7 @@ fastify.addHook('onSend', async (request, reply, payload) => {
 });
 
 // Suppress premature close errors in response handling
-fastify.addHook('onResponse', async (request, reply) => {
+fastify.addHook('onResponse', async (_request, reply) => {
   // Mark successful responses to help filter warnings
   if (reply.statusCode >= 200 && reply.statusCode < 300) {
     // Add metadata to help identify successful responses in logs
@@ -282,7 +263,7 @@ fastify.get('/health', async (request, reply) => {
 });
 
 // API status with versioning info
-fastify.get('/api/status', async (request) => ({
+fastify.get('/api/status', async () => ({
   message: 'RoleReady Node.js API is running',
   version: getVersionInfo(),
   endpoints: {

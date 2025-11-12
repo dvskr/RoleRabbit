@@ -3,10 +3,8 @@ const logger = require('../../utils/logger');
 const { extractSkillsWithAI, semanticSkillMatching, analyzeSkillQuality } = require('./aiSkillExtractor');
 const { withCache } = require('./atsCache');
 const { 
-  extractTechnicalSkills, 
   analyzeResume: legacyAnalyzeResume,
-  analyzeJobDescription: legacyAnalyzeJobDescription,
-  ALL_TECHNICAL_SKILLS 
+  analyzeJobDescription: legacyAnalyzeJobDescription
 } = require('./atsScoringService');
 
 /**
@@ -33,21 +31,30 @@ const SCORING_WEIGHTS = {
   format: 0.05                 // Resume structure (5%)
 };
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const ENABLE_SKILL_QUALITY_ANALYSIS =
+  (process.env.AI_ATS_ENABLE_SKILL_QUALITY || '').toLowerCase() === 'true';
+
 /**
  * Main world-class ATS scoring function
  * @param {Object} params
  * @param {Object} params.resumeData - Resume data object
  * @param {string} params.jobDescription - Job description text
  * @param {boolean} params.useAI - Whether to use AI (default: true)
+ * @param {Function} params.onProgress - Optional progress callback (stage, progress)
  * @returns {Promise<Object>} Comprehensive ATS analysis
  */
-async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = true }) {
+async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = true, onProgress = null }) {
   const startTime = Date.now();
   
   logger.info('🌟 WORLD-CLASS ATS: Starting analysis', {
     use_ai: useAI,
     resume_has_data: !!resumeData
   });
+
+  // Report initial progress
+  onProgress?.({ stage: 'Analyzing job description', progress: 10 });
 
   if (!jobDescription || typeof jobDescription !== 'string') {
     throw new Error('jobDescription is required for ATS scoring');
@@ -88,6 +95,8 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
   // TIER 2: RESUME ANALYSIS (Dictionary-based, always fast)
   // =========================================================================
   
+  onProgress?.({ stage: 'Extracting requirements', progress: 30 });
+  
   const resumeAnalysis = legacyAnalyzeResume(resumeData);
   const resumeText = buildResumeText(resumeData);
   
@@ -101,10 +110,16 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
   // TIER 3: SEMANTIC SKILL MATCHING (AI-powered)
   // =========================================================================
   
+  onProgress?.({ stage: 'Semantic skill matching', progress: 50 });
+  
   let semanticResults;
   let skillQualityScores = {};
   
-  if (useAI && jobAnalysis.extraction_method !== 'dictionary_fallback') {
+  // 🚀 PERFORMANCE: Semantic matching is SLOW (45-180s). Disabled by default.
+  // Enable with AI_ATS_ENABLE_SEMANTIC=true environment variable
+  const enableSemanticMatching = (process.env.AI_ATS_ENABLE_SEMANTIC || '').toLowerCase() === 'true';
+  
+  if (useAI && enableSemanticMatching && jobAnalysis.extraction_method !== 'dictionary_fallback') {
     try {
       // Combine all job skills
       const allJobSkills = [
@@ -127,18 +142,28 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
         quality: semanticResults.quality_score
       });
       
-      // Analyze quality of TOP matched skills (top 5 to save costs)
-      const topMatches = semanticResults.matches
-        .filter(m => m.match && m.confidence > 0.7)
-        .slice(0, 5);
-      
-      for (const match of topMatches) {
-        try {
-          const quality = await analyzeSkillQuality(match.job_skill, resumeText);
-          skillQualityScores[match.job_skill] = quality;
-        } catch (error) {
-          logger.warn(`⚠️  Quality analysis failed for ${match.job_skill}`, { error: error.message });
-        }
+      if (ENABLE_SKILL_QUALITY_ANALYSIS) {
+        // Analyze quality of TOP matched skills (top 5 to save costs)
+        const topMatches = semanticResults.matches
+          .filter(m => m.match && m.confidence > 0.7)
+          .slice(0, 5);
+
+        // Process quality analysis with rate limiting to avoid OpenAI API issues
+        const qualityTasks = topMatches.map((match, index) => (async () => {
+          await delay(index * 500);
+
+          try {
+            const quality = await analyzeSkillQuality(match.job_skill, resumeText);
+            skillQualityScores[match.job_skill] = quality;
+          } catch (error) {
+            logger.warn(`⚠️  Quality analysis failed for ${match.job_skill}`, { error: error.message });
+          }
+        })());
+
+        // Wait for all quality analyses to complete
+        await Promise.all(qualityTasks);
+      } else {
+        logger.info('🔕 Skill quality analysis disabled (AI_ATS_ENABLE_SKILL_QUALITY not set to true)');
       }
       
     } catch (error) {
@@ -151,23 +176,46 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
   // TIER 4: INTELLIGENT SCORING
   // =========================================================================
   
-  const scores = calculateWorldClassScores({
-    jobAnalysis,
-    resumeAnalysis,
-    semanticResults,
-    skillQualityScores,
-    resumeData
-  });
+  onProgress?.({ stage: 'Calculating scores', progress: 80 });
+  
+  let scores;
+  try {
+    scores = calculateWorldClassScores({
+      jobAnalysis,
+      resumeAnalysis,
+      semanticResults,
+      skillQualityScores,
+      resumeData
+    });
+  } catch (error) {
+    logger.error({
+      msg: '🌟 WORLD-CLASS ATS: FATAL ERROR',
+      error: error.message,
+      stack: error.stack,
+      job_analysis_keys: jobAnalysis ? Object.keys(jobAnalysis) : null,
+      resume_skill_counts: {
+        technical: resumeAnalysis?.technical?.length || 0,
+        soft: resumeAnalysis?.soft?.length || 0
+      },
+      semantic_match_summary: semanticResults
+        ? {
+            total_matches: Array.isArray(semanticResults.matches) ? semanticResults.matches.length : null,
+            overall_match_rate: semanticResults.overall_skill_match_rate
+          }
+        : null
+    });
+    throw error;
+  }
 
   // =========================================================================
   // TIER 5: EXPLAINABLE AI - RECOMMENDATIONS
   // =========================================================================
   
+  onProgress?.({ stage: 'Generating recommendations', progress: 95 });
+  
   const recommendations = generateRecommendations({
     scores,
-    jobAnalysis,
     resumeAnalysis,
-    semanticResults,
     skillQualityScores
   });
 
@@ -242,6 +290,8 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
     jobDescriptionHash: hashJobDescription(jobDescription)
   };
 
+  onProgress?.({ stage: 'Complete', progress: 100 });
+  
   logger.info('🏆 WORLD-CLASS ATS: Analysis complete', {
     overall_score: result.overall,
     duration_ms: duration,
@@ -348,7 +398,12 @@ function calculateWorldClassScores({ jobAnalysis, resumeAnalysis, semanticResult
   }
   
   // Education score (relaxed)
-  const educationText = (resumeData.education || []).map(e => 
+  const educationEntries = Array.isArray(resumeData.education)
+    ? resumeData.education
+    : resumeData.education && typeof resumeData.education === 'object'
+      ? Object.values(resumeData.education).filter(Boolean)
+      : [];
+  const educationText = educationEntries.map(e => 
     `${e.degree || ''} ${e.field || ''} ${e.institution || ''}`.toLowerCase()
   ).join(' ');
   
@@ -364,8 +419,32 @@ function calculateWorldClassScores({ jobAnalysis, resumeAnalysis, semanticResult
   // Format score (basic checks)
   let formatScore = 100;
   if (!resumeData.summary) formatScore -= 15;
-  if (!resumeData.experience || resumeData.experience.length === 0) formatScore -= 20;
-  if (!resumeData.skills) formatScore -= 15;
+  const experienceEntries = Array.isArray(resumeData.experience)
+    ? resumeData.experience
+    : resumeData.experience && typeof resumeData.experience === 'object'
+      ? Object.values(resumeData.experience).filter(Boolean)
+      : [];
+  if (experienceEntries.length === 0) formatScore -= 20;
+  const hasSkills = (() => {
+    if (!resumeData.skills) return false;
+    if (Array.isArray(resumeData.skills)) return resumeData.skills.length > 0;
+    if (typeof resumeData.skills === 'object') {
+      const groups = ['technical', 'tools', 'soft', 'languages'];
+      return groups.some((group) => {
+        const value = resumeData.skills[group];
+        if (!value) return false;
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        if (typeof value === 'object') {
+          return Object.keys(value).length > 0;
+        }
+        return typeof value === 'string' && value.trim().length > 0;
+      });
+    }
+    return false;
+  })();
+  if (!hasSkills) formatScore -= 15;
   formatScore = Math.max(0, formatScore);
   
   // Calculate overall
@@ -396,7 +475,7 @@ function calculateWorldClassScores({ jobAnalysis, resumeAnalysis, semanticResult
 /**
  * Generate actionable recommendations
  */
-function generateRecommendations({ scores, jobAnalysis, resumeAnalysis, semanticResults, skillQualityScores }) {
+function generateRecommendations({ scores, resumeAnalysis, skillQualityScores }) {
   const strengths = [];
   const improvements = [];
   const actionableTips = [];

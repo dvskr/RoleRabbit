@@ -599,16 +599,18 @@ model WorkExperience {
 }
 
 model BaseResume {
-  id                String    @id @default(cuid())
-  userId            String
-  slotNumber        Int
-  name              String
-  isActive          Boolean   @default(false)
-  data              Json
-  formatting        Json?     @default("{}")
-  metadata          Json?     @default("{}")
-  lastAIAccessedAt  DateTime?
-  parsingConfidence Float?
+  id                   String    @id @default(cuid())
+  userId               String
+  slotNumber           Int
+  name                 String
+  isActive             Boolean   @default(false)
+  data                 Json
+  formatting           Json?     @default("{}")
+  metadata             Json?     @default("{}")
+  lastAIAccessedAt     DateTime?
+  parsingConfidence    Float?
+  embedding            String?   @db.Text // pgvector embedding stored as text
+  embeddingUpdatedAt   DateTime? @map("embedding_updated_at")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, CheckCircle, Mail } from 'lucide-react';
 import { logger } from '../../../utils/logger';
 import { UserData } from '../types/profile';
@@ -34,6 +35,7 @@ export default function PreferencesTab({
   isEditing,
   onUserDataChange
 }: PreferencesTabProps) {
+  const router = useRouter();
   const { theme } = useTheme();
   const colors = theme.colors;
   const { user } = useAuth();
@@ -186,8 +188,8 @@ export default function PreferencesTab({
     setTimeout(() => {
       setShowEmailModal(false);
       setEmailSuccess(null);
-      // Refresh user data
-      window.location.reload();
+      // Refresh user data without full page reload
+      router.refresh();
     }, 2000);
   };
 
@@ -237,7 +239,7 @@ export default function PreferencesTab({
   };
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="space-y-8">
         {/* Combined Account & Security and Notification Preferences Section */}
         <SecurityCard colors={colors} title="Account & Security">

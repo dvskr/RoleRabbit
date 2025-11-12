@@ -95,6 +95,20 @@ export function generateResumeHTML(options: ExportOptions): string {
     helvetica: 'Helvetica'
   };
   const selectedFont = fontMap[fontFamily] || 'Arial';
+  const contactValues = [
+    resumeData.email,
+    resumeData.phone,
+    resumeData.location,
+    resumeData.linkedin,
+    resumeData.github,
+    resumeData.website,
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean);
+
+  const contactMarkup = contactValues.length
+    ? contactValues.map((value) => `<span>${value}</span>`).join('<span>•</span>')
+    : '';
 
   let html = `
     <!DOCTYPE html>
@@ -188,11 +202,7 @@ export function generateResumeHTML(options: ExportOptions): string {
     <div class="header">
       <div class="name">${resumeData.name || 'Your Name'}</div>
       <div class="title">${resumeData.title || 'Your Title'}</div>
-      <div class="contact">
-        <span>${resumeData.email || ''}</span>
-        <span>${resumeData.phone || ''}</span>
-        <span>${resumeData.location || ''}</span>
-      </div>
+      <div class="contact">${contactMarkup}</div>
     </div>
   `;
 

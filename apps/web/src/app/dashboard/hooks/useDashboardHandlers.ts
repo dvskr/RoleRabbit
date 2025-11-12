@@ -3,7 +3,7 @@
  * Consolidates handler logic for better organization
  */
 
-import { useCallback } from 'react';
+import { useCallback, Dispatch, SetStateAction } from 'react';
 import type {
   ResumeData,
   CustomSection,
@@ -15,13 +15,39 @@ import { createCustomField } from '../utils/dashboardHandlers';
 import {
   removeDuplicateResumeEntries,
   duplicateResumeState,
+  mergeTailoredResume,
 } from '../utils/resumeDataHelpers';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
 import { validateResumeData, sanitizeResumeData } from '../../../utils/validation';
 import { formatErrorForDisplay } from '../../../utils/errorMessages';
-import { mapEditorStateToBasePayload, BaseResumeRecord } from '../../../utils/resumeMapper';
-import { TailorResult, CoverLetterDraft, PortfolioDraft } from '../../../types/ai';
+import {
+  mapEditorStateToBasePayload,
+  BaseResumeRecord,
+  normalizedDataToResumeData,
+} from '../../../utils/resumeMapper';
+import { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../../../types/ai';
+
+const buildATSFromScore = (
+  score: number,
+  previous?: ATSAnalysisResult | null
+): ATSAnalysisResult => {
+  const base: ATSAnalysisResult = previous
+    ? { ...previous, overall: score }
+    : {
+        overall: score,
+        keywords: 0,
+        content: 0,
+        experience: 0,
+        format: 0,
+        improvements: [],
+        strengths: [],
+        matchedKeywords: [],
+        missingKeywords: [],
+      };
+  base.overall = score;
+  return base;
+};
 
 export interface UseDashboardHandlersParams {
   // Resume data
@@ -96,7 +122,7 @@ export interface UseDashboardHandlersParams {
   // Other handlers
   jobDescription: string;
   setIsAnalyzing: (analyzing: boolean) => void;
-  setMatchScore: (score: number) => void;
+  setMatchScore: Dispatch<SetStateAction<ATSAnalysisResult | null>>;
   setMatchedKeywords: (keywords: string[]) => void;
   setMissingKeywords: (keywords: string[]) => void;
   setAiRecommendations: (recommendations: string[]) => void;
@@ -107,12 +133,28 @@ export interface UseDashboardHandlersParams {
   tailorEditMode: string;
   selectedTone: string;
   selectedLength: string;
+  tailorResult: TailorResult | null;
   setTailorResult: (result: TailorResult | null) => void;
   setIsTailoring: (value: boolean) => void;
   setCoverLetterDraft: (draft: CoverLetterDraft | null) => void;
   setIsGeneratingCoverLetter: (value: boolean) => void;
   setPortfolioDraft: (draft: PortfolioDraft | null) => void;
   setIsGeneratingPortfolio: (value: boolean) => void;
+  
+  // AI Progress tracking
+  atsProgress?: any;
+  startATSProgress?: (operation: any, estimatedTime?: number) => void;
+  updateATSProgress?: (stage: string, progress: number, message?: string) => void;
+  completeATSProgress?: () => void;
+  resetATSProgress?: () => void;
+  tailorProgress?: any;
+  startTailorProgress?: (operation: any, estimatedTime?: number) => void;
+  updateTailorProgress?: (stage: string, progress: number, message?: string) => void;
+  completeTailorProgress?: () => void;
+  resetTailorProgress?: () => void;
+  
+  // Toast notifications
+  showToast?: (type: string, title: string, options?: any) => void;
 }
 
 export interface UseDashboardHandlersReturn {
@@ -138,10 +180,33 @@ export interface UseDashboardHandlersReturn {
   generatePortfolioDraft: () => Promise<any | null>;
   
   // Other
-  saveResume: () => void;
+  saveResume: () => Promise<boolean>;
+  confirmTailorResult: () => Promise<boolean>;
   undo: () => void;
   redo: () => void;
 }
+
+export interface ConfirmTailorResultOptions {
+  tailorResult: TailorResult | null;
+  saveResume: () => Promise<boolean>;
+  clearTailorResult: () => void;
+}
+
+export const applyTailoredResumeChanges = async ({
+  tailorResult,
+  saveResume,
+  clearTailorResult,
+}: ConfirmTailorResultOptions): Promise<boolean> => {
+  if (!tailorResult) {
+    return false;
+  }
+
+  const success = await saveResume();
+  if (success) {
+    clearTailorResult();
+  }
+  return success;
+};
 
 /**
  * Hook for dashboard handler functions
@@ -222,12 +287,19 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     tailorEditMode,
     selectedTone,
     selectedLength,
+    tailorResult,
     setTailorResult,
     setIsTailoring,
     setCoverLetterDraft,
     setIsGeneratingCoverLetter,
     setPortfolioDraft,
-    setIsGeneratingPortfolio
+    setIsGeneratingPortfolio,
+    // AI Progress tracking (optional)
+    startATSProgress,
+    completeATSProgress,
+    startTailorProgress,
+    completeTailorProgress,
+    showToast
   } = params;
 
   const toggleSection = useCallback((section: string) => {
@@ -357,10 +429,18 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [sectionVisibility, setSectionVisibility]);
 
   const analyzeJobDescription = useCallback(async () => {
+    logger.debug('ATS analyzeJobDescription invoked', {
+      currentResumeId,
+      hasJobDescription: !!jobDescription?.trim(),
+      jobDescriptionLength: jobDescription?.length ?? 0,
+      isAnalyzing
+    });
     if (!jobDescription.trim()) {
       return null;
     }
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
+      logger.warn('ATS analysis blocked - no active resume id');
       setSaveError('Select a resume slot before running ATS analysis.');
       return null;
     }
@@ -369,27 +449,79 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     }
 
     setIsAnalyzing(true);
+    // Start progress tracking
+    startATSProgress?.('ats', 45); // 45 seconds estimated
+    
+    // Clear previous scores to prevent showing stale data
+    setMatchScore(null);
+    setMatchedKeywords([]);
+    setMissingKeywords([]);
+    setShowATSScore(false);
+    
     try {
       const response = await apiService.runATSCheck({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription
       });
-      const analysis = response?.analysis;
+      
+      logger.debug('ATS response received', { 
+        hasAnalysis: !!response?.analysis,
+        overallScore: response?.analysis?.overall,
+        matchedCount: response?.matchedKeywords?.length || response?.analysis?.matchedKeywords?.length || 0
+      });
+      
+      const analysis: ATSAnalysisResult | null = response?.analysis ?? null;
       if (analysis) {
-        setMatchScore(analysis); // Set the full analysis object, not just the score
-        setMatchedKeywords(response?.matchedKeywords ?? []);
-        setMissingKeywords(response?.missingKeywords ?? []);
-        setAiRecommendations(response?.improvements ?? []);
+        // Ensure we have a valid overall score
+        if (typeof analysis.overall !== 'number') {
+          logger.error('Invalid ATS response - missing overall score', { analysis });
+          throw new Error('Invalid ATS response format');
+        }
+        
+        setMatchScore(analysis);
+        setMatchedKeywords(response?.matchedKeywords ?? analysis.matchedKeywords ?? []);
+        setMissingKeywords(response?.missingKeywords ?? analysis.missingKeywords ?? []);
+        const actionable = analysis.actionable_tips ?? analysis.actionableTips ?? [];
+        const improvements = response?.improvements ?? analysis.improvements ?? [];
+        const recommendationStrings = [
+          ...improvements,
+          ...actionable.map((tip) => (typeof tip === 'string' ? tip : tip.action)),
+        ].filter(Boolean);
+        setAiRecommendations(recommendationStrings);
         setShowATSScore(true);
+        
+        logger.debug('ATS state updated', {
+          overall: analysis.overall,
+          matchedKeywords: (response?.matchedKeywords ?? analysis.matchedKeywords ?? []).length,
+          missingKeywords: (response?.missingKeywords ?? analysis.missingKeywords ?? []).length
+        });
+        
+        // Complete progress and show success toast
+        completeATSProgress?.();
+        showToast?.('success', 'ATS Check Complete!', {
+          message: `Score: ${analysis.overall}/100`,
+          duration: 5000
+        });
       }
       return response;
     } catch (error) {
+      // Complete progress on error
+      completeATSProgress?.();
       logger.error('ATS analysis failed', { error });
       const friendlyError = formatErrorForDisplay(error, {
         action: 'analyzing job description',
         feature: 'ATS analysis'
       });
       setSaveError(friendlyError);
+      // Clear scores on error
+      setMatchScore(null);
+      setShowATSScore(false);
+      
+      // Show error toast
+      showToast?.('error', 'ATS Check Failed', {
+        message: friendlyError,
+        duration: 7000
+      });
       return null;
     } finally {
       setIsAnalyzing(false);
@@ -397,7 +529,11 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     jobDescription,
     currentResumeId,
+    resumeData,
     isAnalyzing,
+    startATSProgress,
+    completeATSProgress,
+    showToast,
     setIsAnalyzing,
     setMatchScore,
     setMatchedKeywords,
@@ -408,7 +544,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const applyAIRecommendations = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before applying recommendations.');
       return null;
     }
@@ -419,7 +556,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
 
     try {
       const response = await apiService.applyAIRecommendations({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription,
         focusAreas: aiRecommendations?.length ? ['summary', 'experience', 'skills'] : undefined,
         tone: writingTone
@@ -427,11 +564,15 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       if (response?.updatedResume && applyBaseResume) {
         applyBaseResume(response.updatedResume as BaseResumeRecord);
       }
-      if (response?.appliedRecommendations) {
-        setAiRecommendations(response.appliedRecommendations);
-      }
-      if (response?.ats?.after?.overall !== undefined) {
-        setMatchScore(response.ats.after.overall ?? 0);
+      setAiRecommendations(response?.appliedRecommendations ?? []);
+      if (response?.ats?.after) {
+        const afterAnalysis = response.ats.after as ATSAnalysisResult;
+        setMatchScore(afterAnalysis);
+        setMatchedKeywords(afterAnalysis.matchedKeywords ?? []);
+        setMissingKeywords(afterAnalysis.missingKeywords ?? []);
+        setShowATSScore(true);
+      } else if (typeof response?.atsScoreAfter === 'number') {
+        setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
         setShowATSScore(true);
       }
       return response;
@@ -447,6 +588,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     currentResumeId,
     jobDescription,
+    resumeData,
     aiRecommendations,
     writingTone,
     applyBaseResume,
@@ -457,7 +599,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const tailorResumeForJob = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before tailoring.');
       return null;
     }
@@ -468,44 +611,88 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
 
     setTailorResult(null);
     setIsTailoring(true);
+    // Start progress tracking (longer for FULL mode)
+    const isFullMode = tailorEditMode?.toUpperCase() === 'FULL';
+    startTailorProgress?.('tailor', isFullMode ? 60 : 45); // 60s for FULL, 45s for PARTIAL
+    
     try {
       const response = await apiService.tailorResume({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription,
-        mode: tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL',
+        mode: isFullMode ? 'FULL' : 'PARTIAL',
         tone: selectedTone,
         length: selectedLength
       });
 
       if (response?.tailoredResume) {
+        const tailoredEditorData = normalizedDataToResumeData(response.tailoredResume as any);
+        let mergedResume: ResumeData | null = null;
+
+        setResumeData((previous) => {
+          const merged = mergeTailoredResume(previous, tailoredEditorData);
+          const deduped = removeDuplicateResumeEntries(merged).data;
+          mergedResume = deduped;
+          return deduped;
+        });
+
+        if (!mergedResume) {
+          const merged = mergeTailoredResume(resumeData, tailoredEditorData);
+          mergedResume = removeDuplicateResumeEntries(merged).data;
+        }
+
+        setHasChanges(true);
+        
         const result: TailorResult = {
-          tailoredResume: response.tailoredResume,
+          tailoredResume: mergedResume,
           diff: Array.isArray(response.diff) ? response.diff : [],
           warnings: Array.isArray(response.warnings) ? response.warnings : [],
           recommendedKeywords: Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : [],
           ats: response.ats ?? null,
           confidence: typeof response.confidence === 'number' ? response.confidence : null,
-          mode: response.tailoredVersion?.mode ?? (tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL')
+          mode: response.tailoredVersion?.mode ?? (tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL'),
+          tailoredVersionId: response.tailoredVersion?.id
         };
         setTailorResult(result);
 
-        if (Array.isArray(response.recommendedKeywords) && response.recommendedKeywords.length) {
-          setAiRecommendations(response.recommendedKeywords);
-        }
-        if (response.ats?.after?.overall !== undefined) {
-          setMatchScore(response.ats.after.overall ?? 0);
+        setAiRecommendations(Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : []);
+        const afterAnalysis = response.ats?.after as ATSAnalysisResult | undefined;
+        if (afterAnalysis) {
+          setMatchScore(afterAnalysis);
+          setMatchedKeywords(afterAnalysis.matchedKeywords ?? response.recommendedKeywords ?? []);
+          setMissingKeywords(afterAnalysis.missingKeywords ?? []);
+          setShowATSScore(true);
+        } else if (typeof response.atsScoreAfter === 'number') {
+          setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
           setShowATSScore(true);
         }
+        
+        // Complete progress and show success toast
+        completeTailorProgress?.();
+        const beforeScore = response.ats?.before?.overall || response.atsScoreBefore || 0;
+        const afterScore = afterAnalysis?.overall || response.atsScoreAfter || 0;
+        const improvement = afterScore - beforeScore;
+        showToast?.('success', 'Resume Tailored!', {
+          message: `Score improved from ${beforeScore} to ${afterScore} (+${improvement} points)`,
+          duration: 7000
+        });
       }
 
       return response;
     } catch (error) {
+      // Complete progress on error
+      completeTailorProgress?.();
       logger.error('Failed to tailor resume', { error });
       const friendlyError = formatErrorForDisplay(error, {
         action: 'tailoring resume',
         feature: 'resume tailoring'
       });
       setSaveError(friendlyError);
+      
+      // Show error toast
+      showToast?.('error', 'Tailoring Failed', {
+        message: friendlyError,
+        duration: 7000
+      });
       return null;
     } finally {
       setIsTailoring(false);
@@ -513,19 +700,27 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     currentResumeId,
     jobDescription,
+    resumeData,
     tailorEditMode,
     selectedTone,
     selectedLength,
+    resumeData,
+    setResumeData,
+    setHasChanges,
     setTailorResult,
     setAiRecommendations,
     setMatchScore,
     setShowATSScore,
     setSaveError,
-    setIsTailoring
+    setIsTailoring,
+    startTailorProgress,
+    completeTailorProgress,
+    showToast
   ]);
 
   const generateCoverLetterDraft = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before generating a cover letter.');
       return null;
     }
@@ -538,7 +733,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsGeneratingCoverLetter(true);
     try {
       const response = await apiService.generateCoverLetter({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         jobDescription,
         tone: selectedTone
       });
@@ -572,6 +767,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   }, [
     currentResumeId,
     jobDescription,
+    resumeData,
     selectedTone,
     setCoverLetterDraft,
     setSaveError,
@@ -579,7 +775,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
   ]);
 
   const generatePortfolioDraft = useCallback(async () => {
-    if (!currentResumeId) {
+    const effectiveResumeId = resumeData?.id || currentResumeId;
+    if (!effectiveResumeId) {
       setSaveError('Select an active resume before generating a portfolio outline.');
       return null;
     }
@@ -588,7 +785,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsGeneratingPortfolio(true);
     try {
       const response = await apiService.generatePortfolio({
-        resumeId: currentResumeId,
+        resumeId: effectiveResumeId,
         tone: selectedTone
       });
 
@@ -618,22 +815,23 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     }
   }, [
     currentResumeId,
+    resumeData,
     selectedTone,
     setPortfolioDraft,
     setSaveError,
     setIsGeneratingPortfolio
   ]);
 
-  const saveResume = useCallback(async () => {
+  const saveResume = useCallback(async (): Promise<boolean> => {
     if (isSaving) {
-      return;
+      return false;
     }
 
     if (!hasChanges && currentResumeId) {
       setSaveError(null);
       setLastSavedAt(new Date());
-       setHasChanges(false);
-      return;
+      setHasChanges(false);
+      return true;
     }
 
     // Pre-save validation
@@ -641,9 +839,8 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     if (!validation.isValid) {
       const errorMessages = Object.values(validation.errors).join(', ');
       setSaveError(`Validation failed: ${errorMessages}. Please fix these errors before saving.`);
-      setIsSaving(false);
       logger.warn('Resume save validation failed:', validation.errors);
-      return;
+      return false;
     }
 
     setIsSaving(true);
@@ -712,6 +909,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         setLastSavedAt(new Date());
         setHasChanges(false);
       }
+      return true;
     } catch (error: any) {
       logger.error('Failed to save resume:', error);
       const friendlyError = formatErrorForDisplay(error, {
@@ -719,6 +917,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         feature: 'resume builder',
       });
       setSaveError(friendlyError);
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -750,6 +949,14 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsSaving,
   ]);
 
+  const confirmTailorResult = useCallback(() => {
+    return applyTailoredResumeChanges({
+      tailorResult,
+      saveResume,
+      clearTailorResult: () => setTailorResult(null),
+    });
+  }, [tailorResult, saveResume, setTailorResult]);
+
   const undo = useCallback(() => {
     resumeHelpers.undo(history, historyIndex, setHistoryIndex, setResumeData);
   }, [history, historyIndex, setHistoryIndex, setResumeData]);
@@ -777,6 +984,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     generateCoverLetterDraft,
     generatePortfolioDraft,
     saveResume,
+    confirmTailorResult,
     undo,
     redo,
   };

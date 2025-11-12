@@ -32,10 +32,6 @@ export interface SecuritySectionProps {
 // Password management section props
 export interface PasswordManagementSectionProps extends SecuritySectionProps {
   onOpenPasswordModal: () => void;
-  twoFAEnabled: boolean;
-  onToggle2FA: () => void;
-  isTwoFAStatusLoading?: boolean;
-  isTwoFAProcessing?: boolean;
 }
 
 // Login activity section props
@@ -72,18 +68,6 @@ export interface PasswordChangeModalProps {
   successMessage?: string | null;
 }
 
-// 2FA modal props
-export interface TwoFASetupModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onVerify: (code: string) => void;
-  colors: ThemeColors;
-  qrCode?: string;
-  secret?: string;
-  backupCodes?: string[];
-  isVerifying?: boolean;
-  errorMessage?: string | null;
-}
 
 // Password input props
 export interface PasswordInputProps {

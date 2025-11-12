@@ -66,7 +66,7 @@ async function testStorage() {
     const testContent = Buffer.from('Test file content');
     const testPath = `test/connection-test-${Date.now()}.txt`;
     
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(testPath, testContent, {
         contentType: 'text/plain',

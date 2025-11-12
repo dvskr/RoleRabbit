@@ -5,6 +5,83 @@ import { Eye, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, CertificationItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const sanitizeString = (value: unknown): string => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.replace(/\s+/g, ' ').trim().replace(/^[•\-\u2022]+\s*/, '');
+};
+
+const collectOrderedValues = (value: unknown): unknown[] => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return Object.keys(record)
+      .sort((a, b) => Number(a) - Number(b))
+      .map((key) => record[key]);
+  }
+  return [value];
+};
+
+const normalizeStringList = (value: unknown, splitDelimiters = false): string[] => {
+  const delimiterRegex = /[,\n\r•·\u2022]+/;
+  const values = collectOrderedValues(value)
+    .flatMap((entry) => collectOrderedValues(entry))
+    .map((entry) => (typeof entry === 'string' ? entry : String(entry ?? '')));
+
+  if (!splitDelimiters) {
+    return values.map((entry) => sanitizeString(entry)).filter(Boolean);
+  }
+
+  return values
+    .flatMap((entry) =>
+      entry
+        .split(delimiterRegex)
+        .map((token) => sanitizeString(token))
+        .filter(Boolean)
+    )
+    .reduce<string[]>((acc, item) => {
+      if (!acc.includes(item)) {
+        acc.push(item);
+      }
+      return acc;
+    }, []);
+};
+
+const normalizeCustomFields = (value: unknown): CustomField[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((field): field is CustomField => !!field);
+};
+
+const normalizeCertificationArray = (value: unknown): CertificationItem[] => {
+  const list = collectOrderedValues(value);
+
+  return list
+    .map((entry, index) => {
+      const candidate = entry as Partial<CertificationItem>;
+      const rawId = candidate?.id;
+      const id =
+        typeof rawId === 'number'
+          ? rawId
+          : Number(rawId) || Date.now() + index;
+
+      return {
+        id,
+        name: sanitizeString(candidate?.name),
+        issuer: sanitizeString(candidate?.issuer),
+        link: sanitizeString(candidate?.link),
+        skills: normalizeStringList(candidate?.skills, true),
+        customFields: normalizeCustomFields(candidate?.customFields),
+      } as CertificationItem;
+    })
+    .filter((item) => !!item);
+};
+
 interface CertificationsSectionProps {
   resumeData: ResumeData;
   setResumeData: React.Dispatch<React.SetStateAction<ResumeData>>;
@@ -23,7 +100,7 @@ const CertificationsSection = React.memo(function CertificationsSection({
   
   // Memoize certifications array
   const certifications = useMemo(() => {
-    return Array.isArray(resumeData.certifications) ? resumeData.certifications : [];
+    return normalizeCertificationArray(resumeData.certifications);
   }, [resumeData.certifications]);
 
   const addCertification = () => {
@@ -35,60 +112,72 @@ const CertificationsSection = React.memo(function CertificationsSection({
       skills: [],
       customFields: []
     };
-    setResumeData((prev: ResumeData) => ({ ...prev, certifications: [...prev.certifications, newCertification] }));
+    setResumeData((prev: ResumeData) => {
+      const normalized = normalizeCertificationArray(prev.certifications);
+      return { ...prev, certifications: [...normalized, newCertification] };
+    });
   };
 
   const updateCertification = (id: number, updates: Partial<CertificationItem>) => {
     setResumeData((prev: ResumeData) => {
-      const updatedCertifications = (prev.certifications || []).map((item: CertificationItem) => 
+      const normalized = normalizeCertificationArray(prev.certifications);
+      const updatedCertifications = normalized.map((item: CertificationItem) =>
         item.id === id ? { ...item, ...updates } : item
       );
-      return {...prev, certifications: updatedCertifications};
+      return { ...prev, certifications: updatedCertifications };
     });
   };
 
   const deleteCertification = (id: number) => {
     setResumeData((prev: ResumeData) => {
-      const updatedCertifications = (prev.certifications || []).filter((item: CertificationItem) => item.id !== id);
-      return {...prev, certifications: updatedCertifications};
+      const normalized = normalizeCertificationArray(prev.certifications);
+      const updatedCertifications = normalized.filter((item: CertificationItem) => item.id !== id);
+      return { ...prev, certifications: updatedCertifications };
     });
   };
 
   const addCustomFieldToCertification = (certId: number, field: CustomField) => {
-    const cert = resumeData.certifications.find(c => c.id === certId)!;
-    const currentFields = cert.customFields || [];
+    const cert = certifications.find(c => c.id === certId);
+    if (!cert) return;
+    const currentFields = normalizeCustomFields(cert.customFields);
     updateCertification(certId, { customFields: [...currentFields, field] });
   };
 
   const updateCustomFieldInCertification = (certId: number, fieldId: string, value: string) => {
-    const cert = resumeData.certifications.find(c => c.id === certId)!;
-    const currentFields = cert.customFields || [];
+    const cert = certifications.find(c => c.id === certId);
+    if (!cert) return;
+    const currentFields = normalizeCustomFields(cert.customFields);
     const updatedFields = currentFields.map(f => f.id === fieldId ? { ...f, value } : f);
     updateCertification(certId, { customFields: updatedFields });
   };
 
   const deleteCustomFieldFromCertification = (certId: number, fieldId: string) => {
-    const cert = resumeData.certifications.find(c => c.id === certId)!;
-    const currentFields = cert.customFields || [];
+    const cert = certifications.find(c => c.id === certId);
+    if (!cert) return;
+    const currentFields = normalizeCustomFields(cert.customFields);
     const updatedFields = currentFields.filter(f => f.id !== fieldId);
     updateCertification(certId, { customFields: updatedFields });
   };
 
   const addSkill = (certId: number) => {
-    const cert = resumeData.certifications.find(c => c.id === certId)!;
-    updateCertification(certId, { skills: [...cert.skills, ''] });
+    const cert = certifications.find(c => c.id === certId);
+    if (!cert) return;
+    const skills = normalizeStringList(cert.skills, true);
+    updateCertification(certId, { skills: [...skills, ''] });
   };
 
   const updateSkill = (certId: number, skillIndex: number, value: string) => {
-    const cert = resumeData.certifications.find(c => c.id === certId)!;
-    const updatedSkills = [...cert.skills];
+    const cert = certifications.find(c => c.id === certId);
+    if (!cert) return;
+    const updatedSkills = [...normalizeStringList(cert.skills, true)];
     updatedSkills[skillIndex] = value;
     updateCertification(certId, { skills: updatedSkills });
   };
 
   const deleteSkill = (certId: number, skillIndex: number) => {
-    const cert = resumeData.certifications.find(c => c.id === certId)!;
-    const updatedSkills = cert.skills.filter((_, index) => index !== skillIndex);
+    const cert = certifications.find(c => c.id === certId);
+    if (!cert) return;
+    const updatedSkills = normalizeStringList(cert.skills, true).filter((_, index) => index !== skillIndex);
     updateCertification(certId, { skills: updatedSkills });
   };
 

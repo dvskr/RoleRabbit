@@ -98,6 +98,26 @@ export function ResumePreview({
     };
   }, [fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle]);
 
+  const contactItems = useMemo(() => {
+    return [
+      resumeData.email,
+      resumeData.phone,
+      resumeData.location,
+      resumeData.linkedin,
+      resumeData.github,
+      resumeData.website,
+    ]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+  }, [
+    resumeData.email,
+    resumeData.phone,
+    resumeData.location,
+    resumeData.linkedin,
+    resumeData.github,
+    resumeData.website,
+  ]);
+
   return (
     <div className="h-full bg-gray-100 overflow-auto">
       {/* Sticky Preview Header */}
@@ -140,16 +160,19 @@ export function ResumePreview({
           >
             {resumeData.title}
           </p>
-          <div 
-            className="flex gap-3 mt-2 text-sm text-gray-600"
-            style={{ fontFamily: formattingStyles.fontFamily }}
-          >
-            <span>{resumeData.email}</span>
-            <span>•</span>
-            <span>{resumeData.phone}</span>
-            <span>•</span>
-            <span>{resumeData.location}</span>
-          </div>
+          {contactItems.length > 0 && (
+            <div
+              className="flex flex-wrap gap-3 mt-2 text-sm text-gray-600"
+              style={{ fontFamily: formattingStyles.fontFamily }}
+            >
+              {contactItems.map((item, index) => (
+                <React.Fragment key={`${item}-${index}`}>
+                  {index > 0 && <span>•</span>}
+                  <span>{item}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Render sections based on sectionOrder */}

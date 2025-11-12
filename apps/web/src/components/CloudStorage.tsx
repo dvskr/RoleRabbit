@@ -67,6 +67,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleEditFile,
     handleRefresh,
     handleShareWithUser,
+    handleRemoveShare,
     handleAddComment,
     handleStarFile,
     handleArchiveFile,

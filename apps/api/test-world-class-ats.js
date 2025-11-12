@@ -10,7 +10,6 @@
 
 const { scoreResumeWorldClass } = require('./services/ats/worldClassATS');
 const { atsCache } = require('./services/ats/atsCache');
-const logger = require('./utils/logger');
 
 // Mock resume data for testing
 const mockResumes = {
@@ -483,7 +482,7 @@ async function runTests() {
   } else if (passRate >= 80) {
     console.log('✅ Good! Most tests passed. Minor adjustments needed.\n');
   } else {
-    console.log('⚠️  Needs improvement. Review failed tests.\n');
+    console.log(`⚠️  Needs improvement. Review failed tests (${failed}).\n`);
   }
   
   return results;

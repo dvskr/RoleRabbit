@@ -10,7 +10,7 @@ export interface AIPanelProps {
   jobDescription: string;
   setJobDescription: (desc: string) => void;
   isAnalyzing: boolean;
-  matchScore: number;
+  matchScore: ATSAnalysisResult | null;
   showATSScore: boolean;
   setShowATSScore: (show: boolean) => void;
   matchedKeywords: string[];
@@ -37,9 +37,21 @@ export interface AIPanelProps {
   portfolioDraft: PortfolioDraft | null;
   setPortfolioDraft: (draft: PortfolioDraft | null) => void;
   isTailoring: boolean;
+  onConfirmTailorChanges?: () => Promise<boolean>;
+  isSavingResume?: boolean;
   isGeneratingCoverLetter: boolean;
   isGeneratingPortfolio: boolean;
   onResumeUpdate?: (data: ResumeData) => void;
+  // AI Progress tracking (optional for backwards compatibility)
+  atsProgress?: any;
+  tailorProgress?: any;
+}
+
+export interface ApplyChangesHandlerDeps {
+  confirmTailorChanges?: () => Promise<boolean>;
+  analyzeJobDescription?: () => Promise<any | null> | void;
+  setApplyError: (value: string | null) => void;
+  setBeforeScore: (value: number | null) => void;
 }
 
 export interface ToneOption {

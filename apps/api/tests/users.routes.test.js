@@ -39,7 +39,6 @@ jest.mock('../utils/profileCompleteness', () => ({
 }));
 
 const { getUserById } = require('../auth');
-const { calculateProfileCompleteness } = require('../utils/profileCompleteness');
 
 describe('User Profile Routes', () => {
   let app;

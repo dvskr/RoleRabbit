@@ -5,7 +5,6 @@
  * Usage: node prisma/migrations/test-migrations.js
  */
 
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -155,8 +154,6 @@ function testSQLSyntax() {
         .replace(/"([^"\\]|\\.)*"/g, ''); // Remove double-quoted strings
       
       const singleQuotes = (cleanedContent.match(/'/g) || []).length;
-      const doubleQuotes = (cleanedContent.match(/"/g) || []).length;
-      
       if (singleQuotes % 2 !== 0) {
         testResults.warnings.push(`Migration ${migration}: Possible unbalanced single quotes (check manually)`);
         // Don't count as syntax error, just warning

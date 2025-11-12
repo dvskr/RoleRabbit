@@ -9,7 +9,6 @@ const { createFastifyApp } = require('../utils/testHelpers');
 describe('Profile Validation Tests', () => {
   let app;
   let authToken;
-  let userId;
 
   beforeAll(async () => {
     app = await createFastifyApp();

@@ -96,7 +96,6 @@ async function checkAndDrop() {
   
   const expectedTables = ['users', 'sessions', 'refresh_tokens', 'password_reset_tokens'];
   const remainingTableNames = finalTables.map(r => r.table_name);
-  const profileTables = remainingTableNames.filter(t => expectedTables.includes(t));
   const otherTables = remainingTableNames.filter(t => !expectedTables.includes(t) && t !== '_prisma_migrations');
   
   if (otherTables.length > 0) {

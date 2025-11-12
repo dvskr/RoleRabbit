@@ -8,6 +8,9 @@ describe('exportHtmlGenerator', () => {
     email: 'john@example.com',
     phone: '123-456-7890',
     location: 'New York, NY',
+    linkedin: 'https://linkedin.com/in/johndoe',
+    github: 'https://github.com/johndoe',
+    website: 'https://johndoe.dev',
     summary: 'Experienced software engineer with 5+ years',
     skills: ['React', 'TypeScript', 'Node.js'],
     experience: [
@@ -102,6 +105,9 @@ describe('exportHtmlGenerator', () => {
     expect(html).toContain('john@example.com');
     expect(html).toContain('123-456-7890');
     expect(html).toContain('New York, NY');
+    expect(html).toContain('https://linkedin.com/in/johndoe');
+    expect(html).toContain('https://github.com/johndoe');
+    expect(html).toContain('https://johndoe.dev');
   });
 
   it('includes summary section when visible', () => {
@@ -214,6 +220,9 @@ describe('exportHtmlGenerator', () => {
       email: '',
       phone: '',
       location: '',
+      linkedin: '',
+      github: '',
+      website: '',
       summary: '',
       skills: [],
       experience: [],

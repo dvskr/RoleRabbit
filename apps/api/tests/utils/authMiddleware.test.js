@@ -24,7 +24,7 @@ describe('Auth Middleware Tests', () => {
           reply.status(401).send({ error: 'Unauthorized' });
         }
       }
-    }, async (request, reply) => {
+    }, async (request) => {
       return { message: 'Success', userId: request.user.userId };
     });
 

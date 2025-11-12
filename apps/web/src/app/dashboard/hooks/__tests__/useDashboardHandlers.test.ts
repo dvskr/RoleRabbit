@@ -64,6 +64,22 @@ jest.mock('../../../../services/apiService', () => ({
         highlights: ['Delivered 5+ enterprise apps'],
         selectedProjects: []
       }
+    })),
+    updateBaseResume: jest.fn(() => Promise.resolve({
+      success: true,
+      resume: {
+        id: 'resume-1',
+        name: 'test-resume',
+        updatedAt: new Date().toISOString()
+      }
+    })),
+    createBaseResume: jest.fn(() => Promise.resolve({
+      success: true,
+      resume: {
+        id: 'resume-1',
+        name: 'test-resume',
+        updatedAt: new Date().toISOString()
+      }
     }))
   }
 }));
@@ -157,7 +173,7 @@ describe('useDashboardHandlers', () => {
     setAiPrompt: jest.fn(),
     writingTone: 'professional',
     setWritingTone: jest.fn(),
-    contentLength: 'medium',
+    contentLength: 'thorough',
     setContentLength: jest.fn(),
     setShowAIGenerateModal: jest.fn(),
     jobDescription: 'We are looking for a React and TypeScript developer to build scalable features.',
@@ -172,7 +188,8 @@ describe('useDashboardHandlers', () => {
     applyBaseResume: jest.fn(),
     tailorEditMode: 'partial',
     selectedTone: 'professional',
-    selectedLength: 'concise',
+    selectedLength: 'thorough',
+    tailorResult: null,
     setTailorResult: jest.fn(),
     setIsTailoring: jest.fn(),
     setCoverLetterDraft: jest.fn(),
@@ -206,6 +223,7 @@ describe('useDashboardHandlers', () => {
     expect(result.current).toHaveProperty('generateCoverLetterDraft');
     expect(result.current).toHaveProperty('generatePortfolioDraft');
     expect(result.current).toHaveProperty('saveResume');
+    expect(result.current).toHaveProperty('confirmTailorResult');
     expect(result.current).toHaveProperty('undo');
     expect(result.current).toHaveProperty('redo');
   });
@@ -278,5 +296,6 @@ describe('useDashboardHandlers', () => {
     expect(createCustomField).toHaveBeenCalledWith('New Field');
     expect(mockParams.setCustomFields).toHaveBeenCalled();
   });
+
 });
 
