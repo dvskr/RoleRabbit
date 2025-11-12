@@ -33,7 +33,14 @@ const pendingEmailChanges = new Map();
  */
 async function authRoutes(fastify, options) {
   // Register user endpoint
-  fastify.post('/api/auth/register', async (request, reply) => {
+  fastify.post('/api/auth/register', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email, password, name } = request.body;
       
@@ -142,7 +149,14 @@ async function authRoutes(fastify, options) {
   });
 
   // Login endpoint
-  fastify.post('/api/auth/login', async (request, reply) => {
+  fastify.post('/api/auth/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email, password } = request.body;
       
@@ -478,7 +492,14 @@ async function authRoutes(fastify, options) {
   });
 
   // Forgot password endpoint
-  fastify.post('/api/auth/forgot-password', async (request, reply) => {
+  fastify.post('/api/auth/forgot-password', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email } = request.body;
       
@@ -544,7 +565,14 @@ async function authRoutes(fastify, options) {
   });
 
   // Reset password endpoint
-  fastify.post('/api/auth/reset-password', async (request, reply) => {
+  fastify.post('/api/auth/reset-password', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { token, newPassword } = request.body;
       
