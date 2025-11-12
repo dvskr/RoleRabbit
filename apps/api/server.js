@@ -154,6 +154,17 @@ fastify.register(require('@fastify/cors'), {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 });
 
+// Register CSRF Protection
+fastify.register(require('@fastify/csrf-protection'), {
+  cookieKey: process.env.CSRF_SECRET || require('crypto').randomBytes(32).toString('hex'),
+  cookieOpts: {
+    signed: true,
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production'
+  }
+});
+
 // Register rate limiting globally
 fastify.register(require('@fastify/rate-limit'), {
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || (process.env.NODE_ENV === 'production' ? 100 : 10000), // Much higher limit for development
