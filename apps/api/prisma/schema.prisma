@@ -54,6 +54,28 @@ enum AIAgentTaskStatus {
   CANCELLED
 }
 
+enum JobBoardPlatform {
+  LINKEDIN
+  INDEED
+  GLASSDOOR
+  ZIPRECRUITER
+  MONSTER
+  DICE
+  OTHER
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  VIEWED
+  IN_REVIEW
+  INTERVIEWING
+  OFFERED
+  REJECTED
+  ACCEPTED
+  WITHDRAWN
+}
+
 model Certification {
   id        String @id @default(cuid())
   profileId String
@@ -361,13 +383,15 @@ model StorageFile {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder      StorageFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  shares      FileShare[]
-  shareLinks  ShareLink[]
-  comments    FileComment[]
-  accessLogs  FileAccessLog[]
-  credentials Credential[]
+  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder                   StorageFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  shares                   FileShare[]
+  shareLinks               ShareLink[]
+  comments                 FileComment[]
+  accessLogs               FileAccessLog[]
+  credentials              Credential[]
+  applicationsAsResume     JobApplication[] @relation("ApplicationResume")
+  applicationsAsCoverLetter JobApplication[] @relation("ApplicationCoverLetter")
 
   @@index([userId])
   @@index([folderId])
@@ -538,6 +562,12 @@ model User {
   aiAgentHistory      AIAgentHistory[]     @relation("AIAgentHistory")
   aiAgentConversations AIAgentConversation[] @relation("AIAgentConversations")
   aiAgentMetrics      AIAgentMetrics[]     @relation("AIAgentMetrics")
+  jobBoardCredentials JobBoardCredential[] @relation("JobBoardCredentials")
+  jobApplications     JobApplication[]     @relation("JobApplications")
+  workflows           Workflow[]           @relation("Workflows")
+  workflowExecutions  WorkflowExecution[]  @relation("WorkflowExecutions")
+  workflowSchedules   WorkflowSchedule[]   @relation("WorkflowSchedules")
+  workflowWebhooks    WorkflowWebhook[]    @relation("WorkflowWebhooks")
 
   @@index([email])
   @@index([provider, providerId])
@@ -802,7 +832,8 @@ model AIAgentTask {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  user User @relation("AIAgentTasks", fields: [userId], references: [id], onDelete: Cascade)
+  user         User             @relation("AIAgentTasks", fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
 
   @@index([userId, status])
   @@index([userId, createdAt])
@@ -929,4 +960,407 @@ model AIAgentMetrics {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("ai_agent_metrics")
+}
+
+model JobBoardSession {
+  id       String @id @default(cuid())
+  userId   Int
+  platform String // linkedin, indeed, etc.
+
+  // Encrypted session data
+  sessionData String @db.Text // Encrypted cookies and storage data
+  iv          String // Initialization vector for encryption
+  authTag     String // Authentication tag for AES-GCM
+
+  // Metadata
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, platform])
+  @@index([userId])
+  @@index([platform])
+  @@index([expiresAt])
+  @@map("job_board_sessions")
+}
+
+model JobBoardCredential {
+  id       String           @id @default(cuid())
+  userId   String
+  platform JobBoardPlatform
+
+  // Encrypted credentials
+  email           String
+  encryptedData   String  @db.Text // Encrypted password and other sensitive data
+  iv              String // Initialization vector for encryption
+  authTag         String // Authentication tag for AES-GCM
+
+  // Metadata
+  isActive        Boolean  @default(true)
+  lastVerified    DateTime?
+  verificationStatus String @default("pending") // pending, verified, failed
+
+  // Connection info
+  isConnected     Boolean  @default(false)
+  lastConnectedAt DateTime?
+  connectionError String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User             @relation("JobBoardCredentials", fields: [userId], references: [id], onDelete: Cascade)
+  applications JobApplication[]
+
+  @@unique([userId, platform, email])
+  @@index([userId])
+  @@index([platform])
+  @@index([isActive])
+  @@map("job_board_credentials")
+}
+
+model JobApplication {
+  id                  String             @id @default(cuid())
+  userId              String
+  credentialId        String?
+  aiAgentTaskId       String? // Link to AI Agent task that created it
+
+  // Job details
+  jobTitle            String
+  company             String
+  jobUrl              String?            @db.Text
+  jobDescription      String?            @db.Text
+  location            String?
+  salary              String?
+  jobType             String? // Full-time, Part-time, Contract, etc.
+  platform            JobBoardPlatform
+  externalJobId       String? // Job ID on the platform
+
+  // Application details
+  status              ApplicationStatus  @default(DRAFT)
+  appliedAt           DateTime?
+  lastStatusUpdate    DateTime?
+
+  // Files used
+  resumeFileId        String?
+  coverLetterFileId   String?
+
+  // Resume/Cover Letter data (for reference)
+  resumeData          Json?
+  coverLetterData     Json?
+
+  // ATS Score
+  atsScore            Int?
+  atsBreakdown        Json?
+
+  // Tracking
+  isAutoApplied       Boolean  @default(false)
+  applicationMethod   String? // easy_apply, quick_apply, external, manual
+
+  // Follow-up
+  followUpDate        DateTime?
+  followUpNotes       String?  @db.Text
+
+  // Metadata
+  notes               String?  @db.Text
+  metadata            Json? // Additional platform-specific data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user              User                        @relation("JobApplications", fields: [userId], references: [id], onDelete: Cascade)
+  credential        JobBoardCredential?         @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  aiAgentTask       AIAgentTask?                @relation(fields: [aiAgentTaskId], references: [id], onDelete: SetNull)
+  resumeFile        StorageFile?                @relation("ApplicationResume", fields: [resumeFileId], references: [id], onDelete: SetNull)
+  coverLetterFile   StorageFile?                @relation("ApplicationCoverLetter", fields: [coverLetterFileId], references: [id], onDelete: SetNull)
+  statusHistory     ApplicationStatusHistory[]
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@index([platform])
+  @@index([credentialId])
+  @@index([aiAgentTaskId])
+  @@index([appliedAt])
+  @@map("job_applications")
+}
+
+model ApplicationStatusHistory {
+  id            String            @id @default(cuid())
+  applicationId String
+
+  status        ApplicationStatus
+  notes         String?           @db.Text
+  metadata      Json? // Additional context about the status change
+
+  createdAt DateTime @default(now())
+
+  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@map("application_status_history")
+}
+
+// =============================================================================
+// WORKFLOW AUTOMATION SYSTEM
+// =============================================================================
+
+enum WorkflowTriggerType {
+  MANUAL
+  SCHEDULE
+  WEBHOOK
+  EVENT
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum WorkflowExecutionStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum WorkflowNodeType {
+  // Triggers
+  TRIGGER_MANUAL
+  TRIGGER_SCHEDULE
+  TRIGGER_WEBHOOK
+  TRIGGER_EVENT
+  
+  // AI Agents
+  AI_AGENT_ANALYZE
+  AI_AGENT_CHAT
+  
+  // Auto Apply
+  AUTO_APPLY_SINGLE
+  AUTO_APPLY_BULK
+  
+  // Resume
+  RESUME_GENERATE
+  RESUME_TAILOR
+  
+  // Cover Letter
+  COVER_LETTER_GENERATE
+  
+  // Job Tracker
+  JOB_TRACKER_ADD
+  JOB_TRACKER_UPDATE
+  
+  // Job Search
+  JOB_SEARCH
+  COMPANY_RESEARCH
+  
+  // Communication
+  EMAIL_SEND
+  NOTIFICATION_SEND
+  WEBHOOK_CALL
+  HTTP_REQUEST
+  
+  // Logic
+  CONDITION_IF
+  CONDITION_SWITCH
+  LOOP_FOR_EACH
+  
+  // Timing
+  WAIT_DELAY
+  WAIT_UNTIL
+  
+  // Data Manipulation
+  MERGE_DATA
+  SPLIT_DATA
+  TRANSFORM_DATA
+  FILTER_DATA
+  
+  // Storage
+  DATABASE_QUERY
+  FILE_READ
+  FILE_WRITE
+}
+
+model Workflow {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  icon        String?
+  color       String?
+
+  // Trigger configuration
+  triggerType   WorkflowTriggerType @default(MANUAL)
+  triggerConfig Json?
+
+  // Workflow definition (nodes and connections)
+  nodes       Json @default("[]") // Array of WorkflowNode
+  connections Json @default("[]") // Array of {from: nodeId, to: nodeId, ...}
+
+  // Status
+  status           WorkflowStatus @default(DRAFT)
+  isTemplate       Boolean        @default(false)
+  templateCategory String?
+
+  // Execution settings
+  maxConcurrentExecutions Int?    @default(1)
+  timeoutSeconds          Int?    @default(300)
+  retryOnFailure          Boolean @default(true)
+  maxRetries              Int?    @default(3)
+
+  // Statistics
+  totalExecutions      Int       @default(0)
+  successfulExecutions Int       @default(0)
+  failedExecutions     Int       @default(0)
+  lastExecutedAt       DateTime?
+
+  // Metadata
+  tags     String[]
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User                 @relation("Workflows", fields: [userId], references: [id], onDelete: Cascade)
+  executions WorkflowExecution[]
+  schedules  WorkflowSchedule[]
+  webhooks   WorkflowWebhook[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([isTemplate])
+  @@index([userId, status])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id         String   @id @default(cuid())
+  workflowId String
+  userId     String
+
+  // Execution details
+  status      WorkflowExecutionStatus @default(QUEUED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int? // milliseconds
+
+  // Input/Output
+  input  Json?
+  output Json?
+  error  Json?
+
+  // Node execution tracking
+  currentNodeId  String?
+  completedNodes String[] @default([])
+  failedNodes    String[] @default([])
+
+  // Metadata
+  triggeredBy String? // 'manual', 'schedule', 'webhook', 'event'
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow                 @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User                     @relation("WorkflowExecutions", fields: [userId], references: [id], onDelete: Cascade)
+  logs     WorkflowExecutionLog[]
+
+  @@index([workflowId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+  @@index([workflowId, status])
+  @@map("workflow_executions")
+}
+
+model WorkflowExecutionLog {
+  id          String           @id @default(cuid())
+  executionId String
+  nodeId      String
+  nodeName    String?
+  nodeType    WorkflowNodeType
+
+  // Log details
+  level   String @default("info") // info, warn, error, debug
+  message String @db.Text
+  data    Json?
+
+  // Timing
+  startedAt   DateTime?
+  completedAt DateTime?
+  duration    Int? // milliseconds
+
+  // Status
+  success Boolean?
+  error   Json?
+
+  createdAt DateTime @default(now())
+
+  execution WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([createdAt])
+  @@map("workflow_execution_logs")
+}
+
+model WorkflowSchedule {
+  id         String  @id @default(cuid())
+  workflowId String
+  userId     String
+
+  // Schedule configuration
+  cronExpression String
+  timezone       String  @default("UTC")
+  enabled        Boolean @default(true)
+
+  // Next execution
+  nextRunAt DateTime?
+  lastRunAt DateTime?
+
+  // Limits
+  maxRuns       Int? // NULL = unlimited
+  runsCompleted Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation("WorkflowSchedules", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([nextRunAt])
+  @@index([enabled])
+  @@map("workflow_schedules")
+}
+
+model WorkflowWebhook {
+  id         String  @id @default(cuid())
+  workflowId String
+  userId     String
+
+  // Webhook config
+  webhookUrl String  @unique
+  secret     String
+  enabled    Boolean @default(true)
+
+  // Security
+  allowedIps   String[]
+  requiresAuth Boolean  @default(false)
+
+  // Statistics
+  totalCalls   Int       @default(0)
+  lastCalledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user     User     @relation("WorkflowWebhooks", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([enabled])
+  @@map("workflow_webhooks")
 }

@@ -410,6 +410,54 @@ module.exports = async function aiAgentRoutes(fastify) {
   });
 
   /**
+   * POST /api/ai-agent/tasks/job-application
+   * Create a job application task (auto-apply to job)
+   */
+  fastify.post('/api/ai-agent/tasks/job-application', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { jobUrl, jobTitle, company, jobDescription, platform, credentialId, baseResumeId } = request.body;
+
+      if (!jobUrl || !platform) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Job URL and platform are required'
+        });
+      }
+
+      const taskData = {
+        type: 'JOB_APPLICATION',
+        jobUrl,
+        jobTitle,
+        company,
+        jobDescription,
+        platform,
+        credentialId,
+        baseResumeId
+      };
+
+      const task = await createTask(userId, taskData);
+
+      return reply.status(201).send({
+        success: true,
+        task
+      });
+    } catch (error) {
+      if (error.code === 'USAGE_LIMIT_EXCEEDED') {
+        return reply.status(403).send({
+          success: false,
+          error: error.message
+        });
+      }
+      logger.error('Failed to create job application task', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: 'Failed to create job application task'
+      });
+    }
+  });
+
+  /**
    * POST /api/ai-agent/tasks/bulk-apply
    * Create bulk job application tasks with proper validation and error handling
    */
@@ -728,6 +776,396 @@ module.exports = async function aiAgentRoutes(fastify) {
       return reply.status(500).send({
         success: false,
         error: 'Failed to process chat message'
+      });
+    }
+  });
+
+  // ============================================
+  // EXPORT ROUTES
+  // ============================================
+
+  /**
+   * POST /api/ai-agent/tasks/:id/export
+   * Export task result to PDF, DOCX, or TXT
+   */
+  fastify.post('/api/ai-agent/tasks/:id/export', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const taskId = request.params.id;
+      const { format = 'pdf' } = request.body;
+
+      // Validate format
+      if (!['pdf', 'docx', 'txt'].includes(format.toLowerCase())) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid format. Supported formats: pdf, docx, txt'
+        });
+      }
+
+      // Verify task belongs to user
+      const task = await prisma.aIAgentTask.findFirst({
+        where: { id: taskId, userId }
+      });
+
+      if (!task) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Task not found'
+        });
+      }
+
+      if (task.status !== 'COMPLETED') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Task must be completed before exporting'
+        });
+      }
+
+      // Import resumeExporter service
+      const resumeExporter = require('../services/resumeExporter');
+
+      // Export and save
+      const storageFile = await resumeExporter.exportAndSaveResume(taskId, format);
+
+      return reply.send({
+        success: true,
+        file: {
+          id: storageFile.id,
+          name: storageFile.name,
+          size: storageFile.size,
+          mimeType: storageFile.mimeType,
+          downloadUrl: `/api/storage/files/${storageFile.id}/download`
+        }
+      });
+
+    } catch (error) {
+      logger.error('Failed to export task result', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to export resume'
+      });
+    }
+  });
+
+  /**
+   * GET /api/ai-agent/tasks/:id/export/:format
+   * Export and directly download task result
+   */
+  fastify.get('/api/ai-agent/tasks/:id/export/:format', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const taskId = request.params.id;
+      const format = request.params.format.toLowerCase();
+
+      // Validate format
+      if (!['pdf', 'docx', 'txt'].includes(format)) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid format. Supported formats: pdf, docx, txt'
+        });
+      }
+
+      // Verify task belongs to user
+      const task = await prisma.aIAgentTask.findFirst({
+        where: { id: taskId, userId },
+        include: { user: true }
+      });
+
+      if (!task) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Task not found'
+        });
+      }
+
+      if (task.status !== 'COMPLETED') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Task must be completed before exporting'
+        });
+      }
+
+      // Import services
+      const resumeExporter = require('../services/resumeExporter');
+      const path = require('path');
+      const fs = require('fs');
+
+      // Create temp file
+      const tempDir = path.join(__dirname, '../temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      const timestamp = Date.now();
+      const filename = `resume_${task.company || 'untitled'}_${timestamp}.${format}`;
+      const tempPath = path.join(tempDir, filename);
+
+      const resumeData = task.resultData?.data;
+      if (!resumeData) {
+        return reply.status(400).send({
+          success: false,
+          error: 'No resume data available'
+        });
+      }
+
+      // Export based on format
+      let filePath;
+      switch (format) {
+        case 'pdf':
+          filePath = await resumeExporter.exportToPDF(resumeData, tempPath);
+          break;
+        case 'docx':
+          filePath = await resumeExporter.exportToDOCX(resumeData, tempPath);
+          break;
+        case 'txt':
+          filePath = await resumeExporter.exportToPlainText(resumeData, tempPath);
+          break;
+      }
+
+      // Set appropriate headers
+      const mimeTypes = {
+        pdf: 'application/pdf',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        txt: 'text/plain'
+      };
+
+      reply.header('Content-Type', mimeTypes[format]);
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+
+      // Stream file
+      const fileStream = fs.createReadStream(filePath);
+
+      fileStream.on('end', () => {
+        // Clean up temp file after streaming
+        fs.unlinkSync(filePath);
+      });
+
+      return reply.send(fileStream);
+
+    } catch (error) {
+      logger.error('Failed to download exported resume', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to export resume'
+      });
+    }
+  });
+
+  // ============================================
+  // JOB SCRAPING ROUTES
+  // ============================================
+
+  /**
+   * POST /api/ai-agent/scrape-job
+   * Scrape job details from a URL
+   */
+  fastify.post('/api/ai-agent/scrape-job', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const { url } = request.body;
+
+      if (!url) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Job URL is required'
+        });
+      }
+
+      // Import job scraper service
+      const jobScraper = require('../services/jobScrapers');
+
+      // Scrape job
+      const result = await jobScraper.scrapeJobFromUrl(url);
+
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          error: result.error
+        });
+      }
+
+      return reply.send({
+        success: true,
+        platform: result.platform,
+        job: result.data
+      });
+
+    } catch (error) {
+      logger.error('Job scraping failed', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to scrape job details'
+      });
+    }
+  });
+
+  /**
+   * POST /api/ai-agent/scrape-jobs-bulk
+   * Scrape multiple jobs from URLs
+   */
+  fastify.post('/api/ai-agent/scrape-jobs-bulk', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const { urls } = request.body;
+
+      if (!Array.isArray(urls) || urls.length === 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Array of URLs is required'
+        });
+      }
+
+      if (urls.length > 20) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Maximum 20 URLs can be scraped at once'
+        });
+      }
+
+      // Import job scraper service
+      const jobScraper = require('../services/jobScrapers');
+
+      // Scrape all jobs
+      const result = await jobScraper.scrapeMultipleJobs(urls);
+
+      return reply.send({
+        success: true,
+        jobs: result.successful.map(r => r.data),
+        failures: result.failed,
+        summary: result.summary
+      });
+
+    } catch (error) {
+      logger.error('Bulk job scraping failed', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to scrape jobs'
+      });
+    }
+  });
+
+  /**
+   * POST /api/ai-agent/tasks/:id/execute-application
+   * Execute a job application task
+   */
+  fastify.post('/api/ai-agent/tasks/:id/execute-application', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { id } = request.params;
+
+      // Verify task belongs to user
+      const task = await prisma.aIAgentTask.findFirst({
+        where: {
+          id,
+          userId
+        }
+      });
+
+      if (!task) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Task not found'
+        });
+      }
+
+      if (task.type !== 'JOB_APPLICATION') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Task is not a job application task'
+        });
+      }
+
+      // Import orchestrator
+      const orchestrator = require('../services/jobApplicationOrchestrator');
+
+      // Execute the application
+      const result = await orchestrator.processAIAgentTask(id);
+
+      return reply.send({
+        success: true,
+        task: result.task,
+        application: result.application,
+        result: result.result
+      });
+
+    } catch (error) {
+      logger.error('Failed to execute job application', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to execute job application'
+      });
+    }
+  });
+
+  /**
+   * POST /api/ai-agent/apply-to-jobs-bulk
+   * Apply to multiple jobs in bulk (actual applications, not just tasks)
+   */
+  fastify.post('/api/ai-agent/apply-to-jobs-bulk', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { applications, maxConcurrent = 1 } = request.body;
+
+      if (!Array.isArray(applications) || applications.length === 0) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Applications array is required'
+        });
+      }
+
+      if (applications.length > 20) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Maximum 20 applications can be processed at once'
+        });
+      }
+
+      // Validate each application
+      for (let i = 0; i < applications.length; i++) {
+        const app = applications[i];
+        if (!app.jobUrl || !app.platform || !app.credentialId) {
+          return reply.status(400).send({
+            success: false,
+            error: `Application ${i + 1}: Missing required fields (jobUrl, platform, credentialId)`
+          });
+        }
+      }
+
+      // Generate batch ID
+      const batchId = `batch_${Date.now()}_${userId.slice(0, 8)}`;
+
+      // Add userId to each application
+      const applicationsWithUser = applications.map(app => ({
+        ...app,
+        userId,
+        batchId
+      }));
+
+      // Import orchestrator
+      const orchestrator = require('../services/jobApplicationOrchestrator');
+
+      // Process applications
+      const result = await orchestrator.applyToMultipleJobs(applicationsWithUser, {
+        userId,
+        batchId,
+        maxConcurrent
+      });
+
+      return reply.send({
+        success: true,
+        batchId,
+        summary: {
+          total: result.total,
+          successful: result.successful,
+          failed: result.failed
+        },
+        results: result.results,
+        errors: result.errors
+      });
+
+    } catch (error) {
+      logger.error('Bulk job application failed', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to process bulk applications'
       });
     }
   });

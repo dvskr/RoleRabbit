@@ -28,6 +28,8 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
     { id: '1', company: '', jobTitle: '', jobDescription: '', jobUrl: '' }
   ]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isScraping, setIsScraping] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
   const [tone, setTone] = useState('professional');
   const [length, setLength] = useState('medium');
 
@@ -84,6 +86,88 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
       }
     } catch (error) {
       showError('Failed to parse file');
+    }
+  };
+
+  const handleImportFromUrl = async () => {
+    if (!urlInput.trim()) {
+      showError('Please enter a job URL');
+      return;
+    }
+
+    setIsScraping(true);
+    try {
+      // Split by newlines to support multiple URLs
+      const urls = urlInput.split('\n').map(u => u.trim()).filter(u => u);
+
+      if (urls.length === 1) {
+        // Single URL
+        const response = await fetch('/api/ai-agent/scrape-job', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ url: urls[0] })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to scrape job');
+        }
+
+        // Add scraped job to list
+        const newJob: JobEntry = {
+          id: (Math.max(...jobs.map(j => parseInt(j.id))) + 1).toString(),
+          company: result.job.company || '',
+          jobTitle: result.job.jobTitle || '',
+          jobDescription: result.job.jobDescription || '',
+          jobUrl: result.job.jobUrl || urls[0]
+        };
+
+        setJobs([...jobs, newJob]);
+        showSuccess(`Imported job from ${result.platform}`);
+        setUrlInput('');
+
+      } else if (urls.length > 1) {
+        // Multiple URLs
+        const response = await fetch('/api/ai-agent/scrape-jobs-bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ urls })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to scrape jobs');
+        }
+
+        // Add all scraped jobs
+        const newJobs: JobEntry[] = result.jobs.map((job: any, index: number) => ({
+          id: (Math.max(...jobs.map(j => parseInt(j.id))) + index + 1).toString(),
+          company: job.company || '',
+          jobTitle: job.jobTitle || '',
+          jobDescription: job.jobDescription || '',
+          jobUrl: job.jobUrl || urls[index]
+        }));
+
+        setJobs([...jobs, ...newJobs]);
+
+        if (result.failures && result.failures.length > 0) {
+          showError(`Imported ${result.summary.successful} jobs, ${result.failures.length} failed`);
+        } else {
+          showSuccess(`Imported ${newJobs.length} jobs from URLs`);
+        }
+
+        setUrlInput('');
+      }
+
+    } catch (error) {
+      console.error('Error importing from URL:', error);
+      showError(error instanceof Error ? error.message : 'Failed to import job from URL');
+    } finally {
+      setIsScraping(false);
     }
   };
 
@@ -236,10 +320,11 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
 
         {/* Options */}
         <div
-          className="px-6 py-4 flex items-center justify-between flex-shrink-0"
+          className="px-6 py-4 flex-shrink-0"
           style={{ borderBottom: `1px solid ${colors.border}` }}
         >
-          <div className="flex gap-4 items-center">
+          {/* First Row: Tone and Length */}
+          <div className="flex gap-4 items-center mb-3">
             <div className="flex items-center gap-2">
               <span className="text-sm" style={{ color: colors.secondaryText }}>
                 Tone:
@@ -281,7 +366,8 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
             </div>
           </div>
 
-          <div className="flex gap-2">
+          {/* Second Row: Action Buttons */}
+          <div className="flex gap-2 mb-3">
             <label
               className="px-4 py-2 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-2"
               style={{
@@ -312,6 +398,47 @@ export const BulkProcessingModal: React.FC<BulkProcessingModalProps> = ({
               <Plus size={16} />
               Add Job
             </button>
+          </div>
+
+          {/* Third Row: URL Import */}
+          <div
+            className="p-3 rounded-lg"
+            style={{
+              background: colors.background,
+              border: `1px solid ${colors.border}`,
+            }}
+          >
+            <p className="text-xs mb-2" style={{ color: colors.secondaryText }}>
+              Import from LinkedIn or Indeed URL (one per line for multiple):
+            </p>
+            <div className="flex gap-2">
+              <textarea
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://linkedin.com/jobs/view/..."
+                rows={2}
+                className="flex-1 px-3 py-2 rounded-lg text-sm outline-none resize-none"
+                style={{
+                  background: colors.inputBackground,
+                  border: `1px solid ${colors.border}`,
+                  color: colors.primaryText,
+                }}
+              />
+              <button
+                onClick={handleImportFromUrl}
+                disabled={isScraping || !urlInput.trim()}
+                className="px-4 py-2 rounded-lg font-medium transition-all text-sm whitespace-nowrap"
+                style={{
+                  background: isScraping || !urlInput.trim() ? colors.inputBackground : colors.badgeGreenBg,
+                  color: isScraping || !urlInput.trim() ? colors.secondaryText : colors.badgeGreenText,
+                  border: `1px solid ${isScraping || !urlInput.trim() ? colors.border : colors.badgeGreenText}`,
+                  opacity: isScraping || !urlInput.trim() ? 0.5 : 1,
+                  cursor: isScraping || !urlInput.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isScraping ? 'Importing...' : 'Import'}
+              </button>
+            </div>
           </div>
         </div>
 
