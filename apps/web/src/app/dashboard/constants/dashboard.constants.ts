@@ -17,11 +17,7 @@ export type DashboardTab =
   | 'email'
   | 'discussion'
   | 'cover-letter'
-  | 'portfolio'
-  | 'ai-agents'
-  | 'agents'  // Alias for ai-agents (legacy support)
-  | 'ai-auto-apply'
-  | 'workflows';
+  | 'portfolio';
 
 export const DASHBOARD_TABS: DashboardTab[] = [
   'dashboard',
@@ -34,9 +30,6 @@ export const DASHBOARD_TABS: DashboardTab[] = [
   'discussion',
   'cover-letter',
   'portfolio',
-  'ai-agents',
-  'ai-auto-apply',
-  'workflows',
 ];
 
 export const DEFAULT_SIDEBAR_STATE = false;
