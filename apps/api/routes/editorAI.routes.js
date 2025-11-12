@@ -234,26 +234,71 @@ module.exports = async function editorAIRoutes(fastify) {
               404
             );
           }
-          if (!resume.isActive) {
-            throw new AIUsageError('You can only run AI features on the active resume.', 400);
-          }
+          // NOTE: Removed isActive check for ATS - users should be able to check any resume
+          // ATS checking is read-only and doesn't modify the resume
           
-          // 🌟 USE WORLD-CLASS ATS SYSTEM (with AI if available)
+          // 🌟 USE EMBEDDING-BASED ATS (if enabled) or WORLD-CLASS ATS SYSTEM
           let analysis;
-          try {
-            analysis = await scoreResumeWorldClass({ 
-              resumeData: resume.data, 
-              jobDescription,
-              useAI: true // Enable AI-powered semantic matching
-            });
-          } catch (worldClassError) {
-            logger.error('World-class ATS failed, using fallback', { error: worldClassError.message });
-            // Fallback to basic scoring if world-class fails
-            const { scoreResumeAgainstJob } = require('../services/ats/atsScoringService');
-            analysis = scoreResumeAgainstJob({ 
-              resumeData: resume.data, 
-              jobDescription 
-            });
+          const useEmbeddings = process.env.ATS_USE_EMBEDDINGS === 'true';
+          
+          if (useEmbeddings) {
+            // NEW: Embedding-based ATS (fast, accurate, cheap)
+            try {
+              const { scoreResumeWithEmbeddings } = require('../services/embeddings/embeddingATSService');
+              const embeddingResult = await scoreResumeWithEmbeddings({
+                resumeData: resume.data,
+                jobDescription,
+                includeDetails: true
+              });
+              
+              // Transform to match existing API format
+              analysis = {
+                overall: embeddingResult.overall,
+                matchedKeywords: embeddingResult.matchedKeywords || [],
+                missingKeywords: embeddingResult.missingKeywords || [],
+                semanticScore: embeddingResult.semanticScore,
+                similarity: embeddingResult.similarity,
+                method: 'embedding',
+                performance: embeddingResult.performance
+              };
+              
+              logger.info('Embedding-based ATS scoring complete', {
+                resumeId,
+                overall: analysis.overall,
+                duration: embeddingResult.performance.duration,
+                fromCache: embeddingResult.performance.fromCache
+              });
+            } catch (embeddingError) {
+              logger.error('Embedding-based ATS failed, falling back to world-class', { 
+                error: embeddingError.message 
+              });
+              // Fallback to world-class ATS
+              analysis = await scoreResumeWorldClass({ 
+                resumeData: resume.data, 
+                jobDescription,
+                useAI: false // Use fast dictionary mode
+              });
+              analysis.method = 'world-class-fallback';
+            }
+          } else {
+            // EXISTING: World-class ATS system
+            try {
+              analysis = await scoreResumeWorldClass({ 
+                resumeData: resume.data, 
+                jobDescription,
+                useAI: true // Enable AI-powered semantic matching
+              });
+              analysis.method = 'world-class';
+            } catch (worldClassError) {
+              logger.error('World-class ATS failed, using fallback', { error: worldClassError.message });
+              // Fallback to basic scoring if world-class fails
+              const { scoreResumeAgainstJob } = require('../services/ats/atsScoringService');
+              analysis = scoreResumeAgainstJob({ 
+                resumeData: resume.data, 
+                jobDescription 
+              });
+              analysis.method = 'basic-fallback';
+            }
           }
           
           analysis.generatedAt = new Date().toISOString();

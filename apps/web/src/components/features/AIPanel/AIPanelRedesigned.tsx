@@ -4,6 +4,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { AIPanelProps, ApplyChangesHandlerDeps } from './types/AIPanel.types';
 import { ChevronDown, ChevronUp, X, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { AIOperationProgress } from '../../common/AIOperationProgress';
+import { InlineProgress } from '../../common/InlineProgress';
 
 export const createApplyChangesHandler =
   ({ confirmTailorChanges, analyzeJobDescription, setApplyError, setBeforeScore }: ApplyChangesHandlerDeps) =>
@@ -55,12 +57,14 @@ export default function AIPanelRedesigned({
   isGeneratingCoverLetter,
   isGeneratingPortfolio,
   onConfirmTailorChanges,
-  isSavingResume = false
+  isSavingResume = false,
+  atsProgress,
+  tailorProgress
 }: AIPanelProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
 
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false); // Collapsed by default, user opens to see options
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [beforeScore, setBeforeScore] = useState<number | null>(null);
@@ -256,30 +260,42 @@ export default function AIPanelRedesigned({
             )}
           </div>
 
-          <button
-            onClick={handleRunAnalysis}
-            disabled={isAnalyzing || !jobDescription || jobDescription.length < 10}
-            className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            style={{
-              background: colors.activeBlueText,
-              opacity: isAnalyzing || !jobDescription || jobDescription.length < 10 ? 0.5 : 1,
-              width: '100%',
-              maxWidth: '100%',
-              boxSizing: 'border-box'
-            }}
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Run ATS Check
-              </>
-            )}
-          </button>
+          {/* ATS Progress or Button */}
+          {isAnalyzing && atsProgress?.isActive ? (
+            <AIOperationProgress
+              operation="ats"
+              stage={atsProgress.stage || 'Starting'}
+              progress={atsProgress.progress || 0}
+              estimatedTime={atsProgress.estimatedTime}
+              elapsedTime={atsProgress.elapsedTime || 0}
+              message={atsProgress.message}
+            />
+          ) : (
+            <button
+              onClick={handleRunAnalysis}
+              disabled={isAnalyzing || !jobDescription || jobDescription.length < 10}
+              className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                background: colors.activeBlueText,
+                opacity: isAnalyzing || !jobDescription || jobDescription.length < 10 ? 0.5 : 1,
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+              }}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Run ATS Check
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Step 2: ATS Results */}
@@ -423,32 +439,45 @@ export default function AIPanelRedesigned({
               </div>
             )}
 
-            {/* Step 3: Auto-Tailor Button */}
+            {/* Step 3: Auto-Tailor Button or Progress */}
             {!tailorResult && (
-              <button
-                onClick={handleAutoTailor}
-                disabled={isTailoring}
-                className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                style={{
-                  background: '#10b981',
-                  opacity: isTailoring ? 0.5 : 1,
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box'
-                }}
-              >
-                {isTailoring ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Tailoring Resume...
-                  </>
+              <>
+                {isTailoring && tailorProgress?.isActive ? (
+                  <AIOperationProgress
+                    operation="tailor"
+                    stage={tailorProgress.stage || 'Starting'}
+                    progress={tailorProgress.progress || 0}
+                    estimatedTime={tailorProgress.estimatedTime}
+                    elapsedTime={tailorProgress.elapsedTime || 0}
+                    message={tailorProgress.message}
+                  />
                 ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Auto-Tailor Resume
-                  </>
+                  <button
+                    onClick={handleAutoTailor}
+                    disabled={isTailoring}
+                    className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{
+                      background: '#10b981',
+                      opacity: isTailoring ? 0.5 : 1,
+                      width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    {isTailoring ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Tailoring Resume...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Auto-Tailor Resume
+                      </>
+                    )}
+                  </button>
                 )}
-              </button>
+              </>
             )}
           </div>
         )}
@@ -651,9 +680,9 @@ export default function AIPanelRedesigned({
                     onClick={() => setTailorEditMode?.('PARTIAL')}
                     className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors"
                     style={{
-                      background: tailorEditMode === 'PARTIAL' ? colors.activeBlueText : colors.inputBackground,
-                      color: tailorEditMode === 'PARTIAL' ? '#ffffff' : colors.text,
-                      border: `1px solid ${tailorEditMode === 'PARTIAL' ? colors.activeBlueText : colors.border}`
+                      background: (!tailorEditMode || tailorEditMode === 'PARTIAL') ? colors.activeBlueText : colors.inputBackground,
+                      color: (!tailorEditMode || tailorEditMode === 'PARTIAL') ? '#ffffff' : colors.text,
+                      border: `1px solid ${(!tailorEditMode || tailorEditMode === 'PARTIAL') ? colors.activeBlueText : colors.border}`
                     }}
                   >
                     Partial

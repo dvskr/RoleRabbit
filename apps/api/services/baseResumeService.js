@@ -50,7 +50,22 @@ async function invalidateBaseResumeArtifacts(userId, baseResumeId) {
 
 async function getBaseResume({ userId, baseResumeId }) {
   return prisma.baseResume.findFirst({
-    where: { id: baseResumeId, userId }
+    where: { id: baseResumeId, userId },
+    select: {
+      id: true,
+      userId: true,
+      slotNumber: true,
+      name: true,
+      isActive: true,
+      data: true,
+      formatting: true,
+      metadata: true,
+      lastAIAccessedAt: true,
+      parsingConfidence: true,
+      createdAt: true,
+      updatedAt: true,
+      // Exclude embedding & embeddingUpdatedAt to avoid vector type issues
+    }
   });
 }
 
@@ -64,7 +79,12 @@ async function updateBaseResume({
   lastKnownServerUpdatedAt
 }) {
   const resume = await prisma.baseResume.findFirst({
-    where: { id: baseResumeId, userId }
+    where: { id: baseResumeId, userId },
+    select: {
+      id: true,
+      updatedAt: true,
+      // Exclude embedding to avoid vector type issues
+    }
   });
   if (!resume) {
     const error = new Error('Base resume not found');
@@ -91,6 +111,21 @@ async function updateBaseResume({
       ...(formatting !== undefined ? { formatting } : {}),
       ...(metadata !== undefined ? { metadata } : {}),
       lastAIAccessedAt: new Date()
+    },
+    select: {
+      id: true,
+      userId: true,
+      slotNumber: true,
+      name: true,
+      isActive: true,
+      data: true,
+      formatting: true,
+      metadata: true,
+      lastAIAccessedAt: true,
+      parsingConfidence: true,
+      createdAt: true,
+      updatedAt: true,
+      // Exclude embedding to avoid vector type issues
     }
   });
 
@@ -111,19 +146,18 @@ async function ensureActiveResume(userId) {
 
   const firstResume = await prisma.baseResume.findFirst({
     where: { userId },
-    orderBy: { slotNumber: 'asc' }
+    orderBy: { slotNumber: 'asc' },
+    select: {
+      id: true,
+      // Exclude embedding to avoid vector type issues
+    }
   });
 
   if (firstResume) {
+    // Use raw SQL for ALL updates to completely avoid vector deserialization issues
     await prisma.$transaction([
-      prisma.baseResume.update({
-        where: { id: firstResume.id },
-        data: { isActive: true }
-      }),
-      prisma.user.update({
-        where: { id: userId },
-        data: { activeBaseResumeId: firstResume.id }
-      })
+      prisma.$executeRaw`UPDATE base_resumes SET "isActive" = true WHERE id = ${firstResume.id}`,
+      prisma.$executeRaw`UPDATE users SET "activeBaseResumeId" = ${firstResume.id} WHERE id = ${userId}`
     ]);
     return firstResume.id;
   }
@@ -215,7 +249,14 @@ async function createBaseResume({ userId, name, data, formatting, metadata }) {
 
 async function activateBaseResume({ userId, baseResumeId }) {
   const resume = await prisma.baseResume.findFirst({
-    where: { id: baseResumeId, userId }
+    where: { id: baseResumeId, userId },
+    select: {
+      id: true,
+      userId: true,
+      name: true,
+      isActive: true,
+      // Exclude embedding column to avoid Prisma deserialization error with vector type
+    }
   });
   if (!resume) {
     const error = new Error('Base resume not found');
@@ -223,19 +264,11 @@ async function activateBaseResume({ userId, baseResumeId }) {
     throw error;
   }
 
+  // Use raw SQL for ALL updates to completely avoid vector deserialization issues
   await prisma.$transaction([
-    prisma.baseResume.updateMany({
-      where: { userId },
-      data: { isActive: false }
-    }),
-    prisma.baseResume.update({
-      where: { id: baseResumeId },
-      data: { isActive: true }
-    }),
-    prisma.user.update({
-      where: { id: userId },
-      data: { activeBaseResumeId: baseResumeId }
-    })
+    prisma.$executeRaw`UPDATE base_resumes SET "isActive" = false WHERE "userId" = ${userId}`,
+    prisma.$executeRaw`UPDATE base_resumes SET "isActive" = true WHERE id = ${baseResumeId}`,
+    prisma.$executeRaw`UPDATE users SET "activeBaseResumeId" = ${baseResumeId} WHERE id = ${userId}`
   ]);
 
   await invalidateUserAIArtifacts(userId);
@@ -245,7 +278,12 @@ async function activateBaseResume({ userId, baseResumeId }) {
 
 async function deleteBaseResume({ userId, baseResumeId }) {
   const resume = await prisma.baseResume.findFirst({
-    where: { id: baseResumeId, userId }
+    where: { id: baseResumeId, userId },
+    select: {
+      id: true,
+      isActive: true,
+      // Exclude embedding to avoid vector type issues
+    }
   });
   if (!resume) {
     const error = new Error('Base resume not found');
@@ -259,7 +297,11 @@ async function deleteBaseResume({ userId, baseResumeId }) {
 
   const remaining = await prisma.baseResume.findMany({
     where: { userId },
-    orderBy: { slotNumber: 'asc' }
+    orderBy: { slotNumber: 'asc' },
+    select: {
+      id: true,
+      // Exclude embedding to avoid vector type issues
+    }
   });
 
   if (resume.isActive) {

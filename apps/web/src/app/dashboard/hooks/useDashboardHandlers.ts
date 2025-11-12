@@ -140,6 +140,21 @@ export interface UseDashboardHandlersParams {
   setIsGeneratingCoverLetter: (value: boolean) => void;
   setPortfolioDraft: (draft: PortfolioDraft | null) => void;
   setIsGeneratingPortfolio: (value: boolean) => void;
+  
+  // AI Progress tracking
+  atsProgress?: any;
+  startATSProgress?: (operation: any, estimatedTime?: number) => void;
+  updateATSProgress?: (stage: string, progress: number, message?: string) => void;
+  completeATSProgress?: () => void;
+  resetATSProgress?: () => void;
+  tailorProgress?: any;
+  startTailorProgress?: (operation: any, estimatedTime?: number) => void;
+  updateTailorProgress?: (stage: string, progress: number, message?: string) => void;
+  completeTailorProgress?: () => void;
+  resetTailorProgress?: () => void;
+  
+  // Toast notifications
+  showToast?: (type: string, title: string, options?: any) => void;
 }
 
 export interface UseDashboardHandlersReturn {
@@ -278,7 +293,13 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setCoverLetterDraft,
     setIsGeneratingCoverLetter,
     setPortfolioDraft,
-    setIsGeneratingPortfolio
+    setIsGeneratingPortfolio,
+    // AI Progress tracking (optional)
+    startATSProgress,
+    completeATSProgress,
+    startTailorProgress,
+    completeTailorProgress,
+    showToast
   } = params;
 
   const toggleSection = useCallback((section: string) => {
@@ -428,13 +449,35 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     }
 
     setIsAnalyzing(true);
+    // Start progress tracking
+    startATSProgress?.('ats', 45); // 45 seconds estimated
+    
+    // Clear previous scores to prevent showing stale data
+    setMatchScore(null);
+    setMatchedKeywords([]);
+    setMissingKeywords([]);
+    setShowATSScore(false);
+    
     try {
       const response = await apiService.runATSCheck({
         resumeId: effectiveResumeId,
         jobDescription
       });
+      
+      logger.debug('ATS response received', { 
+        hasAnalysis: !!response?.analysis,
+        overallScore: response?.analysis?.overall,
+        matchedCount: response?.matchedKeywords?.length || response?.analysis?.matchedKeywords?.length || 0
+      });
+      
       const analysis: ATSAnalysisResult | null = response?.analysis ?? null;
       if (analysis) {
+        // Ensure we have a valid overall score
+        if (typeof analysis.overall !== 'number') {
+          logger.error('Invalid ATS response - missing overall score', { analysis });
+          throw new Error('Invalid ATS response format');
+        }
+        
         setMatchScore(analysis);
         setMatchedKeywords(response?.matchedKeywords ?? analysis.matchedKeywords ?? []);
         setMissingKeywords(response?.missingKeywords ?? analysis.missingKeywords ?? []);
@@ -446,15 +489,39 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         ].filter(Boolean);
         setAiRecommendations(recommendationStrings);
         setShowATSScore(true);
+        
+        logger.debug('ATS state updated', {
+          overall: analysis.overall,
+          matchedKeywords: (response?.matchedKeywords ?? analysis.matchedKeywords ?? []).length,
+          missingKeywords: (response?.missingKeywords ?? analysis.missingKeywords ?? []).length
+        });
+        
+        // Complete progress and show success toast
+        completeATSProgress?.();
+        showToast?.('success', 'ATS Check Complete!', {
+          message: `Score: ${analysis.overall}/100`,
+          duration: 5000
+        });
       }
       return response;
     } catch (error) {
+      // Complete progress on error
+      completeATSProgress?.();
       logger.error('ATS analysis failed', { error });
       const friendlyError = formatErrorForDisplay(error, {
         action: 'analyzing job description',
         feature: 'ATS analysis'
       });
       setSaveError(friendlyError);
+      // Clear scores on error
+      setMatchScore(null);
+      setShowATSScore(false);
+      
+      // Show error toast
+      showToast?.('error', 'ATS Check Failed', {
+        message: friendlyError,
+        duration: 7000
+      });
       return null;
     } finally {
       setIsAnalyzing(false);
@@ -464,6 +531,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     currentResumeId,
     resumeData,
     isAnalyzing,
+    startATSProgress,
+    completeATSProgress,
+    showToast,
     setIsAnalyzing,
     setMatchScore,
     setMatchedKeywords,
@@ -541,11 +611,15 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
 
     setTailorResult(null);
     setIsTailoring(true);
+    // Start progress tracking (longer for FULL mode)
+    const isFullMode = tailorEditMode?.toUpperCase() === 'FULL';
+    startTailorProgress?.('tailor', isFullMode ? 60 : 45); // 60s for FULL, 45s for PARTIAL
+    
     try {
       const response = await apiService.tailorResume({
         resumeId: effectiveResumeId,
         jobDescription,
-        mode: tailorEditMode?.toUpperCase() === 'FULL' ? 'FULL' : 'PARTIAL',
+        mode: isFullMode ? 'FULL' : 'PARTIAL',
         tone: selectedTone,
         length: selectedLength
       });
@@ -591,16 +665,34 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
           setShowATSScore(true);
         }
+        
+        // Complete progress and show success toast
+        completeTailorProgress?.();
+        const beforeScore = response.ats?.before?.overall || response.atsScoreBefore || 0;
+        const afterScore = afterAnalysis?.overall || response.atsScoreAfter || 0;
+        const improvement = afterScore - beforeScore;
+        showToast?.('success', 'Resume Tailored!', {
+          message: `Score improved from ${beforeScore} to ${afterScore} (+${improvement} points)`,
+          duration: 7000
+        });
       }
 
       return response;
     } catch (error) {
+      // Complete progress on error
+      completeTailorProgress?.();
       logger.error('Failed to tailor resume', { error });
       const friendlyError = formatErrorForDisplay(error, {
         action: 'tailoring resume',
         feature: 'resume tailoring'
       });
       setSaveError(friendlyError);
+      
+      // Show error toast
+      showToast?.('error', 'Tailoring Failed', {
+        message: friendlyError,
+        duration: 7000
+      });
       return null;
     } finally {
       setIsTailoring(false);
@@ -620,7 +712,10 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setMatchScore,
     setShowATSScore,
     setSaveError,
-    setIsTailoring
+    setIsTailoring,
+    startTailorProgress,
+    completeTailorProgress,
+    showToast
   ]);
 
   const generateCoverLetterDraft = useCallback(async () => {

@@ -53,7 +53,7 @@ async function generateText(prompt, options = {}, requestOverrides = {}) {
   }
   
   const model = options.model || 'gpt-4o-mini';
-  const timeout = options.timeout || 90000; // 90 seconds default
+  const timeout = options.timeout || 150000; // 150 seconds (2.5 minutes) for slow OpenAI responses
   
   // Remove timeout from options before passing to OpenAI
   const {timeout: _, ...openAIOptions} = options;
@@ -197,6 +197,143 @@ async function generateText(prompt, options = {}, requestOverrides = {}) {
 }
 
 /**
+ * Generate embedding using OpenAI
+ * @param {string} text - Text to generate embedding for
+ * @param {Object} options - Options
+ * @param {string} options.model - Model to use (default: text-embedding-3-small)
+ * @param {number} options.timeout - Timeout in milliseconds (default: 30000)
+ * @returns {Promise<Array<number>>} 1536-dimension embedding vector
+ */
+async function generateEmbedding(text, options = {}) {
+  if (!openaiClient) {
+    initializeOpenAIClient();
+  }
+  
+  if (!openaiClient) {
+    throw new Error('OpenAI not configured. Please set OPENAI_API_KEY environment variable.');
+  }
+  
+  const model = options.model || 'text-embedding-3-small';
+  const timeout = options.timeout || 30000; // 30 seconds default for embeddings
+  
+  logger.debug(`Generating embedding with OpenAI`, {
+    model,
+    textLength: text.length
+  });
+  
+  let timeoutHandle;
+
+  try {
+    // Create a timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(
+        () => reject(new AIServiceError(
+          'Embedding generation timed out.',
+          { statusCode: 408, code: 'EMBEDDING_TIMEOUT' }
+        )),
+        timeout
+      );
+    });
+    
+    const requestPromise = openaiClient.embeddings.create({
+      model,
+      input: text,
+      encoding_format: 'float'
+    });
+    
+    // Race between timeout and actual request
+    const response = await Promise.race([requestPromise, timeoutPromise]);
+    clearTimeout(timeoutHandle);
+    
+    const usage = response.usage;
+    
+    logger.debug(`Embedding generated`, {
+      model: response.model,
+      tokensUsed: usage.total_tokens,
+      dimensions: response.data[0].embedding.length
+    });
+    
+    // Track usage if userId provided
+    if (options.userId) {
+      await trackAIUsage(options.userId, {
+        endpoint: 'embeddings',
+        model: response.model,
+        tokens: usage.total_tokens,
+        cost: calculateEmbeddingCost(usage.total_tokens, response.model)
+      });
+    }
+    
+    return response.data[0].embedding;
+
+  } catch (error) {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+    
+    const status = error?.statusCode || error?.response?.status;
+    
+    logger.error(`OpenAI embedding generation failed (status=${status ?? 'unknown'})`, {
+      error: error?.message,
+      model,
+      textLength: text.length,
+      status
+    });
+    
+    // Provide more specific error messages
+    if (error instanceof AIServiceError || error?.isAIServiceError) {
+      throw error;
+    }
+
+    if (error.code === 'insufficient_quota') {
+      throw new AIServiceError(
+        'Embedding API quota exceeded.',
+        { statusCode: 429, code: 'EMBEDDING_QUOTA_EXCEEDED' }
+      );
+    }
+    if (error.code === 'rate_limit_exceeded') {
+      throw new AIServiceError(
+        'Embedding API rate limit exceeded.',
+        { statusCode: 429, code: 'EMBEDDING_RATE_LIMIT' }
+      );
+    }
+    if (error.code === 'invalid_api_key' || status === 401) {
+      throw new AIServiceError(
+        'Invalid OpenAI API key.',
+        { statusCode: 500, code: 'EMBEDDING_INVALID_KEY' }
+      );
+    }
+    if (status === 503 || status === 502) {
+      throw new AIServiceError(
+        'OpenAI service temporarily unavailable.',
+        { statusCode: 503, code: 'EMBEDDING_SERVICE_UNAVAILABLE' }
+      );
+    }
+    
+    throw new AIServiceError(
+      'Embedding generation failed.',
+      { statusCode: status || 500, code: 'EMBEDDING_ERROR' }
+    );
+  }
+}
+
+/**
+ * Calculate cost for embedding generation
+ * @param {number} tokens - Number of tokens
+ * @param {string} model - Model name
+ * @returns {number} Cost in USD
+ */
+function calculateEmbeddingCost(tokens, model) {
+  const pricing = {
+    'text-embedding-3-small': 0.00002 / 1000, // $0.00002 per 1K tokens
+    'text-embedding-3-large': 0.00013 / 1000, // $0.00013 per 1K tokens
+    'text-embedding-ada-002': 0.0001 / 1000   // $0.0001 per 1K tokens
+  };
+  
+  const price = pricing[model] || pricing['text-embedding-3-small'];
+  return tokens * price;
+}
+
+/**
  * Calculate cost based on tokens and model
  */
 function calculateCost(tokens, model) {
@@ -213,7 +350,9 @@ function calculateCost(tokens, model) {
 module.exports = {
   initializeOpenAIClient,
   generateText,
+  generateEmbedding,
   calculateCost,
+  calculateEmbeddingCost,
   AIServiceError
 };
 

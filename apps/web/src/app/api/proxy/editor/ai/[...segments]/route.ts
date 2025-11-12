@@ -19,6 +19,10 @@ async function forwardRequest(request: NextRequest, params: { segments?: string[
   const targetPath = segments.join('/');
   const targetUrl = `${API_BASE_URL}/api/editor/ai/${targetPath}`;
 
+  // Create an AbortController with a 5-minute timeout for AI operations (semantic matching takes time)
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300000); // 300 seconds (5 minutes)
+
   const init: RequestInit = {
     method: request.method,
     headers: {
@@ -26,7 +30,8 @@ async function forwardRequest(request: NextRequest, params: { segments?: string[
       cookie: request.headers.get('cookie') ?? ''
     },
     redirect: 'manual',
-    cache: 'no-store'
+    cache: 'no-store',
+    signal: controller.signal
   };
 
   if (!['GET', 'HEAD'].includes(request.method)) {
@@ -37,7 +42,9 @@ async function forwardRequest(request: NextRequest, params: { segments?: string[
   let backendResponse: Response;
   try {
     backendResponse = await fetch(targetUrl, init);
+    clearTimeout(timeoutId); // Clear timeout on success
   } catch (error: any) {
+    clearTimeout(timeoutId); // Clear timeout on error
     console.error('AI proxy request failed', {
       targetUrl,
       method: request.method,
@@ -89,6 +96,7 @@ async function forwardRequest(request: NextRequest, params: { segments?: string[
   responseHeaders.delete('content-length');
 
   const body = await backendResponse.arrayBuffer();
+  clearTimeout(timeoutId); // Ensure timeout is cleared after reading response
   return new NextResponse(body, {
     status: backendResponse.status,
     headers: responseHeaders
@@ -117,4 +125,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes for AI operations (semantic matching can be slow)
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 

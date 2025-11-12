@@ -65,7 +65,7 @@ Return ONLY valid JSON, no markdown formatting:
       model: 'gpt-4o-mini', // Use gpt-4o-mini for cost efficiency
       temperature: 0.1, // Low temperature for consistent, factual extraction
       max_tokens: 2000,
-      timeout: 30000 // 30 second timeout
+      timeout: 90000 // 90 seconds for skill extraction (handles long job descriptions)
     });
     
     const response = result.text;
@@ -221,7 +221,7 @@ Return ONLY valid JSON:
       model: 'gpt-4o-mini',
       temperature: 0.2, // Slightly higher for nuanced analysis
       max_tokens: 3000,
-      timeout: 45000 // 45 seconds for complex matching
+      timeout: 180000 // 3 minutes for complex semantic matching with large skill lists
     });
 
     const text = response.text;
@@ -324,7 +324,7 @@ Return ONLY valid JSON:
       model: 'gpt-4o-mini',
       temperature: 0.1,
       max_tokens: 800,
-      timeout: 20000
+      timeout: 60000 // 60 seconds for skill quality analysis
     });
 
     const text = response.text;

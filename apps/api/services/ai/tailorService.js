@@ -21,6 +21,9 @@ const {
   buildPortfolioPrompt
 } = require('./promptBuilder');
 const { scoreResumeAgainstJob } = require('../ats/atsScoringService');
+const { scoreResumeWorldClass } = require('../ats/worldClassATS');
+const { extractSkillsWithAI } = require('../ats/aiSkillExtractor');
+const { calculateRealisticCeiling, calculateTargetScore } = require('../../utils/realisticCeiling');
 const logger = require('../../utils/logger');
 const { normalizeResumeData } = require('@roleready/resume-normalizer');
 const { jsonrepair } = require('jsonrepair');
@@ -102,14 +105,38 @@ async function tailorResume({
 
   const resume = await getActiveResumeOrThrow({ userId: user.id, resumeId });
 
-  const atsBefore = scoreResumeAgainstJob({ resumeData: resume.data, jobDescription });
+  // 🚀 PERFORMANCE: Run ATS and job analysis in parallel (60s → 30s improvement)
+  logger.info('Running parallel analysis: ATS scoring + Job skill extraction');
+  const [atsBefore, jobAnalysis] = await Promise.all([
+    scoreResumeWorldClass({ 
+      resumeData: resume.data, 
+      jobDescription,
+      useAI: false // Fast dictionary mode for initial score
+    }),
+    extractSkillsWithAI(jobDescription)
+  ]);
 
+  // Calculate realistic ceiling and target score
+  const ceiling = calculateRealisticCeiling(resume.data, jobAnalysis, atsBefore);
+  const targetScore = calculateTargetScore(tailorMode, atsBefore.overall, ceiling);
+
+  logger.info('Tailoring targets calculated', {
+    currentScore: atsBefore.overall,
+    targetScore,
+    realisticCeiling: ceiling,
+    mode: tailorMode,
+    potentialGain: targetScore - atsBefore.overall
+  });
+
+  // Build enhanced prompt with targets
   const prompt = buildTailorResumePrompt({
     resumeSnapshot: resume.data,
     jobDescription,
     mode: tailorMode,
     tone,
-    length
+    length,
+    atsAnalysis: atsBefore,
+    targetScore
   });
 
   const stopTimer = aiActionLatency.startTimer({
@@ -130,7 +157,7 @@ async function tailorResume({
     const response = await generateText(prompt, {
       model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
       temperature: 0.3,
-      max_tokens: tailorMode === TailorMode.FULL ? 1600 : 1100,
+      max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000, // Increased to prevent truncation
       timeout: 120000, // 2 minutes timeout
       userId: user.id
     });
@@ -158,7 +185,22 @@ async function tailorResume({
     // Normalize the tailored resume data to convert objects with numeric keys to arrays
     const normalizedTailoredResume = normalizeResumeData(payload.tailoredResume);
 
-    const atsAfter = scoreResumeAgainstJob({ resumeData: normalizedTailoredResume, jobDescription });
+    // 🚀 PERFORMANCE: Use fast scoring for after-score (consistent with before-score)
+    logger.info('Running World-Class ATS analysis after tailoring');
+    const atsAfter = await scoreResumeWorldClass({ 
+      resumeData: normalizedTailoredResume, 
+      jobDescription,
+      useAI: false // Fast dictionary mode for consistency
+    });
+
+    const scoreImprovement = atsAfter.overall - atsBefore.overall;
+    logger.info('Tailoring complete - Score improvement', {
+      before: atsBefore.overall,
+      after: atsAfter.overall,
+      improvement: scoreImprovement,
+      targetWas: targetScore,
+      metTarget: atsAfter.overall >= targetScore
+    });
 
     const tailoredVersion = await prisma.tailoredVersion.create({
       data: {
@@ -197,6 +239,31 @@ async function tailorResume({
     });
     stopTimer();
     atsScoreGauge.set({ userId: user.id, resumeId }, atsAfter.overall);
+
+    // 🚀 OPTIONAL: Regenerate embedding for tailored resume (non-blocking)
+    // Note: Tailored versions don't have embeddings stored separately.
+    // Embeddings are regenerated when/if this tailored version is applied to the base resume.
+    const generateEmbeddingAfterTailor = process.env.GENERATE_EMBEDDING_AFTER_TAILOR === 'true';
+    if (generateEmbeddingAfterTailor) {
+      // Background embedding generation (don't wait for it)
+      try {
+        const { generateResumeEmbedding } = require('../embeddings/embeddingService');
+        generateResumeEmbedding(normalizedTailoredResume)
+          .then(embedding => {
+            logger.info('Tailored resume embedding generated in background', {
+              tailoredVersionId: tailoredVersion.id,
+              dimensions: embedding.length
+            });
+          })
+          .catch(err => {
+            logger.warn('Background embedding generation failed (non-critical)', {
+              error: err.message
+            });
+          });
+      } catch (err) {
+        logger.debug('Embedding service not available', { error: err.message });
+      }
+    }
 
     logger.info('AI tailoring completed', {
       userId: user.id,

@@ -42,6 +42,9 @@ export interface AIPanelProps {
   isGeneratingCoverLetter: boolean;
   isGeneratingPortfolio: boolean;
   onResumeUpdate?: (data: ResumeData) => void;
+  // AI Progress tracking (optional for backwards compatibility)
+  atsProgress?: any;
+  tailorProgress?: any;
 }
 
 export interface ApplyChangesHandlerDeps {

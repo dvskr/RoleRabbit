@@ -62,6 +62,7 @@ import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
 import { Loading } from '../../components/Loading';
 import { useToasts, ToastContainer } from '../../components/Toast';
+import { useAIProgress } from '../../hooks/useAIProgress';
 import { ConflictIndicator } from '../../components/ConflictIndicator';
 import { PlusCircle, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 // Lazy load heavy analytics and modal components
@@ -189,6 +190,10 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   // Toast notifications
   const { toasts, showToast, dismissToast } = useToasts();
+
+  // AI Progress tracking
+  const atsProgressHook = useAIProgress();
+  const tailorProgressHook = useAIProgress();
 
   const {
     state: resumeApplyState,
@@ -568,7 +573,20 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setCoverLetterDraft,
     setIsGeneratingCoverLetter,
     setPortfolioDraft,
-    setIsGeneratingPortfolio
+    setIsGeneratingPortfolio,
+    // AI Progress tracking
+    atsProgress: atsProgressHook.progress,
+    startATSProgress: atsProgressHook.startProgress,
+    updateATSProgress: atsProgressHook.updateProgress,
+    completeATSProgress: atsProgressHook.completeProgress,
+    resetATSProgress: atsProgressHook.resetProgress,
+    tailorProgress: tailorProgressHook.progress,
+    startTailorProgress: tailorProgressHook.startProgress,
+    updateTailorProgress: tailorProgressHook.updateProgress,
+    completeTailorProgress: tailorProgressHook.completeProgress,
+    resetTailorProgress: tailorProgressHook.resetProgress,
+    // Toast notifications
+    showToast
   });
 
   const {
@@ -1100,6 +1118,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                       isSavingResume={isSaving}
                       isGeneratingCoverLetter={isGeneratingCoverLetter}
                       isGeneratingPortfolio={isGeneratingPortfolio}
+                      atsProgress={atsProgressHook.progress}
+                      tailorProgress={tailorProgressHook.progress}
                 onResumeUpdate={(updatedData) => {
                   setResumeData(updatedData);
                   // Add to history for undo/redo
