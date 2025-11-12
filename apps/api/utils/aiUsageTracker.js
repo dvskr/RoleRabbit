@@ -9,32 +9,68 @@ const logger = require('./logger');
 /**
  * Track AI usage
  */
-async function trackAIUsage(userId, model, tokens, cost) {
+async function trackAIUsage(userId, modelOrUsage, tokensArg, costArg) {
+  // Support legacy signature trackAIUsage(userId, model, tokens, cost)
+  // and new signature trackAIUsage(userId, { model, tokens, cost, endpoint })
+  const usage =
+    modelOrUsage && typeof modelOrUsage === 'object' && !Array.isArray(modelOrUsage)
+      ? {
+          model: modelOrUsage.model ?? 'unknown',
+          tokens: modelOrUsage.tokens ?? modelOrUsage.tokensUsed ?? 0,
+          cost: modelOrUsage.cost ?? modelOrUsage.costUsd ?? 0,
+          endpoint: modelOrUsage.endpoint,
+        }
+      : {
+          model: modelOrUsage ?? 'unknown',
+          tokens: tokensArg ?? 0,
+          cost: costArg ?? 0,
+          endpoint: undefined,
+        };
+
+  const tokensUsed = Number.isFinite(usage.tokens) ? usage.tokens : 0;
+  const cost = Number.isFinite(usage.cost) ? usage.cost : 0;
+
+  if (!userId) {
+    logger.debug('trackAIUsage skipped: missing userId', { model: usage.model, tokensUsed, cost });
+    return;
+  }
+
   try {
-    const usage = await prisma.aIUsage.create({
+    if (!prisma?.aIUsage?.create) {
+      logger.debug('AI usage persistence disabled or model missing; logging only', {
+        userId,
+        model: usage.model,
+        tokensUsed,
+        cost,
+      });
+      return;
+    }
+
+    const usageRecord = await prisma.aIUsage.create({
       data: {
         userId,
-        model,
-        tokensUsed: tokens,
+        model: usage.model,
+        tokensUsed,
         cost,
-        timestamp: new Date()
-      }
+        endpoint: usage.endpoint,
+        timestamp: new Date(),
+      },
     });
 
-    // Update user's total usage
     await prisma.user.update({
       where: { id: userId },
       data: {
         totalAIUsage: {
-          increment: tokens
-        }
-      }
+          increment: tokensUsed,
+        },
+      },
     });
 
-    return usage;
+    return usageRecord;
   } catch (error) {
-    logger.error('Failed to track AI usage', error);
-    throw error;
+    logger.error('Failed to track AI usage', { error: error.message, userId, model: usage.model });
+    // Swallow errors so AI flows do not fail due to usage logging
+    return;
   }
 }
 

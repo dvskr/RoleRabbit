@@ -13,7 +13,7 @@ export const useAI = () => {
   const [aiRecommendations, setAiRecommendations] = useState<string[]>([]);
   const [tailorEditMode, setTailorEditMode] = useState('partial');
   const [selectedTone, setSelectedTone] = useState('professional');
-  const [selectedLength, setSelectedLength] = useState('concise');
+  const [selectedLength, setSelectedLength] = useState('thorough');
   const [tailorResult, setTailorResult] = useState<TailorResult | null>(null);
   const [isTailoring, setIsTailoring] = useState(false);
   const [coverLetterDraft, setCoverLetterDraft] = useState<CoverLetterDraft | null>(null);

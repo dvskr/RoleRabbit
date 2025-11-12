@@ -1,5 +1,3 @@
-const { scoreResumeAgainstJob } = require('./services/ats/atsScoringService');
-
 // Simple job description
 const jobDescription = `
 Data Engineer position requiring:
@@ -9,9 +7,6 @@ Data Engineer position requiring:
 - AWS cloud services
 - Azure platform knowledge
 `;
-
-// Log what the analyzer is extracting
-const atsScoringService = require('./services/ats/atsScoringService');
 
 // Access internal functions by requiring the file and logging
 console.log('Job Description:\n', jobDescription);

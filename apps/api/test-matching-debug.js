@@ -1,4 +1,4 @@
-const { analyzeResume, analyzeJobDescription, scoreTechnicalSkills } = require('./services/ats/atsScoringService');
+const { analyzeResume, analyzeJobDescription } = require('./services/ats/atsScoringService');
 
 const resumeData = {
   "skills": {

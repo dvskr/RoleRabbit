@@ -29,11 +29,15 @@ export const DEFAULT_FORMATTING = {
 } as const;
 
 export const createDefaultResumeData = (): ResumeData => ({
+  id: undefined,
   name: '',
   title: '',
   email: '',
   phone: '',
   location: '',
+  linkedin: '',
+  github: '',
+  website: '',
   summary: '',
   skills: [],
   experience: [],

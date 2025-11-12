@@ -14,6 +14,10 @@ import {
   DEFAULT_FORMATTING,
   createDefaultResumeData
 } from './resumeDefaults';
+import {
+  normalizeResumeData as normalizeCanonicalResumeData,
+  NormalizedResumeData
+} from '@roleready/resume-normalizer';
 
 let placeholderIdCounter = 0;
 const nextPlaceholderId = () => {
@@ -67,7 +71,10 @@ export interface NormalizedContact {
   email?: string;
   phone?: string;
   location?: string;
-  links?: string[];
+  linkedin?: string;
+  github?: string;
+  website?: string;
+  links?: Array<string | { url?: string | null } | null | undefined>;
 }
 
 export interface NormalizedSkillGroup {
@@ -181,17 +188,112 @@ const normalizeArray = <T>(value: T[] | Record<string, T> | undefined | null): T
   return [];
 };
 
+const toCleanString = (value: unknown): string => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.trim();
+};
+
+const normalizeLinkEntries = (value: unknown): string[] => {
+  const rawEntries = normalizeArray<any>(value as any);
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  rawEntries.forEach((entry) => {
+    let url = '';
+    if (typeof entry === 'string') {
+      url = entry.trim();
+    } else if (entry && typeof entry === 'object') {
+      const candidate = (entry as { url?: unknown }).url;
+      if (typeof candidate === 'string') {
+        url = candidate.trim();
+      }
+    }
+
+    if (!url) {
+      return;
+    }
+
+    const normalized = url.toLowerCase();
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      result.push(url);
+    }
+  });
+
+  return result;
+};
+
+const findLinkByDomains = (links: string[], domains: string[], exclude: Set<string>): string => {
+  if (!links.length || !domains.length) {
+    return '';
+  }
+  const normalizedDomains = domains.map((domain) => domain.toLowerCase());
+  for (const link of links) {
+    const normalizedLink = link.toLowerCase();
+    if (exclude.has(normalizedLink)) {
+      continue;
+    }
+    if (normalizedDomains.some((domain) => normalizedLink.includes(domain))) {
+      return link;
+    }
+  }
+  return '';
+};
+
+const findFirstAvailableLink = (links: string[], exclude: Set<string>): string => {
+  if (!links.length) {
+    return '';
+  }
+  for (const link of links) {
+    const normalizedLink = link.toLowerCase();
+    if (!exclude.has(normalizedLink)) {
+      return link;
+    }
+  }
+  return '';
+};
+
 export const mapBaseResumeToEditor = (resume?: Partial<BaseResumeRecord> | null): ResumeSnapshot => {
-  const normalizedResume = resume?.data || {};
+  const normalizedResume = normalizeCanonicalResumeData(resume?.data || {});
+  const resumeId = typeof resume?.id === 'string' ? resume.id : undefined;
   const contact = normalizedResume.contact || {};
+  const contactLinks = normalizeLinkEntries(contact.links);
+  const usedContactLinks = new Set<string>();
+
+  const linkedinUrl =
+    toCleanString(contact.linkedin) ||
+    findLinkByDomains(contactLinks, ['linkedin.com', 'lnkd.in'], usedContactLinks);
+  if (linkedinUrl) {
+    usedContactLinks.add(linkedinUrl.toLowerCase());
+  }
+
+  const githubUrl =
+    toCleanString(contact.github) ||
+    findLinkByDomains(contactLinks, ['github.com'], usedContactLinks);
+  if (githubUrl) {
+    usedContactLinks.add(githubUrl.toLowerCase());
+  }
+
+  const websiteUrl =
+    toCleanString(contact.website) ||
+    findFirstAvailableLink(contactLinks, usedContactLinks);
+  if (websiteUrl) {
+    usedContactLinks.add(websiteUrl.toLowerCase());
+  }
 
   const editorResume: ResumeData = {
     ...createDefaultResumeData(),
+    id: resumeId,
     name: contact.name || '',
     title: contact.title || '',
     email: contact.email || '',
     phone: contact.phone || '',
     location: contact.location || '',
+    linkedin: linkedinUrl || '',
+    github: githubUrl || '',
+    website: websiteUrl || '',
     summary: normalizedResume.summary || '',
     skills: normalizeArray(normalizedResume.skills?.technical)
       .concat(normalizeArray(normalizedResume.skills?.tools))
@@ -306,13 +408,10 @@ export const mapBaseResumeToEditor = (resume?: Partial<BaseResumeRecord> | null)
   };
 };
 
-const normalizeEndPeriod = (endPeriod: string | undefined | null): { endDate?: string; isCurrent?: boolean } => {
-  if (!endPeriod) return {};
-  const normalized = endPeriod.trim().toLowerCase();
-  if (normalized === 'present' || normalized === 'current' || normalized === 'ongoing') {
-    return { isCurrent: true };
-  }
-  return { endDate: endPeriod };
+export const normalizedDataToResumeData = (
+  data: NormalizedResumeData | null | undefined
+): ResumeData => {
+  return mapBaseResumeToEditor({ data: data ?? undefined }).resumeData;
 };
 
 export interface EditorStateForMapping {
@@ -343,53 +442,63 @@ export const mapEditorStateToBasePayload = (
     name
   } = state;
 
-  const normalizedData: NormalizedResumeData = {
-    summary: resumeData.summary || '',
+  const contactLinks = [
+    resumeData.linkedin,
+    resumeData.github,
+    resumeData.website
+  ]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value): value is string => !!value);
+
+  const normalizedData = normalizeCanonicalResumeData({
+    summary: resumeData.summary,
     contact: {
-      name: resumeData.name || undefined,
-      title: resumeData.title || undefined,
-      email: resumeData.email || undefined,
-      phone: resumeData.phone || undefined,
-      location: resumeData.location || undefined
+      name: resumeData.name,
+      title: resumeData.title,
+      email: resumeData.email,
+      phone: resumeData.phone,
+      location: resumeData.location,
+      linkedin: resumeData.linkedin,
+      github: resumeData.github,
+      website: resumeData.website,
+      links: contactLinks
     },
     skills: {
-      technical: normalizeArray(resumeData.skills)
+      technical: resumeData.skills
     },
-    experience: resumeData.experience.map((exp) => {
-      return {
-        id: String(exp.id ?? ''),
-        company: exp.company || undefined,
-        role: exp.position || undefined,
-        startDate: exp.period || undefined,
-        ...normalizeEndPeriod(exp.endPeriod),
-        location: exp.location || undefined,
-        environment: normalizeArray(exp.environment),
-        bullets: normalizeArray(exp.bullets)
-      };
-    }),
+    experience: resumeData.experience.map((exp) => ({
+      id: exp.id,
+      company: exp.company,
+      role: exp.position,
+      startDate: exp.period,
+      endDate: exp.endPeriod,
+      location: exp.location,
+      environment: exp.environment,
+      bullets: exp.bullets
+    })),
     education: resumeData.education.map((edu) => ({
-      id: String(edu.id ?? ''),
-      institution: edu.school || undefined,
-      degree: edu.degree || undefined,
-      startDate: edu.startDate || undefined,
-      endDate: edu.endDate || undefined
+      id: edu.id,
+      institution: edu.school,
+      degree: edu.degree,
+      startDate: edu.startDate,
+      endDate: edu.endDate
     })),
     projects: resumeData.projects.map((proj) => ({
-      id: String(proj.id ?? ''),
-      name: proj.name || undefined,
-      summary: proj.description || undefined,
-      link: proj.link || undefined,
-      bullets: normalizeArray(proj.bullets),
-      technologies: normalizeArray(proj.skills)
+      id: proj.id,
+      name: proj.name,
+      summary: proj.description,
+      link: proj.link,
+      bullets: proj.bullets,
+      technologies: proj.skills
     })),
     certifications: resumeData.certifications.map((cert) => ({
-      id: String(cert.id ?? ''),
-      name: cert.name || undefined,
-      issuer: cert.issuer || undefined,
-      link: cert.link || undefined,
-      skills: normalizeArray(cert.skills)
+      id: cert.id,
+      name: cert.name,
+      issuer: cert.issuer,
+      link: cert.link,
+      skills: cert.skills
     }))
-  };
+  });
 
   const metadata: BaseResumeMetadata = {
     sectionOrder: sectionOrder && sectionOrder.length ? [...sectionOrder] : [...DEFAULT_SECTION_ORDER],

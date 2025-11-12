@@ -30,9 +30,22 @@ winston.addColors(colors);
 const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`
-  )
+  winston.format.printf((info) => {
+    const { timestamp, level, message, ...meta } = info;
+    const splat = info[Symbol.for('splat')] || [];
+    const extra = { ...meta };
+
+    if (splat.length) {
+      splat.forEach((item, index) => {
+        extra[`meta_${index}`] = item;
+      });
+    }
+
+    const metaKeys = Object.keys(extra).filter((key) => extra[key] !== undefined);
+    const metaString = metaKeys.length ? `\n${JSON.stringify(extra, null, 2)}` : '';
+
+    return `${timestamp} ${level}: ${message}${metaString}`;
+  })
 );
 
 // Define transports

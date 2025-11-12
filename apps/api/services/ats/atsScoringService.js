@@ -266,16 +266,11 @@ function hashJobDescription(jobDescription = '') {
   return crypto.createHash('sha1').update(jobDescription.trim().toLowerCase()).digest('hex');
 }
 
-function normalizeText(text) {
-  if (!text) return '';
-  return String(text).toLowerCase().trim();
-}
-
 function cleanText(text) {
   if (!text) return '';
   return String(text)
     .toLowerCase()
-    .replace(/[^\w\s\-\.\/\+#]/g, ' ')  // Keep alphanumeric, spaces, and common tech chars
+    .replace(/[^\w\s./+#-]/g, ' ')  // Keep alphanumeric, spaces, and common tech chars
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -636,58 +631,6 @@ function analyzeResume(resumeData = {}) {
 // ============================================================================
 // SCORING FUNCTIONS
 // ============================================================================
-
-// Context-aware matching with section importance weighting
-function computeContextualMatch(resumeSections, jobAnalysis) {
-  let totalScore = 0;
-  let totalWeight = 0;
-  const matched = new Set();
-  const missing = new Set();
-
-  // All job requirements (technical skills prioritized)
-  const allJobSkills = [
-    ...jobAnalysis.technical.required.map(s => s.skill),
-    ...jobAnalysis.technical.preferred.map(s => s.skill),
-    ...jobAnalysis.technical.all.map(s => s.skill)
-  ];
-  const uniqueJobSkills = [...new Set(allJobSkills)];
-
-  // Check each resume section
-  for (const [sectionName, section] of Object.entries(resumeSections)) {
-    const sectionText = cleanText(section.text);
-    let sectionMatches = 0;
-
-    for (const skill of uniqueJobSkills) {
-      const skillNorm = cleanText(skill);
-      if (sectionText.includes(skillNorm)) {
-        matched.add(skill);
-        sectionMatches++;
-      }
-    }
-
-    // Weight the section score
-    if (uniqueJobSkills.length > 0) {
-      const sectionScore = (sectionMatches / uniqueJobSkills.length) * 100;
-      totalScore += sectionScore * section.weight;
-      totalWeight += section.weight;
-    }
-  }
-
-  // Calculate missing skills
-  for (const skill of uniqueJobSkills) {
-    if (!matched.has(skill)) {
-      missing.add(skill);
-    }
-  }
-
-  const finalScore = totalWeight > 0 ? totalScore / totalWeight : 0;
-
-  return {
-    score: Math.round(Math.max(0, Math.min(100, finalScore))),
-    matched: [...matched],
-    missing: [...missing]
-  };
-}
 
 // Technical skills matching with required vs preferred differentiation
 function scoreTechnicalSkills(resumeAnalysis, jobAnalysis) {

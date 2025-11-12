@@ -107,7 +107,7 @@ export const aiHelpers = {
         throw new Error('AI draft was not created.');
       }
 
-      const applyResponse = await apiService.applyAIDraft(draft.id);
+      const applyResponse = await apiService.applyAIDraft({ draftId: draft.id });
       const updatedResume = applyResponse?.resume;
       if (updatedResume && applyBaseResume) {
         applyBaseResume(updatedResume as BaseResumeRecord);

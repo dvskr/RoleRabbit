@@ -13,23 +13,20 @@ const {
 } = require('../services/ai/tailorService');
 const { recordAIRequest, AIUsageError, ensureActionAllowed } = require('../services/ai/usageService');
 const cacheConfig = require('../config/cacheConfig');
-const { scoreResumeAgainstJob, hashJobDescription } = require('../services/ats/atsScoringService');
+const { hashJobDescription } = require('../services/ats/atsScoringService');
 const { scoreResumeWorldClass } = require('../services/ats/worldClassATS');
 const { AIAction } = require('@prisma/client');
 const { atsScoreCounter, atsScoreGauge } = require('../observability/metrics');
-
-function validateGeneratePayload(body) {
-  const required = ['resumeId', 'sectionPath', 'sectionType'];
-  for (const field of required) {
-    if (!body || body[field] == null || body[field] === '') {
-      return `Missing required field: ${field}`;
-    }
-  }
-  if (typeof body.sectionPath !== 'string') {
-    return 'sectionPath must be a string path (e.g., experience[0].summary)';
-  }
-  return null;
-}
+const {
+  generateContentRequestSchema,
+  applyDraftRequestSchema,
+  atsCheckRequestSchema,
+  tailorRequestSchema,
+  applyRecommendationsRequestSchema,
+  coverLetterRequestSchema,
+  portfolioRequestSchema
+} = require('../schemas/editorAI.schemas');
+const { parseBodyOrSendError } = require('../utils/validationHelpers');
 
 module.exports = async function editorAIRoutes(fastify) {
   const allowCorsPreflight = (request, reply) => {
@@ -50,6 +47,19 @@ module.exports = async function editorAIRoutes(fastify) {
     reply.header('Access-Control-Allow-Credentials', 'true');
   };
 
+  const handleAIException = (request, reply, error, fallbackMessage) => {
+    setCorsHeaders(request, reply);
+    const statusCode = error?.statusCode || error?.status || 500;
+    const responsePayload = {
+      success: false,
+      error: error?.isAIServiceError && error?.message ? error.message : fallbackMessage,
+    };
+    if (error?.code) {
+      responsePayload.code = error.code;
+    }
+    return reply.status(statusCode).send(responsePayload);
+  };
+
   fastify.options('/api/editor/ai/ats-check', allowCorsPreflight);
   fastify.options('/api/editor/ai/tailor', allowCorsPreflight);
   fastify.options('/api/editor/ai/apply-recommendations', allowCorsPreflight);
@@ -61,9 +71,14 @@ module.exports = async function editorAIRoutes(fastify) {
   fastify.post('/api/editor/ai/generate-content', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
-      const validationError = validateGeneratePayload(request.body);
-      if (validationError) {
-        return reply.status(400).send({ success: false, error: validationError });
+      const payload = parseBodyOrSendError({
+        schema: generateContentRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
       }
       const {
         resumeId,
@@ -74,7 +89,7 @@ module.exports = async function editorAIRoutes(fastify) {
         tone,
         length,
         instructions
-      } = request.body;
+      } = payload;
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -115,17 +130,23 @@ module.exports = async function editorAIRoutes(fastify) {
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to generate resume content with AI', { error: error.message, stack: error.stack });
-      return reply.status(500).send({ success: false, error: 'Failed to generate AI content.' });
+      return handleAIException(request, reply, error, 'Failed to generate AI content.');
     }
   });
 
   fastify.post('/api/editor/ai/apply-draft', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
-      const { draftId } = request.body || {};
-      if (!draftId) {
-        return reply.status(400).send({ success: false, error: 'draftId is required' });
+      const payload = parseBodyOrSendError({
+        schema: applyDraftRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
       }
+      const { draftId } = payload;
       const userId = request.user.userId;
 
       const draftRecord = await getDraft(draftId);
@@ -168,15 +189,16 @@ module.exports = async function editorAIRoutes(fastify) {
   fastify.post('/api/editor/ai/ats-check', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
-      const { resumeId, jobDescription } = request.body || {};
-      if (!resumeId) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'resumeId is required' });
+      const payload = parseBodyOrSendError({
+        schema: atsCheckRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
       }
-      if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
-      }
+      const { resumeId, jobDescription } = payload;
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -202,28 +224,81 @@ module.exports = async function editorAIRoutes(fastify) {
             select: { id: true, data: true, isActive: true, updatedAt: true }
           });
           if (!resume) {
-            throw new Error('Base resume not found');
+            logger.warn('ATS requested base resume not found', {
+              userId,
+              requestedResumeId: resumeId,
+              jobHash
+            });
+            throw new AIUsageError(
+              'The selected resume could not be found. Please refresh your resumes and try again.',
+              404
+            );
           }
-          if (!resume.isActive) {
-            throw new AIUsageError('You can only run AI features on the active resume.', 400);
-          }
+          // NOTE: Removed isActive check for ATS - users should be able to check any resume
+          // ATS checking is read-only and doesn't modify the resume
           
-          // 🌟 USE WORLD-CLASS ATS SYSTEM (with AI if available)
+          // 🌟 USE EMBEDDING-BASED ATS (if enabled) or WORLD-CLASS ATS SYSTEM
           let analysis;
-          try {
-            analysis = await scoreResumeWorldClass({ 
-              resumeData: resume.data, 
-              jobDescription,
-              useAI: true // Enable AI-powered semantic matching
-            });
-          } catch (worldClassError) {
-            logger.error('World-class ATS failed, using fallback', { error: worldClassError.message });
-            // Fallback to basic scoring if world-class fails
-            const { scoreResumeAgainstJob } = require('../services/ats/atsScoringService');
-            analysis = scoreResumeAgainstJob({ 
-              resumeData: resume.data, 
-              jobDescription 
-            });
+          const useEmbeddings = process.env.ATS_USE_EMBEDDINGS === 'true';
+          
+          if (useEmbeddings) {
+            // NEW: Embedding-based ATS (fast, accurate, cheap)
+            try {
+              const { scoreResumeWithEmbeddings } = require('../services/embeddings/embeddingATSService');
+              const embeddingResult = await scoreResumeWithEmbeddings({
+                resumeData: resume.data,
+                jobDescription,
+                includeDetails: true
+              });
+              
+              // Transform to match existing API format
+              analysis = {
+                overall: embeddingResult.overall,
+                matchedKeywords: embeddingResult.matchedKeywords || [],
+                missingKeywords: embeddingResult.missingKeywords || [],
+                semanticScore: embeddingResult.semanticScore,
+                similarity: embeddingResult.similarity,
+                method: 'embedding',
+                performance: embeddingResult.performance
+              };
+              
+              logger.info('Embedding-based ATS scoring complete', {
+                resumeId,
+                overall: analysis.overall,
+                duration: embeddingResult.performance.duration,
+                fromCache: embeddingResult.performance.fromCache
+              });
+            } catch (embeddingError) {
+              logger.error('Embedding-based ATS failed, falling back to world-class', { 
+                error: embeddingError.message 
+              });
+              // Fallback to world-class ATS
+              analysis = await scoreResumeWorldClass({ 
+                resumeData: resume.data, 
+                jobDescription,
+                useAI: false // Use fast dictionary mode
+              });
+              analysis.method = 'world-class-fallback';
+            }
+          } else {
+            // EXISTING: World-class ATS system
+            try {
+              analysis = await scoreResumeWorldClass({ 
+                resumeData: resume.data, 
+                jobDescription,
+                useAI: true // Enable AI-powered semantic matching
+              });
+              analysis.method = 'world-class';
+            } catch (worldClassError) {
+              logger.error('World-class ATS failed, using fallback', { error: worldClassError.message });
+              // Fallback to basic scoring if world-class fails
+              const { scoreResumeAgainstJob } = require('../services/ats/atsScoringService');
+              analysis = scoreResumeAgainstJob({ 
+                resumeData: resume.data, 
+                jobDescription 
+              });
+              analysis.method = 'basic-fallback';
+            }
           }
           
           analysis.generatedAt = new Date().toISOString();
@@ -285,31 +360,30 @@ module.exports = async function editorAIRoutes(fastify) {
         setCorsHeaders(request, reply);
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
-      logger.error('Failed to run ATS analysis', { error: error.message });
-      setCorsHeaders(request, reply);
-      return reply.status(500).send({ success: false, error: 'Failed to run ATS analysis.' });
+      logger.error('Failed to run ATS analysis', { error: error.message, stack: error.stack });
+      return handleAIException(request, reply, error, 'Failed to run ATS analysis.');
     }
   });
 
   fastify.post('/api/editor/ai/tailor', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
+      const payload = parseBodyOrSendError({
+        schema: tailorRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
+      }
       const {
         resumeId,
         jobDescription,
         mode,
         tone,
         length
-      } = request.body || {};
-
-      if (!resumeId) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'resumeId is required' });
-      }
-      if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
-      }
+      } = payload;
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -340,29 +414,28 @@ module.exports = async function editorAIRoutes(fastify) {
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to tailor resume', { error: error.message });
-      setCorsHeaders(request, reply);
-      return reply.status(500).send({ success: false, error: 'Failed to tailor resume.' });
+      return handleAIException(request, reply, error, 'Failed to tailor resume.');
     }
   });
 
   fastify.post('/api/editor/ai/apply-recommendations', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
+      const payload = parseBodyOrSendError({
+        schema: applyRecommendationsRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
+      }
       const {
         resumeId,
         jobDescription,
         focusAreas,
         tone
-      } = request.body || {};
-
-      if (!resumeId) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'resumeId is required' });
-      }
-      if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
-      }
+      } = payload;
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -392,30 +465,29 @@ module.exports = async function editorAIRoutes(fastify) {
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to apply AI recommendations', { error: error.message });
-      setCorsHeaders(request, reply);
-      return reply.status(500).send({ success: false, error: 'Failed to apply AI recommendations.' });
+      return handleAIException(request, reply, error, 'Failed to apply AI recommendations.');
     }
   });
 
   fastify.post('/api/editor/ai/cover-letter', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
+      const payload = parseBodyOrSendError({
+        schema: coverLetterRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
+      }
       const {
         resumeId,
         jobTitle,
         company,
         jobDescription,
         tone
-      } = request.body || {};
-
-      if (!resumeId) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'resumeId is required' });
-      }
-      if (!jobDescription || typeof jobDescription !== 'string' || jobDescription.trim().length < 10) {
-        setCorsHeaders(request, reply);
-        return reply.status(400).send({ success: false, error: 'jobDescription must be at least 10 characters' });
-      }
+      } = payload;
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -443,18 +515,23 @@ module.exports = async function editorAIRoutes(fastify) {
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to generate cover letter', { error: error.message });
-      setCorsHeaders(request, reply);
-      return reply.status(500).send({ success: false, error: 'Failed to generate cover letter.' });
+      return handleAIException(request, reply, error, 'Failed to generate cover letter.');
     }
   });
 
   fastify.post('/api/editor/ai/portfolio', { preHandler: authenticate }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
-      const { resumeId, tone } = request.body || {};
-      if (!resumeId) {
-        return reply.status(400).send({ success: false, error: 'resumeId is required' });
+      const payload = parseBodyOrSendError({
+        schema: portfolioRequestSchema,
+        payload: request.body,
+        reply,
+        setCorsHeaders: () => setCorsHeaders(request, reply)
+      });
+      if (!payload) {
+        return;
       }
+      const { resumeId, tone } = payload;
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -477,7 +554,7 @@ module.exports = async function editorAIRoutes(fastify) {
         return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
       }
       logger.error('Failed to generate portfolio draft', { error: error.message });
-      return reply.status(500).send({ success: false, error: 'Failed to generate portfolio draft.' });
+      return handleAIException(request, reply, error, 'Failed to generate portfolio draft.');
     }
   });
 };

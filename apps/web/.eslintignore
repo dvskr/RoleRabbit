@@ -17,6 +17,15 @@ __tests__/
 e2e/
 tests/
 
+# Legacy prototype directories
+src/components/coverletter/
+src/components/discussion/
+src/components/email/
+src/components/jobs/
+src/components/portfolio-generator/
+src/components/DashboardFigma/
+src/components/CoverLetterGenerator.tsx
+
 # Generated files
 .next/
 .vercel/

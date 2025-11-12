@@ -37,6 +37,18 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const upsertResume = useCallback((resume: BaseResume) => {
+    setResumes(prev => {
+      const existingIndex = prev.findIndex(r => r.id === resume.id);
+      if (existingIndex === -1) {
+        return [...prev, resume].sort((a, b) => a.slotNumber - b.slotNumber);
+      }
+      const next = [...prev];
+      next[existingIndex] = { ...next[existingIndex], ...resume };
+      return next.sort((a, b) => a.slotNumber - b.slotNumber);
+    });
+  }, []);
+
   const fetchResumes = useCallback(async (options: { showSpinner?: boolean } = {}) => {
     if (options.showSpinner) {
       setIsLoading(true);
@@ -75,16 +87,19 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
     setError(null);
     try {
       const response = await apiService.createBaseResume(payload);
-      if (response?.success) {
-        await fetchResumes();
+      if (response?.success && response.resume) {
+        upsertResume(response.resume);
         return response.resume;
+      }
+      if (response?.success === false) {
+        throw new Error(response?.error || 'Failed to create base resume');
       }
     } catch (err: any) {
       logger.error('Failed to create base resume', err);
       setError(err?.message || 'Failed to create base resume');
       throw err;
     }
-  }, [fetchResumes]);
+  }, [upsertResume]);
 
   const activateResume = useCallback(async (id: string) => {
     setError(null);
@@ -125,6 +140,7 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
     createResume,
     activateResume,
     deleteResume,
-    setActiveId
+    setActiveId,
+    upsertResume
   };
 };

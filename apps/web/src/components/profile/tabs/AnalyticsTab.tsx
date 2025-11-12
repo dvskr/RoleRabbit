@@ -14,7 +14,7 @@ export default function AnalyticsTab({ userData }: AnalyticsTabProps) {
   const colors = theme.colors;
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       
       {/* Profile Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8">

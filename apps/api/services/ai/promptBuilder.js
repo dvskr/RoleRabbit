@@ -81,12 +81,67 @@ function buildTailorResumePrompt({
   jobDescription,
   mode = 'PARTIAL',
   tone = 'professional',
-  length = 'thorough'
+  length = 'thorough',
+  atsAnalysis = null,
+  targetScore = null
 }) {
   const toneDescription = TONE_PRESETS[tone?.toLowerCase()] || TONE_PRESETS.professional;
   const lengthPrompt = LENGTH_PRESETS[length?.toLowerCase()] || LENGTH_PRESETS.thorough;
 
+  // Build performance target guidance if ATS data provided
+  let targetGuidance = '';
+  if (atsAnalysis && targetScore) {
+    const currentScore = atsAnalysis.overall || 0;
+    const improvement = targetScore - currentScore;
+    const missingKeywords = atsAnalysis.missingKeywords || [];
+    
+    targetGuidance = `
+🎯 PERFORMANCE TARGET:
+- Current ATS Score: ${currentScore}/100
+- Target Score: ${targetScore}/100
+- Required Improvement: +${improvement} points
+
+❗ CRITICAL GAPS TO ADDRESS:
+${missingKeywords.slice(0, 15).map(kw => `- Integrate "${kw}" naturally into relevant sections`).join('\n')}
+
+📊 SCORING BREAKDOWN TARGETS:
+- Technical Skills Match: ${atsAnalysis.keywords || 0}/100 → Target: 85+ points
+- Experience Relevance: ${atsAnalysis.experience || 0}/100 → Target: 90+ points
+- Content Quality: ${atsAnalysis.content || 0}/100 → Target: 85+ points
+- Format/ATS Compatibility: ${atsAnalysis.format || 0}/100 → Target: 95+ points
+
+${mode === 'FULL' ? `
+🚀 FULL MODE - AGGRESSIVE OPTIMIZATION:
+- Completely rewrite sections to maximize ATS alignment and keyword density
+- Add quantifiable achievements with specific metrics (e.g., "Increased revenue by 35%")
+- Match job seniority level exactly with appropriate language and scope
+- Ensure target score of ${targetScore}+ is achieved through comprehensive optimization
+- Use power action verbs: architected, spearheaded, optimized, transformed, delivered
+- Add technical depth where missing (frameworks, tools, methodologies)
+- Expand responsibilities to show full scope of impact
+` : `
+⚡ PARTIAL MODE - STRATEGIC ENHANCEMENT:
+- Add missing keywords naturally without complete section rewrites
+- Improve phrasing and structure while keeping original voice and facts
+- Target +30-40 point improvement minimum through high-impact changes
+- Focus on skill additions, keyword optimization, and metric highlights
+- Maintain factual accuracy - enhance, don't invent
+`}
+
+🎯 INSTRUCTIONS FOR ACHIEVING TARGET SCORE:
+1. Systematically address each missing keyword from the list above
+2. Quantify achievements wherever possible (percentages, dollar amounts, time savings)
+3. Use industry-standard terminology that matches the job description
+4. Ensure technical skills section is comprehensive and well-organized
+5. Make experience bullets action-oriented and results-focused
+6. Verify all critical job requirements are explicitly addressed
+`;
+  }
+
   return `You are an elite resume strategist responsible for tailoring resumes to a provided job description.
+
+${targetGuidance}
+
 Return ONLY valid JSON with the schema:
 {
   "mode": "PARTIAL" | "FULL",
@@ -94,7 +149,8 @@ Return ONLY valid JSON with the schema:
   "diff": Array<{ "path": string, "before": any, "after": any, "confidence": number }>,
   "recommendedKeywords": string[],
   "warnings": string[],
-  "confidence": number (0-1)
+  "confidence": number (0-1),
+  "estimatedScoreImprovement": number
 }
 
 Rules:
@@ -105,6 +161,8 @@ Rules:
 - Use ${toneDescription} tone across updated sections.
 - Highlight metrics wherever possible, but only when already present or inferable from context.
 - Diff entries must list JSONPath style paths (e.g. "summary", "experience[1].bullets[0]").
+${targetScore ? `- CRITICAL: Aim to achieve or exceed target score of ${targetScore}/100 through strategic optimizations.` : ''}
+${atsAnalysis?.missingKeywords?.length > 0 ? `- PRIORITY: Integrate these missing keywords naturally: ${atsAnalysis.missingKeywords.slice(0, 10).join(', ')}` : ''}
 
 Base Resume (JSON, truncated if extremely long): ${normalizeJson(resumeSnapshot)}
 Job Description (truncated if extremely long): ${normalizeJson(jobDescription, 8000)}

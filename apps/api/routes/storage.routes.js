@@ -7,7 +7,7 @@ const { authenticate } = require('../middleware/auth');
 const { prisma } = require('../utils/db');
 const storageHandler = require('../utils/storageHandler');
 const { validateFileUpload, validateFileType } = require('../utils/storageValidation');
-const { checkFilePermission, getUserFilePermission } = require('../utils/filePermissions');
+const { checkFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
 
@@ -15,7 +15,7 @@ const socketIOServer = require('../utils/socketIOServer');
  * Register all storage routes with Fastify instance
  * @param {FastifyInstance} fastify - Fastify instance
  */
-async function storageRoutes(fastify, options) {
+async function storageRoutes(fastify, _options) {
   // Log route registration
   logger.info('📁 Storage routes registered: /api/storage/*');
   logger.info('   → GET    /api/storage/files');
@@ -446,7 +446,6 @@ async function storageRoutes(fastify, options) {
         
         // Update publicUrl with the file ID for local storage (enables preview/download via API)
         if (!storageResult.publicUrl || storageResult.publicUrl.startsWith('/api/storage/files/')) {
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
           const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
           const publicUrl = `${apiUrl}/api/storage/files/${savedFile.id}/download`;
           
@@ -673,8 +672,6 @@ async function storageRoutes(fastify, options) {
         });
       }
 
-      const existingFile = permissionCheck.file;
-
       const updatedFile = await prisma.storageFile.update({
         where: { id: fileId },
         data: updates
@@ -739,8 +736,6 @@ async function storageRoutes(fastify, options) {
           message: permissionCheck.reason || 'You do not have permission to delete this file. Only file owners can delete files.'
         });
       }
-
-      const file = permissionCheck.file;
 
       // Soft delete - set deletedAt timestamp
       const updatedFile = await prisma.storageFile.update({
@@ -1648,8 +1643,6 @@ async function storageRoutes(fastify, options) {
           message: permissionCheck.reason || 'You do not have permission to comment on this file'
         });
       }
-
-      const file = permissionCheck.file;
 
       // If parentId is provided, verify it exists
       if (parentId) {

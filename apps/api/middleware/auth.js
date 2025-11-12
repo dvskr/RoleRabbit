@@ -63,7 +63,7 @@ async function authenticate(request, reply) {
  * @param {FastifyReply} reply - Fastify reply object
  * @returns {Promise<void>}
  */
-async function optionalAuthenticate(request, reply) {
+async function optionalAuthenticate(request, _reply) {
   try {
     await request.jwtVerify();
   } catch (err) {

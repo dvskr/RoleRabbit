@@ -33,22 +33,37 @@ const normalizeStringList = (value: unknown, splitDelimiters = false): string[] 
     .map((entry) => (typeof entry === 'string' ? entry : String(entry ?? '')));
 
   if (!splitDelimiters) {
-    return values.map((entry) => sanitizeString(entry)).filter(Boolean);
+    const hasBlank = values.some((entry) => entry === '' || entry === null || entry === undefined);
+    const cleaned = values.map((entry) => sanitizeString(entry)).filter((item) => item.length > 0);
+    if (hasBlank) {
+      cleaned.push('');
+    }
+    if (cleaned.length === 0) {
+      cleaned.push('');
+    }
+    return cleaned;
   }
 
-  return values
-    .flatMap((entry) =>
-      entry
-        .split(delimiterRegex)
-        .map((token) => sanitizeString(token))
-        .filter(Boolean)
-    )
+  const expanded = values.flatMap((entry) => entry.split(delimiterRegex));
+  const hasBlank = expanded.some((entry) => entry === '' || entry === null || entry === undefined);
+  const parts = expanded
+    .map((token) => sanitizeString(token))
+    .filter((token) => token.length > 0)
     .reduce<string[]>((acc, item) => {
       if (!acc.includes(item)) {
         acc.push(item);
       }
       return acc;
     }, []);
+
+  if (hasBlank) {
+    parts.push('');
+  }
+  if (parts.length === 0) {
+    parts.push('');
+  }
+
+  return parts;
 };
 
 const normalizeCustomFields = (value: unknown): CustomField[] => {
@@ -113,7 +128,7 @@ const ProjectsSection = React.memo(function ProjectsSection({
       description: '',
       link: '',
       bullets: [''],
-      skills: [],
+      skills: [''],
       customFields: []
     };
     setResumeData(prev => {
@@ -613,3 +628,7 @@ const ProjectsSection = React.memo(function ProjectsSection({
 });
 
 export default ProjectsSection;
+
+
+
+

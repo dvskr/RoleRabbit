@@ -5,6 +5,11 @@ import { ResumeData, SectionVisibility, CustomSection } from '../../../types/res
 import { CustomField } from '../../../types/resume';
 import { ResumeFile } from '../../../types/cloudStorage';
 import { DashboardTab } from '../constants/dashboard.constants';
+import type {
+  ResumeApplyContext,
+  ResumeApplySuccessPayload,
+  ResumeApplyErrorPayload,
+} from '../../../hooks/useResumeApplyIndicator';
 
 // Lazy load modals
 import dynamic from 'next/dynamic';
@@ -101,6 +106,10 @@ interface DashboardModalsProps {
   slotsUsed?: number;
   maxSlots?: number;
   onResumeApplied?: (resumeId: string, resumeRecord?: any) => void;
+  onApplyStart?: (payload: ResumeApplyContext) => void;
+  onApplySuccess?: (payload: ResumeApplySuccessPayload) => void;
+  onApplyError?: (payload: ResumeApplyErrorPayload) => void;
+  onApplyComplete?: (payload: ResumeApplyContext) => void;
   onAddSection: () => void;
   onOpenAIGenerateModal: (section: string) => void;
   onAddField: () => void;
@@ -182,6 +191,10 @@ export function DashboardModals(props: DashboardModalsProps) {
     slotsUsed,
     maxSlots,
     onResumeApplied,
+    onApplyStart,
+    onApplySuccess,
+    onApplyError,
+    onApplyComplete,
     onAddSection,
     onOpenAIGenerateModal,
     onAddField,
@@ -226,6 +239,10 @@ export function DashboardModals(props: DashboardModalsProps) {
         slotsUsed={slotsUsed}
         maxSlots={maxSlots}
         onResumeApplied={onResumeApplied}
+        onApplyStart={onApplyStart}
+        onApplySuccess={onApplySuccess}
+        onApplyError={onApplyError}
+        onApplyComplete={onApplyComplete}
       />
 
       {/* Add Custom Section Modal */}

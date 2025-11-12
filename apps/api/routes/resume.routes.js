@@ -86,7 +86,7 @@ const validateResumeContactInfo = (resumeData = {}) => {
  * Register all resume routes with Fastify instance
  * @param {FastifyInstance} fastify - Fastify instance
  */
-async function resumeRoutes(fastify, options) {
+async function resumeRoutes(fastify, _options) {
   // Hybrid resume parsing endpoint
   fastify.post('/api/resumes/parse', {
     preHandler: authenticate
@@ -460,7 +460,7 @@ async function resumeRoutes(fastify, options) {
 
       // Validate all fields are defined (not undefined)
       const undefinedFields = Object.entries(createData)
-        .filter(([key, value]) => value === undefined)
+        .filter(([, value]) => value === undefined)
         .map(([key]) => key);
       
       if (undefinedFields.length > 0) {
@@ -631,11 +631,6 @@ async function resumeRoutes(fastify, options) {
           });
         }
       }
-
-      // Extract sectionOrder separately (it's String[], not JSON)
-      const sectionOrder = data?.sectionOrder !== undefined 
-        ? (Array.isArray(data.sectionOrder) ? data.sectionOrder : [])
-        : existingResume.sectionOrder;
 
       // Prepare update data
       const updateData = {

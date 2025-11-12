@@ -32,7 +32,17 @@ const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: f
 const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
 const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
-const AIAgents = dynamic(() => import('../../components/AIAgents/index'), { ssr: false });
+const AIAgents = dynamic(
+  () => import('../../components/AIAgents').then((mod) => ({ default: mod.default })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center text-sm text-gray-500">Loading AI Agents...</div>
+      </div>
+    ),
+  }
+);
 import {
   ResumeData,
   CustomSection,
@@ -44,6 +54,7 @@ import { useResumeData } from '../../hooks/useResumeData';
 import { useBaseResumes } from '../../hooks/useBaseResumes';
 import { useModals } from '../../hooks/useModals';
 import { useAI } from '../../hooks/useAI';
+import { useResumeApplyIndicator } from '../../hooks/useResumeApplyIndicator';
 // Keep utils lazy - import only when actually needed
 import { resumeHelpers } from '../../utils/resumeHelpers';
 import { aiHelpers } from '../../utils/aiHelpers';
@@ -51,8 +62,9 @@ import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
 import { Loading } from '../../components/Loading';
 import { useToasts, ToastContainer } from '../../components/Toast';
+import { useAIProgress } from '../../hooks/useAIProgress';
 import { ConflictIndicator } from '../../components/ConflictIndicator';
-import { PlusCircle, Upload, Trash2 } from 'lucide-react';
+import { PlusCircle, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 // Lazy load heavy analytics and modal components
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
 const EmailAnalytics = dynamic(() => import('../../components/email/EmailAnalytics'), { ssr: false });
@@ -179,6 +191,19 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   // Toast notifications
   const { toasts, showToast, dismissToast } = useToasts();
 
+  // AI Progress tracking
+  const atsProgressHook = useAIProgress();
+  const tailorProgressHook = useAIProgress();
+
+  const {
+    state: resumeApplyState,
+    message: resumeApplyMessage,
+    onApplyStart: handleApplyStartIndicator,
+    onApplySuccess: handleApplySuccessIndicator,
+    onApplyError: handleApplyErrorIndicator,
+    onApplyComplete: handleApplyCompleteIndicator,
+  } = useResumeApplyIndicator();
+
   const handleResumeLoaded = useCallback(({ resume, snapshot }: { resume: any; snapshot: { customFields?: CustomField[] } }) => {
     initializingCustomFieldsRef.current = true;
     try {
@@ -210,7 +235,10 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     error: resumeError,
     createResume: createBaseResume,
     activateResume,
-    deleteResume: deleteBaseResume
+    deleteResume: deleteBaseResume,
+    refresh: refreshBaseResumes,
+    setActiveId: setLocalActiveBaseResumeId,
+    upsertResume: upsertBaseResume
   } = resumeHook;
 
   // Memoize maxSlots to prevent unnecessary re-renders
@@ -539,12 +567,26 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     tailorEditMode,
     selectedTone,
     selectedLength,
+    tailorResult,
     setTailorResult,
     setIsTailoring,
     setCoverLetterDraft,
     setIsGeneratingCoverLetter,
     setPortfolioDraft,
-    setIsGeneratingPortfolio
+    setIsGeneratingPortfolio,
+    // AI Progress tracking
+    atsProgress: atsProgressHook.progress,
+    startATSProgress: atsProgressHook.startProgress,
+    updateATSProgress: atsProgressHook.updateProgress,
+    completeATSProgress: atsProgressHook.completeProgress,
+    resetATSProgress: atsProgressHook.resetProgress,
+    tailorProgress: tailorProgressHook.progress,
+    startTailorProgress: tailorProgressHook.startProgress,
+    updateTailorProgress: tailorProgressHook.updateProgress,
+    completeTailorProgress: tailorProgressHook.completeProgress,
+    resetTailorProgress: tailorProgressHook.resetProgress,
+    // Toast notifications
+    showToast
   });
 
   const {
@@ -564,6 +606,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     generateCoverLetterDraft,
     generatePortfolioDraft,
     saveResume,
+    confirmTailorResult,
     undo,
     redo,
   } = dashboardHandlers;
@@ -875,9 +918,37 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     }
   };
 
+  const resumeApplyBackground =
+    resumeApplyState.status === 'success'
+      ? colors.successGreen
+      : resumeApplyState.status === 'error'
+      ? colors.errorRed
+      : colors.activeBlueText;
+
   return (
     <ErrorBoundary>
       <div className="fixed inset-0 flex" style={{ background: colors.background }}>
+        {activeTab === 'editor' && resumeApplyState.status !== 'idle' && resumeApplyMessage && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+            <div
+              className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium pointer-events-auto"
+              style={{
+                background: resumeApplyBackground,
+                color: '#ffffff',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+              }}
+            >
+              {resumeApplyState.status === 'loading' ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : resumeApplyState.status === 'success' ? (
+                <CheckCircle2 size={18} />
+              ) : (
+                <AlertCircle size={18} />
+              )}
+              <span>{resumeApplyMessage}</span>
+            </div>
+          </div>
+        )}
         {/* Sidebar */}
         <Sidebar
           activeTab={activeTab}
@@ -1043,8 +1114,12 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                       portfolioDraft={portfolioDraft}
                       setPortfolioDraft={setPortfolioDraft}
                       isTailoring={isTailoring}
+                      onConfirmTailorChanges={confirmTailorResult}
+                      isSavingResume={isSaving}
                       isGeneratingCoverLetter={isGeneratingCoverLetter}
                       isGeneratingPortfolio={isGeneratingPortfolio}
+                      atsProgress={atsProgressHook.progress}
+                      tailorProgress={tailorProgressHook.progress}
                 onResumeUpdate={(updatedData) => {
                   setResumeData(updatedData);
                   // Add to history for undo/redo
@@ -1136,16 +1211,41 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             if (process.env.NODE_ENV !== 'production') {
               logger.debug('onResumeApplied called', { resumeId, hasRecord: !!resumeRecord });
             }
+            if (resumeId) {
+              setLocalActiveBaseResumeId(resumeId);
+            }
             if (resumeRecord) {
               if (process.env.NODE_ENV !== 'production') {
                 logger.debug('Applying resume record', { id: resumeRecord.id, dataKeys: Object.keys(resumeRecord.data || {}) });
               }
               applyBaseResume(resumeRecord as BaseResumeRecord);
-            } else if (resumeId) {
-              if (process.env.NODE_ENV !== 'production') {
-                logger.debug('Loading resume by ID', { resumeId });
+              try {
+                upsertBaseResume({
+                  id: resumeRecord.id,
+                  slotNumber: (resumeRecord as BaseResumeRecord)?.slotNumber ?? 0,
+                  name: resumeRecord.name ?? resumeRecord.metadata?.originalFileName ?? 'Imported resume',
+                  isActive: true,
+                  data: resumeRecord.data,
+                  formatting: resumeRecord.formatting ?? undefined,
+                  metadata: resumeRecord.metadata ?? undefined,
+                  createdAt: resumeRecord.createdAt ?? undefined,
+                  updatedAt: resumeRecord.updatedAt ?? undefined
+                });
+              } catch (syncError) {
+                if (process.env.NODE_ENV !== 'production') {
+                  logger.warn('Failed to sync imported resume into dashboard list', syncError);
+                }
               }
+            }
+            if (resumeId) {
+              if (process.env.NODE_ENV !== 'production') {
+                logger.debug('Refreshing resume from server', { resumeId });
+              }
+              const refreshPromise = refreshBaseResumes({ showSpinner: false }).catch((error: unknown) => {
+                logger.warn('Failed to refresh base resumes after resume apply', error);
+              });
               await loadResumeById(resumeId);
+              await refreshPromise;
             }
             if (process.env.NODE_ENV !== 'production') {
               logger.debug('Resume applied successfully');
@@ -1155,6 +1255,10 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             showToast('Resume applied but the editor could not refresh automatically. Please reopen the editor.', 'error', 6000);
           }
         }}
+        onApplyStart={handleApplyStartIndicator}
+        onApplySuccess={handleApplySuccessIndicator}
+        onApplyError={handleApplyErrorIndicator}
+        onApplyComplete={handleApplyCompleteIndicator}
         onAddSection={addCustomSection}
         onOpenAIGenerateModal={openAIGenerateModal}
         onAddField={addCustomField}

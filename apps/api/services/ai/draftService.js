@@ -4,6 +4,7 @@ const { CACHE_NAMESPACES } = require('../../utils/cacheKeys');
 const cacheConfig = require('../../config/cacheConfig');
 const { setAtPath } = require('../../utils/objectPath');
 const logger = require('../../utils/logger');
+const { normalizeResumeData } = require('@roleready/resume-normalizer');
 
 const DEFAULT_DRAFT_TTL_MS = cacheConfig.aiDraftTtlMs || 15 * 60 * 1000;
 
@@ -107,6 +108,7 @@ async function applyDraft({ draftId, userId }) {
   }
 
   const updatedData = applyPatchToResumeData(baseResume.data, draft.payload?.patch);
+  const normalizedData = normalizeResumeData(updatedData);
   const updatedMetadata = draft.payload?.metadataPatch
     ? applyPatchToResumeData(baseResume.metadata || {}, draft.payload.metadataPatch)
     : baseResume.metadata;
@@ -114,7 +116,7 @@ async function applyDraft({ draftId, userId }) {
   const updatedResume = await prisma.baseResume.update({
     where: { id: baseResume.id },
     data: {
-      data: updatedData,
+      data: normalizedData,
       metadata: updatedMetadata ?? baseResume.metadata,
       lastAIAccessedAt: new Date()
     },

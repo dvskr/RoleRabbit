@@ -7,8 +7,6 @@
 
 const dns = require('dns').promises;
 
-const domain = 'rolerabbit.com';
-
 // Expected DNS records from Resend
 const expectedRecords = {
   dkim: {

@@ -5,17 +5,19 @@ import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
 import { ResumeData, ExperienceItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const sanitizeString = (value: unknown): string => {
+const sanitize = (value: unknown): string => {
   if (typeof value !== 'string') {
     return '';
   }
-  return value.replace(/\s+/g, ' ').trim().replace(/^[•\-\u2022]+\s*/, '');
+  return value.replace(/\s+/g, ' ').trim();
 };
 
-const collectOrderedValues = (value: unknown): unknown[] => {
-  if (value === null || value === undefined) return [];
+const toArray = (value: unknown): unknown[] => {
   if (Array.isArray(value)) {
     return value;
+  }
+  if (value === null || value === undefined) {
+    return [];
   }
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
@@ -26,30 +28,47 @@ const collectOrderedValues = (value: unknown): unknown[] => {
   return [value];
 };
 
-const normalizeBulletList = (value: unknown): string[] => {
-  return collectOrderedValues(value)
-    .flatMap((entry) => collectOrderedValues(entry))
-    .map((entry) => sanitizeString(entry))
-    .filter(Boolean);
+const environmentDelimiter = /[,\n\r•·\u2022]+/;
+
+const normalizeBullets = (value: unknown): string[] => {
+  const raw = toArray(value).flatMap(toArray).map((entry) => (typeof entry === 'string' ? entry : String(entry ?? '')));
+  const hasBlank = raw.some((entry) => entry === '' || entry === null || entry === undefined);
+  const sanitized = raw.map(sanitize).filter((entry) => entry.length > 0);
+  if (hasBlank) {
+    sanitized.push('');
+  }
+  if (sanitized.length === 0) {
+    sanitized.push('');
+  }
+  return sanitized;
 };
 
-const normalizeEnvironmentList = (value: unknown): string[] => {
-  const delimiterRegex = /[,\n\r•·\u2022]+/;
-  return collectOrderedValues(value)
-    .flatMap((entry) => collectOrderedValues(entry))
-    .map((entry) => (typeof entry === 'string' ? entry : String(entry ?? '')))
-    .flatMap((entry) =>
-      entry
-        .split(delimiterRegex)
-        .map((token) => sanitizeString(token))
-        .filter(Boolean)
-    )
-    .reduce<string[]>((acc, item) => {
-      if (!acc.includes(item)) {
-        acc.push(item);
-      }
-      return acc;
-    }, []);
+const normalizeEnvironment = (value: unknown): string[] => {
+  const baseEntries = toArray(value).flatMap((entry) =>
+    Array.isArray(entry) ? entry : [entry]
+  );
+
+  const expanded = baseEntries.flatMap((entry) =>
+    typeof entry === 'string' ? entry.split(environmentDelimiter) : [entry]
+  );
+
+  const hasBlank = expanded.some((entry) => entry === '' || entry === null || entry === undefined);
+
+  const sanitized = expanded
+    .map((entry) => (typeof entry === 'string' ? sanitize(entry) : String(entry ?? '')))
+    .filter((entry) => entry.length > 0);
+
+  const unique = Array.from(new Set(sanitized));
+
+  if (hasBlank) {
+    unique.push('');
+  }
+
+  if (unique.length === 0) {
+    unique.push('');
+  }
+
+  return unique;
 };
 
 const normalizeCustomFields = (value: unknown): CustomField[] => {
@@ -60,9 +79,8 @@ const normalizeCustomFields = (value: unknown): CustomField[] => {
 };
 
 const normalizeExperienceArray = (value: unknown): ExperienceItem[] => {
-  const list = collectOrderedValues(value);
-
-  return list
+  const raw = toArray(value);
+  return raw
     .map((entry, index) => {
       const candidate = entry as Partial<ExperienceItem>;
       const rawId = candidate?.id;
@@ -71,27 +89,28 @@ const normalizeExperienceArray = (value: unknown): ExperienceItem[] => {
           ? rawId
           : Number(rawId) || Date.now() + index;
 
+      const bullets = normalizeBullets(candidate?.bullets ?? candidate?.responsibilities);
+      const environment = normalizeEnvironment(candidate?.environment);
+
       return {
         id,
-        company: sanitizeString(candidate?.company),
-        position: sanitizeString(candidate?.position),
-        period: sanitizeString(candidate?.period),
-        endPeriod: sanitizeString(candidate?.endPeriod),
-        location: sanitizeString(candidate?.location),
-        bullets: normalizeBulletList(
-          candidate?.bullets?.length ? candidate?.bullets : candidate?.responsibilities
-        ),
-        environment: normalizeEnvironmentList(candidate?.environment),
+        company: sanitize(candidate?.company),
+        position: sanitize(candidate?.position),
+        period: sanitize(candidate?.period),
+        endPeriod: sanitize(candidate?.endPeriod),
+        location: sanitize(candidate?.location),
+        bullets: bullets.length ? bullets : [''],
+        environment,
         customFields: normalizeCustomFields(candidate?.customFields),
       } as ExperienceItem;
     })
-    .filter((item) => !!item);
+    .filter(Boolean);
 };
 
 interface ExperienceSectionProps {
   resumeData: ResumeData;
   setResumeData: (data: ResumeData | ((prev: ResumeData) => ResumeData)) => void;
-  sectionVisibility: { [key: string]: boolean };
+  sectionVisibility: Record<string, boolean>;
   onHideSection: (section: string) => void;
   onOpenAIGenerateModal: (section: string) => void;
 }
@@ -101,124 +120,151 @@ const ExperienceSection = React.memo(function ExperienceSection({
   setResumeData,
   sectionVisibility,
   onHideSection,
-  onOpenAIGenerateModal
+  onOpenAIGenerateModal,
 }: ExperienceSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  
-  // Memoize experience array
-  const experience = useMemo(() => {
-    return normalizeExperienceArray(resumeData.experience);
-  }, [resumeData.experience]);
 
-  const addExperience = () => {
-    const newExperience: ExperienceItem = {
-      id: Date.now(),
-      company: '',
-      position: '',
-      period: '',
-      endPeriod: '',
-      location: '',
-      bullets: [''],
-      environment: [],
-      customFields: []
-    };
-    setResumeData(prev => {
-      const normalized = normalizeExperienceArray(prev.experience);
-      return { ...prev, experience: [...normalized, newExperience] };
+  const experiences = useMemo(
+    () => normalizeExperienceArray(resumeData.experience),
+    [resumeData.experience]
+  );
+
+  const updateExperiences = (updater: (current: ExperienceItem[]) => ExperienceItem[]) => {
+    setResumeData((prev) => {
+      const current = normalizeExperienceArray(prev.experience);
+      return { ...prev, experience: updater(current) };
     });
   };
 
-  const updateExperience = (id: number, updates: Partial<ExperienceItem>) => {
-    setResumeData((prev: ResumeData) => {
-      const normalized = normalizeExperienceArray(prev.experience);
-      const updatedExperience = normalized.map((item: ExperienceItem) =>
-        item.id === id ? { ...item, ...updates } : item
-      );
-      return { ...prev, experience: updatedExperience };
-    });
+  const handleAddExperience = () => {
+    updateExperiences((current) => [
+      ...current,
+      {
+        id: Date.now(),
+        company: '',
+        position: '',
+        period: '',
+        endPeriod: '',
+        location: '',
+        bullets: [''],
+        environment: [],
+        customFields: [],
+      },
+    ]);
   };
 
-  const deleteExperience = (id: number) => {
-    setResumeData((prev: ResumeData) => {
-      const normalized = normalizeExperienceArray(prev.experience);
-      const updatedExperience = normalized.filter((item: ExperienceItem) => item.id !== id);
-      return { ...prev, experience: updatedExperience };
-    });
+  const handleUpdateExperience = (id: number, updates: Partial<ExperienceItem>) => {
+    updateExperiences((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...updates } : item))
+    );
   };
 
-  const addBullet = (expId: number) => {
-    const exp = experience.find(e => e.id === expId);
-    if (exp) {
-      const currentBullets = normalizeBulletList(exp.bullets);
-      updateExperience(expId, { bullets: [...currentBullets, ''] });
-    }
+  const handleDeleteExperience = (id: number) => {
+    updateExperiences((current) => current.filter((item) => item.id !== id));
   };
 
-  const updateBullet = (expId: number, bulletIndex: number, value: string) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const updatedBullets = [...normalizeBulletList(exp.bullets)];
-    updatedBullets[bulletIndex] = value;
-    updateExperience(expId, { bullets: updatedBullets });
+  const handleAddBullet = (id: number) => {
+    updateExperiences((current) =>
+      current.map((item) =>
+        item.id === id
+          ? { ...item, bullets: [...item.bullets, ''] }
+          : item
+      )
+    );
   };
 
-  const deleteBullet = (expId: number, bulletIndex: number) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const updatedBullets = normalizeBulletList(exp.bullets).filter((_, index) => index !== bulletIndex);
-    updateExperience(expId, { bullets: updatedBullets });
+  const handleUpdateBullet = (id: number, index: number, value: string) => {
+    updateExperiences((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+        const bullets = [...item.bullets];
+        bullets[index] = value;
+        return { ...item, bullets };
+      })
+    );
   };
 
-  const addEnvironment = (expId: number) => {
-    const exp = experience.find(e => e.id === expId);
-    if (exp) {
-      const envList = normalizeEnvironmentList(exp.environment);
-      updateExperience(expId, { environment: [...envList, ''] });
-    }
+  const handleDeleteBullet = (id: number, index: number) => {
+    updateExperiences((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+        const bullets = item.bullets.filter((_, i) => i !== index);
+        return { ...item, bullets: bullets.length ? bullets : [''] };
+      })
+    );
   };
 
-  const updateEnvironment = (expId: number, envIndex: number, value: string) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const updatedEnvironment = [...normalizeEnvironmentList(exp.environment)];
-    updatedEnvironment[envIndex] = value;
-    updateExperience(expId, { environment: updatedEnvironment });
+  const handleAddEnvironment = (id: number) => {
+    updateExperiences((current) =>
+      current.map((item) =>
+        item.id === id ? { ...item, environment: [...item.environment, ''] } : item
+      )
+    );
   };
 
-  const deleteEnvironment = (expId: number, envIndex: number) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const updatedEnvironment = normalizeEnvironmentList(exp.environment).filter((_, index) => index !== envIndex);
-    updateExperience(expId, { environment: updatedEnvironment });
+  const handleUpdateEnvironment = (id: number, index: number, value: string) => {
+    updateExperiences((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+        const environment = [...item.environment];
+        environment[index] = value;
+        return { ...item, environment };
+      })
+    );
   };
 
-  const addCustomFieldToExperience = (expId: number, field: CustomField) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const currentFields = Array.isArray(exp.customFields) ? exp.customFields : [];
-    updateExperience(expId, { customFields: [...currentFields, field] });
+  const handleDeleteEnvironment = (id: number, index: number) => {
+    updateExperiences((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+        const environment = item.environment.filter((_, i) => i !== index);
+        return { ...item, environment };
+      })
+    );
   };
 
-  const updateCustomFieldInExperience = (expId: number, fieldId: string, value: string) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const currentFields = Array.isArray(exp.customFields) ? exp.customFields : [];
-    const updatedFields = currentFields.map(f => f.id === fieldId ? { ...f, value } : f);
-    updateExperience(expId, { customFields: updatedFields });
+  const handleAddCustomField = (id: number) => {
+    updateExperiences((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              customFields: [
+                ...(item.customFields || []),
+                { id: `custom-${Date.now()}`, name: 'Custom Field', value: '' },
+              ],
+            }
+          : item
+      )
+    );
   };
 
-  const deleteCustomFieldFromExperience = (expId: number, fieldId: string) => {
-    const exp = experience.find(e => e.id === expId);
-    if (!exp) return;
-    const currentFields = Array.isArray(exp.customFields) ? exp.customFields : [];
-    const updatedFields = currentFields.filter(f => f.id !== fieldId);
-    updateExperience(expId, { customFields: updatedFields });
+  const handleUpdateCustomField = (id: number, fieldId: string, value: string) => {
+    updateExperiences((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+        const customFields = (item.customFields || []).map((field) =>
+          field.id === fieldId ? { ...field, value } : field
+        );
+        return { ...item, customFields };
+      })
+    );
+  };
+
+  const handleDeleteCustomField = (id: number, fieldId: string) => {
+    updateExperiences((current) =>
+      current.map((item) => {
+        if (item.id !== id) return item;
+        const customFields = (item.customFields || []).filter((field) => field.id !== fieldId);
+        return { ...item, customFields };
+      })
+    );
   };
 
   return (
     <div className="mb-4 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
-        <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <GripVertical size={18} className="cursor-move" style={{ color: colors.tertiaryText }} />
           <h3 className="text-lg font-bold uppercase tracking-wide" style={{ color: colors.primaryText }}>
@@ -226,438 +272,238 @@ const ExperienceSection = React.memo(function ExperienceSection({
           </h3>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={addExperience}
+          <button
+            onClick={handleAddExperience}
             className="flex items-center gap-2 font-semibold px-4 py-2 rounded-xl transition-colors"
             style={{ color: colors.primaryBlue }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.badgeInfoBg;
-              e.currentTarget.style.color = colors.primaryBlue;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = colors.primaryBlue;
-            }}
           >
             <Plus size={18} />
             Add
           </button>
-          <button 
+          <button
             onClick={() => onHideSection('experience')}
             className="p-2 rounded-xl transition-colors"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.hoverBackground;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
-            title={sectionVisibility.experience ? "Hide experience section" : "Show experience section"}
+            title={sectionVisibility.experience ? 'Hide experience section' : 'Show experience section'}
           >
             <Eye size={18} style={{ color: sectionVisibility.experience ? colors.secondaryText : colors.tertiaryText }} />
           </button>
         </div>
       </div>
 
-      {experience.length === 0 && (
-        <div 
+      {experiences.length === 0 ? (
+        <div
           className="text-center py-12 border-2 border-dashed rounded-2xl transition-all"
-          style={{
-            border: `2px dashed ${colors.border}`,
-            background: colors.inputBackground,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = colors.primaryBlue;
-            e.currentTarget.style.background = colors.badgeInfoBg;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = colors.border;
-            e.currentTarget.style.background = colors.inputBackground;
-          }}
+          style={{ border: `2px dashed ${colors.border}`, background: colors.inputBackground }}
         >
-          <div 
+          <div
             className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg"
-            style={{
-              background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
-            }}
+            style={{ background: `linear-gradient(to bottom right, ${colors.primaryBlue}, ${colors.badgePurpleText})` }}
           >
             <Plus size={32} className="text-white" />
           </div>
-          <p className="mb-4 font-semibold" style={{ color: colors.secondaryText }}>No experience added yet</p>
-          <button 
-            onClick={addExperience}
+          <p className="mb-4 font-semibold" style={{ color: colors.secondaryText }}>
+            No experience added yet
+          </p>
+          <button
+            onClick={handleAddExperience}
             className="px-6 py-3 rounded-xl inline-flex items-center gap-2 font-bold transition-all"
             style={{
               background: `linear-gradient(to right, ${colors.primaryBlue}, ${colors.badgePurpleText})`,
               color: 'white',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = `0 8px 16px ${colors.primaryBlue}40`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = 'none';
             }}
           >
             <Plus size={18} />
             Add Experience
           </button>
         </div>
-      )}
+      ) : (
+        experiences.map((exp) => (
+          <div
+            key={exp.id}
+            className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
+            style={{ background: colors.cardBackground, border: `2px solid ${colors.border}` }}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <GripVertical size={18} className="cursor-move mt-2 flex-shrink-0" style={{ color: colors.tertiaryText }} />
+              <div className="flex-1 space-y-3 min-w-0">
+                <input
+                  className="font-bold text-xs border-2 outline-none rounded-lg px-2 py-1.5 w-full transition-all"
+                  style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.primaryText }}
+                  value={exp.company}
+                  onChange={(e) => handleUpdateExperience(exp.id, { company: e.target.value })}
+                  placeholder="Company Name"
+                />
 
-      {experience.map((exp) => (
-        <div 
-          key={exp.id} 
-          className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
-          style={{
-            background: colors.cardBackground,
-            border: `2px solid ${colors.border}`,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = colors.primaryBlue;
-            e.currentTarget.style.boxShadow = `0 8px 16px ${colors.primaryBlue}20`;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = colors.border;
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <div className="flex items-start gap-3 mb-4">
-            <GripVertical size={18} className="cursor-move mt-2 flex-shrink-0" style={{ color: colors.tertiaryText }} />
-            <div className="flex-1 space-y-3 min-w-0">
-              <input
-                className="font-bold text-xs border-2 outline-none rounded-lg px-2 py-1.5 w-full transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `2px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                value={exp.company}
-                onChange={(e) => updateExperience(exp.id, { company: e.target.value })}
-                placeholder="Company Name"
-                onFocus={(e) => {
-                  e.target.style.borderColor = colors.primaryBlue;
-                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = colors.border;
-                  e.target.style.outline = 'none';
-                }}
-              />
-              <div className="flex items-center gap-2 text-sm" style={{ color: colors.secondaryText }}>
-                <input 
-                  className="border-2 outline-none rounded-lg px-2 py-1.5 text-xs font-medium flex-1 min-w-0 transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `2px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  value={exp.period}
-                  onChange={(e) => updateExperience(exp.id, { period: e.target.value })}
-                  placeholder="Start Date"
-                  onFocus={(e) => {
-                    e.target.style.borderColor = colors.primaryBlue;
-                    e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = colors.border;
-                    e.target.style.outline = 'none';
-                  }}
-                />
-                <span className="font-bold flex-shrink-0" style={{ color: colors.tertiaryText }}>→</span>
-                <input 
-                  className="border-2 outline-none rounded-lg px-2 py-1.5 text-xs font-medium flex-1 min-w-0 transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `2px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  value={exp.endPeriod}
-                  onChange={(e) => updateExperience(exp.id, { endPeriod: e.target.value })}
-                  placeholder="End Date"
-                  onFocus={(e) => {
-                    e.target.style.borderColor = colors.primaryBlue;
-                    e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = colors.border;
-                    e.target.style.outline = 'none';
-                  }}
-                />
-              </div>
-              <input
-                className="text-xs border-2 outline-none rounded-lg px-2 py-1.5 w-full transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `2px solid ${colors.border}`,
-                  color: colors.secondaryText,
-                }}
-                value={exp.location}
-                onChange={(e) => updateExperience(exp.id, { location: e.target.value })}
-                placeholder="Location"
-                onFocus={(e) => {
-                  e.target.style.borderColor = colors.primaryBlue;
-                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = colors.border;
-                  e.target.style.outline = 'none';
-                }}
-              />
-              <input
-                className="font-semibold text-xs border-2 outline-none rounded-lg px-2 py-1.5 w-full transition-all"
-                style={{
-                  background: colors.inputBackground,
-                  border: `2px solid ${colors.border}`,
-                  color: colors.primaryText,
-                }}
-                value={exp.position}
-                onChange={(e) => updateExperience(exp.id, { position: e.target.value })}
-                placeholder="Job Title"
-                onFocus={(e) => {
-                  e.target.style.borderColor = colors.primaryBlue;
-                  e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = colors.border;
-                  e.target.style.outline = 'none';
-                }}
-              />
-              
-              {/* Custom Fields */}
-              {(exp.customFields || []).map((field) => (
-                <div key={field.id} className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-sm" style={{ color: colors.secondaryText }}>
                   <input
-                    className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
-                    style={{
-                      background: colors.inputBackground,
-                      border: `2px solid ${colors.border}`,
-                      color: colors.secondaryText,
-                    }}
-                    value={field.value || ''}
-                    onChange={(e) => updateCustomFieldInExperience(exp.id, field.id, e.target.value)}
-                    placeholder={field.name}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = colors.primaryBlue;
-                      e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = colors.border;
-                      e.target.style.outline = 'none';
-                    }}
+                    className="border-2 outline-none rounded-lg px-2 py-1.5 text-xs font-medium flex-1 min-w-0 transition-all"
+                    style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.primaryText }}
+                    value={exp.period}
+                    onChange={(e) => handleUpdateExperience(exp.id, { period: e.target.value })}
+                    placeholder="Start Date"
                   />
-                  <button
-                    onClick={() => deleteCustomFieldFromExperience(exp.id, field.id)}
-                    className="p-1 rounded-lg transition-colors"
-                    style={{ color: colors.errorRed }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = colors.badgeErrorBg;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                    title="Delete field"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <span className="font-bold flex-shrink-0" style={{ color: colors.tertiaryText }}>
+                    →
+                  </span>
+                  <input
+                    className="border-2 outline-none rounded-lg px-2 py-1.5 text-xs font-medium flex-1 min-w-0 transition-all"
+                    style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.primaryText }}
+                    value={exp.endPeriod}
+                    onChange={(e) => handleUpdateExperience(exp.id, { endPeriod: e.target.value })}
+                    placeholder="End Date"
+                  />
                 </div>
-              ))}
-              
-              {/* Add Custom Field Button */}
-              <div className="flex flex-wrap gap-2">
+
+                <input
+                  className="text-xs border-2 outline-none rounded-lg px-2 py-1.5 w-full transition-all"
+                  style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.secondaryText }}
+                  value={exp.location}
+                  onChange={(e) => handleUpdateExperience(exp.id, { location: e.target.value })}
+                  placeholder="Location"
+                />
+
+                <input
+                  className="font-semibold text-xs border-2 outline-none rounded-lg px-2 py-1.5 w-full transition-all"
+                  style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.primaryText }}
+                  value={exp.position}
+                  onChange={(e) => handleUpdateExperience(exp.id, { position: e.target.value })}
+                  placeholder="Job Title"
+                />
+
+                {(exp.customFields || []).map((field) => (
+                  <div key={field.id} className="flex items-center gap-2">
+                    <input
+                      className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
+                      style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.secondaryText }}
+                      value={field.value || ''}
+                      onChange={(e) => handleUpdateCustomField(exp.id, field.id, e.target.value)}
+                      placeholder={field.name}
+                    />
+                    <button
+                      onClick={() => handleDeleteCustomField(exp.id, field.id)}
+                      className="p-1 rounded-lg transition-colors"
+                      style={{ color: colors.errorRed }}
+                      title="Delete field"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+
                 <button
-                  onClick={() => {
-                    const newField: CustomField = {
-                      id: `custom-${Date.now()}`,
-                      name: 'Custom Field',
-                      value: ''
-                    };
-                    addCustomFieldToExperience(exp.id, newField);
-                  }}
+                  onClick={() => handleAddCustomField(exp.id)}
                   className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
                   style={{ color: colors.primaryBlue }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = colors.badgeInfoBg;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
                 >
                   <Plus size={12} />
                   Add Field
                 </button>
               </div>
-            </div>
-            <button
-              onClick={() => deleteExperience(exp.id)}
-              className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-all"
-              style={{ color: colors.errorRed }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = colors.badgeErrorBg;
-                e.currentTarget.style.opacity = '1';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-              title="Delete experience"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
 
-          {/* Bullets */}
-          <div className="ml-6 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold" style={{ color: colors.secondaryText }}>Responsibilities</h4>
               <button
-                onClick={() => addBullet(exp.id)}
-                className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
-                style={{ color: colors.primaryBlue }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.badgeInfoBg;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
+                onClick={() => handleDeleteExperience(exp.id)}
+                className="opacity-0 group-hover:opacity-100 p-2 rounded-xl transition-all"
+                style={{ color: colors.errorRed }}
+                title="Delete experience"
               >
-                <Plus size={12} />
-                Add Responsibility
+                <Trash2 size={18} />
               </button>
             </div>
-            {exp.bullets.map((bullet, bulletIndex) => (
-              <div key={bulletIndex} className="flex items-start gap-2">
-                <span className="mt-1 flex-shrink-0 text-xs resume-bullet" data-bullet style={{ color: colors.tertiaryText }}>•</span>
-                <input
-                  className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
-                  style={{
-                    background: colors.inputBackground,
-                    border: `2px solid ${colors.border}`,
-                    color: colors.primaryText,
-                  }}
-                  value={bullet}
-                  onChange={(e) => updateBullet(exp.id, bulletIndex, e.target.value)}
-                  placeholder="Describe your responsibility..."
-                  onFocus={(e) => {
-                    e.target.style.borderColor = colors.primaryBlue;
-                    e.target.style.outline = `2px solid ${colors.primaryBlue}40`;
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = colors.border;
-                    e.target.style.outline = 'none';
-                  }}
-                />
+
+            <div className="ml-6 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold" style={{ color: colors.secondaryText }}>
+                  Responsibilities
+                </h4>
                 <button
-                  onClick={() => deleteBullet(exp.id, bulletIndex)}
-                  className="p-1 rounded-lg transition-colors flex-shrink-0"
-                  style={{ color: colors.errorRed }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = colors.badgeErrorBg;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                  title="Delete bullet"
+                  onClick={() => handleAddBullet(exp.id)}
+                  className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                  style={{ color: colors.primaryBlue }}
                 >
-                  <X size={14} />
+                  <Plus size={12} />
+                  Add Responsibility
                 </button>
               </div>
-            ))}
-          </div>
 
-          {/* Environment */}
-          <div className="ml-6 mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-semibold" style={{ color: colors.secondaryText }}>Technologies</h4>
-              <button
-                onClick={() => addEnvironment(exp.id)}
-                className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
-                style={{ color: colors.primaryBlue }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.badgeInfoBg;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <Plus size={12} />
-                Add Tech
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {exp.environment.map((tech, techIndex) => (
-                <div 
-                  key={techIndex} 
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
-                  style={{ 
-                    width: 'fit-content',
-                    background: colors.inputBackground,
-                    border: `1px solid ${colors.border}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = colors.borderFocused;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = colors.border;
-                  }}
-                >
+              {exp.bullets.map((bullet, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <span className="mt-1 flex-shrink-0 text-xs" style={{ color: colors.tertiaryText }}>
+                    •
+                  </span>
                   <input
-                    type="text"
-                    className="text-xs bg-transparent border-none outline-none transition-all"
-                    style={{
-                      color: colors.primaryText,
-                    }}
-                    value={tech}
-                    onChange={(e) => {
-                      updateEnvironment(exp.id, techIndex, e.target.value);
-                      // Auto-resize the input
-                      const input = e.target;
-                      input.style.width = `${Math.max(e.target.value.length * 7 + 16, 60)}px`;
-                    }}
-                    placeholder="Technology"
-                    autoComplete="off"
-                    style={{ 
-                      width: `${Math.max(tech.length * 7 + 16, 60)}px`,
-                      maxWidth: '300px',
-                      minWidth: '60px'
-                    }}
+                    className="flex-1 text-xs border-2 outline-none rounded-lg px-2 py-1.5 min-w-0 transition-all"
+                    style={{ background: colors.inputBackground, border: `2px solid ${colors.border}`, color: colors.primaryText }}
+                    value={bullet}
+                    onChange={(e) => handleUpdateBullet(exp.id, index, e.target.value)}
+                    placeholder="Describe your responsibility..."
                   />
                   <button
-                    onClick={() => deleteEnvironment(exp.id, techIndex)}
-                    className="transition-colors flex-shrink-0"
-                    style={{ color: colors.tertiaryText }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.color = colors.errorRed;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.color = colors.tertiaryText;
-                    }}
+                    onClick={() => handleDeleteBullet(exp.id, index)}
+                    className="p-1 rounded-lg transition-colors flex-shrink-0"
+                    style={{ color: colors.errorRed }}
+                    title="Delete bullet"
                   >
-                    <X size={12} />
+                    <X size={14} />
                   </button>
                 </div>
               ))}
             </div>
+
+            <div className="ml-6 mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold" style={{ color: colors.secondaryText }}>
+                  Technologies
+                </h4>
+                <button
+                  onClick={() => handleAddEnvironment(exp.id)}
+                  className="text-xs px-2 py-1 rounded-lg flex items-center gap-1 transition-colors"
+                  style={{ color: colors.primaryBlue }}
+                >
+                  <Plus size={12} />
+                  Add Tech
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {exp.environment.map((tech, index) => (
+                  <div
+                    key={index}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg transition-all"
+                    style={{ background: colors.inputBackground, border: `1px solid ${colors.border}` }}
+                  >
+                    <input
+                      type="text"
+                      className="text-xs bg-transparent border-none outline-none"
+                      style={{ color: colors.primaryText, width: `${Math.max(tech.length * 7 + 24, 60)}px` }}
+                      value={tech}
+                      onChange={(e) => handleUpdateEnvironment(exp.id, index, e.target.value)}
+                      placeholder="Technology"
+                    />
+                    <button
+                      onClick={() => handleDeleteEnvironment(exp.id, index)}
+                      className="transition-colors flex-shrink-0"
+                      style={{ color: colors.tertiaryText }}
+                      title="Remove technology"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
-      
-        <div className="flex justify-end mt-3">
-          <button 
-            onClick={() => onOpenAIGenerateModal('experience')}
-            className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
-            style={{
-              color: colors.badgePurpleText,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.badgePurpleBg;
-              e.currentTarget.style.color = colors.badgePurpleText;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = colors.badgePurpleText;
-            }}
-          >
-            <Sparkles size={16} />
-            AI Generate
-          </button>
+        ))
+      )}
+
+      <div className="flex justify-end mt-3">
+        <button
+          onClick={() => onOpenAIGenerateModal('experience')}
+          className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
+          style={{ color: colors.badgePurpleText }}
+        >
+          <Sparkles size={16} />
+          AI Generate
+        </button>
       </div>
     </div>
   );

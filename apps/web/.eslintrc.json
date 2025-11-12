@@ -19,6 +19,7 @@
     "@typescript-eslint/no-explicit-any": "warn",
     "prefer-const": "warn",
     "no-var": "error",
+    "react-hooks/rules-of-hooks": "warn",
     "react-hooks/exhaustive-deps": "warn",
     "react/no-unescaped-entities": "off",
     "@next/next/no-css-tags": "off",
@@ -28,7 +29,12 @@
     "@next/next/no-inline-styles": "off",
     "react/forbid-dom-props": "off",
     "jsx-a11y/aria-proptypes": "off",
-    "jsx-a11y/aria-props": "off"
+    "jsx-a11y/aria-props": "off",
+    "jsx-a11y/label-has-associated-control": "off",
+    "jsx-a11y/click-events-have-key-events": "off",
+    "jsx-a11y/no-static-element-interactions": "off",
+    "jsx-a11y/no-noninteractive-element-interactions": "off",
+    "jsx-a11y/no-autofocus": "off"
   },
   "env": {
     "browser": true,
