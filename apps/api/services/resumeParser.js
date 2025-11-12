@@ -582,6 +582,24 @@ async function detectDocumentType(buffer, mimeType) {
     try {
       const result = await pdfParse(buffer.slice(0, 200000));
       const textLength = (result.text || '').trim().length;
+      const textSample = (result.text || '').substring(0, 500);
+      
+      // Check if extracted text is actually PDF structure garbage
+      const isPdfStructureGarbage = 
+        textSample.includes('/Type /StructElem') ||
+        textSample.includes('endobj') ||
+        textSample.includes('/K [') ||
+        textSample.match(/^\d{10} \d{5} n/m) || // Cross-reference table pattern
+        textSample.match(/<<\s*\/[A-Z]/); // PDF dictionary objects
+      
+      if (isPdfStructureGarbage) {
+        logger.warn('PDF text extraction returned structure data instead of content - forcing OCR fallback');
+        return {
+          type: 'PDF_STRUCTURE_ISSUE',
+          method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+        };
+      }
+      
       if (textLength > 120) {
         return { type: 'PDF_NATIVE', method: 'TEXT_ONLY' };
       }
@@ -757,8 +775,131 @@ Resume Text:
 ${rawText}`;
 }
 
+/**
+ * Clean PDF extraction artifacts and junk from text
+ * PDFs often extract with embedded fonts, metadata, and binary junk
+ */
+function cleanPdfJunk(text) {
+  if (!text) return text;
+
+  // Remove common PDF artifacts
+  let cleaned = text
+    // Remove font encoding declarations
+    .replace(/\/F\d+\s+\d+\s+Tf/g, '')
+    // Remove PDF operators (BT, ET, Tm, Td, etc.)
+    .replace(/\b(BT|ET|Tm|Td|TD|Tj|TJ|Tc|Tw|Tz|TL|Tf|Tr|Ts)\b/g, '')
+    // Remove hex strings
+    .replace(/<[0-9A-Fa-f\s]+>/g, '')
+    // Remove excessive whitespace but preserve paragraph breaks
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{4,}/g, '\n\n\n')
+    // Remove lines that are mostly non-alphanumeric (likely PDF junk)
+    .split('\n')
+    .filter(line => {
+      const alphanumeric = line.replace(/[^a-zA-Z0-9]/g, '').length;
+      const total = line.length;
+      // Keep lines that are at least 30% alphanumeric, or are very short (like dates)
+      return total === 0 || alphanumeric / total > 0.3 || total < 20;
+    })
+    .join('\n')
+    .trim();
+
+  return cleaned;
+}
+
+/**
+ * Intelligently truncate resume text to avoid OpenAI token limits
+ * OpenAI's gpt-4o-mini has a 200K TPM limit, and we're sending ~4x the text as tokens
+ * So we limit to 100K characters to be safe (roughly 25K tokens + prompt overhead)
+ */
+function truncateResumeText(text, maxChars = 100000) {
+  if (!text || text.length <= maxChars) {
+    return text;
+  }
+
+  const originalLength = text.length;
+  logger.warn(`Resume text too large (${text.length} chars). Truncating to ${maxChars} chars.`);
+
+  // For very large extractions (>300K), likely has junk at beginning or end
+  // Try to find where actual resume content starts
+  if (originalLength > 300000) {
+    // Look for common resume indicators in different sections
+    const indicators = [
+      /\b(experience|education|skills|summary|profile|objective)\b/i,
+      /\b(email|phone|linkedin|github)\b/i,
+      /@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i, // Email pattern
+      /\b\d{4}\s*[-–]\s*(present|\d{4})\b/i // Date ranges
+    ];
+
+    // Sample different parts of the text
+    const sampleSize = 5000;
+    const samples = [
+      { text: text.substring(0, sampleSize), position: 'start' },
+      { text: text.substring(Math.floor(originalLength / 3), Math.floor(originalLength / 3) + sampleSize), position: 'middle' },
+      { text: text.substring(originalLength - sampleSize), position: 'end' }
+    ];
+
+    // Score each sample
+    let bestSample = samples[0];
+    let bestScore = 0;
+
+    for (const sample of samples) {
+      let score = 0;
+      for (const indicator of indicators) {
+        if (indicator.test(sample.text)) {
+          score++;
+        }
+      }
+      // Also score based on alphanumeric density
+      const alphanumeric = sample.text.replace(/[^a-zA-Z0-9]/g, '').length;
+      const density = alphanumeric / sample.text.length;
+      score += density * 2; // Weight density highly
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestSample = sample;
+      }
+    }
+
+    // If content seems to be in the middle or end, extract from there
+    if (bestSample.position === 'middle') {
+      const startPos = Math.max(0, Math.floor(originalLength / 3) - 10000);
+      text = text.substring(startPos, startPos + maxChars + 10000);
+      logger.info(`Content appears to be in middle of extraction, adjusting start position`);
+    } else if (bestSample.position === 'end') {
+      text = text.substring(Math.max(0, originalLength - maxChars - 10000));
+      logger.info(`Content appears to be at end of extraction, extracting from end`);
+    }
+  }
+
+  // Now truncate to maxChars
+  let truncated = text.substring(0, maxChars);
+  
+  // Find the last complete paragraph (double newline)
+  const lastParagraph = truncated.lastIndexOf('\n\n');
+  if (lastParagraph > maxChars * 0.8) {
+    // Only use paragraph boundary if it's not too far back (within last 20%)
+    truncated = truncated.substring(0, lastParagraph);
+  } else {
+    // Otherwise, find the last sentence
+    const lastSentence = Math.max(
+      truncated.lastIndexOf('. '),
+      truncated.lastIndexOf('.\n'),
+      truncated.lastIndexOf('!\n'),
+      truncated.lastIndexOf('?\n')
+    );
+    if (lastSentence > maxChars * 0.9) {
+      truncated = truncated.substring(0, lastSentence + 1);
+    }
+  }
+
+  return truncated.trim();
+}
+
 async function structureResumeWithAI(rawText) {
-  const prompt = buildParsingPrompt(rawText);
+  // Truncate text to avoid OpenAI token limits
+  const truncatedText = truncateResumeText(rawText);
+  const prompt = buildParsingPrompt(truncatedText);
 
   const runRequest = async (options = {}, extra = {}) => {
     const response = await generateText(
@@ -959,6 +1100,17 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
     const detection = await detectDocumentType(buffer, inferredMime);
     let rawText = '';
 
+    // Handle PDFs with structure issues
+    if (detection.type === 'PDF_STRUCTURE_ISSUE') {
+      if (detection.method === 'TEXT_ONLY') {
+        // OCR not available, but PDF text extraction is broken
+        const error = new Error('This PDF has a problematic structure that prevents text extraction. Please try:\n1. Converting the PDF to DOCX format\n2. Saving the PDF with a different tool\n3. Enabling Google Vision OCR for better PDF support');
+        error.code = 'PDF_STRUCTURE_ISSUE';
+        throw error;
+      }
+      // else: Will use OCR below
+    }
+
     if (detection.method === 'TEXT_ONLY') {
       if (detection.type === 'DOCX') {
         rawText = await extractDocxText(buffer);
@@ -999,9 +1151,47 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
       }
     }
 
-    const normalizedText = (rawText || '').trim();
+    let normalizedText = (rawText || '').trim();
     if (!normalizedText) {
       throw new Error('Unable to extract text from resume file');
+    }
+
+    // Log extracted text length for debugging
+    if (normalizedText.length > 200000) {
+      logger.warn('Unusually large text extracted from resume', {
+        userId,
+        fileName,
+        extractedLength: normalizedText.length,
+        bufferSize: buffer.length,
+        detection: detection.type
+      });
+      
+      // Clean PDF junk for large extractions
+      const cleanedText = cleanPdfJunk(normalizedText);
+      const reductionPercent = Math.round((1 - cleanedText.length / normalizedText.length) * 100);
+      
+      if (cleanedText.length < normalizedText.length * 0.95) {
+        logger.info('PDF junk cleaning reduced text size', {
+          originalLength: normalizedText.length,
+          cleanedLength: cleanedText.length,
+          reduction: `${reductionPercent}%`
+        });
+        normalizedText = cleanedText;
+      }
+    }
+
+    // Debug: Log sample of extracted text to diagnose parsing issues
+    if (normalizedText.length > 10000) {
+      const sampleStart = normalizedText.substring(0, 500);
+      const sampleMiddle = normalizedText.substring(Math.floor(normalizedText.length / 2), Math.floor(normalizedText.length / 2) + 500);
+      const sampleEnd = normalizedText.substring(normalizedText.length - 500);
+      
+      logger.info('DEBUG: Extracted text samples', {
+        textLength: normalizedText.length,
+        sampleStart: sampleStart.substring(0, 200),
+        sampleMiddle: sampleMiddle.substring(0, 200),
+        sampleEnd: sampleEnd.substring(0, 200)
+      });
     }
 
     const structuredResume = await structureResumeWithAI(normalizedText);

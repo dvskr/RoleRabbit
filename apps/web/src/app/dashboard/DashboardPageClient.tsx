@@ -11,7 +11,7 @@ import DashboardHeader from '../../components/layout/DashboardHeader';
 import PageHeader from '../../components/layout/PageHeader';
 
 // Lazy load all heavy components to prevent blocking startup
-const DashboardFigma = dynamic(() => import('../../components/DashboardFigma'), { ssr: false });
+const DashboardFigma = dynamic(() => import('../../components/DashboardFigma.tsx'), { ssr: false });
 const Profile = dynamic(() => import('../../components/Profile'), { ssr: false });
 const CloudStorage = dynamic(() => import('../../components/CloudStorage'), { ssr: false });
 const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor').then(mod => ({ default: mod.default })), { 
@@ -319,20 +319,40 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   }, [saveError, showToast]);
 
   // Load resume data when active base resume changes
+  // Use ref to track ongoing load to prevent race conditions
+  const loadingResumeIdRef = useRef<string | null>(null);
+  
   useEffect(() => {
     if (!activeId) {
       setCurrentResumeId(null);
+      loadingResumeIdRef.current = null;
       return;
     }
 
-    if (currentResumeId !== activeId) {
-      setCurrentResumeId(activeId);
+    // Skip if we're already loading this resume or it's already loaded
+    if (loadingResumeIdRef.current === activeId || currentResumeId === activeId) {
+      return;
     }
 
-    loadResumeById(activeId).catch((error: unknown) => {
-      logger.error('Failed to load active resume', error);
-      showToast('Failed to load selected resume', 'error', 6000);
-    });
+    // Mark as loading to prevent concurrent loads
+    loadingResumeIdRef.current = activeId;
+    setCurrentResumeId(activeId);
+
+    loadResumeById(activeId)
+      .then(() => {
+        // Success - clear loading ref
+        if (loadingResumeIdRef.current === activeId) {
+          loadingResumeIdRef.current = null;
+        }
+      })
+      .catch((error: unknown) => {
+        logger.error('Failed to load active resume', error);
+        showToast('Failed to load selected resume', 'error', 6000);
+        // Clear loading ref on error
+        if (loadingResumeIdRef.current === activeId) {
+          loadingResumeIdRef.current = null;
+        }
+      });
   }, [activeId, currentResumeId, setCurrentResumeId, loadResumeById, showToast]);
 
   const setCustomFieldsTracked = useCallback((value: SetStateAction<CustomField[]>) => {

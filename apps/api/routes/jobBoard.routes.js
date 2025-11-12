@@ -3,7 +3,8 @@
  * API endpoints for job board credentials and applications
  */
 
-const prisma = require('../utils/prisma');
+const { authenticate } = require('../middleware/auth');
+const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
 const puppeteerService = require('../services/browserAutomation/puppeteerService');
@@ -64,7 +65,7 @@ module.exports = async function (fastify, opts) {
    * GET /api/job-board/credentials
    */
   fastify.get('/api/job-board/credentials', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -111,7 +112,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/credentials
    */
   fastify.post('/api/job-board/credentials', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -190,7 +191,7 @@ module.exports = async function (fastify, opts) {
    * PUT /api/job-board/credentials/:id
    */
   fastify.put('/api/job-board/credentials/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -263,7 +264,7 @@ module.exports = async function (fastify, opts) {
    * DELETE /api/job-board/credentials/:id
    */
   fastify.delete('/api/job-board/credentials/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -310,7 +311,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/credentials/:id/verify
    */
   fastify.post('/api/job-board/credentials/:id/verify', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -378,7 +379,7 @@ module.exports = async function (fastify, opts) {
    * GET /api/job-board/applications
    */
   fastify.get('/api/job-board/applications', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -441,7 +442,7 @@ module.exports = async function (fastify, opts) {
    * GET /api/job-board/applications/:id
    */
   fastify.get('/api/job-board/applications/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -508,7 +509,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/applications
    */
   fastify.post('/api/job-board/applications', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -605,7 +606,7 @@ module.exports = async function (fastify, opts) {
    * PUT /api/job-board/applications/:id/status
    */
   fastify.put('/api/job-board/applications/:id/status', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -677,7 +678,7 @@ module.exports = async function (fastify, opts) {
    * PUT /api/job-board/applications/:id
    */
   fastify.put('/api/job-board/applications/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -733,7 +734,7 @@ module.exports = async function (fastify, opts) {
    * DELETE /api/job-board/applications/:id
    */
   fastify.delete('/api/job-board/applications/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -780,7 +781,7 @@ module.exports = async function (fastify, opts) {
    * GET /api/job-board/applications/stats
    */
   fastify.get('/api/job-board/applications/stats', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -869,7 +870,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/linkedin/easy-apply
    */
   fastify.post('/api/job-board/linkedin/easy-apply', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -1008,7 +1009,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/linkedin/test-credential
    */
   fastify.post('/api/job-board/linkedin/test-credential', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -1105,7 +1106,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/indeed/quick-apply
    */
   fastify.post('/api/job-board/indeed/quick-apply', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -1244,7 +1245,7 @@ module.exports = async function (fastify, opts) {
    * POST /api/job-board/indeed/test-credential
    */
   fastify.post('/api/job-board/indeed/test-credential', {
-    onRequest: [fastify.authenticate]
+    onRequest: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;

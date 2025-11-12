@@ -88,7 +88,10 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
     try {
       const response = await apiService.createBaseResume(payload);
       if (response?.success && response.resume) {
+        // Add to local state immediately
         upsertResume(response.resume);
+        // Refresh from server to ensure consistency and get correct slot numbers
+        await fetchResumes({ showSpinner: false });
         return response.resume;
       }
       if (response?.success === false) {
@@ -99,24 +102,33 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
       setError(err?.message || 'Failed to create base resume');
       throw err;
     }
-  }, [upsertResume]);
+  }, [upsertResume, fetchResumes]);
 
   const activateResume = useCallback(async (id: string) => {
     setError(null);
     try {
+      // Call API to activate resume
       await apiService.activateBaseResume(id);
+      
+      // Optimistically update local state FIRST for immediate UI feedback
       setActiveId(id);
       onActiveChange?.(id);
       setResumes(prev => prev.map(resume => ({
         ...resume,
         isActive: resume.id === id
       })));
+      
+      // Then verify with a fresh fetch to ensure consistency
+      // This prevents UI state from getting out of sync with backend
+      await fetchResumes({ showSpinner: false });
     } catch (err: any) {
       logger.error('Failed to activate base resume', err);
       setError(err?.message || 'Failed to activate base resume');
+      // Revert optimistic update on error
+      await fetchResumes({ showSpinner: false });
       throw err;
     }
-  }, [onActiveChange]);
+  }, [onActiveChange, fetchResumes]);
 
   const deleteResume = useCallback(async (id: string) => {
     setError(null);

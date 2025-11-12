@@ -7,7 +7,7 @@ const puppeteerService = require('../browserAutomation/puppeteerService');
 const sessionManager = require('../browserAutomation/sessionManager');
 const formFiller = require('../browserAutomation/formFiller');
 const logger = require('../../utils/logger');
-const prisma = require('../../utils/prisma');
+const { prisma } = require('../../utils/db');
 const crypto = require('crypto');
 
 // Encryption configuration (same as jobBoard routes)

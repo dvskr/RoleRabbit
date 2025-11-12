@@ -92,7 +92,7 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
   }
 
   // =========================================================================
-  // TIER 2: RESUME ANALYSIS (Dictionary-based, always fast)
+  // TIER 2: RESUME ANALYSIS (Dictionary-based + Direct extraction)
   // =========================================================================
   
   onProgress?.({ stage: 'Extracting requirements', progress: 30 });
@@ -100,8 +100,33 @@ async function scoreResumeWorldClass({ resumeData = {}, jobDescription, useAI = 
   const resumeAnalysis = legacyAnalyzeResume(resumeData);
   const resumeText = buildResumeText(resumeData);
   
+  // IMPROVED: Also extract skills directly from resume data (not just dictionary)
+  // This captures industry-specific skills that aren't in the IT dictionary
+  const directSkills = [];
+  if (Array.isArray(resumeData.skills)) {
+    directSkills.push(...resumeData.skills.filter(s => s && typeof s === 'string'));
+  } else if (typeof resumeData.skills === 'object') {
+    // Handle skills as object
+    Object.values(resumeData.skills).forEach(skill => {
+      if (skill && typeof skill === 'string') {
+        directSkills.push(skill);
+      } else if (skill && typeof skill === 'object' && skill.name) {
+        directSkills.push(skill.name);
+      }
+    });
+  }
+  
+  // Combine dictionary-found skills with directly-listed skills
+  const dictionarySkills = (resumeAnalysis.technical || []).map(s => s.skill);
+  const allResumeSkillsList = [...new Set([...dictionarySkills, ...directSkills])];
+  
+  // Update resumeAnalysis to include all skills
+  resumeAnalysis.allSkillsList = allResumeSkillsList;
+  
   logger.info('📄 Resume Analysis complete', {
     technical_skills: resumeAnalysis.technical?.length || 0,
+    direct_skills: directSkills.length,
+    total_skills: allResumeSkillsList.length,
     soft_skills: resumeAnalysis.soft?.length || 0,
     years_experience: resumeAnalysis.yearsOfExperience
   });
@@ -345,18 +370,72 @@ function calculateWorldClassScores({ jobAnalysis, resumeAnalysis, semanticResult
     technicalScore = Math.round(requiredScore + preferredScore);
     
   } else {
-    // DICTIONARY FALLBACK (legacy scoring)
-    const resumeSkills = new Set((resumeAnalysis.technical || []).map(s => s.skill.toLowerCase()));
+    // DICTIONARY FALLBACK + DIRECT SKILLS (improved to include all skills)
+    // Use allSkillsList which includes both dictionary-found AND directly-listed skills
+    const resumeSkillsList = resumeAnalysis.allSkillsList || (resumeAnalysis.technical || []).map(s => s.skill);
+    const resumeSkills = new Set(resumeSkillsList.map(s => s.toLowerCase()));
     const requiredSkills = (jobAnalysis.required_skills || jobAnalysis.technical?.required || []).map(s => s.skill || s);
     const preferredSkills = (jobAnalysis.preferred_skills || jobAnalysis.technical?.preferred || []).map(s => s.skill || s);
     
-    requiredMatched = requiredSkills.filter(skill => 
-      [...resumeSkills].some(rs => rs.includes(skill.toLowerCase()) || skill.toLowerCase().includes(rs))
-    );
+    // IMPROVED: More intelligent skill matching
+    const matchSkill = (jobSkill) => {
+      const jobSkillLower = jobSkill.toLowerCase();
+      
+      // Extract core terms from compound requirements like "BIM (Revit)" or "Epic certification"
+      const coreTerms = [];
+      
+      // Handle parentheses: "BIM (Revit)" -> ["BIM", "Revit"]
+      const parenMatch = jobSkillLower.match(/^([^(]+)\s*\(([^)]+)\)/);
+      if (parenMatch) {
+        coreTerms.push(parenMatch[1].trim());
+        coreTerms.push(parenMatch[2].trim());
+      } else {
+        // Handle "or" statements: "Primavera P6 or MS Project" -> ["Primavera P6", "MS Project"]
+        if (jobSkillLower.includes(' or ')) {
+          coreTerms.push(...jobSkillLower.split(' or ').map(s => s.trim()));
+        } else {
+          // Extract main term (first 1-2 words for multi-word terms)
+          const words = jobSkillLower.split(' ');
+          if (words.length > 1) {
+            // For "Epic certification", extract "Epic"
+            // For "HL7/FHIR", extract "HL7" and "FHIR"
+            if (jobSkillLower.includes('/')) {
+              coreTerms.push(...jobSkillLower.split('/').map(s => s.trim()));
+            } else {
+              coreTerms.push(words[0]); // Main term
+              coreTerms.push(jobSkillLower); // Full term
+            }
+          } else {
+            coreTerms.push(jobSkillLower);
+          }
+        }
+      }
+      
+      // Check if any resume skill matches any core term
+      return [...resumeSkills].some(rs => {
+        // Direct substring match (existing logic)
+        if (rs.includes(jobSkillLower) || jobSkillLower.includes(rs)) {
+          return true;
+        }
+        
+        // Check against extracted core terms
+        return coreTerms.some(term => {
+          // Resume skill contains the term
+          if (rs.includes(term)) return true;
+          // Term contains the resume skill (for short terms)
+          if (term.includes(rs) && rs.length >= 3) return true;
+          // Word-level match (handles "Epic Willow" matching "Epic")
+          const resumeWords = rs.split(/[\s/]+/);
+          const termWords = term.split(/[\s/]+/);
+          return resumeWords.some(rw => termWords.some(tw => 
+            (rw === tw) || (rw.includes(tw) && tw.length >= 3) || (tw.includes(rw) && rw.length >= 3)
+          ));
+        });
+      });
+    };
     
-    preferredMatched = preferredSkills.filter(skill => 
-      [...resumeSkills].some(rs => rs.includes(skill.toLowerCase()) || skill.toLowerCase().includes(rs))
-    );
+    requiredMatched = requiredSkills.filter(matchSkill);
+    preferredMatched = preferredSkills.filter(matchSkill);
     
     matchedSkills = [...requiredMatched, ...preferredMatched];
     missingSkills = [
@@ -374,27 +453,64 @@ function calculateWorldClassScores({ jobAnalysis, resumeAnalysis, semanticResult
     technicalScore = Math.round(requiredScore + preferredScore);
   }
   
-  // Experience score
+  // Experience score - IMPROVED to be more realistic
   const requiredYears = jobAnalysis.seniority_level === 'senior' ? 5 : 
                         jobAnalysis.seniority_level === 'mid' ? 3 : 1;
   const resumeYears = resumeAnalysis.yearsOfExperience || 0;
   
   let experienceScore = 100;
-  if (resumeYears < requiredYears * 0.5) {
-    experienceScore = 40;
+  
+  // More forgiving scoring:
+  // - Within 80% of required: 85-100 (good match)
+  // - Within 60% of required: 70-85 (acceptable)
+  // - Below 60%: 50-70 (needs more experience)
+  
+  if (resumeYears === 0) {
+    experienceScore = 30; // No experience data found
+  } else if (resumeYears < requiredYears * 0.6) {
+    // Less than 60% of required (e.g., 1.5 years for mid-level)
+    experienceScore = Math.max(50, 50 + ((resumeYears / (requiredYears * 0.6)) * 20));
+  } else if (resumeYears < requiredYears * 0.8) {
+    // Between 60-80% of required (e.g., 2-2.4 years for mid-level)
+    const ratio = (resumeYears - (requiredYears * 0.6)) / (requiredYears * 0.2);
+    experienceScore = 70 + (ratio * 15);
   } else if (resumeYears < requiredYears) {
-    experienceScore = 70;
-  } else if (resumeYears >= requiredYears && resumeYears <= requiredYears * 2) {
+    // Between 80-100% of required (e.g., 2.4-3 years for mid-level)
+    const ratio = (resumeYears - (requiredYears * 0.8)) / (requiredYears * 0.2);
+    experienceScore = 85 + (ratio * 15);
+  } else if (resumeYears <= requiredYears * 2.5) {
+    // Perfect to moderately over-qualified (e.g., 3-7.5 years for mid-level)
     experienceScore = 100;
   } else {
-    experienceScore = 90; // Slightly over-qualified
+    // Significantly over-qualified
+    experienceScore = 95;
   }
   
-  // Quality score (from AI analysis)
-  let qualityScore = 70; // Default
+  // Quality score (from AI analysis) - IMPROVED to be more generous
+  let qualityScore = 70; // Default baseline
+  
   if (Object.keys(skillQualityScores).length > 0) {
     const qualityScores = Object.values(skillQualityScores).map(q => q.depth_score || 50);
-    qualityScore = Math.round(qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length);
+    const avgScore = qualityScores.reduce((a, b) => a + b, 0) / qualityScores.length;
+    
+    // Apply a curve to be more generous (square root scaling brings scores up)
+    // This rewards well-written content without being too harsh
+    qualityScore = Math.round(Math.sqrt(avgScore / 100) * 100);
+    
+    // Bonus for consistent high-quality demonstrations
+    const highQualityCount = qualityScores.filter(s => s >= 75).length;
+    const highQualityRatio = highQualityCount / qualityScores.length;
+    if (highQualityRatio >= 0.6) {
+      qualityScore = Math.min(100, qualityScore + 10); // Bonus for 60%+ high-quality
+    }
+    
+    // Bonus for detailed descriptions (checks if we have multiple skill analyses)
+    if (qualityScores.length >= 5) {
+      qualityScore = Math.min(100, qualityScore + 5); // Bonus for comprehensive demonstration
+    }
+    
+    // Ensure reasonable minimum for anyone with analyzed skills
+    qualityScore = Math.max(65, qualityScore);
   }
   
   // Education score (relaxed)

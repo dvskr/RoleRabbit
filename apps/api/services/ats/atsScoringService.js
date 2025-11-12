@@ -604,15 +604,23 @@ function analyzeResume(resumeData = {}) {
   // Combine all text
   const allText = Object.values(sections).map(s => s.text).join(' ');
 
-  // Extract years of experience from dates
+  // Extract years of experience from dates or duration
   let totalYears = 0;
   if (Array.isArray(resumeData.experience)) {
     for (const exp of resumeData.experience) {
+      // Try to extract from startDate/endDate first
       if (exp.startDate && exp.endDate) {
         const start = new Date(exp.startDate);
         const end = exp.endDate.toLowerCase() === 'present' ? new Date() : new Date(exp.endDate);
         const years = (end - start) / (1000 * 60 * 60 * 24 * 365);
         totalYears += years;
+      }
+      // Fallback to duration field (e.g., "4 years", "2.5 years", etc.)
+      else if (exp.duration) {
+        const durationMatch = exp.duration.match(/(\d+(?:\.\d+)?)\s*(?:year|yr)/i);
+        if (durationMatch) {
+          totalYears += parseFloat(durationMatch[1]);
+        }
       }
     }
   }

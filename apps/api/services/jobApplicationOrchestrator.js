@@ -6,7 +6,7 @@
 const linkedinService = require('../jobBoards/linkedinService');
 const indeedService = require('../jobBoards/indeedService');
 const logger = require('../../utils/logger');
-const prisma = require('../../utils/prisma');
+const { prisma } = require('../../utils/db');
 
 class JobApplicationOrchestrator {
   constructor() {

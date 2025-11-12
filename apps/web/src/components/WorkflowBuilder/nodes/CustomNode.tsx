@@ -8,7 +8,7 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import {
   Sparkles, Zap, FileText, Briefcase, Search, Mail,
   Webhook, Clock, GitBranch, Repeat, Database, FileCode,
-  Filter, Merge, Split, Transform
+  Filter, Merge, SeparatorHorizontal, RefreshCw
 } from 'lucide-react';
 
 // Node type to icon mapping
@@ -59,8 +59,8 @@ const nodeIcons: Record<string, React.ComponentType<any>> = {
 
   // Data
   MERGE_DATA: Merge,
-  SPLIT_DATA: Split,
-  TRANSFORM_DATA: Transform,
+  SPLIT_DATA: SeparatorHorizontal,
+  TRANSFORM_DATA: RefreshCw,
   FILTER_DATA: Filter,
 
   // Storage

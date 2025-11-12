@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import {
   Sparkles, Zap, FileText, Briefcase, Search, Mail,
   Webhook, Clock, GitBranch, Repeat, Database, FileCode,
-  Filter, Merge, Split, Transform, ChevronDown, ChevronRight,
+  Filter, Merge, SeparatorHorizontal, RefreshCw, ChevronDown, ChevronRight,
   MessageSquare, Files, Send, Layers
 } from 'lucide-react';
 
@@ -245,7 +245,7 @@ const nodeTypes: NodeType[] = [
   {
     type: 'TRANSFORM_DATA',
     name: 'Transform Data',
-    icon: Transform,
+    icon: RefreshCw,
     color: '#8b5cf6',
     category: 'Data',
     description: 'Transform data format'

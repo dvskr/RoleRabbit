@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import apiService from '@/utils/api';
+import apiService from '@/services/apiService';
 
 // Types
 export interface WorkflowNode {

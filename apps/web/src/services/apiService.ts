@@ -311,6 +311,59 @@ class ApiService {
   }
 
   /**
+   * Generic GET request
+   */
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Generic POST request
+   */
+  async post<T>(endpoint: string, body?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Generic PUT request
+   */
+  async put<T>(endpoint: string, body?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Generic PATCH request
+   */
+  async patch<T>(endpoint: string, body?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Generic DELETE request
+   */
+  async delete<T = void>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
    * Health check
    */
   async healthCheck() {

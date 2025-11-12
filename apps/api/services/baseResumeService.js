@@ -239,6 +239,21 @@ async function createBaseResume({ userId, name, data, formatting, metadata }) {
       data: preparedData ?? {},
       formatting: formatting || {},
       metadata: metadata || {}
+    },
+    select: {
+      id: true,
+      userId: true,
+      slotNumber: true,
+      name: true,
+      isActive: true,
+      data: true,
+      formatting: true,
+      metadata: true,
+      lastAIAccessedAt: true,
+      parsingConfidence: true,
+      createdAt: true,
+      updatedAt: true,
+      // Exclude embedding to avoid vector type issues
     }
   });
 
@@ -293,7 +308,8 @@ async function deleteBaseResume({ userId, baseResumeId }) {
 
   await invalidateBaseResumeArtifacts(userId, baseResumeId);
 
-  await prisma.baseResume.delete({ where: { id: baseResumeId } });
+  // Use raw SQL for delete to avoid vector type issues
+  await prisma.$executeRaw`DELETE FROM base_resumes WHERE id = ${baseResumeId}`;
 
   const remaining = await prisma.baseResume.findMany({
     where: { userId },
