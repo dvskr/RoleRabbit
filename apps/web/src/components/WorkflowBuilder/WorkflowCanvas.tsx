@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Node,
@@ -22,10 +22,11 @@ import {
   ConnectionMode
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Save, Play, Settings2, Download, Upload } from 'lucide-react';
+import { Save, Play, Settings2, Download, Upload, Undo, Redo } from 'lucide-react';
 import CustomNode from './nodes/CustomNode';
 import NodePalette from './NodePalette';
 import { Workflow } from '@/hooks/useWorkflowApi';
+import { useWorkflowHistory } from '@/hooks/useWorkflowHistory';
 
 const nodeTypes = {
   custom: CustomNode
@@ -51,6 +52,16 @@ export default function WorkflowCanvas({
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+
+  // Initialize history hook
+  const {
+    saveToHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    initializeHistory
+  } = useWorkflowHistory({ maxHistory: 50 });
 
   // Initialize workflow if provided
   React.useEffect(() => {
@@ -90,8 +101,18 @@ export default function WorkflowCanvas({
 
       setNodes(flowNodes);
       setEdges(flowEdges);
+
+      // Initialize history with loaded workflow
+      initializeHistory(flowNodes, flowEdges);
     }
-  }, [workflow, setNodes, setEdges]);
+  }, [workflow, setNodes, setEdges, initializeHistory]);
+
+  // Save to history when nodes or edges change
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      saveToHistory(nodes, edges);
+    }
+  }, [nodes, edges, saveToHistory]);
 
   // Handle connection between nodes
   const onConnect = useCallback(
@@ -176,6 +197,57 @@ export default function WorkflowCanvas({
       onNodeSelect(null);
     }
   }, [onNodeSelect]);
+
+  // Handle undo
+  const handleUndo = useCallback(() => {
+    if (!canUndo || readOnly) return;
+
+    const previousState = undo();
+    if (previousState) {
+      setNodes(previousState.nodes);
+      setEdges(previousState.edges);
+    }
+  }, [canUndo, undo, setNodes, setEdges, readOnly]);
+
+  // Handle redo
+  const handleRedo = useCallback(() => {
+    if (!canRedo || readOnly) return;
+
+    const nextState = redo();
+    if (nextState) {
+      setNodes(nextState.nodes);
+      setEdges(nextState.edges);
+    }
+  }, [canRedo, redo, setNodes, setEdges, readOnly]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if we're in an input field or textarea
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // Ctrl+Z or Cmd+Z for undo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      }
+
+      // Ctrl+Y or Cmd+Shift+Z for redo
+      if (
+        ((event.ctrlKey || event.metaKey) && event.key === 'y') ||
+        ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'z')
+      ) {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   // Save workflow
   const handleSave = useCallback(() => {
@@ -320,6 +392,27 @@ export default function WorkflowCanvas({
                 >
                   <Upload size={16} />
                 </button>
+
+                {/* Undo/Redo buttons */}
+                <div className="flex gap-1 border-l border-gray-300 pl-2">
+                  <button
+                    onClick={handleUndo}
+                    disabled={!canUndo}
+                    className="px-2 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                    title="Undo (Ctrl+Z)"
+                  >
+                    <Undo size={16} />
+                  </button>
+
+                  <button
+                    onClick={handleRedo}
+                    disabled={!canRedo}
+                    className="px-2 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 flex items-center gap-2 text-sm text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                    title="Redo (Ctrl+Y)"
+                  >
+                    <Redo size={16} />
+                  </button>
+                </div>
               </>
             )}
 
