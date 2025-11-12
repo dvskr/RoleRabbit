@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight, Zap, Sparkles, Workflow } from 'lucide-react';
+import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { RabbitLogo, RabbitLogoWithText } from '../ui/RabbitLogo';
 import { useTheme } from '../../contexts/ThemeContext';
 import NavigationItem from './NavigationItem';
@@ -14,7 +14,6 @@ const getActiveTabId = (itemId: string, activeTab: string): boolean => {
   // Handle mapped names
   const tabMapping: Record<string, string[]> = {
     'tracker': ['jobs', 'tracker'],
-    'agents': ['ai-agents', 'agents'],
   };
   
   const mappedVariants = tabMapping[itemId] || [itemId];
@@ -63,9 +62,6 @@ export default function SidebarNew({
     {
       title: 'APPLY',
       items: [
-        { id: 'ai-auto-apply', icon: Zap, label: 'AI Auto Apply' },
-        { id: 'workflows', icon: Workflow, label: 'Workflows' },
-        { id: 'agents', icon: Sparkles, label: 'AI Agents' },
         { id: 'tracker', icon: Briefcase, label: 'Job Tracker' },
       ],
     },

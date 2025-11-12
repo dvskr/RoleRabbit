@@ -2,7 +2,7 @@
  * Dashboard helper functions for tab metadata
  */
 
-import { HomeIcon, FolderOpen, Briefcase, MessageSquare, Mail, FileText, Globe, LayoutTemplate, UserIcon, Sparkles, Zap, Workflow } from 'lucide-react';
+import { HomeIcon, FolderOpen, Briefcase, MessageSquare, Mail, FileText, Globe, LayoutTemplate, UserIcon } from 'lucide-react';
 import type { DashboardTab } from '../constants/dashboard.constants';
 
 export function getDashboardTabTitle(tab: DashboardTab): string {
@@ -17,10 +17,6 @@ export function getDashboardTabTitle(tab: DashboardTab): string {
     case 'templates': return 'Templates';
     case 'profile': return 'Profile';
     case 'dashboard': return 'Dashboard';
-    case 'ai-agents':
-    case 'agents': return 'AI Agents';
-    case 'ai-auto-apply': return 'AI Auto Apply';
-    case 'workflows': return 'Workflows';
     default: return 'RoleReady';
   }
 }
@@ -37,10 +33,6 @@ export function getDashboardTabSubtitle(tab: DashboardTab): string | undefined {
     case 'portfolio': return 'Build your online portfolio';
     case 'templates': return 'Browse resume templates';
     case 'profile': return 'Manage your profile settings';
-    case 'ai-agents':
-    case 'agents': return 'AI-powered assistants';
-    case 'ai-auto-apply': return 'Automate job applications with AI';
-    case 'workflows': return 'Build and automate workflows visually';
     default: return undefined;
   }
 }
@@ -57,10 +49,6 @@ export function getDashboardTabIcon(tab: DashboardTab) {
     case 'portfolio': return Globe;
     case 'templates': return LayoutTemplate;
     case 'profile': return UserIcon;
-    case 'agents':
-    case 'ai-agents': return Sparkles;
-    case 'ai-auto-apply': return Zap;
-    case 'workflows': return Workflow;
     default: return undefined;
   }
 }
@@ -77,10 +65,6 @@ export function getDashboardTabIconColor(tab: DashboardTab): string {
     case 'portfolio': return 'text-rose-600';
     case 'templates': return 'text-violet-600';
     case 'profile': return 'text-slate-600';
-    case 'agents':
-    case 'ai-agents': return 'text-purple-600';
-    case 'ai-auto-apply': return 'text-yellow-600';
-    case 'workflows': return 'text-indigo-600';
     default: return 'text-blue-600';
   }
 }
@@ -89,9 +73,6 @@ export function shouldHidePageHeader(tab: DashboardTab): boolean {
   return tab === 'profile' ||
          tab === 'storage' ||
          tab === 'portfolio' ||
-         tab === 'cover-letter' ||
-         tab === 'agents' ||
-         tab === 'ai-agents' ||
-         tab === 'ai-auto-apply';
+         tab === 'cover-letter';
 }
 
