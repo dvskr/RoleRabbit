@@ -286,6 +286,164 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
         ];
         break;
 
+      case 'INTERVIEW_PREP':
+        specificFields = [
+          {
+            key: 'jobDescriptionPath',
+            label: 'Job Description Path',
+            type: 'text',
+            placeholder: 'jobDescription',
+            value: config.jobDescriptionPath || 'jobDescription'
+          },
+          {
+            key: 'companyPath',
+            label: 'Company Path',
+            type: 'text',
+            placeholder: 'company',
+            value: config.companyPath || 'company'
+          },
+          {
+            key: 'jobTitlePath',
+            label: 'Job Title Path (optional)',
+            type: 'text',
+            placeholder: 'jobTitle',
+            value: config.jobTitlePath || ''
+          },
+          {
+            key: 'baseResumeIdPath',
+            label: 'Base Resume ID Path (optional)',
+            type: 'text',
+            placeholder: 'baseResumeId',
+            value: config.baseResumeIdPath || ''
+          }
+        ];
+        break;
+
+      case 'BULK_RESUME_GENERATE':
+        specificFields = [
+          {
+            key: 'jobDescriptionsPath',
+            label: 'Job Descriptions Array Path',
+            type: 'text',
+            placeholder: 'jobDescriptions',
+            value: config.jobDescriptionsPath || 'jobDescriptions'
+          },
+          {
+            key: 'baseResumeIdPath',
+            label: 'Base Resume ID Path (optional)',
+            type: 'text',
+            placeholder: 'baseResumeId',
+            value: config.baseResumeIdPath || ''
+          },
+          {
+            key: 'tone',
+            label: 'Tone',
+            type: 'select',
+            options: ['professional', 'casual', 'confident', 'humble'],
+            value: config.tone || 'professional'
+          },
+          {
+            key: 'length',
+            label: 'Length',
+            type: 'select',
+            options: ['short', 'medium', 'long'],
+            value: config.length || 'medium'
+          }
+        ];
+        break;
+
+      case 'COLD_EMAIL_SEND':
+        specificFields = [
+          {
+            key: 'recipientEmailPath',
+            label: 'Recipient Email Path',
+            type: 'text',
+            placeholder: 'recipientEmail',
+            value: config.recipientEmailPath || 'recipientEmail'
+          },
+          {
+            key: 'recipientNamePath',
+            label: 'Recipient Name Path (optional)',
+            type: 'text',
+            placeholder: 'recipientName',
+            value: config.recipientNamePath || ''
+          },
+          {
+            key: 'companyPath',
+            label: 'Company Path',
+            type: 'text',
+            placeholder: 'company',
+            value: config.companyPath || 'company'
+          },
+          {
+            key: 'jobTitlePath',
+            label: 'Job Title Path (optional)',
+            type: 'text',
+            placeholder: 'jobTitle',
+            value: config.jobTitlePath || ''
+          },
+          {
+            key: 'baseResumeIdPath',
+            label: 'Base Resume ID Path (optional)',
+            type: 'text',
+            placeholder: 'baseResumeId',
+            value: config.baseResumeIdPath || ''
+          },
+          {
+            key: 'tone',
+            label: 'Tone',
+            type: 'select',
+            options: ['professional', 'casual', 'confident', 'friendly'],
+            value: config.tone || 'professional'
+          },
+          {
+            key: 'emailType',
+            label: 'Email Type',
+            type: 'select',
+            options: ['introduction', 'follow-up', 'inquiry'],
+            value: config.emailType || 'introduction'
+          }
+        ];
+        break;
+
+      case 'BULK_JD_PROCESSOR':
+        specificFields = [
+          {
+            key: 'jobDescriptionsPath',
+            label: 'Job Descriptions Array Path',
+            type: 'text',
+            placeholder: 'jobDescriptions',
+            value: config.jobDescriptionsPath || 'jobDescriptions'
+          },
+          {
+            key: 'action',
+            label: 'Action',
+            type: 'select',
+            options: ['analyze', 'generate_resume', 'full_application'],
+            value: config.action || 'analyze'
+          },
+          {
+            key: 'baseResumeIdPath',
+            label: 'Base Resume ID Path (optional)',
+            type: 'text',
+            placeholder: 'baseResumeId',
+            value: config.baseResumeIdPath || ''
+          }
+        ];
+        break;
+
+      case 'COMPANY_RESEARCH':
+        specificFields = [
+          {
+            key: 'companyPath',
+            label: 'Company Name Path',
+            type: 'text',
+            placeholder: 'company',
+            value: config.companyPath || 'company'
+          }
+        ];
+        break;
+
       default:
         specificFields = [];
     }

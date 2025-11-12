@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import {
   Sparkles, Zap, FileText, Briefcase, Search, Mail,
   Webhook, Clock, GitBranch, Repeat, Database, FileCode,
-  Filter, Merge, Split, Transform, ChevronDown, ChevronRight
+  Filter, Merge, Split, Transform, ChevronDown, ChevronRight,
+  MessageSquare, Files, Send, Layers
 } from 'lucide-react';
 
 interface NodeType {
@@ -99,6 +100,14 @@ const nodeTypes: NodeType[] = [
     category: 'Resume',
     description: 'Tailor resume for job'
   },
+  {
+    type: 'BULK_RESUME_GENERATE',
+    name: 'Bulk Resume Generator',
+    icon: Files,
+    color: '#22c55e',
+    category: 'Resume',
+    description: 'Generate resumes for multiple jobs'
+  },
 
   // Cover Letter
   {
@@ -145,8 +154,32 @@ const nodeTypes: NodeType[] = [
     category: 'Job Search',
     description: 'Research company info'
   },
+  {
+    type: 'INTERVIEW_PREP',
+    name: 'Interview Prep',
+    icon: MessageSquare,
+    color: '#06b6d4',
+    category: 'Job Search',
+    description: 'Generate interview questions & answers'
+  },
+  {
+    type: 'BULK_JD_PROCESSOR',
+    name: 'Bulk JD Processor',
+    icon: Layers,
+    color: '#06b6d4',
+    category: 'Job Search',
+    description: 'Process multiple job descriptions'
+  },
 
   // Communication
+  {
+    type: 'COLD_EMAIL_SEND',
+    name: 'Cold Email',
+    icon: Send,
+    color: '#ec4899',
+    category: 'Communication',
+    description: 'Generate personalized cold email'
+  },
   {
     type: 'EMAIL_SEND',
     name: 'Send Email',
