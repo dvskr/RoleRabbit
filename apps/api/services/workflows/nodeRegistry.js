@@ -8,6 +8,7 @@ const AutoApplyNode = require('./nodes/autoApplyNode');
 const {
   ResumeNode,
   CoverLetterNode,
+  CompanyResearchNode,
   JobTrackerNode,
   JobSearchNode,
   EmailNode,
@@ -55,7 +56,7 @@ class NodeRegistry {
 
     // Job Search
     this.register('JOB_SEARCH', new JobSearchNode());
-    this.register('COMPANY_RESEARCH', new JobSearchNode('research'));
+    this.register('COMPANY_RESEARCH', new CompanyResearchNode());
 
     // Communication
     this.register('EMAIL_SEND', new EmailNode());

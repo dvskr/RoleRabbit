@@ -6,6 +6,9 @@
 const BaseNode = require('./baseNode');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const aiService = require('../../aiService');
+const aiAgentService = require('../../aiAgentService');
+const logger = require('../../../utils/logger');
 
 class AIAgentNode extends BaseNode {
   constructor(mode = 'analyze') {
@@ -24,75 +27,106 @@ class AIAgentNode extends BaseNode {
   }
 
   async analyzeJob(input, config, context) {
-    // Get job details from input
-    const jobUrl = this.getValue(input, config.jobUrlPath || 'jobUrl');
-    const jobTitle = this.getValue(input, config.jobTitlePath || 'jobTitle');
-    const jobDescription = this.getValue(input, config.jobDescriptionPath || 'jobDescription');
+    try {
+      // Get job details from input
+      const jobUrl = this.getValue(input, config.jobUrlPath || 'jobUrl');
+      const jobTitle = this.getValue(input, config.jobTitlePath || 'jobTitle');
+      const jobDescription = this.getValue(input, config.jobDescriptionPath || 'jobDescription');
 
-    if (!jobUrl && !jobDescription) {
-      throw new Error('Job URL or description required');
-    }
+      if (!jobUrl && !jobDescription) {
+        throw new Error('Job URL or description required');
+      }
 
-    // Create AI Agent task
-    const task = await prisma.aIAgentTask.create({
-      data: {
+      logger.info('AI Agent analyze node executing', {
         userId: context.userId,
-        type: 'JOB_APPLICATION',
-        status: 'QUEUED',
-        input: {
-          jobUrl,
-          jobTitle,
-          jobDescription,
-          action: 'analyze'
-        }
-      }
-    });
+        jobTitle,
+        hasJobDescription: !!jobDescription
+      });
 
-    // For now, return a mock analysis (in production, this would call the AI service)
-    const analysis = {
-      taskId: task.id,
-      score: 8, // 1-10
-      match: true,
-      qualifications: {
-        met: ['React', 'Node.js', 'TypeScript'],
-        missing: ['AWS', 'Docker']
-      },
-      recommendation: 'Good match - apply immediately',
-      salary: {
-        estimated: '$120,000 - $150,000',
-        match: true
-      }
-    };
+      // Use AI service directly for analysis
+      // This is a synchronous operation that doesn't need background processing
+      const jdAnalysis = await aiService.analyzeJobDescription(jobDescription);
 
-    return analysis;
+      // Extract key information
+      const keywords = jdAnalysis.keywords || [];
+      const requiredSkills = jdAnalysis.requiredSkills || [];
+      const preferredSkills = jdAnalysis.preferredSkills || [];
+      const experienceLevel = jdAnalysis.experienceLevel || 'Mid-Level';
+      const salaryRange = jdAnalysis.salaryRange || null;
+
+      // Calculate a match score (1-10) based on analysis
+      // This is a simplified scoring - in production, you'd compare with user's resume
+      const score = Math.min(10, Math.max(1, Math.round(keywords.length / 2 + 5)));
+      const match = score >= (config.minScore || 7);
+
+      logger.info('Job analysis completed', {
+        score,
+        match,
+        keywordsFound: keywords.length
+      });
+
+      // Return real analysis results
+      const analysis = {
+        score,
+        match,
+        jobTitle,
+        company: this.getValue(input, config.companyPath || 'company') || 'Unknown',
+        qualifications: {
+          required: requiredSkills,
+          preferred: preferredSkills,
+          experienceLevel
+        },
+        keywords,
+        recommendation: match
+          ? 'Good match - consider applying'
+          : 'May not be the best fit - review requirements carefully',
+        salary: salaryRange
+          ? {
+              estimated: salaryRange,
+              match: true
+            }
+          : null,
+        analysisDetails: jdAnalysis
+      };
+
+      return analysis;
+    } catch (error) {
+      logger.error('AI Agent analyze node failed', { error: error.message });
+      throw error;
+    }
   }
 
   async chat(input, config, context) {
-    const message = this.getValue(input, config.messagePath || 'message');
-    const conversationId = this.getValue(input, config.conversationIdPath);
+    try {
+      const message = this.getValue(input, config.messagePath || 'message');
 
-    // Create or get conversation
-    let conversation;
-    if (conversationId) {
-      conversation = await prisma.aIAgentConversation.findUnique({
-        where: { id: conversationId }
+      if (!message) {
+        throw new Error('Message is required for chat');
+      }
+
+      logger.info('AI Agent chat node executing', {
+        userId: context.userId,
+        messageLength: message.length
       });
-    } else {
-      conversation = await prisma.aIAgentConversation.create({
-        data: {
-          userId: context.userId,
-          messages: [],
-          isActive: true
-        }
+
+      // Use the real chat service
+      const result = await aiAgentService.sendChatMessage(context.userId, message);
+
+      logger.info('AI Agent chat completed', {
+        userId: context.userId,
+        responseLength: result.message.length
       });
+
+      return {
+        conversationId: result.conversation.id,
+        response: result.message,
+        message,
+        suggestedActions: result.suggestedActions || []
+      };
+    } catch (error) {
+      logger.error('AI Agent chat node failed', { error: error.message });
+      throw error;
     }
-
-    // Mock response
-    return {
-      conversationId: conversation.id,
-      response: `AI Agent response to: ${message}`,
-      message
-    };
   }
 
   getMetadata() {
