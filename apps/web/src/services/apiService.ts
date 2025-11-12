@@ -1090,6 +1090,69 @@ class ApiService {
     });
   }
 
+  // ===== USER PREFERENCES ENDPOINTS =====
+
+  /**
+   * Get user's tailoring preferences
+   */
+  async getTailoringPreferences(): Promise<{ mode: string; tone: string; length: string }> {
+    const response = await this.request<{ success: boolean; preferences: { mode: string; tone: string; length: string } }>(
+      '/api/user/preferences/tailoring',
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    );
+    return response.preferences;
+  }
+
+  /**
+   * Update user's tailoring preferences
+   */
+  async updateTailoringPreferences(preferences: {
+    mode?: string;
+    tone?: string;
+    length?: string;
+  }): Promise<{ mode: string; tone: string; length: string }> {
+    const response = await this.request<{ success: boolean; preferences: { mode: string; tone: string; length: string } }>(
+      '/api/user/preferences/tailoring',
+      {
+        method: 'PUT',
+        body: JSON.stringify(preferences),
+        credentials: 'include',
+      }
+    );
+    return response.preferences;
+  }
+
+  /**
+   * Reset user's tailoring preferences to defaults
+   */
+  async resetTailoringPreferences(): Promise<{ mode: string; tone: string; length: string }> {
+    const response = await this.request<{ success: boolean; preferences: { mode: string; tone: string; length: string } }>(
+      '/api/user/preferences/tailoring/reset',
+      {
+        method: 'POST',
+        credentials: 'include',
+      }
+    );
+    return response.preferences;
+  }
+
+  /**
+   * Get all user preferences
+   */
+  async getUserPreferences(): Promise<any> {
+    const response = await this.request<{ success: boolean; preferences: any }>(
+      '/api/user/preferences',
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    );
+    return response.preferences;
+  }
+
 }
 
 // Export singleton instance

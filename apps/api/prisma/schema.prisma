@@ -473,6 +473,11 @@ model User {
 
   // Preferences (frequently accessed)
   emailNotifications Boolean @default(true)
+  
+  // Tailoring Preferences
+  tailorPreferredMode   TailorMode? @default(PARTIAL)
+  tailorPreferredTone   String?     @default("professional")
+  tailorPreferredLength String?     @default("thorough")
 
   // Subscription & Usage Tracking
   subscriptionTier          SubscriptionTier @default(FREE)
@@ -509,6 +514,7 @@ model User {
   aiRequests          AIRequestLog[]
   aiDrafts            AIDraft[]
   resumeCacheEntries  ResumeCache[]
+  tailoringAnalytics  TailoringAnalytics[]
   activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -557,13 +563,14 @@ model BaseResume {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user               User                @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
-  activeUser         User?               @relation("ActiveBaseResume")
+  user               User                 @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
+  activeUser         User?                @relation("ActiveBaseResume")
   tailoredVersions   TailoredVersion[]
   generatedDocuments GeneratedDocument[]
   resumeCaches       ResumeCache[]
   aiRequests         AIRequestLog[]
   aiDrafts           AIDraft[]
+  tailoringAnalytics TailoringAnalytics[]
 
   @@unique([userId, slotNumber])
   @@index([userId, isActive])
@@ -726,4 +733,35 @@ model AIDraft {
   @@index([baseResumeId])
   @@index([expiresAt])
   @@map("ai_drafts")
+}
+
+model TailoringAnalytics {
+  id                 String   @id @default(cuid())
+  userId             String
+  resumeId           String
+  mode               String
+  scoreBefore        Float
+  scoreAfter         Float
+  improvement        Float
+  improvementRate    Float
+  targetScore        Float
+  targetMet          Boolean
+  tokensUsed         Int?
+  durationMs         Int
+  confidence         Float    @default(0)
+  warningCount       Int      @default(0)
+  changeCount        Int      @default(0)
+  keywordsAddedCount Int      @default(0)
+  costEstimate       Float    @default(0)
+  timestamp          DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume BaseResume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([mode])
+  @@index([userId, timestamp])
+  @@map("tailoring_analytics")
 }

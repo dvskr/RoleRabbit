@@ -15,6 +15,10 @@ const LENGTH_PRESETS = {
 const MAX_JSON_CONTEXT_LENGTH = 20000;
 const TRUNCATION_SENTINEL = '\n[TRUNCATED FOR LENGTH — prioritize the most relevant recent content]\n';
 
+// Prompt compression
+const { compressPrompt, compressTailorPrompt, compressGeneratePrompt } = require('./promptCompression');
+const ENABLE_COMPRESSION = process.env.ENABLE_PROMPT_COMPRESSION !== 'false'; // Enabled by default
+
 function normalizeJson(value, maxLength = MAX_JSON_CONTEXT_LENGTH) {
   try {
     const jsonString = JSON.stringify(value ?? '', null, 0);
@@ -46,6 +50,27 @@ function buildGenerateContentPrompt({
   length = 'thorough',
   instructions
 }) {
+  // Use compressed prompt if compression is enabled
+  if (ENABLE_COMPRESSION) {
+    try {
+      const compressed = compressGeneratePrompt({
+        sectionType,
+        sectionPath,
+        currentContent,
+        resumeSnapshot,
+        jobContext,
+        tone,
+        length,
+        instructions
+      });
+      if (compressed) return compressed;
+    } catch (error) {
+      // Fall through to original prompt on error
+      console.error('Compression failed, using original prompt:', error.message);
+    }
+  }
+
+  // Original verbose prompt (fallback)
   const toneDescription = TONE_PRESETS[tone?.toLowerCase()] || TONE_PRESETS.professional;
   const lengthPrompt = LENGTH_PRESETS[length?.toLowerCase()] || LENGTH_PRESETS.thorough;
 
@@ -85,6 +110,26 @@ function buildTailorResumePrompt({
   atsAnalysis = null,
   targetScore = null
 }) {
+  // Use compressed prompt if compression is enabled
+  if (ENABLE_COMPRESSION) {
+    try {
+      const compressed = compressTailorPrompt({
+        resumeSnapshot,
+        jobDescription,
+        mode,
+        tone,
+        length,
+        atsAnalysis,
+        targetScore
+      });
+      if (compressed) return compressed;
+    } catch (error) {
+      // Fall through to original prompt on error
+      console.error('Compression failed, using original prompt:', error.message);
+    }
+  }
+
+  // Original verbose prompt (fallback)
   const toneDescription = TONE_PRESETS[tone?.toLowerCase()] || TONE_PRESETS.professional;
   const lengthPrompt = LENGTH_PRESETS[length?.toLowerCase()] || LENGTH_PRESETS.thorough;
 

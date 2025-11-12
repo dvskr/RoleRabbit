@@ -6,6 +6,9 @@ import { AIPanelProps, ApplyChangesHandlerDeps } from './types/AIPanel.types';
 import { ChevronDown, ChevronUp, X, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { AIOperationProgress } from '../../common/AIOperationProgress';
 import { InlineProgress } from '../../common/InlineProgress';
+import ResumeQualityIndicator from './components/ResumeQualityIndicator';
+import EnhancedProgressTracker from './components/EnhancedProgressTracker';
+import { useSimulatedProgress } from '../../../hooks/useSimulatedProgress';
 
 export const createApplyChangesHandler =
   ({ confirmTailorChanges, analyzeJobDescription, setApplyError, setBeforeScore }: ApplyChangesHandlerDeps) =>
@@ -46,6 +49,7 @@ export default function AIPanelRedesigned({
   setSelectedTone,
   selectedLength,
   setSelectedLength,
+  onResetTailoringPreferences,
   resumeData,
   onAnalyzeJobDescription,
   tailorResult,
@@ -69,6 +73,10 @@ export default function AIPanelRedesigned({
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [beforeScore, setBeforeScore] = useState<number | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
+
+  // Enhanced progress tracking
+  const tailorProgressSimulator = useSimulatedProgress('tailor');
+  const atsProgressSimulator = useSimulatedProgress('ats');
 
   // Calculate score color and label
   const getScoreColor = (score: number) => {
@@ -112,8 +120,28 @@ export default function AIPanelRedesigned({
       setBeforeScore(matchScore.overall);
     }
     setApplyError(null);
+    
+    // Start progress simulation
+    tailorProgressSimulator.start();
+    
     await onTailorResume?.();
   };
+
+  // Complete progress when tailoring finishes
+  useEffect(() => {
+    if (!isTailoring && tailorProgressSimulator.progressState.isActive) {
+      tailorProgressSimulator.complete();
+    }
+  }, [isTailoring, tailorProgressSimulator]);
+
+  // Start ATS progress when analyzing
+  useEffect(() => {
+    if (isAnalyzing && !atsProgressSimulator.progressState.isActive) {
+      atsProgressSimulator.start();
+    } else if (!isAnalyzing && atsProgressSimulator.progressState.isActive) {
+      atsProgressSimulator.complete();
+    }
+  }, [isAnalyzing, atsProgressSimulator]);
 
   const handleApplyChanges = useCallback(
     () =>
@@ -251,33 +279,60 @@ export default function AIPanelRedesigned({
           />
           <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: colors.textSecondary }}>
-              {jobDescription?.length || 0} characters
+              {jobDescription?.length || 0} / 15,000 characters
             </span>
-            {jobDescription && jobDescription.length < 10 && (
+            {jobDescription && jobDescription.length < 100 && (
               <span className="text-xs" style={{ color: '#ef4444' }}>
-                Min 10 characters
+                ⚠️ Minimum 100 characters for best results
+              </span>
+            )}
+            {jobDescription && jobDescription.length > 15000 && (
+              <span className="text-xs font-medium" style={{ color: '#ef4444' }}>
+                ❌ Maximum 15,000 characters exceeded
               </span>
             )}
           </div>
+          
+          {/* Validation warnings */}
+          {jobDescription && jobDescription.length > 0 && jobDescription.length < 100 && (
+            <div className="text-xs p-2 rounded" style={{ 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.2)'
+            }}>
+              💡 Tip: Include job requirements, responsibilities, and qualifications for accurate tailoring
+            </div>
+          )}
+          
+          {jobDescription && jobDescription.split(/\s+/).length < 20 && jobDescription.length >= 100 && (
+            <div className="text-xs p-2 rounded" style={{ 
+              background: 'rgba(245, 158, 11, 0.1)', 
+              color: '#f59e0b',
+              border: '1px solid rgba(245, 158, 11, 0.2)'
+            }}>
+              ⚠️ Job description seems short. Add more details for better tailoring.
+            </div>
+          )}
 
           {/* ATS Progress or Button */}
-          {isAnalyzing && atsProgress?.isActive ? (
-            <AIOperationProgress
+          {isAnalyzing && atsProgressSimulator.progressState.isActive ? (
+            <EnhancedProgressTracker
               operation="ats"
-              stage={atsProgress.stage || 'Starting'}
-              progress={atsProgress.progress || 0}
-              estimatedTime={atsProgress.estimatedTime}
-              elapsedTime={atsProgress.elapsedTime || 0}
-              message={atsProgress.message}
+              currentStage={atsProgressSimulator.progressState.stage}
+              progress={atsProgressSimulator.progressState.progress}
+              message={atsProgressSimulator.progressState.message}
+              elapsedTime={atsProgressSimulator.progressState.elapsedTime}
+              estimatedTimeRemaining={atsProgressSimulator.progressState.estimatedTimeRemaining}
+              colors={colors}
             />
           ) : (
             <button
               onClick={handleRunAnalysis}
-              disabled={isAnalyzing || !jobDescription || jobDescription.length < 10}
+              disabled={isAnalyzing || !jobDescription || jobDescription.length < 100 || jobDescription.length > 15000}
               className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
                 background: colors.activeBlueText,
-                opacity: isAnalyzing || !jobDescription || jobDescription.length < 10 ? 0.5 : 1,
+                opacity: isAnalyzing || !jobDescription || jobDescription.length < 100 || jobDescription.length > 15000 ? 0.5 : 1,
                 width: '100%',
                 maxWidth: '100%',
                 boxSizing: 'border-box'
@@ -442,19 +497,26 @@ export default function AIPanelRedesigned({
             {/* Step 3: Auto-Tailor Button or Progress */}
             {!tailorResult && (
               <>
-                {isTailoring && tailorProgress?.isActive ? (
-                  <AIOperationProgress
+                {/* Resume Quality Check */}
+                <ResumeQualityIndicator 
+                  resumeData={resumeData} 
+                  colors={colors}
+                />
+                
+                {isTailoring && tailorProgressSimulator.progressState.isActive ? (
+                  <EnhancedProgressTracker
                     operation="tailor"
-                    stage={tailorProgress.stage || 'Starting'}
-                    progress={tailorProgress.progress || 0}
-                    estimatedTime={tailorProgress.estimatedTime}
-                    elapsedTime={tailorProgress.elapsedTime || 0}
-                    message={tailorProgress.message}
+                    currentStage={tailorProgressSimulator.progressState.stage}
+                    progress={tailorProgressSimulator.progressState.progress}
+                    message={tailorProgressSimulator.progressState.message}
+                    elapsedTime={tailorProgressSimulator.progressState.elapsedTime}
+                    estimatedTimeRemaining={tailorProgressSimulator.progressState.estimatedTimeRemaining}
+                    colors={colors}
                   />
                 ) : (
                   <button
                     onClick={handleAutoTailor}
-                    disabled={isTailoring}
+                    disabled={isTailoring || !jobDescription || jobDescription.length < 100 || jobDescription.length > 15000}
                     className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     style={{
                       background: '#10b981',
@@ -746,6 +808,23 @@ export default function AIPanelRedesigned({
                   ))}
                 </div>
               </div>
+
+              {/* Reset to Defaults Button */}
+              {onResetTailoringPreferences && (
+                <div className="pt-2 border-t" style={{ borderColor: colors.border }}>
+                  <button
+                    onClick={onResetTailoringPreferences}
+                    className="w-full py-2 px-3 rounded-md text-xs font-medium transition-all hover:opacity-80"
+                    style={{
+                      background: 'transparent',
+                      color: colors.textSecondary,
+                      border: `1px dashed ${colors.border}`,
+                    }}
+                  >
+                    🔄 Reset to Defaults
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

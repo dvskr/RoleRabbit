@@ -21,6 +21,7 @@ interface ATSSettingsProps {
   setSelectedTone: (tone: string) => void;
   selectedLength: string;
   setSelectedLength: (length: string) => void;
+  onResetPreferences?: () => void;
 }
 
 export default function ATSSettings({
@@ -30,7 +31,8 @@ export default function ATSSettings({
   selectedTone,
   setSelectedTone,
   selectedLength,
-  setSelectedLength
+  setSelectedLength,
+  onResetPreferences
 }: ATSSettingsProps) {
   const [showAISettings, setShowAISettings] = useState(false);
 
@@ -80,30 +82,59 @@ export default function ATSSettings({
           <div className="space-y-3 pt-3">
             <div>
               <p className="block text-xs font-medium mb-1.5" style={{ color: colors.secondaryText }}>
-                Mode
+                Tailoring Mode
               </p>
-              <div className="flex rounded-lg p-1" style={{ background: colors.inputBackground }}>
+              <div className="space-y-2">
                 <button
                   onClick={() => setTailorEditMode('partial')}
-                  className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all"
+                  className="w-full p-2.5 rounded-lg text-left transition-all"
                   style={{
-                    background: tailorEditMode === 'partial' ? colors.badgePurpleBg : 'transparent',
-                    color: tailorEditMode === 'partial' ? colors.badgePurpleText : colors.secondaryText,
-                    border: tailorEditMode === 'partial' ? `1px solid ${colors.badgePurpleBorder}` : 'none',
+                    background: tailorEditMode === 'partial' ? colors.badgePurpleBg : colors.inputBackground,
+                    border: `1px solid ${tailorEditMode === 'partial' ? colors.badgePurpleBorder : colors.border}`,
                   }}
                 >
-                  Partial
+                  <div className="flex items-start justify-between mb-1">
+                    <span className="text-xs font-semibold" style={{ 
+                      color: tailorEditMode === 'partial' ? colors.badgePurpleText : colors.primaryText 
+                    }}>
+                      ⚡ Quick Enhancement
+                    </span>
+                    {tailorEditMode === 'partial' && (
+                      <span style={{ color: colors.badgePurpleText, fontSize: '10px' }}>✓</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '10px', opacity: 0.8, color: colors.secondaryText, lineHeight: '1.3' }}>
+                    ~15 seconds · Keyword optimization
+                  </div>
+                  <div style={{ fontSize: '9px', opacity: 0.7, color: colors.secondaryText, marginTop: '4px' }}>
+                    Best for: Multiple applications, quick adjustments
+                  </div>
                 </button>
+                
                 <button
                   onClick={() => setTailorEditMode('full')}
-                  className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-all"
+                  className="w-full p-2.5 rounded-lg text-left transition-all"
                   style={{
-                    background: tailorEditMode === 'full' ? colors.badgePurpleBg : 'transparent',
-                    color: tailorEditMode === 'full' ? colors.badgePurpleText : colors.secondaryText,
-                    border: tailorEditMode === 'full' ? `1px solid ${colors.badgePurpleBorder}` : 'none',
+                    background: tailorEditMode === 'full' ? colors.badgePurpleBg : colors.inputBackground,
+                    border: `1px solid ${tailorEditMode === 'full' ? colors.badgePurpleBorder : colors.border}`,
                   }}
                 >
-                  Full
+                  <div className="flex items-start justify-between mb-1">
+                    <span className="text-xs font-semibold" style={{ 
+                      color: tailorEditMode === 'full' ? colors.badgePurpleText : colors.primaryText 
+                    }}>
+                      🚀 Complete Rewrite
+                    </span>
+                    {tailorEditMode === 'full' && (
+                      <span style={{ color: colors.badgePurpleText, fontSize: '10px' }}>✓</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '10px', opacity: 0.8, color: colors.secondaryText, lineHeight: '1.3' }}>
+                    ~30 seconds · Comprehensive overhaul
+                  </div>
+                  <div style={{ fontSize: '9px', opacity: 0.7, color: colors.secondaryText, marginTop: '4px' }}>
+                    Best for: Dream jobs, career pivots, weak resumes
+                  </div>
                 </button>
               </div>
             </div>
@@ -155,6 +186,23 @@ export default function ATSSettings({
               ))}
             </div>
           </div>
+
+          {/* Reset to Defaults Button */}
+          {onResetPreferences && (
+            <div className="pt-2 border-t" style={{ borderColor: colors.border }}>
+              <button
+                onClick={onResetPreferences}
+                className="w-full py-2 px-3 rounded-md text-xs font-medium transition-all hover:opacity-80"
+                style={{
+                  background: 'transparent',
+                  color: colors.secondaryText,
+                  border: `1px dashed ${colors.border}`,
+                }}
+              >
+                🔄 Reset to Defaults
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

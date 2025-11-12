@@ -27,6 +27,12 @@ const { calculateRealisticCeiling, calculateTargetScore } = require('../../utils
 const logger = require('../../utils/logger');
 const { normalizeResumeData } = require('@roleready/resume-normalizer');
 const { jsonrepair } = require('jsonrepair');
+const {
+  validateTailorRequest,
+  estimateCost,
+  TailorValidationError
+} = require('../../utils/tailorValidation');
+const { createTailorProgressTracker } = require('../../utils/progressTracker');
 
 function parseJsonResponse(rawText, description) {
   if (!rawText) {
@@ -95,17 +101,77 @@ async function tailorResume({
   jobDescription,
   mode = TailorMode.PARTIAL,
   tone = 'professional',
-  length = 'thorough'
+  length = 'thorough',
+  onProgress = null
 }) {
   const tailorMode = normalizeTailoredMode(mode);
   const action = tailorMode === TailorMode.FULL ? AIAction.TAILOR_FULL : AIAction.TAILOR_PARTIAL;
+
+  // 🚀 NEW: Initialize progress tracker
+  const progressTracker = createTailorProgressTracker(onProgress);
+  progressTracker.setMetadata({
+    userId: user.id,
+    resumeId,
+    mode: tailorMode
+  });
 
   ensureActionAllowed(user.subscriptionTier, action);
   await ensureWithinRateLimit({ userId: user.id, action, tier: user.subscriptionTier });
 
   const resume = await getActiveResumeOrThrow({ userId: user.id, resumeId });
 
-  // 🚀 PERFORMANCE: Run ATS and job analysis in parallel (60s → 30s improvement)
+  // 🎯 Stage 1: Validate input before expensive AI operations
+  progressTracker.update('VALIDATING');
+  
+  try {
+    const validation = validateTailorRequest({
+      resumeData: resume.data,
+      jobDescription,
+      mode: tailorMode,
+      tone,
+      length
+    });
+
+    // Log validation results
+    logger.info('Tailoring input validated', {
+      userId: user.id,
+      resumeId,
+      qualityScore: validation.resume.qualityScore,
+      jdLength: validation.jobDescription.length,
+      warnings: validation.warnings.length,
+      suggestions: validation.suggestions.length
+    });
+
+    // Log cost estimate
+    const costEstimate = estimateCost({
+      jobDescription: validation.jobDescription.trimmed,
+      resumeData: resume.data,
+      mode: tailorMode
+    });
+    
+    logger.info('Estimated tailoring cost', {
+      userId: user.id,
+      ...costEstimate
+    });
+
+  } catch (error) {
+    if (error instanceof TailorValidationError) {
+      logger.warn('Tailoring validation failed', {
+        userId: user.id,
+        resumeId,
+        field: error.field,
+        message: error.message
+      });
+      
+      // Throw user-friendly error
+      throw new AIUsageError(error.suggestedAction || error.message, 400);
+    }
+    throw error;
+  }
+
+  // 🚀 Stage 2-3: Run ATS and job analysis in parallel (60s → 30s improvement)
+  progressTracker.update('ANALYZING_RESUME');
+  
   logger.info('Running parallel analysis: ATS scoring + Job skill extraction');
   const [atsBefore, jobAnalysis] = await Promise.all([
     scoreResumeWorldClass({ 
@@ -115,8 +181,15 @@ async function tailorResume({
     }),
     extractSkillsWithAI(jobDescription)
   ]);
+  
+  progressTracker.update('ANALYZING_JOB');
 
-  // Calculate realistic ceiling and target score
+  // 🎯 Stage 4: Calculate realistic ceiling and target score
+  progressTracker.update('CALCULATING_GAPS', {
+    currentScore: atsBefore.overall,
+    missingKeywords: atsBefore.missingKeywords?.length || 0
+  });
+  
   const ceiling = calculateRealisticCeiling(resume.data, jobAnalysis, atsBefore);
   const targetScore = calculateTargetScore(tailorMode, atsBefore.overall, ceiling);
 
@@ -145,6 +218,12 @@ async function tailorResume({
   });
 
   try {
+    // 🎯 Stage 5: Start AI tailoring
+    progressTracker.update('TAILORING', {
+      targetScore,
+      potentialImprovement: targetScore - atsBefore.overall
+    });
+    
     logger.info('Starting AI tailoring', {
       userId: user.id,
       resumeId,
@@ -168,6 +247,11 @@ async function tailorResume({
       tokensUsed: response.usage?.total_tokens
     });
 
+    // 🎯 Stage 6: Parse and enhance response
+    progressTracker.update('ENHANCING', {
+      tokensUsed: response.usage?.total_tokens
+    });
+
     const payload = parseJsonResponse(response.text, 'tailor resume');
     if (!payload.tailoredResume || typeof payload.tailoredResume !== 'object') {
       throw new Error('Tailor response missing tailoredResume payload');
@@ -185,6 +269,9 @@ async function tailorResume({
     // Normalize the tailored resume data to convert objects with numeric keys to arrays
     const normalizedTailoredResume = normalizeResumeData(payload.tailoredResume);
 
+    // 🎯 Stage 7: Score the tailored resume
+    progressTracker.update('SCORING');
+    
     // 🚀 PERFORMANCE: Use fast scoring for after-score (consistent with before-score)
     logger.info('Running World-Class ATS analysis after tailoring');
     const atsAfter = await scoreResumeWorldClass({ 
@@ -193,15 +280,7 @@ async function tailorResume({
       useAI: false // Fast dictionary mode for consistency
     });
 
-    const scoreImprovement = atsAfter.overall - atsBefore.overall;
-    logger.info('Tailoring complete - Score improvement', {
-      before: atsBefore.overall,
-      after: atsAfter.overall,
-      improvement: scoreImprovement,
-      targetWas: targetScore,
-      metTarget: atsAfter.overall >= targetScore
-    });
-
+    // 🎯 Stage 8: Create DB record (can run in parallel with AI request logging)
     const tailoredVersion = await prisma.tailoredVersion.create({
       data: {
         userId: user.id,
@@ -218,7 +297,17 @@ async function tailorResume({
       }
     });
 
-    await recordAIRequest({
+    const scoreImprovement = atsAfter.overall - atsBefore.overall;
+    logger.info('Tailoring complete - Score improvement', {
+      before: atsBefore.overall,
+      after: atsAfter.overall,
+      improvement: scoreImprovement,
+      targetWas: targetScore,
+      metTarget: atsAfter.overall >= targetScore
+    });
+
+    // 🚀 PERFORMANCE: Make logging/metrics non-blocking (fire-and-forget)
+    recordAIRequest({
       userId: user.id,
       baseResumeId: resume.id,
       action,
@@ -231,6 +320,8 @@ async function tailorResume({
         atsBefore: atsBefore.overall,
         atsAfter: atsAfter.overall
       }
+    }).catch(err => {
+      logger.warn('Failed to record AI request (non-blocking)', { error: err.message });
     });
 
     aiActionCounter.inc({
@@ -275,6 +366,14 @@ async function tailorResume({
       atsAfter: atsAfter.overall,
       warnings: payload.warnings.length,
       diffCount: payload.diff.length
+    });
+
+    // 🎯 Stage 8: Complete!
+    progressTracker.complete({
+      scoreImprovement: atsAfter.overall - atsBefore.overall,
+      atsBefore: atsBefore.overall,
+      atsAfter: atsAfter.overall,
+      changesCount: payload.diff.length
     });
 
     return {
@@ -374,7 +473,8 @@ async function applyRecommendations({
 
     const atsAfter = scoreResumeAgainstJob({ resumeData: normalizedUpdatedResume, jobDescription });
 
-    await recordAIRequest({
+    // 🚀 PERFORMANCE: Non-blocking logging
+    recordAIRequest({
       userId: user.id,
       baseResumeId: resume.id,
       action: AIAction.APPLY_RECOMMENDATIONS,
@@ -386,6 +486,8 @@ async function applyRecommendations({
         atsBefore: atsBefore.overall,
         atsAfter: atsAfter.overall
       }
+    }).catch(err => {
+      logger.warn('Failed to record AI request (non-blocking)', { error: err.message });
     });
 
     aiActionCounter.inc({ action: 'apply_recommendations', tier: user.subscriptionTier });
@@ -489,13 +591,16 @@ async function generateCoverLetter({
       }
     });
 
-    await recordAIRequest({
+    // 🚀 PERFORMANCE: Non-blocking logging
+    recordAIRequest({
       userId: user.id,
       baseResumeId: resume.id,
       action: AIAction.COVER_LETTER,
       model: response.model,
       tokensUsed: response.usage?.total_tokens,
       metadata: { jobTitle, company }
+    }).catch(err => {
+      logger.warn('Failed to record AI request (non-blocking)', { error: err.message });
     });
 
     aiActionCounter.inc({ action: 'cover_letter', tier: user.subscriptionTier });
@@ -583,12 +688,15 @@ async function generatePortfolio({
       }
     });
 
-    await recordAIRequest({
+    // 🚀 PERFORMANCE: Non-blocking logging
+    recordAIRequest({
       userId: user.id,
       baseResumeId: resume.id,
       action: AIAction.PORTFOLIO,
       model: response.model,
       tokensUsed: response.usage?.total_tokens
+    }).catch(err => {
+      logger.warn('Failed to record AI request (non-blocking)', { error: err.message });
     });
 
     aiActionCounter.inc({ action: 'portfolio', tier: user.subscriptionTier });

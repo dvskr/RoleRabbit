@@ -1,0 +1,235 @@
+{
+  "SOFTWARE": {
+    "name": "Software & Technology",
+    "commonTitles": [
+      "Software Engineer", "Developer", "DevOps Engineer",
+      "Full Stack Developer", "Backend Engineer", "Frontend Developer",
+      "Mobile Developer", "QA Engineer", "Technical Lead"
+    ],
+    "keySkills": [
+      "JavaScript", "Python", "Java", "React", "Node.js",
+      "AWS", "Docker", "Kubernetes", "CI/CD", "Git",
+      "Agile", "Scrum", "REST API", "Microservices", "SQL"
+    ],
+    "metrics": [
+      "Reduced latency by X%",
+      "Improved performance by X%",
+      "Scaled to X users/requests",
+      "Reduced deployment time by X%",
+      "Test coverage of X%",
+      "Code review turnaround of X hours"
+    ],
+    "powerVerbs": [
+      "Architected", "Engineered", "Deployed", "Optimized",
+      "Scaled", "Migrated", "Refactored", "Automated"
+    ],
+    "certifications": [
+      "AWS Certified Solutions Architect",
+      "Google Cloud Professional",
+      "Certified Kubernetes Administrator",
+      "Azure Developer Associate"
+    ]
+  },
+  "HEALTHCARE": {
+    "name": "Healthcare & Medical",
+    "commonTitles": [
+      "Registered Nurse", "Physician", "Medical Assistant",
+      "Healthcare Administrator", "Clinical Researcher",
+      "Pharmacist", "Physical Therapist", "Medical Technologist"
+    ],
+    "keySkills": [
+      "Patient Care", "Clinical Assessment", "EMR/EHR",
+      "HIPAA Compliance", "Medical Terminology", "CPR/BLS",
+      "Medication Administration", "Care Planning",
+      "Clinical Documentation"
+    ],
+    "metrics": [
+      "Improved patient satisfaction by X%",
+      "Reduced readmission rates by X%",
+      "Managed X patients daily",
+      "Achieved X% compliance rate",
+      "Reduced wait times by X minutes"
+    ],
+    "powerVerbs": [
+      "Assessed", "Diagnosed", "Treated", "Monitored",
+      "Administered", "Coordinated", "Educated", "Implemented"
+    ],
+    "certifications": [
+      "RN License", "BLS/ACLS Certified",
+      "Certified Nursing Assistant", "Licensed Practical Nurse"
+    ]
+  },
+  "FINANCE": {
+    "name": "Finance & Banking",
+    "commonTitles": [
+      "Financial Analyst", "Investment Banker", "Accountant",
+      "Financial Advisor", "Risk Analyst", "Portfolio Manager",
+      "Auditor", "Tax Consultant"
+    ],
+    "keySkills": [
+      "Financial Modeling", "Excel/VBA", "Bloomberg Terminal",
+      "Risk Management", "Portfolio Analysis", "GAAP",
+      "Valuation", "M&A", "Due Diligence", "SQL"
+    ],
+    "metrics": [
+      "Managed portfolio of $X",
+      "Generated $X in revenue",
+      "Reduced costs by $X",
+      "Achieved X% ROI",
+      "Closed deals worth $X",
+      "Improved efficiency by X%"
+    ],
+    "powerVerbs": [
+      "Analyzed", "Forecasted", "Valued", "Optimized",
+      "Audited", "Advised", "Structured", "Executed"
+    ],
+    "certifications": [
+      "CFA (Chartered Financial Analyst)",
+      "CPA (Certified Public Accountant)",
+      "CFP (Certified Financial Planner)",
+      "FRM (Financial Risk Manager)"
+    ]
+  },
+  "MARKETING": {
+    "name": "Marketing & Advertising",
+    "commonTitles": [
+      "Marketing Manager", "Digital Marketer", "Content Strategist",
+      "SEO Specialist", "Social Media Manager", "Brand Manager",
+      "Growth Marketer", "Marketing Analyst"
+    ],
+    "keySkills": [
+      "SEO/SEM", "Google Analytics", "Content Marketing",
+      "Social Media Marketing", "Email Marketing", "A/B Testing",
+      "Marketing Automation", "HubSpot", "Salesforce", "Copywriting"
+    ],
+    "metrics": [
+      "Increased traffic by X%",
+      "Improved conversion rate by X%",
+      "Generated X leads",
+      "Achieved ROI of X%",
+      "Grew social following by X%",
+      "Reduced CAC by X%"
+    ],
+    "powerVerbs": [
+      "Launched", "Drove", "Generated", "Increased",
+      "Optimized", "Developed", "Executed", "Scaled"
+    ],
+    "certifications": [
+      "Google Analytics Certified",
+      "HubSpot Inbound Certified",
+      "Facebook Blueprint Certified",
+      "Hootsuite Certified"
+    ]
+  },
+  "SALES": {
+    "name": "Sales & Business Development",
+    "commonTitles": [
+      "Account Executive", "Sales Manager", "BDR/SDR",
+      "Account Manager", "Sales Director", "Inside Sales Rep",
+      "Enterprise Sales", "Customer Success Manager"
+    ],
+    "keySkills": [
+      "Salesforce", "Prospecting", "Negotiation",
+      "Pipeline Management", "B2B/B2B Sales", "Cold Calling",
+      "Relationship Building", "Forecasting", "CRM"
+    ],
+    "metrics": [
+      "Achieved X% of quota",
+      "Closed $X in revenue",
+      "Managed X accounts",
+      "Increased territory revenue by X%",
+      "X% win rate",
+      "Reduced sales cycle by X days"
+    ],
+    "powerVerbs": [
+      "Closed", "Negotiated", "Generated", "Exceeded",
+      "Built", "Grew", "Secured", "Converted"
+    ],
+    "certifications": [
+      "Salesforce Certified",
+      "SPIN Selling Certified",
+      "Challenger Sale Certified"
+    ]
+  },
+  "EDUCATION": {
+    "name": "Education & Training",
+    "commonTitles": [
+      "Teacher", "Professor", "Instructor", "Education Coordinator",
+      "Curriculum Developer", "Academic Advisor",
+      "Training Specialist", "Tutor"
+    ],
+    "keySkills": [
+      "Curriculum Development", "Classroom Management",
+      "Learning Management Systems", "Assessment Design",
+      "Educational Technology", "Differentiated Instruction",
+      "Student Engagement"
+    ],
+    "metrics": [
+      "Improved test scores by X%",
+      "Taught X students",
+      "Developed X courses",
+      "Achieved X% student satisfaction",
+      "Reduced dropout rate by X%"
+    ],
+    "powerVerbs": [
+      "Taught", "Developed", "Implemented", "Mentored",
+      "Facilitated", "Assessed", "Designed", "Improved"
+    ],
+    "certifications": [
+      "Teaching License", "ESL Certified",
+      "Special Education Certified"
+    ]
+  },
+  "CONSTRUCTION": {
+    "name": "Construction & Engineering",
+    "commonTitles": [
+      "Project Manager", "Civil Engineer", "Construction Manager",
+      "Site Supervisor", "Estimator", "Safety Manager"
+    ],
+    "keySkills": [
+      "Project Management", "AutoCAD", "OSHA Safety",
+      "Blueprint Reading", "Estimation", "Scheduling",
+      "Building Codes", "Quality Control"
+    ],
+    "metrics": [
+      "Managed projects worth $X",
+      "Completed X projects",
+      "Reduced costs by X%",
+      "Improved safety record to X",
+      "Finished X% ahead of schedule"
+    ],
+    "powerVerbs": [
+      "Managed", "Coordinated", "Supervised", "Delivered",
+      "Inspected", "Ensured", "Oversaw", "Completed"
+    ],
+    "certifications": [
+      "PMP", "OSHA 30-Hour", "LEED AP",
+      "Professional Engineer (PE)"
+    ]
+  },
+  "CONSULTING": {
+    "name": "Consulting & Strategy",
+    "commonTitles": [
+      "Management Consultant", "Strategy Consultant",
+      "Business Analyst", "Operations Consultant"
+    ],
+    "keySkills": [
+      "Strategic Planning", "Business Analysis", "Stakeholder Management",
+      "Excel/PowerPoint", "Process Improvement", "Change Management"
+    ],
+    "metrics": [
+      "Generated $X in value",
+      "Improved efficiency by X%",
+      "Led X client engagements",
+      "Achieved X% client satisfaction"
+    ],
+    "powerVerbs": [
+      "Advised", "Analyzed", "Recommended", "Transformed",
+      "Optimized", "Implemented", "Strategized"
+    ],
+    "certifications": [
+      "PMP", "Six Sigma", "CMC"
+    ]
+  }
+}
+

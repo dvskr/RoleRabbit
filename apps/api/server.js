@@ -287,6 +287,7 @@ fastify.get('/api/status', async () => ({
 // Register route modules
 fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
+fastify.register(require('./routes/userPreferences.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
 fastify.register(require('./routes/resume.routes'));
 fastify.register(require('./routes/baseResume.routes'));

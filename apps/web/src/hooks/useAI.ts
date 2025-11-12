@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../types/ai';
+import { useTailoringPreferences } from './useTailoringPreferences';
 
 // AI state hook
 export const useAI = () => {
@@ -20,6 +21,35 @@ export const useAI = () => {
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [portfolioDraft, setPortfolioDraft] = useState<PortfolioDraft | null>(null);
   const [isGeneratingPortfolio, setIsGeneratingPortfolio] = useState(false);
+
+  // Load user preferences
+  const { preferences, updatePreferences, resetPreferences, loading: prefsLoading } = useTailoringPreferences();
+
+  // Apply loaded preferences to state (only once when preferences load)
+  useEffect(() => {
+    if (!prefsLoading && preferences) {
+      setTailorEditMode(preferences.mode);
+      setSelectedTone(preferences.tone);
+      setSelectedLength(preferences.length);
+    }
+  }, [prefsLoading, preferences]);
+
+  // Auto-save preferences when they change (with debounce)
+  useEffect(() => {
+    if (!prefsLoading) {
+      const timer = setTimeout(() => {
+        updatePreferences({
+          mode: tailorEditMode,
+          tone: selectedTone,
+          length: selectedLength,
+        }).catch(() => {
+          // Silent fail - preferences will be restored on next load
+        });
+      }, 500); // 500ms debounce
+
+      return () => clearTimeout(timer);
+    }
+  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, updatePreferences]);
 
   return {
     aiMode,
@@ -55,6 +85,9 @@ export const useAI = () => {
     portfolioDraft,
     setPortfolioDraft,
     isGeneratingPortfolio,
-    setIsGeneratingPortfolio
+    setIsGeneratingPortfolio,
+    // Preferences management
+    resetTailoringPreferences: resetPreferences,
+    prefsLoading,
   };
 };

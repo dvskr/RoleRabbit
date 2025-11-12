@@ -23,6 +23,7 @@ export interface AIPanelProps {
   setSelectedTone: (tone: string) => void;
   selectedLength: string;
   setSelectedLength: (length: string) => void;
+  onResetTailoringPreferences?: () => void;
   isMobile: boolean;
   resumeData: ResumeData | null;
   onAnalyzeJobDescription: () => Promise<any | null> | void;

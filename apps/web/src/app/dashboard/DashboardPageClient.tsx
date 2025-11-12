@@ -487,6 +487,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     tailorResult, setTailorResult,
     isTailoring, setIsTailoring,
     coverLetterDraft, setCoverLetterDraft,
+    resetTailoringPreferences,
     isGeneratingCoverLetter, setIsGeneratingCoverLetter,
     portfolioDraft, setPortfolioDraft,
     isGeneratingPortfolio, setIsGeneratingPortfolio
@@ -1091,6 +1092,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 setSelectedTone={setSelectedTone}
                 selectedLength={selectedLength}
                 setSelectedLength={setSelectedLength}
+                onResetTailoringPreferences={resetTailoringPreferences}
                 isMobile={false}
                 resumeData={resumeData}
                 onAnalyzeJobDescription={analyzeJobDescription}
