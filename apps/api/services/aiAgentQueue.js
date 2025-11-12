@@ -308,6 +308,80 @@ async function processInterviewPrep(job) {
   }
 }
 
+/**
+ * Process COLD_EMAIL task
+ */
+async function processColdEmail(job) {
+  const { taskId, userId, company, jobTitle, baseResumeId, tone } = job.data;
+
+  try {
+    logger.info('Processing cold email', { taskId, userId, company });
+
+    socketIO.notifyTaskStarted(userId, taskId, 'COLD_EMAIL');
+
+    // Get base resume data
+    let baseResume = null;
+    if (baseResumeId) {
+      baseResume = await prisma.baseResume.findFirst({
+        where: { id: baseResumeId, userId }
+      });
+    }
+
+    const resumeData = baseResume?.data || {};
+
+    await aiAgentService.updateTaskProgress(taskId, 25, 'Researching company...');
+    socketIO.notifyTaskProgress(userId, taskId, 25, 'Researching company...');
+
+    const companyResearch = await aiService.researchCompany(company);
+
+    await aiAgentService.updateTaskProgress(taskId, 50, 'Drafting cold email...');
+    socketIO.notifyTaskProgress(userId, taskId, 50, 'Drafting cold email...');
+
+    const emailResult = await aiService.generateColdEmail(
+      resumeData,
+      company,
+      jobTitle,
+      companyResearch,
+      tone || 'professional'
+    );
+
+    await aiAgentService.updateTaskProgress(taskId, 75, 'Finalizing...');
+    socketIO.notifyTaskProgress(userId, taskId, 75, 'Finalizing...');
+
+    const results = {
+      data: {
+        subject: emailResult.subject,
+        body: emailResult.body,
+        company,
+        jobTitle
+      },
+      companyResearch,
+      tokensUsed: (companyResearch.tokensUsed || 0) + (emailResult.tokensUsed || 0),
+      outputFiles: []
+    };
+
+    await aiAgentService.updateTaskProgress(taskId, 100, 'Completed');
+    socketIO.notifyTaskProgress(userId, taskId, 100, 'Completed');
+    await aiAgentService.saveTaskResults(taskId, results);
+    await aiAgentService.updateTaskStatus(taskId, 'COMPLETED');
+
+    await aiAgentService.updateMetrics(userId, 'COLD_EMAIL', {});
+
+    // Notify completion via WebSocket
+    socketIO.notifyTaskCompleted(userId, taskId, results);
+    logger.info('Cold email generation completed', { taskId });
+
+    return { success: true, results };
+  } catch (error) {
+    logger.error('Cold email generation failed', { error: error.message, taskId });
+    await aiAgentService.updateTaskStatus(taskId, 'FAILED', { errorMessage: error.message });
+
+    // Notify failure via WebSocket
+    socketIO.notifyTaskFailed(userId, taskId, error.message);
+    throw error;
+  }
+}
+
 // ============================================
 // QUEUE HANDLERS
 // ============================================
@@ -366,6 +440,18 @@ aiAgentQueue.process(async (job) => {
             jobDescription: task.jobDescription,
             company: task.company,
             baseResumeId: task.baseResumeId
+          }
+        });
+
+      case 'COLD_EMAIL':
+        return await processColdEmail({
+          data: {
+            taskId: task.id,
+            userId: task.userId,
+            company: task.company,
+            jobTitle: task.jobTitle,
+            baseResumeId: task.baseResumeId,
+            tone: task.tone
           }
         });
 

@@ -209,6 +209,306 @@ class CompanyResearchNode extends BaseNode {
   }
 }
 
+// Interview Prep Node
+class InterviewPrepNode extends BaseNode {
+  constructor() {
+    super('INTERVIEW_PREP');
+  }
+
+  async execute(node, input, context) {
+    try {
+      const config = node.config || {};
+
+      // Extract parameters from input or config
+      const jobDescription = this.getValue(input, config.jobDescriptionPath || 'jobDescription');
+      const company = this.getValue(input, config.companyPath || 'company');
+      const jobTitle = this.getValue(input, config.jobTitlePath || 'jobTitle');
+      const baseResumeId = this.getValue(input, config.baseResumeIdPath || 'baseResumeId');
+
+      if (!jobDescription) {
+        throw new Error('Job description is required for interview prep');
+      }
+
+      logger.info('Interview prep node executing', {
+        userId: context.userId,
+        company,
+        jobTitle
+      });
+
+      // Create task using aiAgentService
+      const task = await aiAgentService.createTask(context.userId, {
+        type: 'INTERVIEW_PREP',
+        jobDescription,
+        company,
+        jobTitle,
+        baseResumeId
+      });
+
+      logger.info('Interview prep task created', { taskId: task.id });
+
+      // Wait for completion
+      const completedTask = await waitForTaskCompletion(task.id, context.userId);
+
+      logger.info('Interview prep completed', { taskId: task.id });
+
+      // Return actual results
+      return {
+        taskId: task.id,
+        prepMaterial: completedTask.resultData,
+        questions: completedTask.resultData?.questions || [],
+        answers: completedTask.resultData?.answers || [],
+        tips: completedTask.resultData?.tips || [],
+        outputFiles: completedTask.outputFiles || []
+      };
+    } catch (error) {
+      logger.error('Interview prep node execution failed', { error: error.message });
+      throw error;
+    }
+  }
+}
+
+// Bulk Resume Node
+class BulkResumeNode extends BaseNode {
+  constructor() {
+    super('BULK_RESUME');
+  }
+
+  async execute(node, input, context) {
+    try {
+      const config = node.config || {};
+
+      // Extract parameters - expects array of job descriptions
+      const jobDescriptions = this.getValue(input, config.jobDescriptionsPath || 'jobDescriptions');
+      const baseResumeId = this.getValue(input, config.baseResumeIdPath || 'baseResumeId');
+      const tone = config.tone || 'professional';
+      const length = config.length || 'medium';
+
+      if (!Array.isArray(jobDescriptions) || jobDescriptions.length === 0) {
+        throw new Error('Array of job descriptions is required for bulk resume generation');
+      }
+
+      logger.info('Bulk resume node executing', {
+        userId: context.userId,
+        count: jobDescriptions.length
+      });
+
+      // Check batch usage limits first
+      await aiAgentService.checkBatchUsageLimits(context.userId, jobDescriptions.length);
+
+      // Create a batch ID for tracking
+      const batchId = `batch_${Date.now()}`;
+      const tasks = [];
+
+      // Create tasks for each job description
+      for (const jd of jobDescriptions) {
+        const task = await aiAgentService.createTask(
+          context.userId,
+          {
+            type: 'RESUME_GENERATION',
+            jobDescription: jd.description || jd,
+            jobTitle: jd.title || '',
+            company: jd.company || '',
+            baseResumeId,
+            tone,
+            length,
+            batchId
+          },
+          { skipUsageCheck: true } // Already checked batch limits
+        );
+        tasks.push(task);
+      }
+
+      // Increment usage counter for the batch
+      await aiAgentService.incrementUsageCounter(context.userId, tasks.length);
+
+      logger.info('Bulk resume tasks created', { batchId, count: tasks.length });
+
+      // Wait for all tasks to complete
+      const completedTasks = await Promise.all(
+        tasks.map(task => waitForTaskCompletion(task.id, context.userId))
+      );
+
+      logger.info('Bulk resume generation completed', {
+        batchId,
+        completed: completedTasks.length
+      });
+
+      // Return results
+      return {
+        batchId,
+        count: completedTasks.length,
+        resumes: completedTasks.map(task => ({
+          taskId: task.id,
+          resumeData: task.resultData,
+          atsScore: task.atsScore,
+          atsBreakdown: task.atsBreakdown
+        }))
+      };
+    } catch (error) {
+      logger.error('Bulk resume node execution failed', { error: error.message });
+      throw error;
+    }
+  }
+}
+
+// Cold Email Node
+class ColdEmailNode extends BaseNode {
+  constructor() {
+    super('COLD_EMAIL');
+  }
+
+  async execute(node, input, context) {
+    try {
+      const config = node.config || {};
+
+      // Extract parameters
+      const recipientEmail = this.getValue(input, config.recipientEmailPath || 'recipientEmail');
+      const recipientName = this.getValue(input, config.recipientNamePath || 'recipientName');
+      const company = this.getValue(input, config.companyPath || 'company');
+      const jobTitle = this.getValue(input, config.jobTitlePath || 'jobTitle');
+      const baseResumeId = this.getValue(input, config.baseResumeIdPath || 'baseResumeId');
+      const tone = config.tone || 'professional';
+      const emailType = config.emailType || 'introduction'; // introduction, follow-up, inquiry
+
+      if (!recipientEmail || !company) {
+        throw new Error('Recipient email and company are required for cold email');
+      }
+
+      logger.info('Cold email node executing', {
+        userId: context.userId,
+        company,
+        emailType
+      });
+
+      // Create task using aiAgentService
+      const task = await aiAgentService.createTask(context.userId, {
+        type: 'COLD_EMAIL',
+        company,
+        jobTitle,
+        baseResumeId,
+        tone
+      });
+
+      logger.info('Cold email task created', { taskId: task.id });
+
+      // Wait for completion
+      const completedTask = await waitForTaskCompletion(task.id, context.userId);
+
+      logger.info('Cold email generation completed', { taskId: task.id });
+
+      // Return actual results
+      return {
+        taskId: task.id,
+        emailContent: completedTask.resultData,
+        recipientEmail,
+        recipientName,
+        company,
+        sent: false, // Not actually sent, just generated
+        outputFiles: completedTask.outputFiles || []
+      };
+    } catch (error) {
+      logger.error('Cold email node execution failed', { error: error.message });
+      throw error;
+    }
+  }
+}
+
+// Bulk JD Processor Node
+class BulkJDProcessorNode extends BaseNode {
+  constructor() {
+    super('BULK_JD_PROCESSOR');
+  }
+
+  async execute(node, input, context) {
+    try {
+      const config = node.config || {};
+
+      // Extract parameters - expects array of job descriptions or URLs
+      const jobDescriptions = this.getValue(input, config.jobDescriptionsPath || 'jobDescriptions');
+      const action = config.action || 'analyze'; // analyze, generate_resume, full_application
+      const baseResumeId = this.getValue(input, config.baseResumeIdPath || 'baseResumeId');
+
+      if (!Array.isArray(jobDescriptions) || jobDescriptions.length === 0) {
+        throw new Error('Array of job descriptions is required for bulk processing');
+      }
+
+      logger.info('Bulk JD processor node executing', {
+        userId: context.userId,
+        count: jobDescriptions.length,
+        action
+      });
+
+      // Check batch usage limits
+      await aiAgentService.checkBatchUsageLimits(context.userId, jobDescriptions.length);
+
+      const batchId = `bulk_jd_${Date.now()}`;
+      const tasks = [];
+
+      // Create appropriate tasks based on action
+      for (const jd of jobDescriptions) {
+        let taskType;
+        switch (action) {
+          case 'generate_resume':
+            taskType = 'RESUME_GENERATION';
+            break;
+          case 'full_application':
+            taskType = 'JOB_APPLICATION';
+            break;
+          case 'analyze':
+          default:
+            taskType = 'JOB_APPLICATION';
+            break;
+        }
+
+        const task = await aiAgentService.createTask(
+          context.userId,
+          {
+            type: taskType,
+            jobDescription: jd.description || jd,
+            jobTitle: jd.title || '',
+            company: jd.company || '',
+            jobUrl: jd.url || '',
+            baseResumeId,
+            batchId
+          },
+          { skipUsageCheck: true }
+        );
+        tasks.push(task);
+      }
+
+      // Increment usage counter
+      await aiAgentService.incrementUsageCounter(context.userId, tasks.length);
+
+      logger.info('Bulk JD processing tasks created', { batchId, count: tasks.length });
+
+      // Wait for all tasks to complete
+      const completedTasks = await Promise.all(
+        tasks.map(task => waitForTaskCompletion(task.id, context.userId))
+      );
+
+      logger.info('Bulk JD processing completed', {
+        batchId,
+        completed: completedTasks.length
+      });
+
+      // Return results
+      return {
+        batchId,
+        action,
+        count: completedTasks.length,
+        results: completedTasks.map(task => ({
+          taskId: task.id,
+          resultData: task.resultData,
+          status: task.status
+        }))
+      };
+    } catch (error) {
+      logger.error('Bulk JD processor node execution failed', { error: error.message });
+      throw error;
+    }
+  }
+}
+
 // Job Search Node
 class JobSearchNode extends BaseNode {
   constructor(mode = 'search') { super('JOB_SEARCH', mode); }
@@ -281,6 +581,10 @@ module.exports = {
   ResumeNode,
   CoverLetterNode,
   CompanyResearchNode,
+  InterviewPrepNode,
+  BulkResumeNode,
+  ColdEmailNode,
+  BulkJDProcessorNode,
   JobTrackerNode,
   JobSearchNode,
   EmailNode,

@@ -9,6 +9,10 @@ const {
   ResumeNode,
   CoverLetterNode,
   CompanyResearchNode,
+  InterviewPrepNode,
+  BulkResumeNode,
+  ColdEmailNode,
+  BulkJDProcessorNode,
   JobTrackerNode,
   JobSearchNode,
   EmailNode,
@@ -46,6 +50,7 @@ class NodeRegistry {
     // Resume
     this.register('RESUME_GENERATE', new ResumeNode('generate'));
     this.register('RESUME_TAILOR', new ResumeNode('tailor'));
+    this.register('BULK_RESUME_GENERATE', new BulkResumeNode());
 
     // Cover Letter
     this.register('COVER_LETTER_GENERATE', new CoverLetterNode());
@@ -57,8 +62,11 @@ class NodeRegistry {
     // Job Search
     this.register('JOB_SEARCH', new JobSearchNode());
     this.register('COMPANY_RESEARCH', new CompanyResearchNode());
+    this.register('INTERVIEW_PREP', new InterviewPrepNode());
+    this.register('BULK_JD_PROCESSOR', new BulkJDProcessorNode());
 
     // Communication
+    this.register('COLD_EMAIL_SEND', new ColdEmailNode());
     this.register('EMAIL_SEND', new EmailNode());
     this.register('NOTIFICATION_SEND', new EmailNode('notification'));
     this.register('WEBHOOK_CALL', new WebhookNode());
