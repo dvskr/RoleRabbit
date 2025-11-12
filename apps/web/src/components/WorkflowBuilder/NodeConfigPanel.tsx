@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Node } from '@xyflow/react';
-import { X, Settings } from 'lucide-react';
+import { X, Settings, Play, Check, AlertCircle, Loader } from 'lucide-react';
 
 interface NodeConfigPanelProps {
   node: Node | null;
@@ -16,14 +16,22 @@ interface NodeConfigPanelProps {
 export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigPanelProps) {
   const [config, setConfig] = useState<any>({});
   const [label, setLabel] = useState('');
+  const [testInput, setTestInput] = useState('{}');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [showTestModal, setShowTestModal] = useState(false);
 
   useEffect(() => {
     if (node) {
       setConfig(node.data.config || {});
       setLabel(node.data.label || '');
+      setTestInput('{}');
+      setTestResult(null);
     } else {
       setConfig({});
       setLabel('');
+      setTestInput('{}');
+      setTestResult(null);
     }
   }, [node]);
 
@@ -42,6 +50,58 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
       ...prev,
       [key]: value
     }));
+  };
+
+  const handleTestNode = async () => {
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      // Parse test input JSON
+      let parsedInput = {};
+      try {
+        parsedInput = JSON.parse(testInput);
+      } catch (e) {
+        throw new Error('Invalid JSON in test input');
+      }
+
+      // Call test node API
+      const response = await fetch('/api/workflows/nodes/test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          node: {
+            id: node.id,
+            type: node.data.type,
+            config,
+            label
+          },
+          testInput: parsedInput
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to test node');
+      }
+
+      setTestResult(data);
+      setShowTestModal(true);
+    } catch (error: any) {
+      setTestResult({
+        success: false,
+        error: {
+          message: error.message
+        }
+      });
+      setShowTestModal(true);
+    } finally {
+      setTesting(false);
+    }
   };
 
   // Get config fields based on node type
@@ -548,7 +608,24 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
+      <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-2">
+        <button
+          onClick={handleTestNode}
+          disabled={testing}
+          className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {testing ? (
+            <>
+              <Loader size={16} className="animate-spin" />
+              Testing...
+            </>
+          ) : (
+            <>
+              <Play size={16} />
+              Test Node
+            </>
+          )}
+        </button>
         <button
           onClick={handleSave}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -556,6 +633,112 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
           Apply Changes
         </button>
       </div>
+
+      {/* Test Modal */}
+      {showTestModal && testResult && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowTestModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                {testResult.success ? (
+                  <Check size={20} className="text-green-600" />
+                ) : (
+                  <AlertCircle size={20} className="text-red-600" />
+                )}
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Test Results
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Status */}
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">Status</div>
+                <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                  testResult.success
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {testResult.success ? 'Success' : 'Failed'}
+                </div>
+              </div>
+
+              {/* Duration */}
+              {testResult.duration !== undefined && (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">Duration</div>
+                  <div className="text-sm text-gray-600">{testResult.duration}ms</div>
+                </div>
+              )}
+
+              {/* Result or Error */}
+              {testResult.success ? (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">Result</div>
+                  <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs overflow-x-auto">
+                    {JSON.stringify(testResult.result, null, 2)}
+                  </pre>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 mb-2">Error</div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="text-sm text-red-800 font-medium mb-1">
+                      {testResult.error?.message || 'Unknown error'}
+                    </div>
+                    {testResult.error?.stack && (
+                      <pre className="text-xs text-red-600 mt-2 overflow-x-auto">
+                        {testResult.error.stack}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Test Input Configuration */}
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">Test Input</div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Modify the JSON below to test the node with different inputs:
+                </div>
+                <textarea
+                  value={testInput}
+                  onChange={(e) => setTestInput(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder='{"jobDescription": "Software Engineer position...", "company": "Acme Corp"}'
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex gap-2">
+              <button
+                onClick={handleTestNode}
+                disabled={testing}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testing ? 'Testing...' : 'Test Again'}
+              </button>
+              <button
+                onClick={() => setShowTestModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

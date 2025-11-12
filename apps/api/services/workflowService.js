@@ -480,6 +480,65 @@ async function getNodeMetadata() {
   }
 }
 
+/**
+ * Test a single node with provided input
+ */
+async function testNode(userId, nodeData, testInput = {}) {
+  try {
+    logger.info('Testing node', { userId, nodeType: nodeData.type });
+
+    // Get node executor from registry
+    const nodeExecutor = nodeRegistry.getNodeExecutor(nodeData.type);
+
+    if (!nodeExecutor) {
+      throw new Error(`No executor found for node type: ${nodeData.type}`);
+    }
+
+    // Create a minimal execution context for testing
+    const testContext = {
+      userId,
+      variables: {},
+      executionId: 'test_' + Date.now(),
+      workflowId: 'test',
+      input: testInput
+    };
+
+    // Execute the node
+    const startTime = Date.now();
+    const result = await nodeExecutor.execute(nodeData, testInput, testContext);
+    const duration = Date.now() - startTime;
+
+    logger.info('Node test completed', {
+      userId,
+      nodeType: nodeData.type,
+      duration,
+      success: true
+    });
+
+    return {
+      success: true,
+      result,
+      duration,
+      executedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    logger.error('Node test failed', {
+      error: error.message,
+      userId,
+      nodeType: nodeData?.type
+    });
+
+    return {
+      success: false,
+      error: {
+        message: error.message,
+        stack: error.stack
+      },
+      executedAt: new Date().toISOString()
+    };
+  }
+}
+
 // ============================================
 // SCHEDULES
 // ============================================
@@ -771,6 +830,7 @@ module.exports = {
 
   // Node metadata
   getNodeMetadata,
+  testNode,
 
   // Schedules
   createSchedule,

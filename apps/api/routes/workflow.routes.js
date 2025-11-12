@@ -18,6 +18,7 @@ const {
   getTemplates,
   createFromTemplate,
   getNodeMetadata,
+  testNode,
   createSchedule,
   updateSchedule,
   deleteSchedule,
@@ -354,6 +355,38 @@ module.exports = async function workflowRoutes(fastify) {
       return reply.status(500).send({
         success: false,
         error: error.message || 'Failed to get node metadata'
+      });
+    }
+  });
+
+  /**
+   * POST /api/workflows/nodes/test
+   * Test a single node with provided input
+   */
+  fastify.post('/api/workflows/nodes/test', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const { node, testInput } = request.body;
+
+      // Validate required fields
+      if (!node || !node.type) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Node data with type is required'
+        });
+      }
+
+      const result = await testNode(userId, node, testInput);
+
+      return reply.send({
+        success: result.success,
+        ...result
+      });
+    } catch (error) {
+      logger.error('Failed to test node', { error: error.message, userId: request.user.userId });
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to test node'
       });
     }
   });
