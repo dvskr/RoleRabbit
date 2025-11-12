@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Node } from '@xyflow/react';
 import { X, Settings, Play, Check, AlertCircle, Loader } from 'lucide-react';
+import TemplateVariableInput from './TemplateVariableInput';
 
 interface NodeConfigPanelProps {
   node: Node | null;
@@ -578,6 +579,13 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
                   </option>
                 ))}
               </select>
+            ) : field.key.endsWith('Path') || field.key.includes('path') ? (
+              /* Use autocomplete for path fields */
+              <TemplateVariableInput
+                value={field.value}
+                onChange={(value) => handleConfigChange(field.key, value)}
+                placeholder={field.placeholder}
+              />
             ) : (
               <input
                 type={field.type}
@@ -598,11 +606,13 @@ export default function NodeConfigPanel({ node, onClose, onUpdate }: NodeConfigP
         {/* Variable Hint */}
         <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
           <div className="text-xs font-medium text-blue-900 mb-1">
-            Template Variables
+            Template Variables & Autocomplete
           </div>
           <div className="text-xs text-blue-700 space-y-1">
             <div>• Use <code className="px-1 bg-blue-100 rounded">{'{{fieldName}}'}</code> for data from previous nodes</div>
             <div>• Use <code className="px-1 bg-blue-100 rounded">{'{{$variableName}}'}</code> for workflow variables</div>
+            <div>• Press <kbd className="px-1.5 py-0.5 bg-blue-100 rounded text-blue-900 font-mono">↓</kbd> or <kbd className="px-1.5 py-0.5 bg-blue-100 rounded text-blue-900 font-mono">Tab</kbd> in path fields for suggestions</div>
+            <div>• Navigate with arrow keys, select with <kbd className="px-1.5 py-0.5 bg-blue-100 rounded text-blue-900 font-mono">Enter</kbd></div>
           </div>
         </div>
       </div>
