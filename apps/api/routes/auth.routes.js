@@ -22,6 +22,8 @@ const { sendOTPToEmail, verifyOTP, createOTP } = require('../utils/otpService');
 const { validateEmail, validatePassword } = require('../utils/validation');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
+// Standardized error responses
+const { ErrorResponses, asyncHandler } = require('../utils/errorResponses');
 
 // In-memory store for pending email changes (userId -> { newEmail, verifiedCurrent })
 // In production, consider using Redis or database
