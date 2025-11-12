@@ -22,6 +22,8 @@ const { sendOTPToEmail, verifyOTP, createOTP } = require('../utils/otpService');
 const { validateEmail, validatePassword } = require('../utils/validation');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
+// Standardized error responses
+const { ErrorResponses, asyncHandler } = require('../utils/errorResponses');
 
 // In-memory store for pending email changes (userId -> { newEmail, verifiedCurrent })
 // In production, consider using Redis or database
@@ -33,7 +35,14 @@ const pendingEmailChanges = new Map();
  */
 async function authRoutes(fastify, _options) {
   // Register user endpoint
-  fastify.post('/api/auth/register', async (request, reply) => {
+  fastify.post('/api/auth/register', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email, password, name } = request.body;
       
@@ -90,15 +99,15 @@ async function authRoutes(fastify, _options) {
       const accessToken = fastify.jwt.sign({ 
         userId: user.id, 
         email: user.email 
-      }, { expiresIn: '365d' });
+      }, { expiresIn: '1h' });
       
       // Create refresh token (persists until logout: 10 years)
-      const refreshToken = await createRefreshToken(user.id, 3650);
+      const refreshToken = await createRefreshToken(user.id, 7);
       
       // Create session (persists until logout: 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650);
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 7);
       
       // Set access token in httpOnly cookie (1 year - browser cookie limit)
       reply.setCookie('auth_token', accessToken, {
@@ -142,7 +151,14 @@ async function authRoutes(fastify, _options) {
   });
 
   // Login endpoint
-  fastify.post('/api/auth/login', async (request, reply) => {
+  fastify.post('/api/auth/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email, password } = request.body;
       
@@ -182,15 +198,15 @@ async function authRoutes(fastify, _options) {
       const accessToken = fastify.jwt.sign({ 
         userId: user.id, 
         email: user.email 
-      }, { expiresIn: '365d' });
+      }, { expiresIn: '1h' });
       
       // Create refresh token (persists until logout: 10 years)
-      const refreshToken = await createRefreshToken(user.id, 3650);
+      const refreshToken = await createRefreshToken(user.id, 7);
       
       // Create session (persists until logout - 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650); // 10 years
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 7); // 10 years
       
       // Fetch user profile data
       const userProfile = await prisma.userProfile.findUnique({
@@ -298,7 +314,14 @@ async function authRoutes(fastify, _options) {
   });
 
   // Refresh token endpoint
-  fastify.post('/api/auth/refresh', async (request, reply) => {
+  fastify.post('/api/auth/refresh', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       // Get refresh token from cookies
       const refreshToken = request.cookies.refresh_token;
@@ -324,7 +347,7 @@ async function authRoutes(fastify, _options) {
       const accessToken = fastify.jwt.sign({ 
         userId: result.user.id, 
         email: result.user.email 
-      }, { expiresIn: '365d' });
+      }, { expiresIn: '1h' });
       
       // Set new access token in httpOnly cookie (persists until logout: 1 year)
       reply.setCookie('auth_token', accessToken, {
@@ -478,7 +501,14 @@ async function authRoutes(fastify, _options) {
   });
 
   // Forgot password endpoint
-  fastify.post('/api/auth/forgot-password', async (request, reply) => {
+  fastify.post('/api/auth/forgot-password', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { email } = request.body;
       
@@ -544,7 +574,14 @@ async function authRoutes(fastify, _options) {
   });
 
   // Reset password endpoint
-  fastify.post('/api/auth/reset-password', async (request, reply) => {
+  fastify.post('/api/auth/reset-password', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       const { token, newPassword } = request.body;
       
