@@ -312,7 +312,14 @@ async function authRoutes(fastify, options) {
   });
 
   // Refresh token endpoint
-  fastify.post('/api/auth/refresh', async (request, reply) => {
+  fastify.post('/api/auth/refresh', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '15 minutes'
+      }
+    }
+  }, async (request, reply) => {
     try {
       // Get refresh token from cookies
       const refreshToken = request.cookies.refresh_token;
