@@ -1,4 +1,4 @@
-const { PrismaClient, AIAction, SubscriptionTier } = require('@prisma/client');
+const { AIAction, SubscriptionTier } = require('@prisma/client');
 const { prisma } = require('../../utils/db');
 const { calculateCost } = require('../../utils/openAI');
 const logger = require('../../utils/logger');

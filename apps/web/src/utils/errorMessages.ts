@@ -109,6 +109,33 @@ export const getUserFriendlyError = (
     };
   }
 
+  // AI quota/usage limits
+  if (lowerMessage.includes('usage limit') || lowerMessage.includes('quota')) {
+    return {
+      message: 'You have reached the AI usage limit. Please wait a few minutes or upgrade your plan to continue.',
+      action: 'Wait a few minutes or upgrade your plan',
+      canRetry: false,
+    };
+  }
+
+  // AI credentials misconfiguration
+  if (lowerMessage.includes('ai service credentials') || lowerMessage.includes('invalid key')) {
+    return {
+      message: 'The AI service is misconfigured. Please contact support so we can resolve it quickly.',
+      action: 'Contact support',
+      canRetry: false,
+    };
+  }
+
+  // AI service outage/unavailable
+  if (lowerMessage.includes('temporarily unavailable')) {
+    return {
+      message: 'The AI service is temporarily unavailable. Please try again in a few minutes.',
+      action: 'Try again in a few minutes',
+      canRetry: true,
+    };
+  }
+
   // Generic API errors
   if (statusCode && statusCode >= 400) {
     return {

@@ -210,6 +210,232 @@ class SocketIOServer {
   }
 
   /**
+   * ===========================================
+   * AI AGENT EVENTS
+   * ===========================================
+   */
+
+  /**
+   * Emit AI Agent task progress update
+   */
+  notifyTaskProgress(userId, taskId, progress, currentStep) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_progress', {
+      taskId,
+      progress,
+      currentStep,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit AI Agent task completed event
+   */
+  notifyTaskCompleted(userId, taskId, result) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_completed', {
+      taskId,
+      result,
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of completed task ${taskId}`);
+  }
+
+  /**
+   * Emit AI Agent task failed event
+   */
+  notifyTaskFailed(userId, taskId, error) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_failed', {
+      taskId,
+      error,
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of failed task ${taskId}`);
+  }
+
+  /**
+   * Emit AI Agent task started event
+   */
+  notifyTaskStarted(userId, taskId, taskType) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_started', {
+      taskId,
+      taskType,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit AI Agent task cancelled event
+   */
+  notifyTaskCancelled(userId, taskId) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:task_cancelled', {
+      taskId,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit batch tasks progress (for bulk operations)
+   */
+  notifyBatchProgress(userId, batchId, completed, total, currentTask) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('ai_agent:batch_progress', {
+      batchId,
+      completed,
+      total,
+      currentTask,
+      percentage: Math.round((completed / total) * 100),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * ===========================================
+   * WORKFLOW EVENTS
+   * ===========================================
+   */
+
+  /**
+   * Emit workflow execution queued event
+   */
+  notifyWorkflowQueued(userId, executionId, workflowId, workflowName) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:execution_queued', {
+      executionId,
+      workflowId,
+      workflowName,
+      status: 'QUEUED',
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of queued workflow execution ${executionId}`);
+  }
+
+  /**
+   * Emit workflow execution started event
+   */
+  notifyWorkflowStarted(userId, executionId, workflowId, workflowName) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:execution_started', {
+      executionId,
+      workflowId,
+      workflowName,
+      status: 'RUNNING',
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of started workflow execution ${executionId}`);
+  }
+
+  /**
+   * Emit workflow execution completed event
+   */
+  notifyWorkflowCompleted(userId, executionId, workflowId, result, duration) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:execution_completed', {
+      executionId,
+      workflowId,
+      status: 'COMPLETED',
+      result,
+      duration,
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of completed workflow execution ${executionId}`);
+  }
+
+  /**
+   * Emit workflow execution failed event
+   */
+  notifyWorkflowFailed(userId, executionId, workflowId, error, failedNodeId) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:execution_failed', {
+      executionId,
+      workflowId,
+      status: 'FAILED',
+      error,
+      failedNodeId,
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of failed workflow execution ${executionId}`);
+  }
+
+  /**
+   * Emit workflow execution cancelled event
+   */
+  notifyWorkflowCancelled(userId, executionId, workflowId) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:execution_cancelled', {
+      executionId,
+      workflowId,
+      status: 'CANCELLED',
+      timestamp: new Date().toISOString()
+    });
+    logger.info(`Notified user ${userId} of cancelled workflow execution ${executionId}`);
+  }
+
+  /**
+   * Emit workflow node started event
+   */
+  notifyWorkflowNodeStarted(userId, executionId, nodeId, nodeName, nodeType) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:node_started', {
+      executionId,
+      nodeId,
+      nodeName,
+      nodeType,
+      status: 'RUNNING',
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit workflow node completed event
+   */
+  notifyWorkflowNodeCompleted(userId, executionId, nodeId, nodeName, result, duration) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:node_completed', {
+      executionId,
+      nodeId,
+      nodeName,
+      status: 'COMPLETED',
+      result,
+      duration,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit workflow node failed event
+   */
+  notifyWorkflowNodeFailed(userId, executionId, nodeId, nodeName, error) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('workflow:node_failed', {
+      executionId,
+      nodeId,
+      nodeName,
+      status: 'FAILED',
+      error,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit workflow progress update (overall percentage)
+   */
+  notifyWorkflowProgress(userId, executionId, completedNodes, totalNodes) {
+    if (!this.io) return;
+    const percentage = Math.round((completedNodes / totalNodes) * 100);
+    this.io.to(`user:${userId}`).emit('workflow:execution_progress', {
+      executionId,
+      completedNodes,
+      totalNodes,
+      percentage,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
    * Get instance
    */
   getIO() {

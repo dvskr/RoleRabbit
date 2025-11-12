@@ -33,7 +33,7 @@ const pendingEmailChanges = new Map();
  * Register all authentication routes with Fastify instance
  * @param {FastifyInstance} fastify - Fastify instance
  */
-async function authRoutes(fastify, options) {
+async function authRoutes(fastify, _options) {
   // Register user endpoint
   fastify.post('/api/auth/register', {
     config: {

@@ -3,7 +3,6 @@
  * Handles real-time collaboration, notifications, and live updates
  */
 
-const { Server } = require('@fastify/websocket');
 const logger = require('./logger');
 
 class WebSocketServer {
@@ -17,7 +16,7 @@ class WebSocketServer {
    */
   register(server) {
     server.register(async function (fastify) {
-      fastify.get('/ws', { websocket: true }, (connection, req) => {
+      fastify.get('/ws', { websocket: true }, (connection) => {
         connection.socket.on('message', (message) => {
           this.handleMessage(connection, message);
         });

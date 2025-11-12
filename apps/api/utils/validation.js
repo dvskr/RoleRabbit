@@ -25,9 +25,9 @@ function validateEmail(email) {
 function validatePhone(phone) {
   if (!phone) return { valid: true }; // Optional field
   // Remove common formatting characters
-  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
+  const cleaned = phone.replace(/[\s().-]/g, '');
   // Allow formats: +1234567890, 1234567890, (123) 456-7890, etc.
-  const phoneRegex = /^\+?[\d\s\-\(\)\.]{10,15}$/;
+  const phoneRegex = /^\+?[\d\s().-]{10,15}$/;
   return {
     valid: phoneRegex.test(cleaned) && cleaned.replace(/\D/g, '').length >= 10,
     error: phoneRegex.test(cleaned) && cleaned.replace(/\D/g, '').length >= 10 

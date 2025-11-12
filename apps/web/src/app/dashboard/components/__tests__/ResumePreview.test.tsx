@@ -22,6 +22,9 @@ describe('ResumePreview', () => {
     email: 'john@example.com',
     phone: '123-456-7890',
     location: 'New York, NY',
+    linkedin: 'https://linkedin.com/in/johndoe',
+    github: 'https://github.com/johndoe',
+    website: 'https://johndoe.dev',
     summary: 'Experienced software engineer',
     skills: ['React', 'TypeScript', 'Node.js'],
     experience: [
@@ -84,6 +87,9 @@ describe('ResumePreview', () => {
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
     expect(screen.getByText('123-456-7890')).toBeInTheDocument();
     expect(screen.getByText('New York, NY')).toBeInTheDocument();
+    expect(screen.getByText('https://linkedin.com/in/johndoe')).toBeInTheDocument();
+    expect(screen.getByText('https://github.com/johndoe')).toBeInTheDocument();
+    expect(screen.getByText('https://johndoe.dev')).toBeInTheDocument();
   });
 
   it('renders summary section when visible', () => {
@@ -160,6 +166,9 @@ describe('ResumePreview', () => {
       email: '',
       phone: '',
       location: '',
+      linkedin: '',
+      github: '',
+      website: '',
       summary: '',
       skills: [],
       experience: [],

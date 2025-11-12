@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight, Zap, Sparkles, Workflow } from 'lucide-react';
 import { RabbitLogo, RabbitLogoWithText } from '../ui/RabbitLogo';
 import { useTheme } from '../../contexts/ThemeContext';
 import NavigationItem from './NavigationItem';
@@ -63,7 +63,9 @@ export default function SidebarNew({
     {
       title: 'APPLY',
       items: [
-        { id: 'agents', icon: Bot, label: 'AI Auto-Apply' },
+        { id: 'ai-auto-apply', icon: Zap, label: 'AI Auto Apply' },
+        { id: 'workflows', icon: Workflow, label: 'Workflows' },
+        { id: 'agents', icon: Sparkles, label: 'AI Agents' },
         { id: 'tracker', icon: Briefcase, label: 'Job Tracker' },
       ],
     },
@@ -93,12 +95,13 @@ export default function SidebarNew({
       >
             {sidebarCollapsed ? (
               <div className="w-full flex justify-center">
-                <RabbitLogo size={100} animated={true} />
+                <span className="text-lg font-bold">
+                  <span className="text-gray-800 dark:text-white">R</span><span className="text-green-400">R</span>
+                </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 w-full -ml-2">
-                <RabbitLogo size={80} animated={true} />
-                  <div className="flex flex-col flex-1 min-w-0 -ml-2">
+              <div className="flex items-center gap-1 w-full">
+                  <div className="flex flex-col flex-1 min-w-0">
                     <span className="text-xl font-bold leading-tight">
                       <span className="text-gray-800 dark:text-white">Role</span><span className="text-green-400">Rabbit</span>
                     </span>

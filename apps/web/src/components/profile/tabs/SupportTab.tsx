@@ -9,7 +9,7 @@ export default function SupportTab() {
   const colors = theme.colors;
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="space-y-6">
         <div 
           className="backdrop-blur-sm rounded-2xl p-8 shadow-lg"

@@ -7,7 +7,6 @@ const { prisma } = require('./db');
 const logger = require('./logger');
 
 const OTP_EXPIRY_MINUTES = 10; // OTP expires in 10 minutes
-const OTP_LENGTH = 6;
 
 /**
  * Generate a random 6-digit OTP

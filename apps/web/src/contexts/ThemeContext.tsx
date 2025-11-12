@@ -239,14 +239,43 @@ export function ThemeProvider({ children, initialThemeMode = 'dark' }: ThemeProv
   // Update theme when mode changes (only on client)
   useEffect(() => {
     if (!isClient) return;
-    
+
     setTheme(themeMode === 'dark' ? darkTheme : lightTheme);
-    
+
     // Apply theme class to document
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(themeMode);
     document.documentElement.setAttribute('data-theme', themeMode);
-    
+
+    // Apply theme colors as CSS variables
+    const currentTheme = themeMode === 'dark' ? darkTheme : lightTheme;
+    const root = document.documentElement;
+
+    // Set CSS variables for theme colors
+    root.style.setProperty('--theme-background', currentTheme.colors.background);
+    root.style.setProperty('--theme-card-bg', currentTheme.colors.cardBackground);
+    root.style.setProperty('--theme-input-bg', currentTheme.colors.inputBackground);
+    root.style.setProperty('--theme-hover-bg', currentTheme.colors.hoverBackground);
+    root.style.setProperty('--theme-hover-bg-strong', currentTheme.colors.hoverBackgroundStrong);
+
+    root.style.setProperty('--theme-primary-text', currentTheme.colors.primaryText);
+    root.style.setProperty('--theme-secondary-text', currentTheme.colors.secondaryText);
+    root.style.setProperty('--theme-tertiary-text', currentTheme.colors.tertiaryText);
+
+    root.style.setProperty('--theme-border', currentTheme.colors.border);
+    root.style.setProperty('--theme-border-focused', currentTheme.colors.borderFocused);
+
+    root.style.setProperty('--theme-primary-blue', currentTheme.colors.primaryBlue);
+    root.style.setProperty('--theme-primary-blue-hover', currentTheme.colors.primaryBlueHover);
+    root.style.setProperty('--theme-error-red', currentTheme.colors.errorRed);
+    root.style.setProperty('--theme-success-green', currentTheme.colors.successGreen);
+    root.style.setProperty('--theme-warning-yellow', currentTheme.colors.warningYellow);
+
+    root.style.setProperty('--theme-badge-info-bg', currentTheme.colors.badgeInfoBg);
+    root.style.setProperty('--theme-badge-info-text', currentTheme.colors.badgeInfoText);
+    root.style.setProperty('--theme-badge-error-bg', currentTheme.colors.badgeErrorBg);
+    root.style.setProperty('--theme-badge-error-text', currentTheme.colors.badgeErrorText);
+
     // Store in localStorage
     localStorage.setItem('themeMode', themeMode);
 

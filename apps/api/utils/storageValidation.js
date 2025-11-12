@@ -4,7 +4,7 @@
  */
 
 const path = require('path');
-const logger = require('./logger');
+
 
 // Allowed file types (MIME types)
 const ALLOWED_MIME_TYPES = [

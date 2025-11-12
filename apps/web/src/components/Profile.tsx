@@ -152,8 +152,8 @@ function Profile() {
 
         {/* Enhanced Main Content */}
         <div className="flex-1 overflow-y-auto scroll-smooth">
-          <div className="p-4">
-            <div className="max-w-6xl mx-auto">
+          <div className="p-4 px-6">
+            <div className="w-full">
               {renderTabContent()}
                       </div>
           </div>

@@ -249,7 +249,7 @@ export default function BillingTab({
   const currentPlanPrice = currentPlan ? getPlanPrice(currentPlan, currentPlanFrequency) : 0;
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <div className="space-y-8">
         {/* Current Subscription */}
         <SecurityCard colors={colors} title="Current Subscription">

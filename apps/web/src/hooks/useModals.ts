@@ -19,7 +19,7 @@ export const useModals = () => {
   const [aiGenerateSection, setAiGenerateSection] = useState('summary');
   const [aiPrompt, setAiPrompt] = useState('');
   const [writingTone, setWritingTone] = useState('professional');
-  const [contentLength, setContentLength] = useState('concise');
+  const [contentLength, setContentLength] = useState('thorough');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   return {

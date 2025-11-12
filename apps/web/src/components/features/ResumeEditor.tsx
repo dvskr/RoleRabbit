@@ -252,8 +252,8 @@ export default function ResumeEditor({
           lineHeight: getFormattingStyles.lineHeight,
           paddingTop: '1.5rem',
           paddingBottom: getFormattingStyles.padding,
-          paddingLeft: getFormattingStyles.padding,
-          paddingRight: getFormattingStyles.padding,
+          paddingLeft: '1.5rem',
+          paddingRight: '1.5rem',
         }}
       >
         {/* Dynamic styles for heading, bullet, and template formatting */}

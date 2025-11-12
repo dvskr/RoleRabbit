@@ -2,20 +2,6 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
-// Expected API model names (from code usage)
-const apiModelNames = {
-  user: 'User',
-  userProfile: 'UserProfile', 
-  workExperience: 'WorkExperience',
-  education: 'Education',
-  certification: 'Certification',
-  project: 'Project',
-  achievement: 'Achievement',
-  socialLink: 'SocialLink',
-  userSkill: 'UserSkill',
-  skill: 'Skill'
-};
-
 // Check what Prisma Client actually exposes
 console.log('\n🔍 Validating API against Database Schema\n');
 console.log('='.repeat(60));
@@ -33,7 +19,6 @@ const checks = [
 ];
 
 let errors = [];
-let warnings = [];
 
 checks.forEach(check => {
   try {

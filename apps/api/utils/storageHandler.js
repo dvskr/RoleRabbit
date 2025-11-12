@@ -129,7 +129,7 @@ async function uploadToSupabase(fileStream, userId, fileName, contentType) {
     const fileBuffer = Buffer.concat(chunks);
     
     // Upload to Supabase Storage
-    const { data, error } = await supabaseClient.storage
+    const { error } = await supabaseClient.storage
       .from(supabaseStorageBucket)
       .upload(storagePath, fileBuffer, {
         contentType: contentType || 'application/octet-stream',
@@ -168,7 +168,7 @@ async function uploadToSupabase(fileStream, userId, fileName, contentType) {
 /**
  * Upload file to local filesystem
  */
-async function uploadToLocal(fileStream, userId, fileName, contentType) {
+async function uploadToLocal(fileStream, userId, fileName, _contentType) {
   try {
     const fileExtension = path.extname(fileName);
     const { storagePath, displayName } = generateFilePath(userId, fileName, fileExtension);

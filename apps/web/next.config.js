@@ -1,3 +1,5 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -20,14 +22,29 @@ const nextConfig = {
   experimental: {
     // Ensure stable build
   },
-  webpack: (config, { isServer }) => {
-    // Fix for potential loader issues
+  webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
       };
     }
+
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@roleready/resume-normalizer': path.resolve(__dirname, '../../packages/resume-normalizer'),
+      '@roleready/editor-ai-schemas': path.resolve(__dirname, '../../packages/editor-ai-schemas')
+    };
+
+    // Ensure proper chunk generation in dev mode
+    if (dev) {
+      config.optimization = {
+        ...config.optimization,
+        moduleIds: 'named',
+        chunkIds: 'named',
+      };
+    }
+
     return config;
   },
 }

@@ -9,12 +9,35 @@ import { logger } from '../utils/logger';
 import { retryWithBackoff, isOnline, waitForOnline } from '../utils/retryHandler';
 import type { Job } from '../types/job';
 import type { CoverLetterDraft } from '../components/coverletter/types/coverletter';
+import type {
+  GenerateContentRequest,
+  ApplyDraftRequest,
+  AtsCheckRequest,
+  TailorRequest,
+  ApplyRecommendationsRequest,
+  CoverLetterRequest,
+  PortfolioRequest
+} from '@roleready/editor-ai-schemas';
 
 class ApiService {
   private baseUrl: string;
 
   constructor() {
     this.baseUrl = API_BASE_URL;
+  }
+
+  private resolveUrl(endpoint: string): string {
+    if (!endpoint) {
+      return this.baseUrl;
+    }
+    const trimmed = endpoint.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('/api/proxy/')) {
+      return trimmed;
+    }
+    return `${this.baseUrl}${trimmed}`;
   }
 
   /**
@@ -91,7 +114,8 @@ class ApiService {
       // httpOnly cookie is automatically sent by browser
       // No need to manually add Authorization header
 
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const url = this.resolveUrl(endpoint);
+      const response = await fetch(url, {
         ...options,
         headers,
         credentials: 'include', // Important: Include cookies in all requests
@@ -141,29 +165,33 @@ class ApiService {
           }
           
           if (text && typeof text === 'string' && text.trim()) {
+            const limitedText = text.length > 4096 ? `${text.slice(0, 4096)}…` : text;
             try {
-              const errorData = JSON.parse(text);
-              const parsedMessage = errorData.error || errorData.message;
+              const errorData = JSON.parse(limitedText);
+              const parsedMessage = errorData.error || errorData.message || errorData.detail;
               if (parsedMessage && typeof parsedMessage === 'string') {
                 errorMessage = parsedMessage;
               } else if (parsedMessage && typeof parsedMessage === 'object') {
                 try {
                   const jsonStr = JSON.stringify(parsedMessage);
-                  errorMessage = `API error (${statusCode}): ${jsonStr.substring(0, 100)}`;
-                } catch (stringifyError) {
+                  errorMessage = `API error (${statusCode}): ${jsonStr.substring(0, 180)}`;
+                } catch {
                   errorMessage = `API error (${statusCode}): Invalid error format`;
                 }
               }
-              if (errorData.details) {
+              if (errorData.details !== undefined) {
                 errorDetails = errorData.details;
-                if (typeof errorData.details === 'string' && errorMessage && !errorMessage.includes(errorData.details)) {
-                  errorMessage += ` - ${errorData.details}`;
-                }
+              } else if (errorData.meta !== undefined) {
+                errorDetails = errorData.meta;
               }
-            } catch (jsonError) {
-              // If not JSON, use the text as error message if it's meaningful
-              if (text.length < 500 && text.trim()) {
-                errorMessage = `API error (${statusCode}): ${text.substring(0, 200).trim()}`;
+              if (typeof errorDetails === 'string' && !errorMessage.includes(errorDetails)) {
+                errorMessage += ` - ${errorDetails.substring(0, 180)}`;
+              }
+            } catch {
+              const preview = limitedText.substring(0, 200).trim();
+              if (preview) {
+                errorMessage = `API error (${statusCode}): ${preview}`;
+                errorDetails = preview;
               }
             }
           }
@@ -210,7 +238,15 @@ class ApiService {
             errorObj.code = 'AUTH_REQUIRED';
           }
           if (errorDetails !== undefined) {
-            errorObj.details = errorDetails;
+            if (typeof errorDetails === 'string') {
+              errorObj.details = errorDetails;
+            } else {
+              try {
+                errorObj.details = JSON.parse(JSON.stringify(errorDetails));
+              } catch {
+                errorObj.details = errorDetails;
+              }
+            }
           }
           throw errorObj;
         } catch (errorCreationError) {
@@ -225,7 +261,15 @@ class ApiService {
             fallbackError.code = 'AUTH_REQUIRED';
           }
           if (errorDetails !== undefined) {
-            fallbackError.details = errorDetails;
+            if (typeof errorDetails === 'string') {
+              fallbackError.details = errorDetails;
+            } else {
+              try {
+                fallbackError.details = JSON.parse(JSON.stringify(errorDetails));
+              } catch {
+                fallbackError.details = errorDetails;
+              }
+            }
           }
           throw fallbackError;
         }
@@ -765,82 +809,56 @@ class ApiService {
     });
   }
 
-  async generateEditorAIContent(payload: {
-    resumeId: string;
-    sectionPath: string;
-    sectionType: string;
-    currentContent?: any;
-    jobContext?: any;
-    tone?: string;
-    length?: string;
-    instructions?: string;
-  }): Promise<any> {
-    return this.request('/api/editor/ai/generate-content', {
+  async generateEditorAIContent(payload: GenerateContentRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/generate-content', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
     });
   }
 
-  async applyAIDraft(draftId: string): Promise<any> {
-    return this.request('/api/editor/ai/apply-draft', {
-      method: 'POST',
-      body: JSON.stringify({ draftId }),
-      credentials: 'include'
-    });
-  }
-
-  async runATSCheck(payload: { resumeId: string; jobDescription: string }): Promise<any> {
-    return this.request('/api/editor/ai/ats-check', {
+  async applyAIDraft(payload: ApplyDraftRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/apply-draft', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
     });
   }
 
-  async tailorResume(payload: {
-    resumeId: string;
-    jobDescription: string;
-    mode?: 'PARTIAL' | 'FULL';
-    tone?: string;
-    length?: string;
-  }): Promise<any> {
-    return this.request('/api/editor/ai/tailor', {
+  async runATSCheck(payload: AtsCheckRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/ats-check', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
     });
   }
 
-  async applyAIRecommendations(payload: {
-    resumeId: string;
-    jobDescription: string;
-    focusAreas?: string[];
-    tone?: string;
-  }): Promise<any> {
-    return this.request('/api/editor/ai/apply-recommendations', {
+  async tailorResume(payload: TailorRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/tailor', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
     });
   }
 
-  async generateCoverLetter(payload: {
-    resumeId: string;
-    jobTitle?: string;
-    company?: string;
-    jobDescription: string;
-    tone?: string;
-  }): Promise<any> {
-    return this.request('/api/editor/ai/cover-letter', {
+  async applyAIRecommendations(payload: ApplyRecommendationsRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/apply-recommendations', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
     });
   }
 
-  async generatePortfolio(payload: { resumeId: string; tone?: string }): Promise<any> {
-    return this.request('/api/editor/ai/portfolio', {
+  async generateCoverLetter(payload: CoverLetterRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/cover-letter', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  async generatePortfolio(payload: PortfolioRequest): Promise<any> {
+    return this.request('/api/proxy/editor/ai/portfolio', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -855,23 +873,39 @@ class ApiService {
     const fileToUpload = file instanceof File ? file : new File([file], 'resume-upload');
     formData.append('file', fileToUpload);
 
-    const response = await fetch(`${this.baseUrl}/api/resumes/parse`, {
-      method: 'POST',
-      body: formData,
-      credentials: 'include'
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
-    if (!response.ok) {
-      let message = 'Failed to parse resume';
-      try {
-        const err = await response.json();
-        message = err?.error || err?.message || message;
-      } catch (_) {
-        // ignore
+    try {
+      const response = await fetch(`${this.baseUrl}/api/resumes/parse`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        let message = 'Failed to parse resume';
+        try {
+          const err = await response.json();
+          message = err?.error || err?.message || message;
+        } catch (_) {
+          // ignore
+        }
+        throw new Error(message);
       }
-      throw new Error(message);
+      return await response.json();
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('Resume parsing timed out. Please try again.');
+      }
+      if (error instanceof Error) {
+        throw new Error(error.message || 'Failed to parse resume');
+      }
+      throw new Error('Failed to parse resume');
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return await response.json();
   }
 
   /**

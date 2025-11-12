@@ -19,7 +19,7 @@ async function createSession(userId, ipAddress, userAgent, daysToExpire = 3650) 
     // This is much longer than cookie expiration, so session persists until user logs out
     const expirationDate = new Date(Date.now() + daysToExpire * 24 * 60 * 60 * 1000);
     
-    const session = await prisma.session.create({
+    await prisma.session.create({
       data: {
         id: sessionId,
         userId,

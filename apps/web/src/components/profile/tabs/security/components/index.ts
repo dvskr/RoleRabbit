@@ -9,5 +9,4 @@ export { PasswordChangeModal } from './PasswordChangeModal';
 export { EmailUpdateModal } from './EmailUpdateModal';
 export { ForgotFlowModal } from './ForgotFlowModal';
 export { OTPVerificationModal } from './OTPVerificationModal';
-export { TwoFASetupModal } from './TwoFASetupModal';
 
