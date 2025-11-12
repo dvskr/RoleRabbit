@@ -12,8 +12,12 @@ const { MEGA_EXPANSION_TAXONOMY } = require('./taxonomy-mega-expansion');
 const { LANGUAGES_FRAMEWORKS_EXPANSION } = require('./taxonomy-languages-frameworks-expansion');
 const { FINAL_1000_PLUS_TAXONOMY } = require('./taxonomy-final-1000-plus');
 const { COMPLETE_REMAINING_1000 } = require('./taxonomy-complete-remaining-1000');
+const { BATCH_1_LIBRARIES_TOOLS } = require('./taxonomy-batch-1-libraries-tools');
+const { BATCH_2_INDUSTRY_CMS_UTILITIES } = require('./taxonomy-batch-2-industry-cms-utilities');
+const { INDUSTRY_MANUFACTURING_ENGINEERING } = require('./taxonomy-industry-manufacturing-engineering');
+const { INDUSTRY_MARKETING_SALES_HR } = require('./taxonomy-industry-marketing-sales-hr');
 
-// Merge all taxonomies (approaching 1600+ Technologies!)
+// Merge all taxonomies (rapidly approaching 1600+!)
 const ALL_TECHNOLOGIES = {
   ...COMPREHENSIVE_TECH_TAXONOMY,                    // ~200 core frontend/languages
   ...BACKEND_TAXONOMY,                               // ~300 backend frameworks
@@ -25,6 +29,10 @@ const ALL_TECHNOLOGIES = {
   ...LANGUAGES_FRAMEWORKS_EXPANSION,                 // ~200 languages, frameworks, build tools
   ...FINAL_1000_PLUS_TAXONOMY,                       // ~100+ final additions (expandable)
   ...COMPLETE_REMAINING_1000,                        // ~100+ embedded, IoT, industry-specific
+  ...BATCH_1_LIBRARIES_TOOLS,                        // ~300 framework libraries + dev tools
+  ...BATCH_2_INDUSTRY_CMS_UTILITIES,                 // ~200 industry + CMS + utilities
+  ...INDUSTRY_MANUFACTURING_ENGINEERING,             // ~70 manufacturing & engineering
+  ...INDUSTRY_MARKETING_SALES_HR,                    // ~140 marketing, sales & HR
 };
 
 // Statistics
