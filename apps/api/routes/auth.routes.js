@@ -97,15 +97,15 @@ async function authRoutes(fastify, options) {
       const accessToken = fastify.jwt.sign({ 
         userId: user.id, 
         email: user.email 
-      }, { expiresIn: '365d' });
+      }, { expiresIn: '1h' });
       
       // Create refresh token (persists until logout: 10 years)
-      const refreshToken = await createRefreshToken(user.id, 3650);
+      const refreshToken = await createRefreshToken(user.id, 7);
       
       // Create session (persists until logout: 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650);
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 7);
       
       // Set access token in httpOnly cookie (1 year - browser cookie limit)
       reply.setCookie('auth_token', accessToken, {
@@ -196,15 +196,15 @@ async function authRoutes(fastify, options) {
       const accessToken = fastify.jwt.sign({ 
         userId: user.id, 
         email: user.email 
-      }, { expiresIn: '365d' });
+      }, { expiresIn: '1h' });
       
       // Create refresh token (persists until logout: 10 years)
-      const refreshToken = await createRefreshToken(user.id, 3650);
+      const refreshToken = await createRefreshToken(user.id, 7);
       
       // Create session (persists until logout - 10 years expiration)
       const ipAddress = request.ip || request.headers['x-forwarded-for'] || request.socket.remoteAddress;
       const userAgent = request.headers['user-agent'];
-      const sessionId = await createSession(user.id, ipAddress, userAgent, 3650); // 10 years
+      const sessionId = await createSession(user.id, ipAddress, userAgent, 7); // 10 years
       
       // Fetch user profile data
       const userProfile = await prisma.userProfile.findUnique({
@@ -338,7 +338,7 @@ async function authRoutes(fastify, options) {
       const accessToken = fastify.jwt.sign({ 
         userId: result.user.id, 
         email: result.user.email 
-      }, { expiresIn: '365d' });
+      }, { expiresIn: '1h' });
       
       // Set new access token in httpOnly cookie (persists until logout: 1 year)
       reply.setCookie('auth_token', accessToken, {
