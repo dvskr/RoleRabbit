@@ -13,7 +13,6 @@ export function getDashboardTabTitle(tab: DashboardTab): string {
     case 'discussion': return 'Community';
     case 'email': return 'Email Hub';
     case 'cover-letter': return 'Cover Letter';
-    case 'portfolio': return 'Portfolio';
     case 'templates': return 'Templates';
     case 'profile': return 'Profile';
     case 'dashboard': return 'Dashboard';
@@ -30,7 +29,6 @@ export function getDashboardTabSubtitle(tab: DashboardTab): string | undefined {
     case 'discussion': return 'Connect with the community';
     case 'email': return 'Manage your emails and contacts';
     case 'cover-letter': return 'Create professional cover letters';
-    case 'portfolio': return 'Build your online portfolio';
     case 'templates': return 'Browse resume templates';
     case 'profile': return 'Manage your profile settings';
     default: return undefined;
@@ -46,7 +44,6 @@ export function getDashboardTabIcon(tab: DashboardTab) {
     case 'discussion': return MessageSquare;
     case 'email': return Mail;
     case 'cover-letter': return FileText;
-    case 'portfolio': return Globe;
     case 'templates': return LayoutTemplate;
     case 'profile': return UserIcon;
     default: return undefined;
@@ -62,7 +59,6 @@ export function getDashboardTabIconColor(tab: DashboardTab): string {
     case 'discussion': return 'text-indigo-600';
     case 'email': return 'text-purple-600';
     case 'cover-letter': return 'text-orange-600';
-    case 'portfolio': return 'text-rose-600';
     case 'templates': return 'text-violet-600';
     case 'profile': return 'text-slate-600';
     default: return 'text-blue-600';
@@ -72,7 +68,6 @@ export function getDashboardTabIconColor(tab: DashboardTab): string {
 export function shouldHidePageHeader(tab: DashboardTab): boolean {
   return tab === 'profile' ||
          tab === 'storage' ||
-         tab === 'portfolio' ||
          tab === 'cover-letter';
 }
 

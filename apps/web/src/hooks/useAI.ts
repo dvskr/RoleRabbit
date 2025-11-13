@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../types/ai';
+import type { TailorResult, CoverLetterDraft, ATSAnalysisResult } from '../types/ai';
 import { useTailoringPreferences } from './useTailoringPreferences';
 
 // AI state hook
@@ -19,9 +19,7 @@ export const useAI = () => {
   const [isTailoring, setIsTailoring] = useState(false);
   const [coverLetterDraft, setCoverLetterDraft] = useState<CoverLetterDraft | null>(null);
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
-  const [portfolioDraft, setPortfolioDraft] = useState<PortfolioDraft | null>(null);
-  const [isGeneratingPortfolio, setIsGeneratingPortfolio] = useState(false);
-  
+
   // Diff highlighting state
   const [showDiffBanner, setShowDiffBanner] = useState(false);
   const [showDiffHighlighting, setShowDiffHighlighting] = useState(true);
@@ -107,10 +105,6 @@ export const useAI = () => {
     setCoverLetterDraft,
     isGeneratingCoverLetter,
     setIsGeneratingCoverLetter,
-    portfolioDraft,
-    setPortfolioDraft,
-    isGeneratingPortfolio,
-    setIsGeneratingPortfolio,
     // Preferences management
     resetTailoringPreferences: resetPreferences,
     prefsLoading,

@@ -17,8 +17,7 @@ const {
 const {
   buildTailorResumePrompt,
   buildApplyRecommendationsPrompt,
-  buildCoverLetterPrompt,
-  buildPortfolioPrompt
+  buildCoverLetterPrompt
 } = require('./promptBuilder');
 const { scoreResumeWithEmbeddings } = require('../embeddings/embeddingATSService');
 const { extractSkillsWithAI } = require('../ats/aiSkillExtractor');
@@ -763,102 +762,8 @@ async function generateCoverLetter({
   }
 }
 
-async function generatePortfolio({
-  user,
-  resumeId,
-  tone = 'professional'
-}) {
-  ensureActionAllowed(user.subscriptionTier, AIAction.PORTFOLIO);
-  await ensureWithinRateLimit({
-    userId: user.id,
-    action: AIAction.PORTFOLIO,
-    tier: user.subscriptionTier
-  });
-
-  const resume = await getActiveResumeOrThrow({ userId: user.id, resumeId });
-
-  const prompt = buildPortfolioPrompt({
-    resumeSnapshot: resume.data,
-    tone
-  });
-
-  const stopTimer = aiActionLatency.startTimer({ action: 'portfolio', model: 'gpt-4o-mini' });
-
-  try {
-    logger.info('Starting portfolio generation', {
-      userId: user.id,
-      resumeId,
-      promptLength: prompt.length
-    });
-
-    const response = await generateText(prompt, {
-      model: 'gpt-4o-mini',
-      temperature: 0.3,
-      max_tokens: 1000,
-      timeout: 90000, // 90 seconds timeout
-      userId: user.id
-    });
-
-    logger.info('Portfolio response received', {
-      userId: user.id,
-      responseLength: response.text?.length || 0,
-      tokensUsed: response.usage?.total_tokens
-    });
-
-    const payload = parseJsonResponse(response.text, 'portfolio generation');
-    if (!payload.headline || !payload.tagline) {
-      throw new Error('Portfolio payload missing headline or tagline');
-    }
-
-    const generatedDoc = await prisma.generatedDocument.create({
-      data: {
-        userId: user.id,
-        baseResumeId: resume.id,
-        type: GeneratedDocType.PORTFOLIO,
-        tone,
-        data: payload
-      }
-    });
-
-    // 🚀 PERFORMANCE: Non-blocking logging
-    recordAIRequest({
-      userId: user.id,
-      baseResumeId: resume.id,
-      action: AIAction.PORTFOLIO,
-      model: response.model,
-      tokensUsed: response.usage?.total_tokens
-    }).catch(err => {
-      logger.warn('Failed to record AI request (non-blocking)', { error: err.message });
-    });
-
-    aiActionCounter.inc({ action: 'portfolio', tier: user.subscriptionTier });
-    stopTimer();
-
-    logger.info('AI portfolio outline generated', {
-      userId: user.id,
-      resumeId,
-      highlights: Array.isArray(payload.highlights) ? payload.highlights.length : 0,
-      projects: Array.isArray(payload.selectedProjects) ? payload.selectedProjects.length : 0
-    });
-
-    return {
-      document: generatedDoc,
-      content: payload
-    };
-  } catch (error) {
-    stopTimer();
-    logger.error('AI portfolio generation failed', {
-      userId: user.id,
-      resumeId,
-      error: error.message
-    });
-    throw error;
-  }
-}
-
 module.exports = {
   tailorResume,
   applyRecommendations,
-  generateCoverLetter,
-  generatePortfolio
+  generateCoverLetter
 };

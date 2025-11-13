@@ -16,8 +16,7 @@ export type DashboardTab =
   | 'tracker'  // Alias for jobs (legacy support)
   | 'email'
   | 'discussion'
-  | 'cover-letter'
-  | 'portfolio';
+  | 'cover-letter';
 
 export const DASHBOARD_TABS: DashboardTab[] = [
   'dashboard',
@@ -29,7 +28,6 @@ export const DASHBOARD_TABS: DashboardTab[] = [
   'email',
   'discussion',
   'cover-letter',
-  'portfolio',
 ];
 
 export const DEFAULT_SIDEBAR_STATE = false;

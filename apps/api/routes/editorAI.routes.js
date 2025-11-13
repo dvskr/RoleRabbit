@@ -8,8 +8,7 @@ const { applyDraft: applyDraftService, getDraft } = require('../services/ai/draf
 const {
   tailorResume,
   applyRecommendations,
-  generateCoverLetter,
-  generatePortfolio
+  generateCoverLetter
 } = require('../services/ai/tailorService');
 const { recordAIRequest, AIUsageError, ensureActionAllowed } = require('../services/ai/usageService');
 const cacheConfig = require('../config/cacheConfig');
@@ -27,8 +26,7 @@ const {
   atsCheckRequestSchema,
   tailorRequestSchema,
   applyRecommendationsRequestSchema,
-  coverLetterRequestSchema,
-  portfolioRequestSchema
+  coverLetterRequestSchema
 } = require('../schemas/editorAI.schemas');
 const { parseBodyOrSendError } = require('../utils/validationHelpers');
 
@@ -68,7 +66,6 @@ module.exports = async function editorAIRoutes(fastify) {
   fastify.options('/api/editor/ai/tailor', allowCorsPreflight);
   fastify.options('/api/editor/ai/apply-recommendations', allowCorsPreflight);
   fastify.options('/api/editor/ai/cover-letter', allowCorsPreflight);
-  fastify.options('/api/editor/ai/portfolio', allowCorsPreflight);
   fastify.options('/api/editor/ai/generate-content', allowCorsPreflight);
   fastify.options('/api/editor/ai/apply-draft', allowCorsPreflight);
 
@@ -517,45 +514,6 @@ module.exports = async function editorAIRoutes(fastify) {
       }
       logger.error('Failed to generate cover letter', { error: error.message });
       return handleAIException(request, reply, error, 'Failed to generate cover letter.');
-    }
-  });
-
-  fastify.post('/api/editor/ai/portfolio', { preHandler: authenticate }, async (request, reply) => {
-    try {
-      setCorsHeaders(request, reply);
-      const payload = parseBodyOrSendError({
-        schema: portfolioRequestSchema,
-        payload: request.body,
-        reply,
-        setCorsHeaders: () => setCorsHeaders(request, reply)
-      });
-      if (!payload) {
-        return;
-      }
-      const { resumeId, tone } = payload;
-
-      const userId = request.user.userId;
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, subscriptionTier: true }
-      });
-      if (!user) {
-        return reply.status(404).send({ success: false, error: 'User not found' });
-      }
-
-      const result = await generatePortfolio({
-        user,
-        resumeId,
-        tone
-      });
-
-      return reply.send({ success: true, ...result });
-    } catch (error) {
-      if (error instanceof AIUsageError) {
-        return reply.status(error.statusCode || 403).send({ success: false, error: error.message });
-      }
-      logger.error('Failed to generate portfolio draft', { error: error.message });
-      return handleAIException(request, reply, error, 'Failed to generate portfolio draft.');
     }
   });
 };

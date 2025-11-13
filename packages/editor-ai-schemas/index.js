@@ -160,11 +160,6 @@ const coverLetterRequestSchema = z.object({
   tone: optionalToneSchema
 });
 
-const portfolioRequestSchema = z.object({
-  resumeId: resumeIdSchema,
-  tone: optionalToneSchema
-});
-
 module.exports = {
   resumeIdSchema,
   jobDescriptionSchema,
@@ -174,7 +169,6 @@ module.exports = {
   tailorRequestSchema,
   applyRecommendationsRequestSchema,
   coverLetterRequestSchema,
-  portfolioRequestSchema,
   tailorModeSchema
 };
 

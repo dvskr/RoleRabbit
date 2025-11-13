@@ -26,7 +26,7 @@ import {
   BaseResumeRecord,
   normalizedDataToResumeData,
 } from '../../../utils/resumeMapper';
-import { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../../../types/ai';
+import { TailorResult, CoverLetterDraft, ATSAnalysisResult } from '../../../types/ai';
 
 const buildATSFromScore = (
   score: number,
@@ -139,9 +139,7 @@ export interface UseDashboardHandlersParams {
   setIsTailoring: (value: boolean) => void;
   setCoverLetterDraft: (draft: CoverLetterDraft | null) => void;
   setIsGeneratingCoverLetter: (value: boolean) => void;
-  setPortfolioDraft: (draft: PortfolioDraft | null) => void;
-  setIsGeneratingPortfolio: (value: boolean) => void;
-  
+
   // AI Progress tracking
   atsProgress?: any;
   startATSProgress?: (operation: any, estimatedTime?: number) => void;
@@ -182,8 +180,7 @@ export interface UseDashboardHandlersReturn {
   applyAIRecommendations: () => Promise<any | null>;
   tailorResumeForJob: () => Promise<any | null>;
   generateCoverLetterDraft: () => Promise<any | null>;
-  generatePortfolioDraft: () => Promise<any | null>;
-  
+
   // Other
   saveResume: () => Promise<boolean>;
   confirmTailorResult: () => Promise<boolean>;
@@ -300,8 +297,6 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsTailoring,
     setCoverLetterDraft,
     setIsGeneratingCoverLetter,
-    setPortfolioDraft,
-    setIsGeneratingPortfolio,
     // AI Progress tracking (optional)
     startATSProgress,
     completeATSProgress,
@@ -857,54 +852,6 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     setIsGeneratingCoverLetter
   ]);
 
-  const generatePortfolioDraft = useCallback(async () => {
-    const effectiveResumeId = resumeData?.id || currentResumeId;
-    if (!effectiveResumeId) {
-      setSaveError('Select an active resume before generating a portfolio outline.');
-      return null;
-    }
-
-    setPortfolioDraft(null);
-    setIsGeneratingPortfolio(true);
-    try {
-      const response = await apiService.generatePortfolio({
-        resumeId: effectiveResumeId,
-        tone: selectedTone
-      });
-
-      if (response?.content) {
-        const draft: PortfolioDraft = {
-          headline: response.content.headline || '',
-          tagline: response.content.tagline || '',
-          about: response.content.about || '',
-          highlights: Array.isArray(response.content.highlights) ? response.content.highlights : [],
-          selectedProjects: Array.isArray(response.content.selectedProjects) ? response.content.selectedProjects : [],
-          tone: selectedTone
-        };
-        setPortfolioDraft(draft);
-      }
-
-      return response;
-    } catch (error) {
-      logger.error('Failed to generate portfolio outline', { error });
-      const friendlyError = formatErrorForDisplay(error, {
-        action: 'generating portfolio outline',
-        feature: 'portfolio generator'
-      });
-      setSaveError(friendlyError);
-      return null;
-    } finally {
-      setIsGeneratingPortfolio(false);
-    }
-  }, [
-    currentResumeId,
-    resumeData,
-    selectedTone,
-    setPortfolioDraft,
-    setSaveError,
-    setIsGeneratingPortfolio
-  ]);
-
   const saveResume = useCallback(async (): Promise<boolean> => {
     if (isSaving) {
       return false;
@@ -1065,7 +1012,6 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     applyAIRecommendations,
     tailorResumeForJob,
     generateCoverLetterDraft,
-    generatePortfolioDraft,
     saveResume,
     confirmTailorResult,
     undo,

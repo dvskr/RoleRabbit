@@ -313,35 +313,9 @@ Job Description: ${normalizeJson(jobDescription, 8000)}
 Resume Snapshot: ${smartTruncateResume(resumeSnapshot, 30000)}`;
 }
 
-function buildPortfolioPrompt({
-  resumeSnapshot,
-  tone = 'professional'
-}) {
-  const toneDescription = TONE_PRESETS[tone?.toLowerCase()] || TONE_PRESETS.professional;
-
-  return `You are drafting content for a personal portfolio/website derived from the resume data.
-Return ONLY valid JSON with the schema:
-{
-  "headline": string,
-  "tagline": string,
-  "about": string,
-  "highlights": string[],
-  "selectedProjects": Array<{ "name": string, "summary": string, "technologies": string[] }>
-}
-
-Rules:
-- Tone must be ${toneDescription} and first-person singular.
-- Summaries must remain truthful to the resume data.
-- Highlight measurable achievements and leadership moments.
-- Limit highlights to 5 items and projects to 3 entries.
-
-Resume Snapshot: ${smartTruncateResume(resumeSnapshot, 30000)}`;
-}
-
 module.exports = {
   buildGenerateContentPrompt,
   buildTailorResumePrompt,
   buildApplyRecommendationsPrompt,
-  buildCoverLetterPrompt,
-  buildPortfolioPrompt
+  buildCoverLetterPrompt
 };

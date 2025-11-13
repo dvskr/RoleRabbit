@@ -15,8 +15,7 @@ import type {
   AtsCheckRequest,
   TailorRequest,
   ApplyRecommendationsRequest,
-  CoverLetterRequest,
-  PortfolioRequest
+  CoverLetterRequest
 } from '@roleready/editor-ai-schemas';
 
 class ApiService {
@@ -1005,14 +1004,6 @@ class ApiService {
 
   async generateCoverLetter(payload: CoverLetterRequest): Promise<any> {
     return this.request('/api/proxy/editor/ai/cover-letter', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      credentials: 'include'
-    });
-  }
-
-  async generatePortfolio(payload: PortfolioRequest): Promise<any> {
-    return this.request('/api/proxy/editor/ai/portfolio', {
       method: 'POST',
       body: JSON.stringify(payload),
       credentials: 'include'

@@ -109,18 +109,3 @@ export interface CoverLetterDraft {
   company?: string | null;
   tone?: string | null;
 }
-
-export interface PortfolioProjectEntry {
-  name: string;
-  summary: string;
-  technologies: string[];
-}
-
-export interface PortfolioDraft {
-  headline: string;
-  tagline: string;
-  about: string;
-  highlights: string[];
-  selectedProjects: PortfolioProjectEntry[];
-  tone?: string | null;
-}

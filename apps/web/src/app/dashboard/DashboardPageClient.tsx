@@ -31,7 +31,6 @@ const JobTracker = dynamic(() => import('../../components/JobTracker'), { ssr: f
 const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: false });
 const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
-const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
 import {
   ResumeData,
   CustomSection,
@@ -608,9 +607,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     isTailoring, setIsTailoring,
     coverLetterDraft, setCoverLetterDraft,
     resetTailoringPreferences,
-    isGeneratingCoverLetter, setIsGeneratingCoverLetter,
-    portfolioDraft, setPortfolioDraft,
-    isGeneratingPortfolio, setIsGeneratingPortfolio
+    isGeneratingCoverLetter, setIsGeneratingCoverLetter
   } = aiHook;
 
   // Save changes to history when resumeData changes
@@ -703,8 +700,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     setIsTailoring,
     setCoverLetterDraft,
     setIsGeneratingCoverLetter,
-    setPortfolioDraft,
-    setIsGeneratingPortfolio,
     // AI Progress tracking
     atsProgress: atsProgressHook.progress,
     startATSProgress: atsProgressHook.startProgress,
@@ -738,7 +733,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     applyAIRecommendations,
     tailorResumeForJob,
     generateCoverLetterDraft,
-    generatePortfolioDraft,
     saveResume,
     confirmTailorResult,
     undo,
@@ -1033,8 +1027,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         return <Email />;
       case 'cover-letter':
         return <CoverLetterGenerator />;
-      case 'portfolio':
-        return <PortfolioGenerator />;
       default:
         return <DashboardFigma onNavigateToTab={handleTabChange} />;
     }
@@ -1323,18 +1315,14 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 onApplyAIRecommendations={applyAIRecommendations}
                       onTailorResume={tailorResumeForJob}
                       onGenerateCoverLetter={generateCoverLetterDraft}
-                      onGeneratePortfolio={generatePortfolioDraft}
                       tailorResult={tailorResult}
                       setTailorResult={setTailorResult}
                       coverLetterDraft={coverLetterDraft}
                       setCoverLetterDraft={setCoverLetterDraft}
-                      portfolioDraft={portfolioDraft}
-                      setPortfolioDraft={setPortfolioDraft}
                       isTailoring={isTailoring}
                       onConfirmTailorChanges={confirmTailorResult}
                       isSavingResume={isSaving}
                       isGeneratingCoverLetter={isGeneratingCoverLetter}
-                      isGeneratingPortfolio={isGeneratingPortfolio}
                       atsProgress={atsProgressHook.progress}
                       tailorProgress={tailorProgressHook.progress}
                 onResumeUpdate={(updatedData) => {

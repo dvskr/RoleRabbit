@@ -102,16 +102,6 @@ export const coverLetterRequestSchema: ZodObject<{
   company?: string | undefined;
   tone?: string | undefined;
 }>;
-export const portfolioRequestSchema: ZodObject<{
-  resumeId: ZodString;
-  tone: import('zod').ZodOptional<ZodString>;
-}, "strip", import('zod').ZodTypeAny, {
-  resumeId: string;
-  tone?: string | undefined;
-}, {
-  resumeId: string;
-  tone?: string | undefined;
-}>;
 
 export type GenerateContentRequest = import('zod').infer<typeof generateContentRequestSchema>;
 export type ApplyDraftRequest = import('zod').infer<typeof applyDraftRequestSchema>;
@@ -119,5 +109,4 @@ export type AtsCheckRequest = import('zod').infer<typeof atsCheckRequestSchema>;
 export type TailorRequest = import('zod').infer<typeof tailorRequestSchema>;
 export type ApplyRecommendationsRequest = import('zod').infer<typeof applyRecommendationsRequestSchema>;
 export type CoverLetterRequest = import('zod').infer<typeof coverLetterRequestSchema>;
-export type PortfolioRequest = import('zod').infer<typeof portfolioRequestSchema>;
 
