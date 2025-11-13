@@ -28,11 +28,12 @@ export function getAnimationDuration(
 
 /**
  * Gets success animation duration based on user's motion preferences
- * Default: 2000ms normal, 200ms reduced (short enough to notice but not distracting)
+ * Default: 1000ms normal, 100ms reduced
+ * Optimized for power users who need to perform quick successive actions
  * @returns Appropriate success animation duration
  */
 export function getSuccessAnimationDuration(): number {
-  return getAnimationDuration(2000, 200);
+  return getAnimationDuration(1000, 100);
 }
 
 /**
