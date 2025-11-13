@@ -55,14 +55,12 @@ interface UseTemplateActionsReturn {
   addedTemplateId: string | null;
   favorites: string[];
   uploadedFile: File | null;
-  uploadSource: 'cloud' | 'system';
 
   // Setters
   setSelectedTemplate: (id: string | null) => void;
   setShowPreviewModal: (show: boolean) => void;
   setShowUploadModal: (show: boolean) => void;
   setUploadedFile: (file: File | null) => void;
-  setUploadSource: (source: 'cloud' | 'system') => void;
 
   // Actions
   handlePreviewTemplate: (templateId: string) => void;
@@ -87,7 +85,6 @@ export const useTemplateActions = (
   const [addedTemplateId, setAddedTemplateId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(() => loadFavoritesFromStorage());
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [uploadSource, setUploadSource] = useState<'cloud' | 'system'>('cloud');
 
   // Persist favorites to localStorage whenever they change
   useEffect(() => {
@@ -163,14 +160,12 @@ export const useTemplateActions = (
     addedTemplateId,
     favorites,
     uploadedFile,
-    uploadSource,
 
     // Setters
     setSelectedTemplate,
     setShowPreviewModal,
     setShowUploadModal,
     setUploadedFile,
-    setUploadSource,
 
     // Actions
     handlePreviewTemplate,
