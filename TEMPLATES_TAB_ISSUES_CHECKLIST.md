@@ -224,10 +224,11 @@
   - Impact: Cannot easily swap storage or add caching
   - **Fix**: Created comprehensive service layer architecture (/services/) with 5 files totaling 1000+ lines. **Core Service** (templateService.ts): ITemplateStorage interface defines abstract storage contract, LocalTemplateStorage implements static data access, TemplateService provides business logic (filter/sort/query/stats with 15+ methods), automatic validation and error handling, full TypeScript support. **Storage Adapters**: CachedTemplateStorage decorator adds LRU caching with configurable TTL/maxSize/stats (hit rate tracking, automatic eviction, 300s default TTL), APITemplateStorage skeleton shows API backend integration. **Initialization** (initializeServices.ts): Single function to configure service at app startup, supports caching toggle and config, development vs production presets. **Documentation** (README.md): Complete architecture guide, quick start examples, API reference for all methods, migration guide from direct imports, usage patterns (hooks, server components, context), testing examples, performance tips, 37+ code examples. **Benefits**: Decouples data access from business logic (18+ files currently import templates directly), enables storage backend swapping (Local→API→IndexedDB), built-in caching strategy (LRU with stats), centralized error handling, consistent API across app, easy testing/mocking, ready for backend integration, type-safe operations. **Architecture**: Layered design (Components→Service→Storage→Data), pluggable adapters via interface, decorator pattern for caching, async/await throughout, immutable data (returns copies)
 
-- [ ] **Issue #37: Tight Coupling to Theme**
+- [x] **Issue #37: Tight Coupling to Theme** ✅ FIXED
   - Location: All components
   - Problem: Every component requires `useTheme()` and passes `colors`
   - Impact: Cannot use in emails/PDFs where theme doesn't apply
+  - **Fix**: Created decoupled theming system with 3-layer fallback architecture (/utils/themeUtils.ts - 450 lines, /hooks/useThemeColors.ts - 60 lines). **Core Utilities**: DEFAULT_THEME_COLORS (58 color values) serves as universal fallback, getThemeColors() implements fallback chain (provided→context→CSS vars→default), getColorsFromCSSVariables() reads from :root for runtime theming, CSS_VAR_MAP (58 mappings) connects ThemeColors to CSS variables. **Helper Functions**: generateInlineStyles() creates React.CSSProperties objects for 7 common patterns (card, badges, buttons), generateEmailCSS() produces complete CSS string for email templates (reset, typography, components), themeToCSSVariables() converts ThemeColors to CSS declarations, applyThemeToRoot() dynamically sets :root CSS vars, isBrowser() detects environment. **React Hook** (useThemeColors): Provides theme colors with automatic fallback, works with or without ThemeContext, useThemeColorsOptional() returns null if no context (for detection), useHasThemeContext() checks context availability. **Documentation** (THEMING_GUIDE.md - 650 lines): 5 theming strategies (React/standalone/email/PDF/SSR), complete API reference, migration guide from useTheme(), testing examples, email template generation, performance tips, troubleshooting, FAQ. **Benefits**: Components work without React context (emails/PDFs/SSR), CSS variable support for runtime theming, always-available default theme, easy testing (no context mocking), backward compatible (useTheme still works), environment detection (browser/server), inline styles for email clients. **Use Cases**: Email generation, PDF creation, server components, standalone widgets, testing isolation, theme previews
 
 - [ ] **Issue #38: Client-Side Only**
   - Location: All template components (`'use client'`)
@@ -402,14 +403,14 @@
 - Critical Issues: 1 / 4 completed (25%)
 - Major Issues: 10 / 16 completed (62.5%)
 - Moderate Issues: 8 / 15 completed (53.3%)
-- Minor Issues: 3 / 9 completed (33.3%) ⬆️
+- Minor Issues: 4 / 9 completed (44.4%) ⬆️
 - UX/UI Issues: 2 / 9 completed (22.2%)
 - Performance Issues: 0 / 4 completed (0%)
 - Documentation Issues: 0 / 3 completed (0%)
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 24 / 66 (36.4%)** ⬆️
+**Overall Progress: 25 / 66 (37.9%)** ⬆️
 
 ---
 
