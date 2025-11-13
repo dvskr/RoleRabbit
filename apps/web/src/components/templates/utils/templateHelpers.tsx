@@ -490,15 +490,83 @@ export const getTemplateDownloadHTML = (template: any): string => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${template.name} - Resume Template</title>
+  <meta name="description" content="${template.description || 'Professional resume template created with RoleRabbit'}">
+  <meta name="author" content="${sampleData.name}">
+  <meta name="generator" content="RoleRabbit Resume Builder">
+  <meta name="keywords" content="resume, cv, ${template.category}, ${template.difficulty}, professional">
+  <title>${template.name} - Resume Template | ${sampleData.name}</title>
   <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+      color: #1f2937;
+    }
+
+    /* Print Styles */
     @media print {
-      body { margin: 0; }
-      @page { margin: 0.5in; }
+      body {
+        margin: 0;
+        background: white;
+      }
+
+      @page {
+        margin: 0.5in;
+        size: letter portrait;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* Prevent page breaks in certain elements */
+      h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+
+      ul, ol {
+        page-break-inside: avoid;
+      }
+
+      /* Remove background colors for better printing */
+      .no-print-bg {
+        background: transparent !important;
+      }
+    }
+
+    /* Screen Styles for Better Viewing */
+    @media screen {
+      body {
+        background: #f3f4f6;
+        padding: 20px;
+      }
+    }
+
+    /* Responsive adjustments */
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background: white;">
+<body>
   ${bodyContent}
 </body>
 </html>`;
