@@ -67,25 +67,62 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
     variables: [] as string[]
   });
 
-  // Load templates from localStorage
+  // Validate email template structure
+  const isValidEmailTemplate = (template: any): template is EmailTemplate => {
+    return (
+      typeof template === 'object' &&
+      template !== null &&
+      typeof template.id === 'string' &&
+      typeof template.name === 'string' &&
+      typeof template.category === 'string' &&
+      typeof template.subject === 'string' &&
+      typeof template.body === 'string' &&
+      Array.isArray(template.variables) &&
+      typeof template.isCustom === 'boolean'
+    );
+  };
+
+  // Load templates from localStorage with validation
   useEffect(() => {
-    const saved = localStorage.getItem('emailTemplates');
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem('emailTemplates');
+      if (saved) {
         const parsed = JSON.parse(saved);
+
+        // Validate that it's an array of valid templates
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setTemplates(parsed);
+          const validTemplates = parsed.filter(isValidEmailTemplate);
+
+          if (validTemplates.length > 0) {
+            setTemplates(validTemplates);
+            logger.debug(`Loaded ${validTemplates.length} valid email templates from localStorage`);
+
+            // If some templates were invalid, save only the valid ones
+            if (validTemplates.length < parsed.length) {
+              logger.warn(`Filtered out ${parsed.length - validTemplates.length} invalid email templates`);
+              localStorage.setItem('emailTemplates', JSON.stringify(validTemplates));
+            }
+          } else {
+            logger.warn('No valid email templates found in localStorage, using defaults');
+          }
         }
-      } catch (e) {
-        logger.debug('Error loading email templates:', e);
       }
+    } catch (error) {
+      logger.error('Error loading email templates from localStorage:', error);
+      // Don't crash the app, just use default templates
     }
   }, []);
 
-  // Save templates to localStorage
+  // Save templates to localStorage with error handling
   const saveTemplates = (templatesToSave: EmailTemplate[]) => {
     setTemplates(templatesToSave);
-    localStorage.setItem('emailTemplates', JSON.stringify(templatesToSave));
+    try {
+      localStorage.setItem('emailTemplates', JSON.stringify(templatesToSave));
+      logger.debug(`Saved ${templatesToSave.length} email templates to localStorage`);
+    } catch (error) {
+      logger.error('Error saving email templates to localStorage:', error);
+      // Could show a toast notification here if needed
+    }
   };
 
   const handleCreateTemplate = () => {
