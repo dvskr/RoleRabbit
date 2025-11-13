@@ -249,10 +249,11 @@
   - Impact: Malicious templates could inject scripts, steal data, or hijack sessions
   - **Fix**: Created comprehensive HTML sanitization system (/utils/sanitize.ts - 550 lines, XSS_PREVENTION_GUIDE.md - 680 lines). **Core Sanitization Functions**: escapeHtml() escapes dangerous characters (&<>"'/), unescapeHtml() reverses escaping, sanitizeHtml() allows safe HTML tags while removing scripts/event handlers, stripHtml() removes all HTML tags, sanitizeAttribute() escapes attribute values, sanitizeCSSValue() removes dangerous CSS characters, sanitizeUrl() blocks javascript:/data:/vbscript: protocols, sanitizeTemplateField() sanitizes template metadata with length limiting, sanitizeMarkdown() escapes HTML in markdown content, sanitizeTemplate() sanitizes entire template objects, containsPotentialXSS() detects XSS patterns, validateAndSanitize() combines validation and sanitization. **Fixed templateHelpers.tsx**: Added sanitization to getTemplateDownloadHTML() function, all template fields (name, description, category, difficulty) now sanitized before HTML insertion, sample data properly escaped in meta tags and title, prevents template name XSS attacks. **Fixed Markdown.tsx**: Added escapeHtml() before markdown processing, HTML entities escaped first to prevent script injection, added security note recommending react-markdown for production, prevents markdown XSS via HTML injection. **Security Features**: HTML entity escaping for all text content, attribute value sanitization, URL validation (blocks dangerous protocols), full HTML sanitization with tag whitelist, template-specific sanitization with length limits, XSS pattern detection, comprehensive JSDoc documentation. **Prevention**: Blocks &lt;script&gt; tags, removes event handlers (onclick/onload/etc), blocks javascript: URLs, blocks data: URLs, removes &lt;iframe&gt;/&lt;object&gt;/&lt;embed&gt; tags, prevents attribute breakout attacks. **Documentation**: Complete XSS Prevention Guide with attack vectors, usage examples, React best practices, testing strategies, security checklist, 14+ code examples showing vulnerable vs safe patterns
 
-- [ ] **Issue #41: No Input Validation**
-  - Location: `UploadTemplateModal.tsx:36-41`
-  - Problem: File uploads accepted without validation
-  - Impact: Users could upload non-resume files
+- [x] **Issue #41: No Input Validation** ✅ FIXED
+  - Location: UploadTemplateModal.tsx:36-41
+  - Problem: File uploads accepted without validation, no file type/size/security checks
+  - Impact: Users could upload non-resume files, malicious files, or files that break the system
+  - **Fix**: Created comprehensive file validation system (/utils/fileValidation.ts - 650 lines, FILE_UPLOAD_VALIDATION_GUIDE.md - 680 lines). **Validation Functions**: validateResumeFile() performs complete validation, validateMultipleFiles() handles batch uploads, isValidExtension() checks file extensions, isValidMimeType() validates MIME types, validateFileSize() enforces size limits (10 MB max, 1 KB min), validateFilename() prevents path traversal and malicious names, validateFileSignature() verifies file magic bytes, isDangerousExtension() blocks executables (.exe/.bat/.sh/.js etc), sanitizeFilename() cleans filenames, formatFileSize() displays human-readable sizes. **Security Features**: File signature verification (magic bytes) for PDF/DOC/DOCX/TXT, dangerous extension blocking (.exe/.bat/.cmd/.scr/.js/.vbs/.sh/.ps1 etc), path traversal prevention (../ and \ blocked), null byte detection, control character removal, MIME type validation, size limits (1 KB min, 10 MB max), filename length limit (255 chars), content type verification reads first 512 bytes. **Updated UploadTemplateModal.tsx**: Added async validation in handleFileChange(), displays validation errors with AlertCircle icon, shows validation warnings with AlertTriangle icon, displays file requirements upfront (formats/size/security), shows "Validating file..." state with animated icon, disabled input during validation, clears file input on validation failure, proper error logging, user-friendly error messages. **Allowed File Types**: PDF (application/pdf), DOC (application/msword), DOCX (application/vnd.openxmlformats-officedocument.wordprocessingml.document), TXT (text/plain). **Documentation**: Complete validation guide with API reference, validation rules table, error handling examples, security best practices, testing strategies, 20+ code examples
 
 - [ ] **Issue #42: localStorage Unlimited Growth**
   - Location: Email template library
@@ -409,12 +410,12 @@
 - Moderate Issues: 8 / 15 completed (53.3%)
 - Minor Issues: 4 / 9 completed (44.4%)
 - UX/UI Issues: 2 / 9 completed (22.2%)
-- Performance Issues: 2 / 4 completed (50%) ⬆️
+- Performance Issues: 3 / 4 completed (75%) ⬆️
 - Documentation Issues: 0 / 3 completed (0%)
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 27 / 66 (40.9%)** ⬆️
+**Overall Progress: 28 / 66 (42.4%)** ⬆️
 
 ---
 
