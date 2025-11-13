@@ -1,6 +1,7 @@
 /**
  * Custom hook for template filtering and search
  * Includes localStorage persistence for filter state
+ * Enhanced with Zod validation for runtime safety
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -9,6 +10,8 @@ import { resumeTemplates, getTemplatesByCategory, searchTemplates } from '../../
 import { TemplateSortBy, TemplateDifficulty, TemplateLayout, TemplateColorScheme } from '../types';
 import { DEBOUNCE_DELAY } from '../constants';
 import type { ResumeTemplate } from '../../../data/templates';
+import { safeParseWithDefault, templateSortBySchema, templateDifficultySchema, templateLayoutSchema, templateColorSchemeSchema } from '../validation';
+import { z } from 'zod';
 
 // localStorage keys for filter persistence
 const STORAGE_KEYS = {
@@ -22,13 +25,22 @@ const STORAGE_KEYS = {
 } as const;
 
 /**
- * Load filter value from localStorage with fallback
+ * Load filter value from localStorage with fallback and validation
  */
-function loadFromStorage<T>(key: string, fallback: T): T {
+function loadFromStorage<T>(key: string, fallback: T, schema?: z.ZodSchema<T>): T {
   if (typeof window === 'undefined') return fallback;
   try {
     const stored = localStorage.getItem(key);
-    return stored !== null ? JSON.parse(stored) : fallback;
+    if (stored === null) return fallback;
+
+    const parsed = JSON.parse(stored);
+
+    // If schema is provided, validate the parsed value
+    if (schema) {
+      return safeParseWithDefault(schema, parsed, fallback);
+    }
+
+    return parsed;
   } catch (error) {
     console.warn(`Failed to load ${key} from localStorage:`, error);
     return fallback;
@@ -111,29 +123,43 @@ export const useTemplateFilters = (
     persistFilters = true, // Enable persistence by default
   } = options;
 
-  // Initialize state from localStorage or use defaults
+  // Initialize state from localStorage or use defaults with validation
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.CATEGORY, initialCategory) : initialCategory
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.CATEGORY, initialCategory, z.string())
+      : initialCategory
   );
   const [sortBy, setSortBy] = useState<TemplateSortBy>(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.SORT_BY, initialSortBy) : initialSortBy
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.SORT_BY, initialSortBy, templateSortBySchema)
+      : initialSortBy
   );
   const [selectedDifficulty, setSelectedDifficulty] = useState(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.DIFFICULTY, initialDifficulty) : initialDifficulty
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.DIFFICULTY, initialDifficulty, z.string())
+      : initialDifficulty
   );
   const [selectedLayout, setSelectedLayout] = useState(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.LAYOUT, initialLayout) : initialLayout
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.LAYOUT, initialLayout, z.string())
+      : initialLayout
   );
   const [selectedColorScheme, setSelectedColorScheme] = useState(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.COLOR_SCHEME, initialColorScheme) : initialColorScheme
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.COLOR_SCHEME, initialColorScheme, z.string())
+      : initialColorScheme
   );
   const [showPremiumOnly, setShowPremiumOnly] = useState(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.PREMIUM_ONLY, false) : false
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.PREMIUM_ONLY, false, z.boolean())
+      : false
   );
   const [showFreeOnly, setShowFreeOnly] = useState(() =>
-    persistFilters ? loadFromStorage(STORAGE_KEYS.FREE_ONLY, false) : false
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.FREE_ONLY, false, z.boolean())
+      : false
   );
 
   // Save filters to localStorage when they change

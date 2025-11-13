@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Tooltip from './Tooltip';
 
 interface PaginationControlsProps {
   currentPage: number;
@@ -22,15 +23,16 @@ export default function PaginationControls({
 
   return (
     <div className="flex items-center justify-center mt-6 mb-4 gap-1">
-      <button
-        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-        disabled={currentPage === 1}
-        className="p-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Previous page"
-        title="Previous page"
-      >
-        <ChevronLeft size={16} />
-      </button>
+      <Tooltip content="Go to previous page" position="top">
+        <button
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="p-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Previous page"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      </Tooltip>
 
       {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
         <button
@@ -46,15 +48,16 @@ export default function PaginationControls({
         </button>
       ))}
 
-      <button
-        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-        disabled={currentPage === totalPages}
-        className="p-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-label="Next page"
-        title="Next page"
-      >
-        <ChevronRight size={16} />
-      </button>
+      <Tooltip content="Go to next page" position="top">
+        <button
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          className="p-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Next page"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </Tooltip>
     </div>
   );
 }

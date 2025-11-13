@@ -63,6 +63,8 @@ function TemplatesInternal({
         setViewMode={setViewMode}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        hasActiveFilters={filterState.hasActiveFilters}
+        activeFilterCount={filterState.activeFilterCount}
         selectedCategory={filterState.selectedCategory}
         setSelectedCategory={filterState.setSelectedCategory}
         selectedDifficulty={filterState.selectedDifficulty}
@@ -81,7 +83,9 @@ function TemplatesInternal({
       {/* Main Content */}
       <div
         className="flex-1 overflow-y-auto p-2 force-scrollbar"
-            style={{
+        role="main"
+        aria-label="Template gallery"
+        style={{
           scrollbarWidth: 'thin',
           scrollbarColor: `${colors.tertiaryText} ${colors.background}`,
         }}
@@ -91,10 +95,11 @@ function TemplatesInternal({
 
         {/* Added Templates Section */}
         {addedTemplatesList.length > 0 && (
-          <div className="mb-3">
+          <div className="mb-3" role="region" aria-labelledby="added-templates-heading">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle size={16} style={{ color: colors.successGreen }} />
               <h2
+                id="added-templates-heading"
                 className="text-base font-bold"
                 style={{ color: colors.primaryText }}
               >
@@ -105,7 +110,11 @@ function TemplatesInternal({
                 style={{ background: colors.border }}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+              role="list"
+              aria-label="Added templates grid"
+            >
               {addedTemplatesList.map(template => (
                 <TemplateCard
                   key={template.id} 
@@ -126,7 +135,11 @@ function TemplatesInternal({
 
         {/* All Templates */}
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6"
+            role="list"
+            aria-label="All available templates in grid view"
+          >
             {paginationState.currentTemplates.map(template => (
               <TemplateCard
                 key={template.id} 
@@ -146,10 +159,11 @@ function TemplatesInternal({
           <div className="space-y-4 pb-8">
             {/* Added Templates List View */}
             {addedTemplatesList.length > 0 && (
-              <div className="mb-8">
+              <div className="mb-8" role="region" aria-labelledby="added-templates-list-heading">
                 <div className="flex items-center gap-2 mb-4">
                   <CheckCircle size={20} style={{ color: colors.successGreen }} />
                   <h2
+                    id="added-templates-list-heading"
                     className="text-lg font-bold"
                     style={{ color: colors.primaryText }}
                   >
@@ -160,7 +174,7 @@ function TemplatesInternal({
                     style={{ background: colors.border }}
                   />
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-4" role="list" aria-label="Added templates list">
                   {addedTemplatesList.map(template => (
                     <TemplateCardList
                       key={template.id} 

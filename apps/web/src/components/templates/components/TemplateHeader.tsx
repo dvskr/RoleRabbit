@@ -18,11 +18,13 @@ interface TemplateHeaderProps {
   setViewMode: (viewMode: TemplateViewMode) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
-  
+  hasActiveFilters?: boolean;
+  activeFilterCount?: number;
+
   // Category
   selectedCategory: string;
   setSelectedCategory: (category: string) => void;
-  
+
   // Advanced filters
   selectedDifficulty: string;
   setSelectedDifficulty: (difficulty: string) => void;
@@ -34,7 +36,7 @@ interface TemplateHeaderProps {
   setShowFreeOnly: (show: boolean) => void;
   showPremiumOnly: boolean;
   setShowPremiumOnly: (show: boolean) => void;
-  
+
   colors: any;
 }
 
@@ -47,6 +49,8 @@ export default function TemplateHeader({
   setViewMode,
   showFilters,
   setShowFilters,
+  hasActiveFilters,
+  activeFilterCount,
   selectedCategory,
   setSelectedCategory,
   selectedDifficulty,
@@ -79,6 +83,8 @@ export default function TemplateHeader({
         setViewMode={setViewMode}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
+        hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
         colors={colors}
       />
 

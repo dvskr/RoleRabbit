@@ -1,6 +1,7 @@
 /**
  * Custom hook for template actions (preview, use, download, share, favorites)
  * Includes localStorage persistence for favorites
+ * Enhanced with Zod validation for runtime safety
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -8,18 +9,36 @@ import { logger } from '../../../utils/logger';
 import { resumeTemplates } from '../../../data/templates';
 import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '../utils/templateHelpers';
 import { SUCCESS_ANIMATION_DURATION } from '../constants';
+import { validateTemplate } from '../validation';
 
 // localStorage key for favorites persistence
 const FAVORITES_STORAGE_KEY = 'template_favorites';
 
 /**
  * Load favorites from localStorage
+ * Validates that favorites are valid template IDs
  */
 function loadFavoritesFromStorage(): string[] {
   if (typeof window === 'undefined') return [];
   try {
     const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
-    return stored !== null ? JSON.parse(stored) : [];
+    if (!stored) return [];
+
+    const parsed = JSON.parse(stored);
+
+    // Validate that parsed data is an array of strings
+    if (!Array.isArray(parsed)) {
+      console.warn('Invalid favorites format in localStorage, expected array');
+      return [];
+    }
+
+    // Filter out any non-string values and validate template IDs exist
+    const validFavorites = parsed.filter(id => {
+      if (typeof id !== 'string') return false;
+      return resumeTemplates.some(t => t.id === id);
+    });
+
+    return validFavorites;
   } catch (error) {
     console.warn('Failed to load favorites from localStorage:', error);
     return [];
@@ -127,6 +146,15 @@ export const useTemplateActions = (
           throw new Error(`Template with ID "${templateId}" not found`);
         }
 
+        // Validate template data structure
+        const validationResult = validateTemplate(template);
+        if (!validationResult.success) {
+          logger.error('Template validation failed:', validationResult.error);
+          throw new Error(
+            `Template data is invalid: ${validationResult.error?.issues[0]?.message || 'Unknown validation error'}`
+          );
+        }
+
         if (onAddToEditor) {
           onAddToEditor(templateId);
         }
@@ -211,6 +239,15 @@ export const useTemplateActions = (
       const template = resumeTemplates.find(t => t.id === templateId);
       if (!template) {
         throw new Error(`Template with ID "${templateId}" not found`);
+      }
+
+      // Validate template data structure
+      const validationResult = validateTemplate(template);
+      if (!validationResult.success) {
+        logger.error('Template validation failed:', validationResult.error);
+        throw new Error(
+          `Template data is invalid: ${validationResult.error?.issues[0]?.message || 'Unknown validation error'}`
+        );
       }
 
       setFavorites(prev =>

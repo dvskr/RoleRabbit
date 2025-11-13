@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
 import { getDifficultyColor } from '../utils/templateHelpers';
+import Tooltip from './Tooltip';
 
 interface TemplateCardProps {
   template: ResumeTemplate;
@@ -129,36 +130,41 @@ export default function TemplateCard({
 
         {/* Favorite Button */}
         <div className="absolute top-2 left-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFavorite(template.id);
-            }}
-            className={`p-2 rounded-full transition-colors ${
-              isFavorite
-                ? 'bg-red-500 text-white'
-                : 'bg-white/80 text-gray-600 hover:bg-white'
-            }`}
-            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-            title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          <Tooltip
+            content={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            position="right"
           >
-            <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
-          </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavorite(template.id);
+              }}
+              className={`p-2 rounded-full transition-colors ${
+                isFavorite
+                  ? 'bg-red-500 text-white'
+                  : 'bg-white/80 text-gray-600 hover:bg-white'
+              }`}
+              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Preview Button (hover) */}
         <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPreview(template.id);
-            }}
-            className="p-2 bg-white/80 text-gray-600 hover:bg-white rounded-full transition-colors"
-            aria-label="Preview template"
-            title="Preview"
-          >
-            <Eye size={14} />
-          </button>
+          <Tooltip content="Preview template in fullscreen" position="left">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreview(template.id);
+              }}
+              className="p-2 bg-white/80 text-gray-600 hover:bg-white rounded-full transition-colors"
+              aria-label="Preview template"
+            >
+              <Eye size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -221,29 +227,31 @@ export default function TemplateCard({
           </div>
           <div className="flex items-center gap-2">
             {!isAdded && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUse(template.id);
-                }}
-                className={`px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 relative overflow-hidden ${
-                  addedTemplateId === template.id
-                    ? 'bg-green-500 shadow-lg scale-105'
-                    : 'bg-purple-600 hover:bg-purple-700'
-                }`}
-              >
-                {addedTemplateId === template.id ? (
-                  <>
-                    <CheckCircle size={14} className="animate-bounce" />
-                    <span>Added!</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus size={14} />
-                    Add
-                  </>
-                )}
-              </button>
+              <Tooltip content="Add this template to your resume editor" position="top">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUse(template.id);
+                  }}
+                  className={`px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 relative overflow-hidden ${
+                    addedTemplateId === template.id
+                      ? 'bg-green-500 shadow-lg scale-105'
+                      : 'bg-purple-600 hover:bg-purple-700'
+                  }`}
+                >
+                  {addedTemplateId === template.id ? (
+                    <>
+                      <CheckCircle size={14} className="animate-bounce" />
+                      <span>Added!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} />
+                      Add
+                    </>
+                  )}
+                </button>
+              </Tooltip>
             )}
             {isAdded && (
               <div className="px-3 py-2 bg-green-100 text-green-700 text-sm font-semibold rounded-lg flex items-center gap-1.5">
@@ -251,26 +259,28 @@ export default function TemplateCard({
                 <span>Already Added</span>
               </div>
             )}
-            <button
-              onClick={() => onPreview(template.id)}
-              className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-              aria-label="Preview template"
-              title="Preview Template"
-            >
-              <Eye size={16} />
-            </button>
-            {onRemove && isAdded && (
+            <Tooltip content="Preview template in fullscreen" position="top">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove(template.id);
-                }}
-                className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                aria-label="Remove template"
-                title="Remove"
+                onClick={() => onPreview(template.id)}
+                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                aria-label="Preview template"
               >
-                <X size={16} />
+                <Eye size={16} />
               </button>
+            </Tooltip>
+            {onRemove && isAdded && (
+              <Tooltip content="Remove this template from your editor" position="top">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(template.id);
+                  }}
+                  className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                  aria-label="Remove template"
+                >
+                  <X size={16} />
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
