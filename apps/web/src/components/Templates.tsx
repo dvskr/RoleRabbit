@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { TemplatesProps, TemplateViewMode } from './templates/types';
@@ -11,6 +11,8 @@ import TemplateHeader from './templates/components/TemplateHeader';
 import TemplateStats from './templates/components/TemplateStats';
 import TemplateCard from './templates/components/TemplateCard';
 import TemplateCardList from './templates/components/TemplateCardList';
+import TemplateCardSkeleton from './templates/components/TemplateCardSkeleton';
+import TemplateCardListSkeleton from './templates/components/TemplateCardListSkeleton';
 import TemplatePreviewModal from './templates/components/TemplatePreviewModal';
 import UploadTemplateModal from './templates/components/UploadTemplateModal';
 import PaginationControls from './templates/components/PaginationControls';
@@ -25,6 +27,15 @@ export default function Templates({
   const colors = theme.colors;
   const [viewMode, setViewMode] = useState<TemplateViewMode>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate initial loading for better UX
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Use extracted hooks
   const filterState = useTemplateFilters();
@@ -158,20 +169,27 @@ export default function Templates({
         {/* All Templates */}
         {viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
-            {paginationState.currentTemplates.map(template => (
-              <TemplateCard
-                key={template.id} 
-                template={template}
-                isAdded={addedTemplates.includes(template.id)}
-                isFavorite={actionsState.favorites.includes(template.id)}
-                addedTemplateId={actionsState.addedTemplateId}
-                colors={colors}
-                onFavorite={actionsState.toggleFavorite}
-                onPreview={actionsState.handlePreviewTemplate}
-                onUse={actionsState.handleUseTemplate}
-                onRemove={onRemoveTemplate}
-              />
-            ))}
+            {isLoading ? (
+              // Show skeleton loaders during initial load
+              Array.from({ length: 8 }).map((_, index) => (
+                <TemplateCardSkeleton key={`skeleton-${index}`} colors={colors} />
+              ))
+            ) : (
+              paginationState.currentTemplates.map(template => (
+                <TemplateCard
+                  key={template.id}
+                  template={template}
+                  isAdded={addedTemplates.includes(template.id)}
+                  isFavorite={actionsState.favorites.includes(template.id)}
+                  addedTemplateId={actionsState.addedTemplateId}
+                  colors={colors}
+                  onFavorite={actionsState.toggleFavorite}
+                  onPreview={actionsState.handlePreviewTemplate}
+                  onUse={actionsState.handleUseTemplate}
+                  onRemove={onRemoveTemplate}
+                />
+              ))
+            )}
           </div>
         ) : (
           <div className="space-y-4 pb-8">
@@ -211,33 +229,42 @@ export default function Templates({
             )}
 
             {/* All Templates List View */}
-            {paginationState.currentTemplates.map(template => (
-              <TemplateCardList
-                key={template.id} 
-                template={template}
-                isAdded={addedTemplates.includes(template.id)}
-                isFavorite={actionsState.favorites.includes(template.id)}
-                addedTemplateId={actionsState.addedTemplateId}
-                colors={colors}
-                onFavorite={actionsState.toggleFavorite}
-                onPreview={actionsState.handlePreviewTemplate}
-                onUse={actionsState.handleUseTemplate}
-                onRemove={onRemoveTemplate}
-              />
-                        ))}
+            {isLoading ? (
+              // Show skeleton loaders during initial load
+              Array.from({ length: 6 }).map((_, index) => (
+                <TemplateCardListSkeleton key={`skeleton-list-${index}`} colors={colors} />
+              ))
+            ) : (
+              paginationState.currentTemplates.map(template => (
+                <TemplateCardList
+                  key={template.id}
+                  template={template}
+                  isAdded={addedTemplates.includes(template.id)}
+                  isFavorite={actionsState.favorites.includes(template.id)}
+                  addedTemplateId={actionsState.addedTemplateId}
+                  colors={colors}
+                  onFavorite={actionsState.toggleFavorite}
+                  onPreview={actionsState.handlePreviewTemplate}
+                  onUse={actionsState.handleUseTemplate}
+                  onRemove={onRemoveTemplate}
+                />
+              ))
+            )}
                       </div>
         )}
 
         {/* Pagination */}
-        <PaginationControls
-          currentPage={paginationState.currentPage}
-          totalPages={paginationState.totalPages}
-          onPageChange={paginationState.setCurrentPage}
-          colors={colors}
-        />
+        {!isLoading && (
+          <PaginationControls
+            currentPage={paginationState.currentPage}
+            totalPages={paginationState.totalPages}
+            onPageChange={paginationState.setCurrentPage}
+            colors={colors}
+          />
+        )}
 
         {/* Empty State */}
-        {filterState.filteredTemplates.length === 0 && (
+        {!isLoading && filterState.filteredTemplates.length === 0 && (
           <EmptyState onClearFilters={clearAllFilters} colors={colors} />
         )}
       </div>
