@@ -37,10 +37,11 @@
   - Problem: Download counts, ratings hardcoded
   - Impact: Misleading metrics, cannot track real usage
 
-- [ ] **Issue #6: Filter Logic Bug**
+- [x] **Issue #6: Filter Logic Bug** ✅ FIXED
   - Location: `useTemplateFilters.ts:79-130`
   - Problem: Category filter overrides search results
   - Impact: Search + category filter combination gives incomplete results
+  - **Fix**: Changed category filter from `getTemplatesByCategory()` to `.filter()` so it applies cumulatively to search results instead of replacing them
 
 - [ ] **Issue #7: 10-Template Limit Not Enforced**
   - Location: `useDashboardTemplates.ts:27-30`
@@ -376,7 +377,7 @@
 
 **By Category:**
 - Critical Issues: 1 / 4 completed (25%) ⬆️
-- Major Issues: 0 / 16 completed (0%)
+- Major Issues: 1 / 16 completed (6%) ⬆️
 - Moderate Issues: 0 / 15 completed (0%)
 - Minor Issues: 0 / 9 completed (0%)
 - UX/UI Issues: 0 / 9 completed (0%)
@@ -385,7 +386,7 @@
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 1 / 66 (1.5%)** ⬆️
+**Overall Progress: 2 / 66 (3%)** ⬆️
 
 ---
 
