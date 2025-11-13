@@ -1,12 +1,42 @@
 /**
  * Custom hook for template actions (preview, use, download, share, favorites)
+ * Includes localStorage persistence for favorites
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { logger } from '../../../utils/logger';
 import { resumeTemplates } from '../../../data/templates';
 import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '../utils/templateHelpers';
 import { SUCCESS_ANIMATION_DURATION } from '../constants';
+
+// localStorage key for favorites persistence
+const FAVORITES_STORAGE_KEY = 'template_favorites';
+
+/**
+ * Load favorites from localStorage
+ */
+function loadFavoritesFromStorage(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    return stored !== null ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.warn('Failed to load favorites from localStorage:', error);
+    return [];
+  }
+}
+
+/**
+ * Save favorites to localStorage
+ */
+function saveFavoritesToStorage(favorites: string[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+  } catch (error) {
+    console.warn('Failed to save favorites to localStorage:', error);
+  }
+}
 
 interface UseTemplateActionsOptions {
   onAddToEditor?: (templateId: string) => void;
@@ -55,11 +85,16 @@ export const useTemplateActions = (
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [addedTemplateId, setAddedTemplateId] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(() => loadFavoritesFromStorage());
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadSource, setUploadSource] = useState<'cloud' | 'system'>('cloud');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Save favorites to localStorage when they change
+  useEffect(() => {
+    saveFavoritesToStorage(favorites);
+  }, [favorites]);
 
   const clearError = useCallback(() => {
     setError(null);

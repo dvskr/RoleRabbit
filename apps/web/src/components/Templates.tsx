@@ -48,16 +48,6 @@ function TemplatesInternal({
     [filterState.filteredTemplates, addedTemplates]
   );
 
-  const clearAllFilters = () => {
-    filterState.setSearchQuery('');
-    filterState.setSelectedCategory('all');
-    filterState.setSelectedDifficulty('all');
-    filterState.setSelectedLayout('all');
-    filterState.setSelectedColorScheme('all');
-    filterState.setShowPremiumOnly(false);
-    filterState.setShowFreeOnly(false);
-  };
-
   return (
     <div
       className="h-full flex flex-col overflow-hidden"
@@ -217,7 +207,7 @@ function TemplatesInternal({
 
         {/* Empty State */}
         {filterState.filteredTemplates.length === 0 && (
-          <EmptyState onClearFilters={clearAllFilters} colors={colors} />
+          <EmptyState onClearFilters={filterState.clearAllFilters} colors={colors} />
         )}
       </div>
 
