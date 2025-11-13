@@ -39,20 +39,29 @@ export default function Templates({
 
   // Use extracted hooks
   const filterState = useTemplateFilters();
-  const paginationState = useTemplatePagination({
-    templates: filterState.filteredTemplates,
-  });
   const actionsState = useTemplateActions({
     onAddToEditor,
     onRemoveTemplate,
   });
-  
+
   // Separate added and not-added templates
   const addedTemplatesList = useMemo(
     () =>
       filterState.filteredTemplates.filter(t => addedTemplates.includes(t.id)),
     [filterState.filteredTemplates, addedTemplates]
   );
+
+  // Filter out added templates from the main list to avoid duplication
+  const notAddedTemplatesList = useMemo(
+    () =>
+      filterState.filteredTemplates.filter(t => !addedTemplates.includes(t.id)),
+    [filterState.filteredTemplates, addedTemplates]
+  );
+
+  // Pagination for templates that haven't been added (prevents duplication)
+  const paginationState = useTemplatePagination({
+    templates: notAddedTemplatesList,
+  });
 
   const clearAllFilters = () => {
     filterState.setSearchQuery('');
