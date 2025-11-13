@@ -267,10 +267,11 @@
   - Impact: Confusing UX, wasted space, duplicate cards for same template
   - **Fix**: Updated Templates.tsx to filter out added templates from main pagination. Created notAddedTemplatesList that excludes templates in addedTemplates array, updated paginationState to use notAddedTemplatesList instead of all filteredTemplates, reordered hooks to compute filters before pagination. **Logic**: addedTemplatesList shows only added templates (lines 48-52), notAddedTemplatesList filters out added templates (lines 55-59), paginationState now paginates only non-added templates (lines 62-64). **Result**: "Added Templates" section shows templates that have been added, "All Templates" section shows only templates that haven't been added yet, no duplication in either grid or list view, clean separation between added and available templates
 
-- [ ] **Issue #44: No Template Sorting in Added Section**
-  - Location: Added templates display
-  - Problem: Added templates shown in arbitrary order
-  - Impact: Hard to find specific template
+- [x] **Issue #44: No Template Sorting in Added Section** ✅ FIXED
+  - Location: Added templates display, Templates.tsx:48-62
+  - Problem: Added templates shown in arbitrary order (based on filter results), making it hard to find specific template
+  - Impact: Unpredictable order in "Added Templates" section, difficult to locate recently added templates
+  - **Fix**: Updated Templates.tsx to sort added templates by when they were added (most recent first). Modified addedTemplatesList useMemo to apply custom sorting based on position in addedTemplates array, sort order is reversed (indexB - indexA) to show most recently added templates first, predictable chronological ordering independent of filter settings. **Implementation**: Filters templates to get only added ones, then sorts by their index in addedTemplates array, higher index (more recent addition) comes first, uses array.sort() with index comparison. **Result**: Added templates always displayed with most recent addition at the top, consistent and predictable order regardless of filters, easy to find recently added templates, chronological organization improves usability
 
 ---
 
@@ -410,14 +411,14 @@
 - Critical Issues: 1 / 4 completed (25%)
 - Major Issues: 10 / 16 completed (62.5%)
 - Moderate Issues: 8 / 15 completed (53.3%)
-- Minor Issues: 5 / 9 completed (55.6%) ⬆️
+- Minor Issues: 6 / 9 completed (66.7%) ⬆️
 - UX/UI Issues: 2 / 9 completed (22.2%)
 - Performance Issues: 4 / 4 completed (100%) ✅
 - Documentation Issues: 0 / 3 completed (0%)
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 30 / 66 (45.5%)** ⬆️
+**Overall Progress: 31 / 66 (47.0%)** ⬆️
 
 ---
 

@@ -45,9 +45,19 @@ export default function Templates({
   });
 
   // Separate added and not-added templates
+  // Sort added templates by their order in addedTemplates array (most recent first)
   const addedTemplatesList = useMemo(
-    () =>
-      filterState.filteredTemplates.filter(t => addedTemplates.includes(t.id)),
+    () => {
+      const added = filterState.filteredTemplates.filter(t => addedTemplates.includes(t.id));
+
+      // Sort by order in addedTemplates array (most recently added first)
+      return added.sort((a, b) => {
+        const indexA = addedTemplates.indexOf(a.id);
+        const indexB = addedTemplates.indexOf(b.id);
+        // Reverse order - most recent (higher index) first
+        return indexB - indexA;
+      });
+    },
     [filterState.filteredTemplates, addedTemplates]
   );
 
