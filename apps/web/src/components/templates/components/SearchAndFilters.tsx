@@ -5,10 +5,9 @@
 import React from 'react';
 import type { ThemeColors } from '../types';
 import { Search, Filter, Grid, List, RefreshCw } from 'lucide-react';
-import type { ThemeColors } from '../types';
 import { TemplateSortBy, TemplateViewMode } from '../types';
-import type { ThemeColors } from '../types';
 import { SORT_OPTIONS } from '../constants';
+import TemplateGuide from './TemplateGuide';
 
 interface SearchAndFiltersProps {
   searchQuery: string;
@@ -159,6 +158,9 @@ export default function SearchAndFilters({
         <Filter size={16} className="inline mr-1" />
         Filters
       </button>
+
+      {/* Help Guide */}
+      <TemplateGuide colors={colors} />
 
       {/* Refresh Button */}
       <button
