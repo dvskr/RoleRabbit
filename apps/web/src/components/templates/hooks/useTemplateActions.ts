@@ -7,6 +7,7 @@ import { logger } from '../../../utils/logger';
 import { resumeTemplates } from '../../../data/templates';
 import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '../utils/templateHelpers';
 import { SUCCESS_ANIMATION_DURATION } from '../constants';
+import { isValidResumeTemplate } from '../../../utils/templateValidator';
 
 // localStorage key for favorites
 const FAVORITES_STORAGE_KEY = 'template_favorites';
@@ -108,12 +109,41 @@ export const useTemplateActions = (
   }, []);
 
   const handlePreviewTemplate = useCallback((templateId: string) => {
+    const template = resumeTemplates.find(t => t.id === templateId);
+
+    if (!template) {
+      setError(`Template not found: ${templateId}`);
+      logger.error('Template not found:', templateId);
+      return;
+    }
+
+    if (!isValidResumeTemplate(template)) {
+      setError('Invalid template data. Please try another template.');
+      logger.error('Invalid template data for:', templateId);
+      return;
+    }
+
     setSelectedTemplate(templateId);
     setShowPreviewModal(true);
+    setError(null);
   }, []);
 
   const handleUseTemplate = useCallback(
     (templateId: string) => {
+      const template = resumeTemplates.find(t => t.id === templateId);
+
+      if (!template) {
+        setError(`Template not found: ${templateId}`);
+        logger.error('Template not found:', templateId);
+        return;
+      }
+
+      if (!isValidResumeTemplate(template)) {
+        setError('Invalid template data. Cannot add to editor.');
+        logger.error('Invalid template data for:', templateId);
+        return;
+      }
+
       logger.debug('Adding template to editor:', templateId);
 
       if (onAddToEditor) {
@@ -122,6 +152,7 @@ export const useTemplateActions = (
 
       // Set animation state
       setAddedTemplateId(templateId);
+      setError(null);
 
       // Show success animation
       setTimeout(() => {

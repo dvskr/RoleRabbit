@@ -1087,10 +1087,24 @@ export const getTemplatesByDifficulty = (difficulty: string) => {
 
 export const searchTemplates = (query: string) => {
   const lowercaseQuery = query.toLowerCase();
-  return resumeTemplates.filter(template => 
+  return resumeTemplates.filter(template =>
     template.name.toLowerCase().includes(lowercaseQuery) ||
     template.description.toLowerCase().includes(lowercaseQuery) ||
     template.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery)) ||
     template.industry.some(ind => ind.toLowerCase().includes(lowercaseQuery))
   );
 };
+
+// Validate all templates on module load (development only)
+if (process.env.NODE_ENV === 'development') {
+  import('../utils/templateValidator').then(({ validateAndFilterTemplates }) => {
+    const validCount = validateAndFilterTemplates(resumeTemplates).length;
+    if (validCount !== resumeTemplates.length) {
+      console.warn(`⚠️ Template validation: ${resumeTemplates.length - validCount} templates failed validation`);
+    } else {
+      console.log(`✅ All ${resumeTemplates.length} templates validated successfully`);
+    }
+  }).catch(err => {
+    console.error('Failed to load template validator:', err);
+  });
+}
