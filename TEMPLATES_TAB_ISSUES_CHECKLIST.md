@@ -105,15 +105,17 @@
   - Impact: Share feature fails silently on desktop Chrome, Firefox
   - **Fix**: Implemented progressive fallback strategy: Web Share API → Clipboard API → Legacy textarea copy, distinguishes user cancellation from errors, removes alert() usage, throws proper errors when all methods fail, works on all browsers
 
-- [ ] **Issue #18: Pagination Reset Issues**
-  - Location: `useTemplatePagination.ts:43-47`
-  - Problem: Page resets when filters change
-  - Impact: User loses their place in template list
+- [x] **Issue #18: Pagination Reset Issues** ✅ FIXED
+  - Location: `useTemplatePagination.ts:43-50`
+  - Problem: Page resets to page 1 when filters change, losing user's position
+  - Impact: Jarring UX when filtering, user loses their place
+  - **Fix**: Changed pagination reset to go to last valid page instead of page 1, keeps users closer to their previous position, smoother filtering experience
 
-- [ ] **Issue #19: Cover Letter Templates Hardcoded**
+- [x] **Issue #19: Cover Letter Templates Hardcoded** ✅ FIXED
   - Location: `coverletter/tabs/TemplatesTab.tsx:23-96`
   - Problem: Only 6 templates defined inline in component
   - Impact: No scalability, cannot add without code changes
+  - **Fix**: Created `/data/coverLetterTemplates.ts` with templates and categories arrays, updated type definition to match actual categories ('tech', 'business', 'creative', 'executive', 'academic'), refactored component to import from data file, templates now maintainable and scalable
 
 - [ ] **Issue #20: Template Download Generates Invalid HTML**
   - Location: Referenced in `useTemplateActions.ts:97`
@@ -386,7 +388,7 @@
 
 **By Category:**
 - Critical Issues: 1 / 4 completed (25%) ⬆️
-- Major Issues: 8 / 16 completed (50%) ⬆️
+- Major Issues: 9 / 16 completed (56%) ⬆️
 - Moderate Issues: 2 / 15 completed (13%) ⬆️
 - Minor Issues: 0 / 9 completed (0%)
 - UX/UI Issues: 0 / 9 completed (0%)
@@ -395,7 +397,7 @@
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 11 / 66 (16.5%)** ⬆️
+**Overall Progress: 12 / 66 (18%)** ⬆️
 
 ---
 

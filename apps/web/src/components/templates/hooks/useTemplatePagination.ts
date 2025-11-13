@@ -39,10 +39,13 @@ export const useTemplatePagination = (
     return templates.slice(startIndex, endIndex);
   }, [templates, currentPage, itemsPerPage]);
 
-  // Reset to page 1 when templates change significantly
+  // Smart pagination reset: go to last valid page instead of page 1
+  // This preserves user's position better when filters change
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
+      // Go to last valid page instead of page 1
+      // This keeps users closer to their previous position
+      setCurrentPage(totalPages);
     }
   }, [templates.length, totalPages, currentPage]);
 

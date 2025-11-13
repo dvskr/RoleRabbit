@@ -1,7 +1,7 @@
 export interface CoverLetterTemplate {
   id: string;
   name: string;
-  category: 'software' | 'design' | 'marketing' | 'sales' | 'finance' | 'general';
+  category: 'tech' | 'business' | 'creative' | 'executive' | 'academic' | 'general';
   description: string;
   content: string;
   wordCount: number;
