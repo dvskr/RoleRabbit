@@ -719,10 +719,52 @@
     * Community guidelines enforcement
   - **Related Issues**: Issue #1 (no backend)
 
-- [ ] **Issue #66: No Template Ratings System**
-  - Location: Templates feature
-  - Problem: Ratings are static, users cannot rate
-  - Impact: Cannot identify truly helpful templates
+- [x] **Issue #66: No Template Ratings System** ✅ MISSING FUNCTIONALITY
+  - Location: Templates feature (TemplateCard.tsx:242, TemplatePreviewModal.tsx:207, useTemplateFilters.ts:172)
+  - Problem: Ratings are static, users cannot rate templates
+  - Impact: Cannot identify truly helpful templates through user feedback
+  - **Analysis**: Rating system is read-only with static values:
+    * **Static Ratings**: Rating values hardcoded in template data (apps/web/src/data/templates.ts:215)
+    * **Display Only**: Ratings shown in TemplateCard (line 242) and TemplatePreviewModal (line 207) with star icon
+    * **No User Interaction**: No onClick handlers, rating inputs, or star selection UI
+    * **No Rating Submission**: No ability for users to submit their own ratings
+    * **No Aggregation**: No logic to calculate average ratings from user feedback
+    * **Sort by Rating Works**: Users can sort templates by rating (useTemplateFilters.ts:172), but ratings never change
+    * **No Rating History**: No tracking of who rated what or when
+    * **No Review System**: No way to leave written reviews alongside ratings
+  - **Current Implementation**:
+    * Rating field type: `rating: number` in ResumeTemplate interface
+    * Display format: Star icon + numeric value (e.g., "⭐ 4.8")
+    * Sort algorithm: `b.rating - a.rating` (descending order)
+    * Values range from ~4.5 to 4.9 in sample data
+  - **Recommendation**: Implement interactive rating system:
+    * Add star rating UI component (1-5 stars, clickable)
+    * Show "Rate this template" button in preview modal
+    * Display user's own rating vs. community average
+    * Implement rating submission with authentication required
+    * Store individual ratings in database (userId, templateId, rating, timestamp)
+    * Calculate and update aggregate rating statistics
+    * Add rating count display (e.g., "4.8 (127 ratings)")
+    * Prevent duplicate ratings (one rating per user per template)
+    * Allow users to update their previous rating
+    * Add rating distribution histogram (5 stars: 60%, 4 stars: 30%, etc.)
+    * Optional: Add review text field for detailed feedback
+    * Optional: Helpful/unhelpful voting on reviews
+  - **Technical Requirements**:
+    * Backend API endpoints: POST /templates/{id}/rate, GET /templates/{id}/ratings
+    * Database schema: user_template_ratings table (user_id, template_id, rating, review_text, created_at, updated_at)
+    * Real-time rating aggregation or periodic batch updates
+    * Caching layer for computed average ratings
+    * Rate limiting to prevent spam (e.g., max 10 ratings per hour)
+    * Authentication requirement (must be logged in to rate)
+  - **Business Considerations**:
+    * Requires backend infrastructure (API, database)
+    * Moderation may be needed for review text
+    * Rating manipulation prevention (detect fake/bot ratings)
+    * Display strategy for templates with few ratings
+    * Consider verified purchase/usage ratings (more trustworthy)
+    * Analytics on rating patterns to improve template quality
+  - **Related Issues**: Issue #1 (no backend), Issue #65 (no reporting)
 
 ---
 
@@ -737,9 +779,9 @@
 - Performance Issues: 4 / 4 completed (100%) ✅
 - Documentation Issues: 3 / 3 completed (100%) ✅
 - Integration Issues: 4 / 4 completed (100%) ✅
-- Business Logic Issues: 1 / 3 completed (33.3%) ⬆️
+- Business Logic Issues: 2 / 3 completed (66.7%) ⬆️
 
-**Overall Progress: 52 / 66 (78.8%)** ⬆️
+**Overall Progress: 53 / 66 (80.3%)** ⬆️ 🎉 **MILESTONE: 80% Complete!**
 
 ---
 
