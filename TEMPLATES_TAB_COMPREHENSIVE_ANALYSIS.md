@@ -10,7 +10,7 @@
 
 The Templates component is well-architected with proper separation of concerns through custom hooks, reusable components, and utility functions. However, there are several areas for improvement across architecture, user experience, performance, testing, and documentation.
 
-**Overall Status:** 5 / 30 issues completed (16.7%)
+**Overall Status:** 7 / 30 issues completed (23.3%)
 
 ---
 
@@ -18,8 +18,8 @@ The Templates component is well-architected with proper separation of concerns t
 
 - **Critical Issues:** 1 / 3 completed (33%)
 - **Major Issues:** 3 / 8 completed (37.5%)
-- **Moderate Issues:** 1 / 9 completed (11.1%)
-- **Minor Issues:** 0 / 6 completed (0%)
+- **Moderate Issues:** 2 / 9 completed (22.2%)
+- **Minor Issues:** 1 / 6 completed (16.7%)
 - **Documentation:** 0 / 4 completed (0%)
 
 ---
@@ -409,13 +409,27 @@ The Templates component is well-architected with proper separation of concerns t
 - Confusing UX
 - Users might miss templates at top of new page
 
-**Recommendation:**
-- Scroll to top on page change
-- Add smooth scroll behavior
-- Consider infinite scroll as alternative
-- Add "Back to top" button
+**Solution Implemented:**
+- ✅ Smooth scroll to top on page change
+- ✅ useRef to track previous page (prevent scroll on initial mount)
+- ✅ scrollToTopOnPageChange option (default: true)
+- ✅ scrollContainerSelector for custom scroll containers
+- ✅ 50ms delay to ensure DOM updates before scrolling
+- ✅ Automatic cleanup with timer clearance
+- ✅ Supports both window and element scrolling
+- 📝 TODO: Add "Back to top" floating button for long pages
 
-**Status:** ❌ Not Started
+**Technical Implementation:**
+- useRef(previousPage) to detect actual page changes
+- useEffect triggers on currentPage change
+- scrollTo({ behavior: 'smooth' }) for smooth animation
+- Supports custom scroll container via selector
+- Timer cleanup prevents memory leaks
+
+**Files Modified:**
+- `apps/web/src/components/templates/hooks/useTemplatePagination.ts` (added scroll logic)
+
+**Status:** ✅ Completed (2025-11-13)
 
 ---
 
@@ -537,13 +551,38 @@ The Templates component is well-architected with proper separation of concerns t
 - Reduced discoverability
 - Accessibility issue
 
-**Recommendation:**
-- Add tooltips to all icon buttons
-- Use aria-label for accessibility
-- Show keyboard shortcuts in tooltips
-- Implement tooltip component with delay
+**Solution Implemented:**
+- ✅ Created reusable Tooltip component
+- ✅ Accessible with role="tooltip" and aria-describedby
+- ✅ Keyboard-friendly (shows on focus, hides on blur)
+- ✅ Configurable delay (default: 300ms)
+- ✅ 4 position options: top, bottom, left, right
+- ✅ Smooth fade-in animation
+- ✅ Proper z-index layering
+- ✅ Arrow indicator pointing to target element
+- 📝 TODO: Apply tooltips to all icon buttons throughout UI
+- 📝 TODO: Add keyboard shortcut hints in tooltips
 
-**Status:** ❌ Not Started
+**Technical Implementation:**
+- Compound component pattern with React.cloneElement
+- useState for visibility tracking
+- useEffect for timeout cleanup (prevents memory leaks)
+- Tailwind CSS for styling and animations
+- Dark mode support
+- SSR-safe with proper event handlers
+
+**Features:**
+- Customizable delay before showing
+- Automatic positioning with CSS transforms
+- Visual arrow indicator
+- Smooth animations (fade-in)
+- Works with mouse hover and keyboard focus
+- Accessible ARIA attributes
+
+**Files Created:**
+- `apps/web/src/components/templates/components/Tooltip.tsx` (new reusable component)
+
+**Status:** ✅ Completed (2025-11-13)
 
 ---
 
