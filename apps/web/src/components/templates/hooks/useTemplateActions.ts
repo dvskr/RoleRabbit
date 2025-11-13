@@ -2,6 +2,7 @@
  * Custom hook for template actions (preview, use, download, share, favorites)
  * Includes localStorage persistence for favorites
  * Enhanced with Zod validation for runtime safety
+ * Enhanced with usage history tracking
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
@@ -10,6 +11,7 @@ import { resumeTemplates } from '../../../data/templates';
 import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '../utils/templateHelpers';
 import { SUCCESS_ANIMATION_DURATION } from '../constants';
 import { validateTemplate } from '../validation';
+import { useTemplateHistory } from './useTemplateHistory';
 
 // localStorage key for favorites persistence
 const FAVORITES_STORAGE_KEY = 'template_favorites';
@@ -110,6 +112,9 @@ export const useTemplateActions = (
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Usage history tracking
+  const { addToHistory } = useTemplateHistory();
+
   // Save favorites to localStorage when they change
   useEffect(() => {
     saveFavoritesToStorage(favorites);
@@ -133,7 +138,9 @@ export const useTemplateActions = (
   const handlePreviewTemplate = useCallback((templateId: string) => {
     setSelectedTemplate(templateId);
     setShowPreviewModal(true);
-  }, []);
+    // Track preview in history
+    addToHistory(templateId, 'preview');
+  }, [addToHistory]);
 
   const handleUseTemplate = useCallback(
     (templateId: string) => {
@@ -159,6 +166,9 @@ export const useTemplateActions = (
           onAddToEditor(templateId);
         }
 
+        // Track usage in history
+        addToHistory(templateId, 'use');
+
         // Clear any previous errors
         setError(null);
 
@@ -178,7 +188,7 @@ export const useTemplateActions = (
         }
       }
     },
-    [onAddToEditor, onError]
+    [onAddToEditor, onError, addToHistory]
   );
 
   const handleDownloadTemplate = useCallback(() => {
@@ -194,6 +204,9 @@ export const useTemplateActions = (
       const htmlContent = getTemplateDownloadHTML(currentSelectedTemplate);
       downloadTemplateAsHTML(currentSelectedTemplate, htmlContent);
 
+      // Track download in history
+      addToHistory(currentSelectedTemplate.id, 'download');
+
       setIsLoading(false);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to download template');
@@ -204,7 +217,7 @@ export const useTemplateActions = (
         onError(error, 'downloadTemplate');
       }
     }
-  }, [currentSelectedTemplate, onError]);
+  }, [currentSelectedTemplate, onError, addToHistory]);
 
   const handleShareTemplate = useCallback(async () => {
     try {

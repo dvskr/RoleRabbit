@@ -92,7 +92,11 @@ function TemplatesInternal({
         }}
       >
         {/* Stats */}
-        <TemplateStats colors={colors} />
+        <TemplateStats
+          colors={colors}
+          favorites={actionsState.favorites}
+          filteredCount={filterState.filteredTemplates.length}
+        />
 
         {/* Filter Chips */}
         <FilterChips

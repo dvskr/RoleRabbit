@@ -1,8 +1,9 @@
 /**
  * TemplatePreviewModal - Modal for previewing template with full details
+ * Enhanced with smooth animations for better UX
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
 import { getDifficultyColor } from '../utils/templateHelpers';
@@ -35,21 +36,84 @@ export default function TemplatePreviewModal({
   onUse,
   onOpenUpload,
 }: TemplatePreviewModalProps) {
-  if (!isOpen || !template) return null;
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      // Small delay to trigger enter animation
+      setTimeout(() => setIsAnimating(true), 10);
+    } else {
+      setIsAnimating(false);
+      // Wait for exit animation before unmounting
+      const timer = setTimeout(() => setShouldRender(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!shouldRender || !template) return null;
 
   const difficultyColor = getDifficultyColor(template.difficulty, colors || {});
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div
+      className={`fixed inset-0 flex items-center justify-center z-50 p-4 transition-all duration-300 ${
+        isAnimating ? 'bg-black bg-opacity-50 backdrop-blur-sm' : 'bg-black bg-opacity-0'
+      }`}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div
+        className={`bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl transition-all duration-300 ${
+          isAnimating
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 translate-y-4'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: colors?.cardBackground || '#ffffff' }}
+      >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
               <Layout size={24} className="text-gray-400" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{template.name}</h2>
-              <p className="text-sm text-gray-600">{template.description}</p>
+              <h2
+                id="modal-title"
+                className="text-2xl font-bold"
+                style={{ color: colors?.primaryText || '#111827' }}
+              >
+                {template.name}
+              </h2>
+              <p
+                className="text-sm"
+                style={{ color: colors?.secondaryText || '#4b5563' }}
+              >
+                {template.description}
+              </p>
             </div>
           </div>
           <button
