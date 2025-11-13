@@ -67,8 +67,8 @@ export default function TemplatePreviewModal({
   const difficultyColor = getDifficultyColor(template.difficulty, colors || {});
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
             <div className="w-16 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
@@ -89,9 +89,9 @@ export default function TemplatePreviewModal({
         </div>
 
         {/* Template Preview */}
-        <div className="mb-6 bg-gray-100 rounded-lg p-4">
-          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl overflow-auto max-h-[600px]">
-            <div className="p-6 min-w-[650px]">
+        <div className="mb-4 sm:mb-6 bg-gray-100 rounded-lg p-2 sm:p-4">
+          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl overflow-auto max-h-[400px] sm:max-h-[600px]">
+            <div className="p-3 sm:p-6 min-w-0 sm:min-w-[650px]">
               {isLoading ? (
                 /* Loading State - Skeleton */
                 <div className="space-y-6 animate-pulse">
@@ -146,7 +146,7 @@ export default function TemplatePreviewModal({
         </div>
 
         {/* Template Details */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div className="space-y-2">
             <h3 className="font-semibold text-gray-900">Features</h3>
             <div className="flex flex-wrap gap-2">
@@ -198,8 +198,8 @@ export default function TemplatePreviewModal({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-center sm:justify-start gap-2">
             <button
               onClick={() => onFavorite(template.id)}
               className={`p-2 rounded-lg transition-colors ${
@@ -229,33 +229,35 @@ export default function TemplatePreviewModal({
               <Download size={20} />
             </button>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
             >
               Close
             </button>
             <button
               onClick={onOpenUpload}
-              className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center gap-2"
+              className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
-              <Upload size={18} />
-              Upload & Apply
+              <Upload size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="hidden sm:inline">Upload & Apply</span>
+              <span className="sm:hidden">Upload</span>
             </button>
             <button
               onClick={() => onUse(template.id)}
-              className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center gap-2 group relative overflow-hidden"
+              className="px-4 sm:px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 group relative overflow-hidden text-sm sm:text-base"
             >
               {addedTemplateId === template.id ? (
                 <span className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
-                  <CheckCircle size={18} className="text-green-200" />
+                  <CheckCircle size={16} className="text-green-200 sm:w-[18px] sm:h-[18px]" />
                   Added!
                 </span>
               ) : (
                 <>
-                  <Plus size={18} />
-                  Add to Editor
+                  <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Add to Editor</span>
+                  <span className="sm:hidden">Add</span>
                 </>
               )}
               {addedTemplateId === template.id && (

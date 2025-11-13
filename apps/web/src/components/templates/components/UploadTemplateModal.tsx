@@ -94,8 +94,8 @@ export default function UploadTemplateModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-full sm:max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 flex items-center justify-between">
           <h2 className="text-xl font-bold">Upload & Apply Template</h2>
@@ -109,7 +109,7 @@ export default function UploadTemplateModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 120px)' }}>
+        <div className="p-3 sm:p-6 overflow-y-auto" style={{ maxHeight: 'calc(95vh - 80px)' }}>
           {!uploadedFile ? (
             /* Upload Area */
             <>
@@ -251,8 +251,8 @@ export default function UploadTemplateModal({
 
               {/* Download Options */}
               <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-3">Download Format</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <h3 className="text-base sm:text-lg font-semibold mb-3">Download Format</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <button
                     onClick={() => {
                       logger.debug('Downloading as PDF with template:', template.id);

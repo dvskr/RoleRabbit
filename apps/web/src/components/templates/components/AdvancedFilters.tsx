@@ -35,7 +35,7 @@ export default function AdvancedFilters({
 }: AdvancedFiltersProps) {
   return (
     <div className="mt-2 p-2 rounded-lg" style={{ background: colors.cardBackground }}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
         <div>
           <label
             className="block text-xs font-medium mb-1"
