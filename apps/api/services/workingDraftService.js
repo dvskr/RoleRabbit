@@ -89,17 +89,30 @@ async function getCurrentResumeData(baseResumeId) {
 async function saveWorkingDraft({ userId, baseResumeId, data, formatting, metadata }) {
   try {
     // Support both old signature (baseResumeId, { data, ... }) and new signature ({ baseResumeId, data, ... })
-    // If userId is a string and looks like an ID, it's the old signature
-    if (typeof userId === 'string' && !baseResumeId && typeof data === 'object') {
+    // If userId is a string that starts with 'cm' (CUID) and baseResumeId is undefined, it's the old signature
+    if (typeof userId === 'string' && userId.startsWith('cm') && !baseResumeId && typeof data === 'object') {
       // Old signature: saveWorkingDraft(baseResumeId, { data, formatting, metadata })
       baseResumeId = userId;
       userId = undefined;
     }
     
+    if (!baseResumeId) {
+      // Silently ignore auto-save attempts without baseResumeId (stale frontend state)
+      logger.debug('saveWorkingDraft called without baseResumeId (ignoring)', { userId });
+      return null;
+    }
+    
     // Verify base resume exists
-    const baseResume = await prisma.baseResume.findUnique({
-      where: { id: baseResumeId }
-    });
+    let baseResume;
+    try {
+      baseResume = await prisma.baseResume.findUnique({
+        where: { id: baseResumeId }
+      });
+    } catch (prismaError) {
+      // Silently handle Prisma errors (e.g., invalid ID format)
+      logger.debug('Prisma error when checking base resume', { baseResumeId, error: prismaError.message });
+      return null;
+    }
 
     if (!baseResume) {
       // Silently fail if resume doesn't exist (likely deleted or stale frontend state)
@@ -124,6 +137,11 @@ async function saveWorkingDraft({ userId, baseResumeId, data, formatting, metada
       }
     });
 
+    if (!draft) {
+      logger.debug('Draft upsert returned null', { baseResumeId });
+      return null;
+    }
+
     logger.info('Working draft saved', {
       baseResumeId,
       draftId: draft.id,
@@ -132,9 +150,12 @@ async function saveWorkingDraft({ userId, baseResumeId, data, formatting, metada
 
     return draft;
   } catch (error) {
-    logger.error('Failed to save working draft', {
+    // Silently handle errors for deleted/stale resumes (auto-save will retry)
+    // Changed to debug level to avoid log spam - v2 10:25
+    logger.debug('Failed to save working draft (likely deleted resume)', {
       baseResumeId,
-      error: error.message
+      error: error.message,
+      timestamp: new Date().toISOString()
     });
     // Don't throw - just log and return null
     return null;

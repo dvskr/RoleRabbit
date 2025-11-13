@@ -21,6 +21,10 @@ export const useAI = () => {
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [portfolioDraft, setPortfolioDraft] = useState<PortfolioDraft | null>(null);
   const [isGeneratingPortfolio, setIsGeneratingPortfolio] = useState(false);
+  
+  // Diff highlighting state
+  const [showDiffBanner, setShowDiffBanner] = useState(false);
+  const [showDiffHighlighting, setShowDiffHighlighting] = useState(true);
 
   // Load user preferences
   const { preferences, updatePreferences, resetPreferences, loading: prefsLoading } = useTailoringPreferences();
@@ -52,6 +56,13 @@ export const useAI = () => {
       return;
     }
     
+    // Also skip if current values match loaded preferences (no actual change)
+    if (tailorEditMode === preferences.mode && 
+        selectedTone === preferences.tone && 
+        selectedLength === preferences.length) {
+      return;
+    }
+    
     const timer = setTimeout(() => {
       updatePreferences({
         mode: tailorEditMode,
@@ -63,7 +74,7 @@ export const useAI = () => {
     }, 500); // 500ms debounce
 
     return () => clearTimeout(timer);
-  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, prefsInitialized, updatePreferences]);
+  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, prefsInitialized, updatePreferences, preferences]);
 
   return {
     aiMode,
@@ -103,5 +114,10 @@ export const useAI = () => {
     // Preferences management
     resetTailoringPreferences: resetPreferences,
     prefsLoading,
+    // Diff highlighting
+    showDiffBanner,
+    setShowDiffBanner,
+    showDiffHighlighting,
+    setShowDiffHighlighting,
   };
 };

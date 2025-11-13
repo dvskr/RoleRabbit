@@ -327,7 +327,7 @@ async function tailorResume({
       model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
       temperature: 0.3,
       max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000, // Increased to prevent truncation
-      timeout: 120000, // 2 minutes timeout
+      timeout: 240000, // 4 minutes timeout (increased for complex resumes)
       userId: user.id
     });
 
@@ -383,13 +383,21 @@ async function tailorResume({
     
     const [draftSaved, tailoredVersion] = await Promise.all([
       // Save the tailored content to the working draft (user can review before committing)
-      saveWorkingDraft({
-        userId: user.id,
-        baseResumeId: resume.id,
-        data: normalizedTailoredResume,
-        formatting: resume.formatting || {},
-        metadata: resume.metadata || {}
-      }),
+      (async () => {
+        const result = await saveWorkingDraft({
+          userId: user.id,
+          baseResumeId: resume.id,
+          data: normalizedTailoredResume,
+          formatting: resume.formatting || {},
+          metadata: resume.metadata || {}
+        });
+        logger.info('✅ [TAILOR] Draft saved result:', {
+          success: !!result,
+          draftId: result?.id,
+          hasSummary: !!result?.data?.summary
+        });
+        return result;
+      })(),
       // Create a TailoredVersion record for history/tracking
       prisma.tailoredVersion.create({
         data: {

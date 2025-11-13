@@ -40,5 +40,23 @@ export interface ResumeEditorProps {
   onNavigateToTemplates?: () => void;
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+  onGenerateSummary?: () => void;
+  onOpenAIGenerateModal?: (section: string) => void;
+  colors?: any;
+  resumeLoading?: boolean;
+  // Diff highlighting
+  showDiffBanner?: boolean;
+  diffChanges?: Array<{
+    type: 'added' | 'removed' | 'modified' | 'unchanged';
+    section: string;
+    field?: string;
+    index?: number;
+    oldValue?: string;
+    newValue?: string;
+    path: string;
+  }>;
+  showDiffHighlighting?: boolean;
+  onToggleDiffHighlighting?: () => void;
+  onCloseDiffBanner?: () => void;
 }
 

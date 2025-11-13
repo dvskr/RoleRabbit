@@ -155,7 +155,11 @@ export interface UseDashboardHandlersParams {
   resetTailorProgress?: () => void;
   
   // Toast notifications
-  showToast?: (type: string, title: string, options?: any) => void;
+  showToast?: (message: string, type?: 'info' | 'success' | 'error' | 'warning', duration?: number) => void;
+  
+  // UI state
+  setShowRightPanel?: (show: boolean) => void;
+  setShowDiffBanner?: (show: boolean) => void;
 }
 
 export interface UseDashboardHandlersReturn {
@@ -303,7 +307,10 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     completeATSProgress,
     startTailorProgress,
     completeTailorProgress,
-    showToast
+    showToast,
+    // UI state
+    setShowRightPanel,
+    setShowDiffBanner
   } = params;
 
   const toggleSection = useCallback((section: string) => {
@@ -637,9 +644,33 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         // DON'T call setResumeData() - we'll force a full reload from backend instead
         // This ensures the editor shows the exact data that was saved to the database
         
+        // Calculate diff for highlighting changes
+        console.log('📊 [TAILOR] About to calculate diff...');
+        console.log('📊 [TAILOR] Original data:', { 
+          hasSummary: !!resumeData.summary,
+          experienceCount: resumeData.experience?.length,
+          summaryPreview: resumeData.summary?.substring(0, 50)
+        });
+        console.log('📊 [TAILOR] Tailored data:', {
+          hasSummary: !!mergedResume.summary,
+          experienceCount: mergedResume.experience?.length,
+          summaryPreview: mergedResume.summary?.substring(0, 50)
+        });
+        
+        const { calculateResumeDiff } = await import('../../../utils/resumeDiff');
+        const diffResult = calculateResumeDiff(resumeData, mergedResume);
+        console.log('📊 [TAILOR] Diff calculated:', {
+          totalChanges: diffResult.totalChanges,
+          added: diffResult.addedCount,
+          modified: diffResult.modifiedCount,
+          removed: diffResult.removedCount,
+          changesArray: diffResult.changes
+        });
+        
         const result: TailorResult = {
           tailoredResume: mergedResume,
           diff: Array.isArray(response.diff) ? response.diff : [],
+          diffChanges: diffResult.changes, // Add calculated diff
           warnings: Array.isArray(response.warnings) ? response.warnings : [],
           recommendedKeywords: Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : [],
           ats: response.ats ?? null,
@@ -656,9 +687,48 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           setMatchedKeywords(afterAnalysis.matchedKeywords ?? response.recommendedKeywords ?? []);
           setMissingKeywords(afterAnalysis.missingKeywords ?? []);
           setShowATSScore(true);
+          // Open the AI panel to show the ATS score
+          if (setShowRightPanel) {
+            try {
+              setShowRightPanel(true);
+            } catch (err) {
+              console.warn('Failed to open AI panel:', err);
+            }
+          }
+          // Show the diff banner to highlight changes
+          console.log('📊 [TAILOR] Attempting to show diff banner (afterAnalysis path)...', {
+            hasSetShowDiffBanner: !!setShowDiffBanner,
+            diffChangesCount: diffResult.changes.length
+          });
+          if (setShowDiffBanner) {
+            try {
+              setShowDiffBanner(true);
+              console.log('✅ [TAILOR] Diff banner shown!');
+            } catch (err) {
+              console.error('❌ [TAILOR] Failed to show diff banner:', err);
+            }
+          } else {
+            console.warn('⚠️ [TAILOR] setShowDiffBanner is not available!');
+          }
         } else if (typeof response.atsScoreAfter === 'number') {
           setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
           setShowATSScore(true);
+          // Open the AI panel to show the ATS score
+          if (setShowRightPanel) {
+            try {
+              setShowRightPanel(true);
+            } catch (err) {
+              console.warn('Failed to open AI panel:', err);
+            }
+          }
+          // Show the diff banner to highlight changes
+          if (setShowDiffBanner) {
+            try {
+              setShowDiffBanner(true);
+            } catch (err) {
+              console.warn('Failed to show diff banner:', err);
+            }
+          }
         }
         
         // Complete progress and show success toast
@@ -674,14 +744,19 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
         // Force a complete reload from the backend
         console.log('🔄 [TAILOR] Force reloading resume data from backend after tailoring...');
         console.log('🔄 [TAILOR] Resume ID:', effectiveResumeId);
+        console.log('🔄 [TAILOR] loadResumeById available:', typeof loadResumeById);
         
         // Directly call loadResumeById to force a fresh fetch from the backend
         // This bypasses the useEffect guard that prevents reloading the same resume
-        try {
-          await loadResumeById(effectiveResumeId);
-          console.log('✅ [TAILOR] Resume reloaded successfully from backend!');
-        } catch (reloadError) {
-          console.error('❌ [TAILOR] Failed to reload resume:', reloadError);
+        if (loadResumeById && typeof loadResumeById === 'function') {
+          try {
+            await loadResumeById(effectiveResumeId);
+            console.log('✅ [TAILOR] Resume reloaded successfully from backend!');
+          } catch (reloadError) {
+            console.error('❌ [TAILOR] Failed to reload resume:', reloadError);
+          }
+        } else {
+          console.error('❌ [TAILOR] loadResumeById is not available!');
         }
       }
 

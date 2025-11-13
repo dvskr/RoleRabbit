@@ -17,17 +17,17 @@ export interface UseDashboardUIReturn {
   activeTab: DashboardTab;
   setActiveTab: (tab: DashboardTab) => void;
   sidebarCollapsed: boolean;
-  setSidebarCollapsed: (collapsed: boolean) => void;
+  setSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   resumePanelCollapsed: boolean;
-  setResumePanelCollapsed: (collapsed: boolean) => void;
+  setResumePanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   showRightPanel: boolean;
-  setShowRightPanel: (show: boolean) => void;
+  setShowRightPanel: (show: boolean | ((prev: boolean) => boolean)) => void;
   previousSidebarState: boolean;
-  setPreviousSidebarState: (state: boolean) => void;
+  setPreviousSidebarState: (state: boolean | ((prev: boolean) => boolean)) => void;
   previousMainSidebarState: boolean;
-  setPreviousMainSidebarState: (state: boolean) => void;
+  setPreviousMainSidebarState: (state: boolean | ((prev: boolean) => boolean)) => void;
   isPreviewMode: boolean;
-  setIsPreviewMode: (mode: boolean) => void;
+  setIsPreviewMode: (mode: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 /**

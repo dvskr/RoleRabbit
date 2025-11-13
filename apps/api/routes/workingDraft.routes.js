@@ -107,15 +107,17 @@ module.exports = async function workingDraftRoutes(fastify) {
         }
       });
     } catch (error) {
-      logger.error('Failed to save working draft', {
+      // Silently handle errors for deleted/stale resumes (auto-save will retry)
+      logger.debug('Failed to save working draft (likely deleted resume)', {
         error: error.message,
         baseResumeId: request.params.baseResumeId
       });
 
-      return reply.status(500).send({
-        success: false,
-        error: 'Failed to save working draft',
-        message: error.message
+      // Return success with null draft to avoid frontend errors
+      return reply.send({
+        success: true,
+        draft: null,
+        message: 'Resume not found or deleted'
       });
     }
   });

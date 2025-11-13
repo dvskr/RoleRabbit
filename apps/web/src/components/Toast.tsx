@@ -9,7 +9,7 @@ import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export interface Toast {
   id: string;

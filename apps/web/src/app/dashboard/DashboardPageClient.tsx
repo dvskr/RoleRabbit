@@ -11,7 +11,7 @@ import DashboardHeader from '../../components/layout/DashboardHeader';
 import PageHeader from '../../components/layout/PageHeader';
 
 // Lazy load all heavy components to prevent blocking startup
-const DashboardFigma = dynamic(() => import('../../components/DashboardFigma.tsx'), { ssr: false });
+const DashboardFigma = dynamic(() => import('../../components/DashboardFigma'), { ssr: false });
 const Profile = dynamic(() => import('../../components/Profile'), { ssr: false });
 const CloudStorage = dynamic(() => import('../../components/CloudStorage'), { ssr: false });
 const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor').then(mod => ({ default: mod.default })), { 
@@ -717,7 +717,10 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     completeTailorProgress: tailorProgressHook.completeProgress,
     resetTailorProgress: tailorProgressHook.resetProgress,
     // Toast notifications
-    showToast
+    showToast,
+    // UI state
+    setShowRightPanel,
+    setShowDiffBanner: aiHook.setShowDiffBanner
   });
 
   const {
@@ -887,7 +890,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       case 'editor':
         // Show loading state only on initial load, not on subsequent updates
         if (resumeLoading && !currentResumeId && resumes.length === 0) {
-          return <Loading message="Loading Resume Editor..." />;
+          return <Loading text="Loading Resume Editor..." />;
         }
         
         try {
@@ -939,6 +942,12 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             setShowAddFieldModal={setShowAddFieldModal}
             customFields={customFields}
             setCustomFields={setCustomFieldsTracked}
+            // Diff highlighting
+            showDiffBanner={aiHook.showDiffBanner}
+            diffChanges={aiHook.tailorResult?.diffChanges}
+            showDiffHighlighting={aiHook.showDiffHighlighting}
+            onToggleDiffHighlighting={() => aiHook.setShowDiffHighlighting(!aiHook.showDiffHighlighting)}
+            onCloseDiffBanner={() => aiHook.setShowDiffBanner(false)}
             selectedTemplateId={selectedTemplateId || DEFAULT_TEMPLATE_ID}
             onTemplateApply={(templateId) => {
               // Apply template styling

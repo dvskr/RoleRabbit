@@ -321,8 +321,18 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
       });
       
       if (response?.resume) {
+        console.log('📝 [LOAD] Applying resume to editor:', {
+          resumeId: response.resume.id,
+          hasData: !!response.resume.data,
+          hasSummary: !!response.resume.data?.summary,
+          summaryPreview: response.resume.data?.summary?.substring(0, 100),
+          experienceCount: response.resume.data?.experience?.length
+        });
         const result = await applyBaseResume(response.resume as BaseResumeRecord);
-        console.log('✅ [LOAD] Resume applied to editor');
+        console.log('✅ [LOAD] Resume applied to editor, result:', {
+          hasResult: !!result,
+          resultSummary: result?.summary?.substring(0, 100)
+        });
         return result;
       }
       throw new Error('Resume not found');
@@ -380,7 +390,24 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   useEffect(() => {
     logger.debug('Auto-save effect triggered', { hasChanges, isSaving, currentResumeId });
     
-    if (!hasChanges || isSaving) {
+    // Don't auto-save if there's no resume ID or no changes or currently saving
+    if (!currentResumeId || !hasChanges || isSaving) {
+      if (autosaveTimerRef.current) {
+        clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+      return undefined;
+    }
+
+    // Don't auto-save if resume data is empty/default (not yet loaded)
+    const hasRealData = resumeDataRef.current.name || 
+                        resumeDataRef.current.email || 
+                        resumeDataRef.current.summary ||
+                        (resumeDataRef.current.experience && resumeDataRef.current.experience.length > 0) ||
+                        (resumeDataRef.current.education && resumeDataRef.current.education.length > 0);
+    
+    if (!hasRealData) {
+      logger.debug('Auto-save skipped - resume data is empty', { currentResumeId });
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
         autosaveTimerRef.current = null;
@@ -408,30 +435,31 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         return;
       }
 
+      // Prepare payload outside try block so it's available in catch block for offline queue
+      const editorState = {
+          resumeData: resumeDataRef.current,
+          sectionOrder: sectionOrderRef.current,
+          sectionVisibility: sectionVisibilityRef.current,
+          customSections: customSectionsRef.current,
+          formatting: {
+            fontFamily: fontFamilyRef.current,
+            fontSize: fontSizeRef.current,
+            lineSpacing: lineSpacingRef.current,
+            sectionSpacing: sectionSpacingRef.current,
+            margins: marginsRef.current,
+            headingStyle: headingStyleRef.current,
+          bulletStyle: bulletStyleRef.current
+          },
+        customFields: [] as CustomField[],
+        name: resumeFileNameRef.current
+      };
+
+      const mappedPayload = mapEditorStateToBasePayload(editorState);
+      const sanitizedPayload = sanitizeResumeData(mappedPayload);
+
       try {
         setIsSaving(true);
         setSaveError(null);
-
-        const editorState = {
-            resumeData: resumeDataRef.current,
-            sectionOrder: sectionOrderRef.current,
-            sectionVisibility: sectionVisibilityRef.current,
-            customSections: customSectionsRef.current,
-            formatting: {
-              fontFamily: fontFamilyRef.current,
-              fontSize: fontSizeRef.current,
-              lineSpacing: lineSpacingRef.current,
-              sectionSpacing: sectionSpacingRef.current,
-              margins: marginsRef.current,
-              headingStyle: headingStyleRef.current,
-            bulletStyle: bulletStyleRef.current
-            },
-          customFields: [] as CustomField[],
-          name: resumeFileNameRef.current
-        };
-
-        const mappedPayload = mapEditorStateToBasePayload(editorState);
-        const sanitizedPayload = sanitizeResumeData(mappedPayload);
 
         const currentId = currentResumeId;
         if (currentId) {
