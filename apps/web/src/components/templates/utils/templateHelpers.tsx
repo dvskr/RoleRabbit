@@ -21,7 +21,30 @@ import { SAMPLE_RESUME_DATA } from '../constants';
 import { escapeHtml, sanitizeTemplateField } from '../../../utils/sanitize';
 
 /**
- * Get color scheme for difficulty level
+ * Get color scheme for difficulty level badge
+ *
+ * Maps template difficulty levels to appropriate color schemes using the theme colors.
+ * Returns text, background, and border colors for consistent visual hierarchy.
+ *
+ * @param difficulty - The difficulty level string
+ * @param colors - Theme colors object containing all color definitions
+ *
+ * @returns Color scheme object with:
+ *  - text: Text color for the difficulty badge
+ *  - bg: Background color for the difficulty badge
+ *  - border: Border color for the difficulty badge
+ *
+ * @example
+ * ```typescript
+ * const colors = getDifficultyColor('beginner', themeColors);
+ * // Returns: { text: '#10b981', bg: '#d1fae5', border: '#a7f3d0' }
+ * ```
+ *
+ * @remarks
+ * - 'beginner': Green color scheme (success colors)
+ * - 'intermediate': Yellow/orange color scheme (warning colors)
+ * - 'advanced': Red color scheme (error colors)
+ * - default/unknown: Gray color scheme (neutral colors)
  */
 export const getDifficultyColor = (
   difficulty: string,
@@ -56,7 +79,35 @@ export const getDifficultyColor = (
 };
 
 /**
- * Get icon component for category
+ * Get icon component for template category
+ *
+ * Returns the appropriate Lucide icon component for visual category representation.
+ * Icons are sized at 16x16 pixels for consistent display.
+ *
+ * @param category - The template category string (e.g., 'ats', 'creative', 'modern')
+ *
+ * @returns React component (Lucide icon) corresponding to the category
+ *
+ * @example
+ * ```typescript
+ * const icon = getCategoryIcon('ats');        // Returns: <Target size={16} />
+ * const icon = getCategoryIcon('creative');   // Returns: <Palette size={16} />
+ * const icon = getCategoryIcon('unknown');    // Returns: <Sparkles size={16} /> (default)
+ * ```
+ *
+ * @remarks
+ * Category icon mappings:
+ * - 'ats': Target (precision/targeting)
+ * - 'creative': Palette (artistic/design)
+ * - 'modern': Zap (fast/contemporary)
+ * - 'classic': Award (traditional/established)
+ * - 'executive': Crown (leadership/senior)
+ * - 'minimal': Layout (simple/clean)
+ * - 'academic': Users (education/research)
+ * - 'technical': Globe (technology/global)
+ * - 'startup': TrendingUp (growth/innovation)
+ * - 'freelance': Heart (passion/independent)
+ * - default: Sparkles (special/unique)
  */
 export const getCategoryIcon = (category: string): React.ReactNode => {
   switch (category) {
@@ -317,7 +368,48 @@ export const generateSampleResumePreview = (
 };
 
 /**
- * Generate HTML content for template download
+ * Generate HTML content for template download with sample data
+ *
+ * Creates a complete standalone HTML document with embedded styles and sample resume data.
+ * This function generates a preview-only version (not personalized with user data).
+ *
+ * @param template - The resume template object containing layout and styling information
+ * @param template.name - Template name (sanitized, max 100 chars)
+ * @param template.description - Template description (sanitized, max 200 chars)
+ * @param template.category - Template category (e.g., 'ats', 'creative')
+ * @param template.difficulty - Template difficulty level ('beginner', 'intermediate', 'advanced')
+ * @param template.layout - Template layout type ('single-column', 'two-column', 'hybrid')
+ *
+ * @returns Complete HTML document string with:
+ *  - DOCTYPE and meta tags for proper rendering and SEO
+ *  - Embedded CSS styles for consistent appearance
+ *  - Sample resume data (name, title, experience, skills, education)
+ *  - Yellow warning banner indicating this is a sample preview
+ *  - Responsive design that works across devices
+ *  - XSS protection through field sanitization
+ *
+ * @example
+ * ```typescript
+ * const template = {
+ *   name: 'ATS Classic',
+ *   description: 'Clean ATS-friendly template',
+ *   category: 'ats',
+ *   difficulty: 'beginner',
+ *   layout: 'single-column'
+ * };
+ * const html = getTemplateDownloadHTML(template);
+ * // Returns: "<!DOCTYPE html><html>...</html>"
+ * ```
+ *
+ * @remarks
+ * - Uses SAMPLE_RESUME_DATA constant for placeholder content
+ * - Sanitizes all template fields to prevent XSS attacks
+ * - Generates different layouts based on template.layout property
+ * - Single-column: Center-aligned, full-width content (max 800px)
+ * - Two-column: Sidebar (30%) + main content (70%)
+ * - Hybrid: Falls back to single-column layout
+ * - Includes print-friendly styles (@media print)
+ * - No external dependencies (all styles inline)
  */
 export const getTemplateDownloadHTML = (template: any): string => {
   if (!template) return '';
