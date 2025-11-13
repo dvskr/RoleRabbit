@@ -278,6 +278,9 @@ export default function ResumeEditor({
           ${templateClasses.sectionColor.includes('purple') ? '.resume-editor-content h3 { color: #9333ea !important; }' : ''}
           ${templateClasses.sectionColor.includes('red') ? '.resume-editor-content h3 { color: #dc2626 !important; }' : ''}
           ${templateClasses.sectionColor.includes('orange') ? '.resume-editor-content h3 { color: #ea580c !important; }' : ''}
+          ${templateClasses.sectionColor.includes('teal') ? '.resume-editor-content h3 { color: #0d9488 !important; }' : ''}
+          ${templateClasses.sectionColor.includes('cyan') ? '.resume-editor-content h3 { color: #0891b2 !important; }' : ''}
+          ${templateClasses.sectionColor.includes('gray') ? '.resume-editor-content h3 { color: #374151 !important; }' : ''}
         `}</style>
 
         {/* Template Header Styling */}

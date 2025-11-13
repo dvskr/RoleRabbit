@@ -49,10 +49,11 @@
   - Impact: Users can add unlimited templates despite UI showing "(X/10)"
   - **Fix**: Added MAX_ADDED_TEMPLATES constant, enforced limit in addTemplate(), return boolean for success/failure, added toast notifications when limit is reached
 
-- [ ] **Issue #8: Template Application Has No Effect**
-  - Location: `useTemplateApplication.ts:12-17`
-  - Problem: No-op if callback isn't provided
-  - Impact: Template selection doesn't change resume styling
+- [x] **Issue #8: Template Application Has No Effect** ✅ FIXED
+  - Location: `useTemplateApplication.ts:12-17` & `ResumeEditor.tsx:276-280`
+  - Problem: Custom and monochrome color schemes missing from CSS injection
+  - Impact: Template selection doesn't change resume styling for all color schemes
+  - **Fix**: Added teal, cyan, and gray color CSS injections to match all 7 color schemes, templates now fully apply to resume editor
 
 - [x] **Issue #9: Inconsistent Template Rendering** ✅ FIXED
   - Location: `templateClassesHelper.ts:19-105`
@@ -380,7 +381,7 @@
 
 **By Category:**
 - Critical Issues: 1 / 4 completed (25%) ⬆️
-- Major Issues: 3 / 16 completed (19%) ⬆️
+- Major Issues: 4 / 16 completed (25%) ⬆️
 - Moderate Issues: 1 / 15 completed (7%) ⬆️
 - Minor Issues: 0 / 9 completed (0%)
 - UX/UI Issues: 0 / 9 completed (0%)
@@ -389,7 +390,7 @@
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 5 / 66 (7.5%)** ⬆️
+**Overall Progress: 6 / 66 (9%)** ⬆️
 
 ---
 
