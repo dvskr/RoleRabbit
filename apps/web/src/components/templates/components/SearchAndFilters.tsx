@@ -2,7 +2,7 @@
  * SearchAndFilters - Search bar, sort, view mode, and filter toggle
  */
 
-import React from 'react';
+import React, { RefObject } from 'react';
 import { Search, Filter, Grid, List, RefreshCw } from 'lucide-react';
 import { TemplateSortBy, TemplateViewMode } from '../types';
 import { SORT_OPTIONS } from '../constants';
@@ -20,6 +20,7 @@ interface SearchAndFiltersProps {
   colors: any;
   hasActiveFilters?: boolean;
   activeFilterCount?: number;
+  searchInputRef?: RefObject<HTMLInputElement>;
 }
 
 export default function SearchAndFilters({
@@ -34,6 +35,7 @@ export default function SearchAndFilters({
   colors,
   hasActiveFilters = false,
   activeFilterCount = 0,
+  searchInputRef,
 }: SearchAndFiltersProps) {
   return (
     <div className="flex items-center gap-2 mb-2">
@@ -46,6 +48,7 @@ export default function SearchAndFilters({
           aria-hidden="true"
         />
         <input
+          ref={searchInputRef}
           type="search"
           placeholder="Search templates..."
           value={searchQuery}

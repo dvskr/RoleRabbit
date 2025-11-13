@@ -2,7 +2,7 @@
  * TemplateHeader - Complete header section combining search, filters, and category tabs
  */
 
-import React from 'react';
+import React, { RefObject } from 'react';
 import SearchAndFilters from './SearchAndFilters';
 import CategoryTabs from './CategoryTabs';
 import AdvancedFilters from './AdvancedFilters';
@@ -20,6 +20,7 @@ interface TemplateHeaderProps {
   setShowFilters: (show: boolean) => void;
   hasActiveFilters?: boolean;
   activeFilterCount?: number;
+  searchInputRef?: RefObject<HTMLInputElement>;
 
   // Category
   selectedCategory: string;
@@ -51,6 +52,7 @@ export default function TemplateHeader({
   setShowFilters,
   hasActiveFilters,
   activeFilterCount,
+  searchInputRef,
   selectedCategory,
   setSelectedCategory,
   selectedDifficulty,
@@ -85,6 +87,7 @@ export default function TemplateHeader({
         setShowFilters={setShowFilters}
         hasActiveFilters={hasActiveFilters}
         activeFilterCount={activeFilterCount}
+        searchInputRef={searchInputRef}
         colors={colors}
       />
 

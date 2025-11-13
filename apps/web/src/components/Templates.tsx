@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { TemplatesProps, TemplateViewMode } from './templates/types';
 import { useTemplateFilters } from './templates/hooks/useTemplateFilters';
 import { useTemplatePagination } from './templates/hooks/useTemplatePagination';
 import { useTemplateActions } from './templates/hooks/useTemplateActions';
+import { useKeyboardShortcuts } from './templates/hooks/useKeyboardShortcuts';
 import TemplateHeader from './templates/components/TemplateHeader';
 import TemplateStats from './templates/components/TemplateStats';
 import TemplateCard from './templates/components/TemplateCard';
@@ -31,6 +32,7 @@ function TemplatesInternal({
   const colors = theme.colors;
   const [viewMode, setViewMode] = useState<TemplateViewMode>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Use extracted hooks
   const filterState = useTemplateFilters();
@@ -41,7 +43,37 @@ function TemplatesInternal({
     onAddToEditor,
     onRemoveTemplate,
   });
-  
+
+  // Keyboard shortcuts callbacks
+  const handleToggleFilters = useCallback(() => {
+    setShowFilters(prev => !prev);
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    if (paginationState.currentPage < paginationState.totalPages) {
+      paginationState.setCurrentPage(paginationState.currentPage + 1);
+    }
+  }, [paginationState]);
+
+  const handlePrevPage = useCallback(() => {
+    if (paginationState.currentPage > 1) {
+      paginationState.setCurrentPage(paginationState.currentPage - 1);
+    }
+  }, [paginationState]);
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts({
+    searchInputRef,
+    onClearFilters: filterState.clearAllFilters,
+    onToggleFilters: handleToggleFilters,
+    onChangeViewMode: setViewMode,
+    onNextPage: handleNextPage,
+    onPrevPage: handlePrevPage,
+    currentPage: paginationState.currentPage,
+    totalPages: paginationState.totalPages,
+    isModalOpen: actionsState.showPreviewModal || actionsState.showUploadModal,
+  });
+
   // Separate added and not-added templates
   const addedTemplatesList = useMemo(
     () =>
@@ -78,6 +110,7 @@ function TemplatesInternal({
         setShowFreeOnly={filterState.setShowFreeOnly}
         showPremiumOnly={filterState.showPremiumOnly}
         setShowPremiumOnly={filterState.setShowPremiumOnly}
+        searchInputRef={searchInputRef}
         colors={colors}
       />
 
