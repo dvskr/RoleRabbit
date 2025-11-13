@@ -6,25 +6,13 @@
  */
 
 import { CoverLetterTemplate } from '../components/coverletter/types/coverletter';
-import { Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, LucideIcon } from 'lucide-react';
-
-export interface CoverLetterCategory {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-}
+import { COVER_LETTER_CATEGORY_INFO, CoverLetterCategoryInfo } from './categories';
 
 /**
  * Available template categories
+ * Uses centralized category definitions from categories.ts
  */
-export const coverLetterCategories: CoverLetterCategory[] = [
-  { id: 'all', label: 'All Templates', icon: FileText },
-  { id: 'tech', label: 'Tech', icon: Code },
-  { id: 'business', label: 'Business', icon: Briefcase },
-  { id: 'creative', label: 'Creative', icon: Lightbulb },
-  { id: 'executive', label: 'Executive', icon: TrendingUp },
-  { id: 'academic', label: 'Academic', icon: GraduationCap }
-];
+export const coverLetterCategories: CoverLetterCategoryInfo[] = COVER_LETTER_CATEGORY_INFO;
 
 /**
  * Predefined cover letter templates

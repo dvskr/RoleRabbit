@@ -1,7 +1,9 @@
+import { ResumeCategory, RESUME_CATEGORY_INFO, ResumeCategoryInfo } from './categories';
+
 export interface ResumeTemplate {
   id: string;
   name: string;
-  category: 'ats' | 'creative' | 'modern' | 'classic' | 'executive' | 'minimal' | 'academic' | 'technical' | 'startup' | 'freelance';
+  category: ResumeCategory;
   description: string;
   preview: string; // Base64 or URL to preview image
   features: string[];
@@ -1050,18 +1052,14 @@ export const resumeTemplates: ResumeTemplate[] = [
   }
 ];
 
-export const templateCategories = [
-  { id: 'ats', name: 'ATS-Friendly', description: 'Optimized for Applicant Tracking Systems', count: 8 },
-  { id: 'creative', name: 'Creative', description: 'Bold, artistic designs for creative professionals', count: 8 },
-  { id: 'modern', name: 'Modern', description: 'Contemporary, sleek designs', count: 6 },
-  { id: 'classic', name: 'Classic', description: 'Traditional, timeless designs', count: 4 },
-  { id: 'executive', name: 'Executive', description: 'Sophisticated designs for leadership roles', count: 6 },
-  { id: 'minimal', name: 'Minimal', description: 'Clean, simple designs focusing on content', count: 4 },
-  { id: 'academic', name: 'Academic', description: 'Designed for researchers and educators', count: 4 },
-  { id: 'technical', name: 'Technical', description: 'Tech-focused designs for engineers and developers', count: 6 },
-  { id: 'startup', name: 'Startup', description: 'Dynamic designs for entrepreneurs', count: 4 },
-  { id: 'freelance', name: 'Freelance', description: 'Portfolio-focused designs for freelancers', count: 4 }
-];
+/**
+ * Get template categories with dynamic counts
+ * Uses centralized category definitions from categories.ts
+ */
+export const templateCategories: ResumeCategoryInfo[] = RESUME_CATEGORY_INFO.map(categoryInfo => ({
+  ...categoryInfo,
+  count: resumeTemplates.filter(t => t.category === categoryInfo.id).length,
+}));
 
 export const getTemplatesByCategory = (category: string) => {
   return resumeTemplates.filter(template => template.category === category);

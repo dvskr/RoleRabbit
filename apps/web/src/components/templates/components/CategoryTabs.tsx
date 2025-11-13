@@ -5,7 +5,6 @@
 import React from 'react';
 import type { ThemeColors } from '../types';
 import { templateCategories, resumeTemplates } from '../../../data/templates';
-import type { ThemeColors } from '../types';
 import { getCategoryIcon } from '../utils/templateHelpers';
 
 interface CategoryTabsProps {

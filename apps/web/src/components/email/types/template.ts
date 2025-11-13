@@ -3,7 +3,9 @@
  * Used for email template management
  */
 
-export type TemplateCategory = 'Follow-up' | 'Thank You' | 'Introduction' | 'Networking' | 'Application' | 'Custom';
+import { EmailCategory } from '../../../data/categories';
+
+export type TemplateCategory = EmailCategory;
 
 export interface EmailTemplate {
   id: string;
