@@ -516,11 +516,55 @@ model User {
   aiDrafts            AIDraft[]
   resumeCacheEntries  ResumeCache[]
   tailoringAnalytics  TailoringAnalytics[]
+  jobs                Job[]                @relation("UserJobs")
   activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([provider, providerId])
   @@map("users")
+}
+
+model Job {
+  id        String   @id @default(cuid())
+  userId    String
+
+  title       String
+  company     String
+  location    String
+  status      String   @default("applied") // applied, interview, offer, rejected
+  appliedDate String
+  lastUpdated DateTime @default(now()) @updatedAt
+  deletedAt   DateTime? // For recycle bin functionality
+
+  salary       String?
+  description  String?  @db.Text
+  url          String?
+  notes        String?  @db.Text
+  priority     String   @default("medium") // low, medium, high
+
+  // Contact information (stored as JSON)
+  contact      Json?    @default("{}")
+
+  // Arrays
+  requirements String[] @default([])
+  benefits     String[] @default([])
+
+  // Boolean and additional fields
+  remote       Boolean  @default(false)
+  companySize  String?
+  industry     String?
+  nextStep     String?
+  nextStepDate String?
+
+  createdAt    DateTime @default(now())
+
+  user User @relation("UserJobs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([appliedDate])
+  @@index([deletedAt])
+  @@map("jobs")
 }
 
 model WorkExperience {
