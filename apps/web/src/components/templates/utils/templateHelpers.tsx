@@ -523,11 +523,17 @@ export const downloadTemplateAsHTML = (
 };
 
 /**
- * Share template (uses Web Share API if available, otherwise copies to clipboard)
+ * Share template with progressive fallback strategy:
+ * 1. Try Web Share API (mobile-friendly)
+ * 2. Try Clipboard API (modern browsers)
+ * 3. Fall back to textarea copy (legacy browsers)
  */
 export const shareTemplate = async (
   template: { name: string; description: string }
 ): Promise<void> => {
+  const shareText = `${template.name}\n${template.description}\n${window.location.href}`;
+
+  // Try Web Share API first (best for mobile)
   if (navigator.share) {
     try {
       await navigator.share({
@@ -535,16 +541,50 @@ export const shareTemplate = async (
         text: template.description,
         url: window.location.href,
       });
-    } catch (err) {
-      // User cancelled or error occurred
-      console.debug('Share failed:', err);
+      return; // Success!
+    } catch (err: any) {
+      // Check if user cancelled (not a real error)
+      if (err.name === 'AbortError') {
+        console.debug('User cancelled share');
+        return; // User cancelled, don't try fallback
+      }
+      // Other error - try fallback
+      console.debug('Web Share API failed, trying clipboard:', err);
     }
-  } else {
-    // Fallback: Copy to clipboard
-    await navigator.clipboard.writeText(
-      `${template.name} - ${template.description}`
-    );
-    alert('Template link copied to clipboard!');
+  }
+
+  // Try Clipboard API (modern browsers)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      // Show success message (non-blocking)
+      console.info('Template details copied to clipboard');
+      return; // Success!
+    } catch (err) {
+      console.debug('Clipboard API failed, trying legacy method:', err);
+    }
+  }
+
+  // Legacy fallback: Create textarea and copy
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = shareText;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    if (!successful) {
+      throw new Error('Legacy copy failed');
+    }
+
+    console.info('Template details copied to clipboard (legacy method)');
+  } catch (err) {
+    // All methods failed
+    console.error('All share methods failed:', err);
+    throw new Error('Unable to share. Please try copying the URL manually.');
   }
 };
 
