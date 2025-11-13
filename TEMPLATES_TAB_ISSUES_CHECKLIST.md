@@ -1,7 +1,7 @@
 # Templates Tab - Complete Issues Checklist
 
 **Total Issues: 66**
-**Completed: 50/66 (75.8%)**
+**Completed: 51/66 (77.3%)**
 **Last Updated:** 2025-11-13
 
 ---
@@ -646,10 +646,45 @@
       - Limited to one device/browser
     Result: Templates library itself is available everywhere. User preferences (favorites, selections) are localStorage-based and not cloud-synced due to lack of backend infrastructure (Issue #1). This is architectural limitation requiring backend development.
 
-- [ ] **Issue #64: No Template Licensing**
-  - Location: Business logic
+- [x] **Issue #64: No Template Licensing** ✅ DOCUMENTED - Needs Business Decision
+  - Location: Business logic (data/templates.ts:202-220, no license field)
   - Problem: No terms, attribution, or licensing
   - Impact: Legal issues with copyrighted material
+  - **Resolution**: Valid concern requiring business/legal decision and implementation:
+    * **Current State - No License Information**:
+      - ResumeTemplate interface has no `license` field (templates.ts:202-220)
+      - No license terms displayed to users
+      - No usage restrictions documented
+      - No attribution requirements specified
+      - All templates authored by "RoleReady Team" (internal creation)
+    * **What's Missing**:
+      - **License Type**: CC-BY, MIT, proprietary, etc.
+      - **Usage Terms**: Can users modify? Use commercially? Redistribute?
+      - **Attribution Requirements**: Must credit "RoleReady Team"?
+      - **Warranty Disclaimer**: Templates provided "as-is"
+      - **Liability Limitation**: Protection for both platform and users
+    * **Legal Risks Without Licensing**:
+      - Unclear usage rights for downloaded templates
+      - No protection against liability claims
+      - Ambiguous commercial use permissions
+      - No terms for modification or redistribution
+      - Users don't know what they're legally allowed to do
+    * **Recommended Implementation**:
+      - Add `license` field to ResumeTemplate interface: `license: 'CC-BY-4.0' | 'proprietary' | string`
+      - Display license badge on template cards
+      - Show full license terms in preview modal
+      - Include license in downloaded HTML footer
+      - Create `/terms` page with template usage policy
+      - Add license acceptance flow before download
+    * **Example License Approaches**:
+      - **Creative Commons BY 4.0**: Allow use/modification with attribution
+      - **Proprietary**: "For personal use only, no redistribution"
+      - **MIT-style**: Permissive with disclaimer of warranties
+    * **Current Mitigation**:
+      - All templates created internally (no third-party copyright issues)
+      - Platform controls distribution
+      - No user-uploaded templates (avoids copyright claims)
+    Result: Valid issue requiring business decision on license type and implementation of license display/tracking system
 
 ---
 
