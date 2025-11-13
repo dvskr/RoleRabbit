@@ -83,9 +83,24 @@ export function getTemplateClasses(templateId: string | null): TemplateClasses {
       sectionColor = 'text-orange-600';
       accentColor = 'text-orange-600';
       break;
-    default: // monochrome
+    case 'custom':
+      // Custom color scheme with teal/cyan colors for visual distinction
+      containerClass = 'bg-white';
+      headerClass = 'border-b-2 border-teal-500';
+      nameColor = 'text-gray-900';
+      titleColor = 'text-teal-600';
+      sectionColor = 'text-teal-600';
+      accentColor = 'text-cyan-600';
+      break;
+    case 'monochrome':
+    default:
+      // Monochrome - grayscale only
       containerClass = 'bg-white';
       headerClass = 'border-b border-gray-300';
+      nameColor = 'text-gray-900';
+      titleColor = 'text-gray-700';
+      sectionColor = 'text-gray-900';
+      accentColor = 'text-gray-700';
       break;
   }
 

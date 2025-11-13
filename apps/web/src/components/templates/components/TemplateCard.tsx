@@ -48,10 +48,18 @@ export default function TemplateCard({
         return 'bg-blue-600';
       case 'green':
         return 'bg-green-600';
+      case 'purple':
+        return 'bg-purple-600';
+      case 'red':
+        return 'bg-red-600';
+      case 'orange':
+        return 'bg-orange-600';
+      case 'custom':
+        return 'bg-gradient-to-r from-teal-500 to-cyan-500';
       case 'monochrome':
         return 'bg-gray-700';
       default:
-        return 'bg-gradient-to-r from-purple-500 to-pink-500';
+        return 'bg-gray-700'; // Fallback to monochrome
     }
   };
   
