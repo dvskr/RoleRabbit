@@ -2,8 +2,8 @@
  * TemplatePreviewModal - Modal for previewing template with full details
  */
 
-import React from 'react';
-import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout, Loader2 } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
 import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
@@ -36,6 +36,32 @@ export default function TemplatePreviewModal({
   onUse,
   onOpenUpload,
 }: TemplatePreviewModalProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [previewContent, setPreviewContent] = useState<React.ReactNode>(null);
+
+  // Handle preview loading when modal opens or template changes
+  useEffect(() => {
+    if (!isOpen || !template) {
+      setIsLoading(true);
+      setPreviewContent(null);
+      return;
+    }
+
+    // Reset loading state when template changes
+    setIsLoading(true);
+    setPreviewContent(null);
+
+    // Simulate async preview generation
+    // In a real scenario, this could be actual async template rendering
+    const timer = setTimeout(() => {
+      const content = generateSampleResumePreview(template);
+      setPreviewContent(content);
+      setIsLoading(false);
+    }, 150); // Small delay to show loading state, prevents janky UX
+
+    return () => clearTimeout(timer);
+  }, [isOpen, template]);
+
   if (!isOpen || !template) return null;
 
   const difficultyColor = getDifficultyColor(template.difficulty, colors || {});
@@ -66,7 +92,55 @@ export default function TemplatePreviewModal({
         <div className="mb-6 bg-gray-100 rounded-lg p-4">
           <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl overflow-auto max-h-[600px]">
             <div className="p-6 min-w-[650px]">
-              {generateSampleResumePreview(template)}
+              {isLoading ? (
+                /* Loading State - Skeleton */
+                <div className="space-y-6 animate-pulse">
+                  {/* Header Skeleton */}
+                  <div className="text-center border-b pb-4">
+                    <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/4 mx-auto mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                  </div>
+
+                  {/* Summary Section Skeleton */}
+                  <div>
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+                  </div>
+
+                  {/* Experience Section Skeleton */}
+                  <div>
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
+                    <div className="mb-4">
+                      <div className="h-5 bg-gray-200 rounded w-1/3 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    </div>
+                  </div>
+
+                  {/* Skills Section Skeleton */}
+                  <div>
+                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
+                    <div className="flex gap-2 flex-wrap">
+                      <div className="h-6 bg-gray-200 rounded w-20"></div>
+                      <div className="h-6 bg-gray-200 rounded w-24"></div>
+                      <div className="h-6 bg-gray-200 rounded w-16"></div>
+                      <div className="h-6 bg-gray-200 rounded w-20"></div>
+                    </div>
+                  </div>
+
+                  {/* Loading Indicator */}
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={32} className="text-blue-600 animate-spin" />
+                    <span className="ml-3 text-gray-600">Loading preview...</span>
+                  </div>
+                </div>
+              ) : (
+                /* Actual Preview */
+                previewContent
+              )}
             </div>
           </div>
         </div>
