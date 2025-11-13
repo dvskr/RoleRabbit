@@ -836,8 +836,23 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               }
             }}
             onAddTemplates={(templateIds) => {
-              templateIds.forEach(id => dashboardTemplates.addTemplate(id));
-              logger.debug('Templates added to editor:', templateIds);
+              let added = 0;
+              let skipped = 0;
+              templateIds.forEach(id => {
+                const success = dashboardTemplates.addTemplate(id);
+                if (success) {
+                  added++;
+                } else {
+                  skipped++;
+                }
+              });
+
+              if (added > 0) {
+                logger.debug(`Added ${added} template(s) to editor`);
+              }
+              if (skipped > 0) {
+                showToast(`Cannot add ${skipped} template(s): maximum limit of ${dashboardTemplates.maxTemplates} templates reached`, 'warning');
+              }
             }}
             onNavigateToTemplates={() => {
               handleTabChange('templates');
@@ -869,12 +884,23 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         );
         }
       case 'templates':
-        return <Templates 
+        return <Templates
           onAddToEditor={(templateId) => {
-            // Save template ID so editor can apply it
-            setSelectedTemplateId(templateId);
-            dashboardTemplates.addTemplate(templateId);
-            logger.debug('Template added to editor:', templateId);
+            // Try to add the template
+            const success = dashboardTemplates.addTemplate(templateId);
+
+            if (success) {
+              // Save template ID so editor can apply it
+              setSelectedTemplateId(templateId);
+              logger.debug('Template added to editor:', templateId);
+            } else {
+              // Show warning if limit reached or already added
+              if (addedTemplates.includes(templateId)) {
+                showToast('Template already added to editor', 'info');
+              } else {
+                showToast(`Maximum limit of ${dashboardTemplates.maxTemplates} templates reached. Remove a template before adding another.`, 'warning');
+              }
+            }
           }}
           addedTemplates={addedTemplates}
           onRemoveTemplate={dashboardTemplates.removeTemplate}

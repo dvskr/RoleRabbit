@@ -43,10 +43,11 @@
   - Impact: Search + category filter combination gives incomplete results
   - **Fix**: Changed category filter from `getTemplatesByCategory()` to `.filter()` so it applies cumulatively to search results instead of replacing them
 
-- [ ] **Issue #7: 10-Template Limit Not Enforced**
+- [x] **Issue #7: 10-Template Limit Not Enforced** ✅ FIXED
   - Location: `useDashboardTemplates.ts:27-30`
   - Problem: No limit check in `addTemplate()` function
   - Impact: Users can add unlimited templates despite UI showing "(X/10)"
+  - **Fix**: Added MAX_ADDED_TEMPLATES constant, enforced limit in addTemplate(), return boolean for success/failure, added toast notifications when limit is reached
 
 - [ ] **Issue #8: Template Application Has No Effect**
   - Location: `useTemplateApplication.ts:12-17`
@@ -377,7 +378,7 @@
 
 **By Category:**
 - Critical Issues: 1 / 4 completed (25%) ⬆️
-- Major Issues: 1 / 16 completed (6%) ⬆️
+- Major Issues: 2 / 16 completed (13%) ⬆️
 - Moderate Issues: 0 / 15 completed (0%)
 - Minor Issues: 0 / 9 completed (0%)
 - UX/UI Issues: 0 / 9 completed (0%)
@@ -386,7 +387,7 @@
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 2 / 66 (3%)** ⬆️
+**Overall Progress: 3 / 66 (4.5%)** ⬆️
 
 ---
 
