@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { DIFFICULTY_LEVELS, LAYOUT_TYPES, COLOR_SCHEMES } from '../constants';
+import type { ThemeColors } from '../types';
 
 interface AdvancedFiltersProps {
   selectedDifficulty: string;
@@ -16,7 +17,7 @@ interface AdvancedFiltersProps {
   setShowFreeOnly: (show: boolean) => void;
   showPremiumOnly: boolean;
   setShowPremiumOnly: (show: boolean) => void;
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function AdvancedFilters({

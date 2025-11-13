@@ -5,10 +5,11 @@
 
 import React from 'react';
 import { Search, Sparkles, Filter, Tag, Layout } from 'lucide-react';
+import type { ThemeColors } from '../types';
 
 interface EmptyStateProps {
   onClearFilters: () => void;
-  colors?: any;
+  colors?: ThemeColors;
 }
 
 export default function EmptyState({ onClearFilters, colors }: EmptyStateProps) {

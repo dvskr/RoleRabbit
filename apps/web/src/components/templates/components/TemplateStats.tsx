@@ -5,9 +5,10 @@
 import React from 'react';
 import { FileText, Unlock, Crown, Download } from 'lucide-react';
 import { resumeTemplates } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 
 interface TemplateStatsProps {
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function TemplateStats({ colors }: TemplateStatsProps) {

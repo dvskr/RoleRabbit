@@ -3,16 +3,19 @@
  */
 
 import React from 'react';
+import type { ThemeColors } from '../types';
 import { X, Folder, File, FileText, XCircle } from 'lucide-react';
+import type { ThemeColors } from '../types';
 import { logger } from '../../../utils/logger';
 import type { ResumeTemplate } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { generateSampleResumePreview } from '../utils/templateHelpers';
 
 interface UploadTemplateModalProps {
   isOpen: boolean;
   template: ResumeTemplate | null;
   uploadedFile: File | null;
-  colors?: any;
+  colors?: ThemeColors;
   onClose: () => void;
   onFileSelect: (file: File) => void;
   onFileRemove: () => void;

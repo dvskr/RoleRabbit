@@ -3,13 +3,15 @@
  */
 
 import React from 'react';
+import type { ThemeColors } from '../types';
 import { templateCategories, resumeTemplates } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { getCategoryIcon } from '../utils/templateHelpers';
 
 interface CategoryTabsProps {
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function CategoryTabs({

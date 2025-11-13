@@ -3,8 +3,11 @@
  */
 
 import React from 'react';
+import type { ThemeColors } from '../types';
 import { Search, Filter, Grid, List, RefreshCw } from 'lucide-react';
+import type { ThemeColors } from '../types';
 import { TemplateSortBy, TemplateViewMode } from '../types';
+import type { ThemeColors } from '../types';
 import { SORT_OPTIONS } from '../constants';
 
 interface SearchAndFiltersProps {
@@ -16,7 +19,7 @@ interface SearchAndFiltersProps {
   setViewMode: (viewMode: TemplateViewMode) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function SearchAndFilters({

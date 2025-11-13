@@ -4,9 +4,10 @@
  */
 
 import React from 'react';
+import type { ThemeColors } from '../types';
 
 interface TemplateCardSkeletonProps {
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function TemplateCardSkeleton({ colors }: TemplateCardSkeletonProps) {

@@ -6,6 +6,7 @@ import React from 'react';
 import SearchAndFilters from './SearchAndFilters';
 import CategoryTabs from './CategoryTabs';
 import AdvancedFilters from './AdvancedFilters';
+import type { ThemeColors } from '../types';
 import { TemplateSortBy, TemplateViewMode } from '../types';
 
 interface TemplateHeaderProps {
@@ -35,7 +36,7 @@ interface TemplateHeaderProps {
   showPremiumOnly: boolean;
   setShowPremiumOnly: (show: boolean) => void;
   
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function TemplateHeader({

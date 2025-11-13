@@ -15,6 +15,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import TemplatePreview from './TemplatePreview';
 
@@ -23,7 +24,7 @@ interface TemplateCardListProps {
   isAdded: boolean;
   isFavorite: boolean;
   addedTemplateId: string | null;
-  colors: any;
+  colors: ThemeColors;
   onFavorite: (templateId: string) => void;
   onPreview: (templateId: string) => void;
   onUse: (templateId: string) => void;

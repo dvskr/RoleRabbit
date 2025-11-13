@@ -5,6 +5,7 @@
 import React from 'react';
 import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import { generateSampleResumePreview } from '../utils/templateHelpers';
 
@@ -13,7 +14,7 @@ interface TemplatePreviewModalProps {
   template: ResumeTemplate | null;
   isFavorite: boolean;
   addedTemplateId: string | null;
-  colors?: any;
+  colors?: ThemeColors;
   onClose: () => void;
   onFavorite: (templateId: string) => void;
   onShare: () => void;

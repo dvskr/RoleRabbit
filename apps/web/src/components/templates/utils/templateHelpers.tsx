@@ -16,7 +16,7 @@ import {
   Heart,
   Sparkles
 } from 'lucide-react';
-import { DifficultyColorScheme } from '../types';
+import type { ThemeColors, DifficultyColorScheme } from '../types';
 import { SAMPLE_RESUME_DATA } from '../constants';
 
 /**
@@ -24,7 +24,7 @@ import { SAMPLE_RESUME_DATA } from '../constants';
  */
 export const getDifficultyColor = (
   difficulty: string,
-  colors: any
+  colors: ThemeColors
 ): DifficultyColorScheme => {
   switch (difficulty) {
     case 'beginner':
