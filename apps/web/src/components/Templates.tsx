@@ -7,6 +7,7 @@ import { TemplatesProps, TemplateViewMode } from './templates/types';
 import { useTemplateFilters } from './templates/hooks/useTemplateFilters';
 import { useTemplatePagination } from './templates/hooks/useTemplatePagination';
 import { useTemplateActions } from './templates/hooks/useTemplateActions';
+import { resumeTemplates } from '../data/templates';
 import TemplateHeader from './templates/components/TemplateHeader';
 import TemplateStats from './templates/components/TemplateStats';
 import TemplateCard from './templates/components/TemplateCard';
@@ -292,6 +293,7 @@ export default function Templates({
       <TemplatePreviewModal
         isOpen={actionsState.showPreviewModal}
         template={actionsState.currentSelectedTemplate}
+        allTemplates={resumeTemplates}
         isFavorite={
           actionsState.currentSelectedTemplate
             ? actionsState.favorites.includes(actionsState.currentSelectedTemplate.id)
@@ -305,6 +307,7 @@ export default function Templates({
         onDownload={actionsState.handleDownloadTemplate}
         onUse={actionsState.handleUseTemplate}
         onOpenUpload={() => actionsState.setShowUploadModal(true)}
+        onPreview={actionsState.handlePreviewTemplate}
       />
 
       <UploadTemplateModal

@@ -2,16 +2,19 @@
  * TemplatePreviewModal - Modal for previewing template with full details
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout, Loader2 } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
 import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import { generateSampleResumePreview } from '../utils/templateHelpers';
+import { getRecommendedTemplates } from '../utils/templateRecommendations';
+import RecommendedTemplates from './RecommendedTemplates';
 
 interface TemplatePreviewModalProps {
   isOpen: boolean;
   template: ResumeTemplate | null;
+  allTemplates: ResumeTemplate[];
   isFavorite: boolean;
   addedTemplateId: string | null;
   colors?: ThemeColors;
@@ -21,11 +24,13 @@ interface TemplatePreviewModalProps {
   onDownload: () => void;
   onUse: (templateId: string) => void;
   onOpenUpload: () => void;
+  onPreview: (templateId: string) => void;
 }
 
 export default function TemplatePreviewModal({
   isOpen,
   template,
+  allTemplates,
   isFavorite,
   addedTemplateId,
   colors,
@@ -35,9 +40,18 @@ export default function TemplatePreviewModal({
   onDownload,
   onUse,
   onOpenUpload,
+  onPreview,
 }: TemplatePreviewModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [previewContent, setPreviewContent] = useState<React.ReactNode>(null);
+
+  // Calculate similar template recommendations
+  const recommendations = useMemo(() => {
+    if (!template || !allTemplates || allTemplates.length === 0) {
+      return [];
+    }
+    return getRecommendedTemplates(template, allTemplates, 4, 20);
+  }, [template, allTemplates]);
 
   // Handle preview loading when modal opens or template changes
   useEffect(() => {
@@ -196,6 +210,15 @@ export default function TemplatePreviewModal({
             </div>
           </div>
         </div>
+
+        {/* Recommended Templates */}
+        {recommendations.length > 0 && (
+          <RecommendedTemplates
+            recommendations={recommendations}
+            colors={colors || {}}
+            onSelectTemplate={onPreview}
+          />
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-gray-200">
