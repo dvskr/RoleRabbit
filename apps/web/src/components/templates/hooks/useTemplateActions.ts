@@ -2,11 +2,45 @@
  * Custom hook for template actions (preview, use, download, share, favorites)
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { logger } from '../../../utils/logger';
 import { resumeTemplates } from '../../../data/templates';
 import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '../utils/templateHelpers';
 import { SUCCESS_ANIMATION_DURATION } from '../constants';
+
+// localStorage key for favorites
+const FAVORITES_STORAGE_KEY = 'template_favorites';
+
+/**
+ * Load favorites from localStorage with error handling
+ */
+const loadFavoritesFromStorage = (): string[] => {
+  try {
+    const stored = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Validate that it's an array of strings
+      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+        return parsed;
+      }
+      logger.warn('Invalid favorites data in localStorage, ignoring');
+    }
+  } catch (error) {
+    logger.error('Error loading favorites from localStorage:', error);
+  }
+  return [];
+};
+
+/**
+ * Save favorites to localStorage with error handling
+ */
+const saveFavoritesToStorage = (favorites: string[]): void => {
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+  } catch (error) {
+    logger.error('Error saving favorites to localStorage:', error);
+  }
+};
 
 interface UseTemplateActionsOptions {
   onAddToEditor?: (templateId: string) => void;
@@ -51,9 +85,14 @@ export const useTemplateActions = (
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [addedTemplateId, setAddedTemplateId] = useState<string | null>(null);
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<string[]>(() => loadFavoritesFromStorage());
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadSource, setUploadSource] = useState<'cloud' | 'system'>('cloud');
+
+  // Persist favorites to localStorage whenever they change
+  useEffect(() => {
+    saveFavoritesToStorage(favorites);
+  }, [favorites]);
 
   const currentSelectedTemplate = useMemo(() => {
     return selectedTemplate
