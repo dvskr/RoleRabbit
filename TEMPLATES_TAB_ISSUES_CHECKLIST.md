@@ -169,10 +169,11 @@
   - Impact: Poor user guidance
   - **Fix**: Completely redesigned empty state with helpful suggestions grid (4 cards with icons and tips), larger icon and improved typography, popular categories section showing ATS-Friendly/Modern/Creative/Executive, responsive 2-column grid on larger screens, improved spacing and visual hierarchy, theme-aware styling with color fallbacks, each suggestion card has icon, title, and helpful tip, better user guidance for finding templates
 
-- [ ] **Issue #28: Template Preview Scaling**
+- [x] **Issue #28: Template Preview Scaling** ✅ FIXED
   - Location: `TemplatePreviewModal.tsx:67`
   - Problem: `transform: scale(0.75)` makes text unreadable
   - Impact: Poor preview experience
+  - **Fix**: Removed problematic scale(0.75) transform, changed to scrollable container with overflow-auto and max-h-[600px], added min-w-[650px] for proper preview width, reduced outer padding (p-8 → p-4) for better space usage, changed from min-h to max-h for flexibility, text now fully readable at 100% scale, users can scroll if preview is larger than viewport, better UX with natural sizing
 
 - [ ] **Issue #29: No Template Comparison**
   - Location: Templates feature
@@ -397,13 +398,13 @@
 - Major Issues: 10 / 16 completed (62.5%) ⬆️
 - Moderate Issues: 5 / 15 completed (33.3%) ⬆️
 - Minor Issues: 1 / 9 completed (11.1%) ⬆️
-- UX/UI Issues: 1 / 9 completed (11.1%) ⬆️
+- UX/UI Issues: 2 / 9 completed (22.2%) ⬆️
 - Performance Issues: 0 / 4 completed (0%)
 - Documentation Issues: 0 / 3 completed (0%)
 - Integration Issues: 0 / 4 completed (0%)
 - Business Logic Issues: 0 / 3 completed (0%)
 
-**Overall Progress: 18 / 66 (27.3%)** ⬆️
+**Overall Progress: 19 / 66 (28.8%)** ⬆️
 
 ---
 

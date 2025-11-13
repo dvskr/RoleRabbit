@@ -61,10 +61,10 @@ export default function TemplatePreviewModal({
           </button>
         </div>
 
-        {/* Template Preview Image */}
-        <div className="mb-6 bg-gray-100 rounded-lg p-8">
-          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-8 min-h-[600px] overflow-hidden">
-            <div className="transform scale-75 origin-top-left">
+        {/* Template Preview */}
+        <div className="mb-6 bg-gray-100 rounded-lg p-4">
+          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl overflow-auto max-h-[600px]">
+            <div className="p-6 min-w-[650px]">
               {generateSampleResumePreview(template)}
             </div>
           </div>
