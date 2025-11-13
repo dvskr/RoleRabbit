@@ -74,6 +74,11 @@ export const useTemplateFilters = (
 
   useEffect(() => {
     debouncedSetSearch(searchQuery);
+
+    // Cleanup: cancel pending debounced call on unmount
+    return () => {
+      debouncedSetSearch.cancel();
+    };
   }, [searchQuery, debouncedSetSearch]);
 
   const filteredTemplates = useMemo(() => {
