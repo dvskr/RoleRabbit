@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { ThemeColors, DifficultyColorScheme } from '../types';
 import { SAMPLE_RESUME_DATA } from '../constants';
+import { escapeHtml, sanitizeTemplateField } from '../../../utils/sanitize';
 
 /**
  * Get color scheme for difficulty level
@@ -320,9 +321,18 @@ export const generateSampleResumePreview = (
  */
 export const getTemplateDownloadHTML = (template: any): string => {
   if (!template) return '';
-  
+
   const sampleData = SAMPLE_RESUME_DATA;
-  
+
+  // Sanitize template fields to prevent XSS
+  const safeName = sanitizeTemplateField(template.name || 'Resume Template', 100);
+  const safeDescription = sanitizeTemplateField(
+    template.description || 'Professional resume template created with RoleRabbit',
+    200
+  );
+  const safeCategory = sanitizeTemplateField(template.category || 'professional', 50);
+  const safeDifficulty = sanitizeTemplateField(template.difficulty || 'intermediate', 50);
+
   // Generate HTML based on template layout
   let bodyContent = '';
   
@@ -490,11 +500,11 @@ export const getTemplateDownloadHTML = (template: any): string => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${template.description || 'Professional resume template created with RoleRabbit'}">
-  <meta name="author" content="${sampleData.name}">
+  <meta name="description" content="${safeDescription}">
+  <meta name="author" content="${escapeHtml(sampleData.name)}">
   <meta name="generator" content="RoleRabbit Resume Builder">
-  <meta name="keywords" content="resume, cv, ${template.category}, ${template.difficulty}, professional">
-  <title>${template.name} - Resume Template | ${sampleData.name}</title>
+  <meta name="keywords" content="resume, cv, ${safeCategory}, ${safeDifficulty}, professional">
+  <title>${safeName} - Resume Template | ${escapeHtml(sampleData.name)}</title>
   <style>
     /* Reset and Base Styles */
     * {
