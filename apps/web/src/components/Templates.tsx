@@ -15,8 +15,13 @@ import TemplatePreviewModal from './templates/components/TemplatePreviewModal';
 import UploadTemplateModal from './templates/components/UploadTemplateModal';
 import PaginationControls from './templates/components/PaginationControls';
 import EmptyState from './templates/components/EmptyState';
+import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundary';
 
-export default function Templates({
+/**
+ * Templates Component (Internal)
+ * Main template browsing and management component
+ */
+function TemplatesInternal({
   onAddToEditor,
   addedTemplates = [],
   onRemoveTemplate,
@@ -245,5 +250,17 @@ export default function Templates({
         onFileRemove={() => actionsState.setUploadedFile(null)}
       />
     </div>
+  );
+}
+
+/**
+ * Templates Component with Error Boundary
+ * Exported wrapper that provides error handling
+ */
+export default function Templates(props: TemplatesProps) {
+  return (
+    <TemplatesErrorBoundary>
+      <TemplatesInternal {...props} />
+    </TemplatesErrorBoundary>
   );
 }

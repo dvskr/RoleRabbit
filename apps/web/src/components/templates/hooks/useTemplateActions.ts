@@ -11,6 +11,7 @@ import { SUCCESS_ANIMATION_DURATION } from '../constants';
 interface UseTemplateActionsOptions {
   onAddToEditor?: (templateId: string) => void;
   onRemoveTemplate?: (templateId: string) => void;
+  onError?: (error: Error, action: string) => void;
 }
 
 interface UseTemplateActionsReturn {
@@ -22,6 +23,8 @@ interface UseTemplateActionsReturn {
   favorites: string[];
   uploadedFile: File | null;
   uploadSource: 'cloud' | 'system';
+  error: string | null;
+  isLoading: boolean;
 
   // Setters
   setSelectedTemplate: (id: string | null) => void;
@@ -29,12 +32,13 @@ interface UseTemplateActionsReturn {
   setShowUploadModal: (show: boolean) => void;
   setUploadedFile: (file: File | null) => void;
   setUploadSource: (source: 'cloud' | 'system') => void;
+  clearError: () => void;
 
   // Actions
   handlePreviewTemplate: (templateId: string) => void;
   handleUseTemplate: (templateId: string) => void;
   handleDownloadTemplate: () => void;
-  handleShareTemplate: () => void;
+  handleShareTemplate: () => Promise<void>;
   toggleFavorite: (templateId: string) => void;
   handleSelectTemplate: (templateId: string) => void;
 
@@ -45,7 +49,7 @@ interface UseTemplateActionsReturn {
 export const useTemplateActions = (
   options: UseTemplateActionsOptions = {}
 ): UseTemplateActionsReturn => {
-  const { onAddToEditor, onRemoveTemplate } = options;
+  const { onAddToEditor, onRemoveTemplate, onError } = options;
 
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -54,6 +58,12 @@ export const useTemplateActions = (
   const [favorites, setFavorites] = useState<string[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadSource, setUploadSource] = useState<'cloud' | 'system'>('cloud');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
   const currentSelectedTemplate = useMemo(() => {
     return selectedTemplate
@@ -73,48 +83,117 @@ export const useTemplateActions = (
 
   const handleUseTemplate = useCallback(
     (templateId: string) => {
-      logger.debug('Adding template to editor:', templateId);
+      try {
+        logger.debug('Adding template to editor:', templateId);
 
-      if (onAddToEditor) {
-        onAddToEditor(templateId);
+        // Validate template exists
+        const template = resumeTemplates.find(t => t.id === templateId);
+        if (!template) {
+          throw new Error(`Template with ID "${templateId}" not found`);
+        }
+
+        if (onAddToEditor) {
+          onAddToEditor(templateId);
+        }
+
+        // Clear any previous errors
+        setError(null);
+
+        // Set animation state
+        setAddedTemplateId(templateId);
+
+        // Show success animation
+        setTimeout(() => {
+          setAddedTemplateId(null);
+        }, SUCCESS_ANIMATION_DURATION);
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Failed to add template');
+        logger.error('Error adding template to editor:', error);
+        setError(error.message);
+        if (onError) {
+          onError(error, 'useTemplate');
+        }
       }
-
-      // Set animation state
-      setAddedTemplateId(templateId);
-
-      // Show success animation
-      setTimeout(() => {
-        setAddedTemplateId(null);
-      }, SUCCESS_ANIMATION_DURATION);
     },
-    [onAddToEditor]
+    [onAddToEditor, onError]
   );
 
   const handleDownloadTemplate = useCallback(() => {
-    if (!currentSelectedTemplate) return;
-    logger.debug('Downloading template:', currentSelectedTemplate.name);
+    try {
+      if (!currentSelectedTemplate) {
+        throw new Error('No template selected for download');
+      }
 
-    const htmlContent = getTemplateDownloadHTML(currentSelectedTemplate);
-    downloadTemplateAsHTML(currentSelectedTemplate, htmlContent);
-  }, [currentSelectedTemplate]);
+      logger.debug('Downloading template:', currentSelectedTemplate.name);
+      setIsLoading(true);
+      setError(null);
+
+      const htmlContent = getTemplateDownloadHTML(currentSelectedTemplate);
+      downloadTemplateAsHTML(currentSelectedTemplate, htmlContent);
+
+      setIsLoading(false);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to download template');
+      logger.error('Error downloading template:', error);
+      setError(error.message);
+      setIsLoading(false);
+      if (onError) {
+        onError(error, 'downloadTemplate');
+      }
+    }
+  }, [currentSelectedTemplate, onError]);
 
   const handleShareTemplate = useCallback(async () => {
-    if (!currentSelectedTemplate) return;
-    logger.debug('Sharing template:', currentSelectedTemplate.name);
+    try {
+      if (!currentSelectedTemplate) {
+        throw new Error('No template selected for sharing');
+      }
 
-    await shareTemplate({
-      name: currentSelectedTemplate.name,
-      description: currentSelectedTemplate.description,
-    });
-  }, [currentSelectedTemplate]);
+      logger.debug('Sharing template:', currentSelectedTemplate.name);
+      setIsLoading(true);
+      setError(null);
+
+      await shareTemplate({
+        name: currentSelectedTemplate.name,
+        description: currentSelectedTemplate.description,
+      });
+
+      setIsLoading(false);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to share template');
+      logger.error('Error sharing template:', error);
+      setError(error.message);
+      setIsLoading(false);
+      if (onError) {
+        onError(error, 'shareTemplate');
+      }
+    }
+  }, [currentSelectedTemplate, onError]);
 
   const toggleFavorite = useCallback((templateId: string) => {
-    setFavorites(prev =>
-      prev.includes(templateId)
-        ? prev.filter(id => id !== templateId)
-        : [...prev, templateId]
-    );
-  }, []);
+    try {
+      // Validate template exists
+      const template = resumeTemplates.find(t => t.id === templateId);
+      if (!template) {
+        throw new Error(`Template with ID "${templateId}" not found`);
+      }
+
+      setFavorites(prev =>
+        prev.includes(templateId)
+          ? prev.filter(id => id !== templateId)
+          : [...prev, templateId]
+      );
+
+      setError(null);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Failed to toggle favorite');
+      logger.error('Error toggling favorite:', error);
+      setError(error.message);
+      if (onError) {
+        onError(error, 'toggleFavorite');
+      }
+    }
+  }, [onError]);
 
   return {
     // State
@@ -125,6 +204,8 @@ export const useTemplateActions = (
     favorites,
     uploadedFile,
     uploadSource,
+    error,
+    isLoading,
 
     // Setters
     setSelectedTemplate,
@@ -132,6 +213,7 @@ export const useTemplateActions = (
     setShowUploadModal,
     setUploadedFile,
     setUploadSource,
+    clearError,
 
     // Actions
     handlePreviewTemplate,
