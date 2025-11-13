@@ -6,8 +6,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { logger } from '../../../utils/logger';
 import { resumeTemplates } from '../../../data/templates';
 import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '../utils/templateHelpers';
-import { SUCCESS_ANIMATION_DURATION } from '../constants';
 import { isValidResumeTemplate } from '../../../utils/templateValidator';
+import { getSuccessAnimationDuration } from '../../../utils/accessibility';
 
 // localStorage key for favorites
 const FAVORITES_STORAGE_KEY = 'template_favorites';
@@ -154,10 +154,10 @@ export const useTemplateActions = (
       setAddedTemplateId(templateId);
       setError(null);
 
-      // Show success animation
+      // Show success animation (respects user's reduced motion preference)
       setTimeout(() => {
         setAddedTemplateId(null);
-      }, SUCCESS_ANIMATION_DURATION);
+      }, getSuccessAnimationDuration());
     },
     [onAddToEditor]
   );
