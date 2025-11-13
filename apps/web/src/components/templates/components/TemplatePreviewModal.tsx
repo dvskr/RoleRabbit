@@ -245,11 +245,17 @@ export default function TemplatePreviewModal({
             </button>
             <button
               onClick={onDownload}
-              className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
-              aria-label="Download template"
-              title="Download"
+              className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors relative group"
+              aria-label="Download sample preview (no resume data)"
+              title="Download Sample Preview"
             >
               <Download size={20} />
+              {/* Tooltip explaining this is sample only */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                <div className="font-semibold mb-1">Sample Preview Only</div>
+                <div className="text-gray-300 text-[10px]">Upload your resume for personalized download</div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+              </div>
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">

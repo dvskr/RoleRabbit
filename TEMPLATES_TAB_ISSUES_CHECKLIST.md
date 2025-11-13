@@ -1,7 +1,7 @@
 # Templates Tab - Complete Issues Checklist
 
 **Total Issues: 66**
-**Completed: 35/66 (53.0%)**
+**Completed: 36/66 (54.5%)**
 **Last Updated:** 2025-11-13
 
 ---
@@ -315,10 +315,17 @@
     * **Integration**: Added to TemplatePreviewModal below template details, shows "Similar Templates" section with sparkles icon, clicking recommendation opens that template's preview
     Result: Users discover relevant templates easily, browse by similarity, intelligent recommendations improve template selection workflow
 
-- [ ] **Issue #49: Download Button Misleading**
+- [x] **Issue #49: Download Button Misleading** ✅ FIXED
   - Location: `TemplatePreviewModal.tsx:148-155`
   - Problem: Downloads template HTML without resume data
   - Impact: Downloaded file mostly empty
+  - **Fix**: Made download behavior crystal clear with multiple improvements:
+    * **Button Tooltip**: Added hover tooltip explaining "Sample Preview Only - Upload your resume for personalized download"
+    * **Aria Label**: Updated to "Download sample preview (no resume data)" for accessibility
+    * **Filename**: Changed from "Template-Name.html" to "Template-Name-sample-preview.html" to make it obvious
+    * **HTML Banner**: Added prominent yellow/orange notice banner at top of downloaded HTML with "📋 SAMPLE PREVIEW ONLY" message explaining it contains placeholder data
+    * **Documentation**: Added comment in downloadTemplateAsHTML function clarifying it downloads sample data
+    Result: Users clearly understand they're downloading a sample/preview, not their personalized resume. No confusion about empty data
 
 - [ ] **Issue #50: Success Animation Blocks UI**
   - Location: `useTemplateActions.ts:83-88`

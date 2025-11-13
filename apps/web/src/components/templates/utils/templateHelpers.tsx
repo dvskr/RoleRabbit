@@ -577,6 +577,11 @@ export const getTemplateDownloadHTML = (template: any): string => {
   </style>
 </head>
 <body>
+  <!-- Sample Preview Notice -->
+  <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #78350f; padding: 16px; text-align: center; border-bottom: 3px solid #b45309; margin-bottom: 20px; font-family: Arial, sans-serif;">
+    <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">📋 SAMPLE PREVIEW ONLY</div>
+    <div style="font-size: 14px;">This is a template preview with placeholder data. Upload your resume to RoleRabbit for a personalized version.</div>
+  </div>
   ${bodyContent}
 </body>
 </html>`;
@@ -584,6 +589,7 @@ export const getTemplateDownloadHTML = (template: any): string => {
 
 /**
  * Download template as HTML file
+ * Note: This downloads a SAMPLE preview with placeholder data, not user resume data
  */
 export const downloadTemplateAsHTML = (
   template: any,
@@ -593,7 +599,8 @@ export const downloadTemplateAsHTML = (
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${template.name.replace(/\s+/g, '-')}.html`;
+  // Add "sample" to filename to make it clear this is not personalized
+  link.download = `${template.name.replace(/\s+/g, '-')}-sample-preview.html`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
