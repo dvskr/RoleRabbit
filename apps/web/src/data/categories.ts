@@ -239,3 +239,137 @@ export function getEmailCategoryInfo(id: EmailCategory): EmailCategoryInfo | nul
 export function getPortfolioCategoryInfo(id: PortfolioCategory): PortfolioCategoryInfo | null {
   return PORTFOLIO_CATEGORY_INFO.find(cat => cat.id === id) || null;
 }
+
+// =============================================================================
+// INDUSTRY DEFINITIONS
+// =============================================================================
+
+/**
+ * Standard industry identifiers (single source of truth)
+ * Replaces inconsistent string arrays with validated enum
+ */
+export const INDUSTRIES = [
+  // Core Industries
+  'Technology',
+  'Software',
+  'Engineering',
+  'IT',
+  'Finance',
+  'Banking',
+  'Investment',
+  'Healthcare',
+  'Medical',
+  'Nursing',
+  'Pharmacy',
+  'Education',
+  'Teaching',
+  'Training',
+  'Marketing',
+  'Advertising',
+  'Digital Marketing',
+  'Brand Management',
+  'Sales',
+  'Business Development',
+  'Design',
+  'Creative',
+  'Art',
+  'Visual Arts',
+  'Consulting',
+  'Professional Services',
+  'Advisory',
+  'Law',
+  'Legal',
+  'Compliance',
+  'Government',
+  'Public Sector',
+  'Policy',
+
+  // Career Stages & Types
+  'Executive',
+  'Leadership',
+  'Management',
+  'C-Suite',
+  'Senior Management',
+  'Startup',
+  'Entrepreneurship',
+  'Innovation',
+  'Freelance',
+  'Independent Contractor',
+  'Student',
+  'Graduate',
+  'Academia',
+  'Research',
+  'Science',
+  'Higher Education',
+
+  // Specializations
+  'Data Science',
+  'Analytics',
+  'DevOps',
+  'Cloud',
+  'Infrastructure',
+  'Cybersecurity',
+  'Information Security',
+  'Product Management',
+  'Strategy',
+  'UX Design',
+  'UI Design',
+  'User Experience',
+  'Product Design',
+  'Writing',
+  'Content',
+  'Journalism',
+  'Publishing',
+  'Photography',
+  'Nonprofit',
+  'Social Impact',
+  'Community',
+
+  // Additional Common Industries
+  'Retail',
+  'Manufacturing',
+  'Construction',
+  'Real Estate',
+  'Hospitality',
+  'Transportation',
+  'Logistics',
+  'Media',
+  'Entertainment',
+  'Telecommunications',
+  'Energy',
+  'Utilities',
+  'Agriculture',
+  'Environmental',
+  'Human Resources',
+  'Operations',
+  'Quality Assurance',
+  'Customer Service',
+  'Administration',
+] as const;
+
+/**
+ * Industry type derived from constant
+ */
+export type Industry = typeof INDUSTRIES[number];
+
+/**
+ * Check if a string is a valid industry
+ */
+export function isIndustry(value: string): value is Industry {
+  return INDUSTRIES.includes(value as Industry);
+}
+
+/**
+ * Validate an array of industries
+ */
+export function validateIndustries(industries: string[]): Industry[] {
+  return industries.filter(isIndustry);
+}
+
+/**
+ * Get industries that contain a search term (case-insensitive)
+ */
+export function searchIndustries(term: string): Industry[] {
+  const lowerTerm = term.toLowerCase();
+  return INDUSTRIES.filter(industry => industry.toLowerCase().includes(lowerTerm));
+}
