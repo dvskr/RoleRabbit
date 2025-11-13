@@ -19,6 +19,9 @@ const TRUNCATION_SENTINEL = '\n[TRUNCATED FOR LENGTH — prioritize the most rel
 const { compressPrompt, compressTailorPrompt, compressGeneratePrompt } = require('./promptCompression');
 const ENABLE_COMPRESSION = process.env.ENABLE_PROMPT_COMPRESSION !== 'false'; // Enabled by default
 
+// Smart truncation for huge resumes (reuse from ATS service)
+const { smartTruncateResume } = require('../embeddings/embeddingATSService');
+
 function normalizeJson(value, maxLength = MAX_JSON_CONTEXT_LENGTH) {
   try {
     const jsonString = JSON.stringify(value ?? '', null, 0);
@@ -94,9 +97,9 @@ Rules:
 Section Type: ${sectionType}
 Section Path: ${sectionPath}
 Current Content: ${normalizeJson(currentContent)}
-Full Resume Snapshot (for context only): ${normalizeJson(resumeSnapshot)}
+Full Resume Snapshot (for context only): ${smartTruncateResume(resumeSnapshot, 30000)}
 ${jobContext ? `Job Context:
-${normalizeJson(jobContext)}` : ''}
+${normalizeJson(jobContext, 8000)}` : ''}
 ${instructions ? `Additional User Instructions:
 ${instructions}` : ''}`;
 }
@@ -108,7 +111,10 @@ function buildTailorResumePrompt({
   tone = 'professional',
   length = 'thorough',
   atsAnalysis = null,
-  targetScore = null
+  targetScore = null,
+  // NEW: allow caller to provide prioritized missing keywords and/or limit
+  missingKeywords = null,
+  missingKeywordsLimit = null
 }) {
   // Use compressed prompt if compression is enabled
   if (ENABLE_COMPRESSION) {
@@ -120,7 +126,9 @@ function buildTailorResumePrompt({
         tone,
         length,
         atsAnalysis,
-        targetScore
+        targetScore,
+        missingKeywords,
+        missingKeywordsLimit
       });
       if (compressed) return compressed;
     } catch (error) {
@@ -138,7 +146,18 @@ function buildTailorResumePrompt({
   if (atsAnalysis && targetScore) {
     const currentScore = atsAnalysis.overall || 0;
     const improvement = targetScore - currentScore;
-    const missingKeywords = atsAnalysis.missingKeywords || [];
+    // Determine which gaps to show:
+    // 1) Use provided prioritized list when available
+    // 2) Fallback to ATS analysis missing list
+    const defaultLimit = String(mode).toUpperCase() === 'FULL' ? 25 : 15;
+    const limit = Number.isFinite(missingKeywordsLimit) && missingKeywordsLimit > 0
+      ? missingKeywordsLimit
+      : (parseInt(process.env.ATS_TAILOR_MISSING_MAX, 10) || defaultLimit);
+    const gapsSource = Array.isArray(missingKeywords) && missingKeywords.length
+      ? missingKeywords
+      : (atsAnalysis.missingKeywords || []);
+    const gaps = gapsSource;  // Use ALL provided keywords (already prioritized)
+    const recommendedCount = limit;  // This is the intelligent recommendation
     
     targetGuidance = `
 🎯 PERFORMANCE TARGET:
@@ -146,8 +165,15 @@ function buildTailorResumePrompt({
 - Target Score: ${targetScore}/100
 - Required Improvement: +${improvement} points
 
-❗ CRITICAL GAPS TO ADDRESS:
-${missingKeywords.slice(0, 15).map(kw => `- Integrate "${kw}" naturally into relevant sections`).join('\n')}
+📋 AVAILABLE KEYWORDS (${gaps.length} total, prioritized by importance):
+${gaps.map((kw, idx) => `${idx + 1}. ${kw}${idx < recommendedCount ? ' ⭐' : ''}`).join('\n')}
+
+💡 KEYWORD INTEGRATION GUIDANCE:
+- ⭐ Starred keywords (top ${recommendedCount}): HIGH PRIORITY - strongly recommended
+- Remaining keywords: Use if they fit naturally and add value
+- Recommended integration: ~${recommendedCount} keywords for optimal balance
+- Use your judgment: integrate more if resume has space, fewer if it feels forced
+- QUALITY OVER QUANTITY: Natural integration is more important than hitting a specific count
 
 📊 SCORING BREAKDOWN TARGETS:
 - Technical Skills Match: ${atsAnalysis.keywords || 0}/100 → Target: 85+ points
@@ -207,9 +233,20 @@ Rules:
 - Highlight metrics wherever possible, but only when already present or inferable from context.
 - Diff entries must list JSONPath style paths (e.g. "summary", "experience[1].bullets[0]").
 ${targetScore ? `- CRITICAL: Aim to achieve or exceed target score of ${targetScore}/100 through strategic optimizations.` : ''}
-${atsAnalysis?.missingKeywords?.length > 0 ? `- PRIORITY: Integrate these missing keywords naturally: ${atsAnalysis.missingKeywords.slice(0, 10).join(', ')}` : ''}
+${(() => {
+  const defaultLimitInline = 10;
+  const providedList = Array.isArray(missingKeywords) && missingKeywords.length ? missingKeywords : (atsAnalysis?.missingKeywords || []);
+  const inlineLimit = Math.min(
+    defaultLimitInline,
+    (Number.isFinite(missingKeywordsLimit) && missingKeywordsLimit > 0) ? missingKeywordsLimit : defaultLimitInline
+  );
+  const inlineGaps = providedList.slice(0, inlineLimit);
+  return inlineGaps.length > 0
+    ? `- PRIORITY: Integrate these missing keywords naturally: ${inlineGaps.join(', ')}`
+    : '';
+})()}
 
-Base Resume (JSON, truncated if extremely long): ${normalizeJson(resumeSnapshot)}
+Base Resume (JSON, intelligently truncated for huge resumes): ${smartTruncateResume(resumeSnapshot, 30000)}
 Job Description (truncated if extremely long): ${normalizeJson(jobDescription, 8000)}
 Requested Tailoring Mode: ${mode}`;
 }
@@ -241,7 +278,7 @@ Rules:
 - Only update sections when a concrete improvement is possible; otherwise keep them identical.
 - Add high-impact action verbs and quantifiable outcomes only when already implied.
 
-Base Resume: ${normalizeJson(resumeSnapshot)}
+Base Resume: ${smartTruncateResume(resumeSnapshot, 30000)}
 Job Description: ${normalizeJson(jobDescription, 8000)}`;
 }
 
@@ -272,8 +309,8 @@ Rules:
 
 Job Title: ${jobTitle || 'Unknown Title'}
 Company: ${company || 'Company'}
-Job Description: ${normalizeJson(jobDescription)}
-Resume Snapshot: ${normalizeJson(resumeSnapshot)}`;
+Job Description: ${normalizeJson(jobDescription, 8000)}
+Resume Snapshot: ${smartTruncateResume(resumeSnapshot, 30000)}`;
 }
 
 function buildPortfolioPrompt({
@@ -298,7 +335,7 @@ Rules:
 - Highlight measurable achievements and leadership moments.
 - Limit highlights to 5 items and projects to 3 entries.
 
-Resume Snapshot: ${normalizeJson(resumeSnapshot)}`;
+Resume Snapshot: ${smartTruncateResume(resumeSnapshot, 30000)}`;
 }
 
 module.exports = {

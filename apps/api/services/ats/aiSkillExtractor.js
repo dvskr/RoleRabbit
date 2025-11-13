@@ -1,5 +1,27 @@
 const { generateText } = require('../../utils/openAI');
 const logger = require('../../utils/logger');
+const cacheManager = require('../../utils/cacheManager');
+const crypto = require('crypto');
+
+// Cache namespace for AI skill extraction
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// In-flight extraction tracking (prevents duplicate AI requests)
+const inflightExtractions = new Map();
+
+/**
+ * Generate cache key for skill extraction
+ * @param {string} text - Text to extract skills from
+ * @returns {string} Cache key
+ */
+function getCacheKey(text) {
+  const hash = crypto
+    .createHash('sha256')
+    .update(text.trim().toLowerCase())
+    .digest('hex')
+    .substring(0, 16);
+  return `skill_extraction_${hash}`;
+}
 
 /**
  * AI-POWERED SKILL EXTRACTION
@@ -19,9 +41,32 @@ const logger = require('../../utils/logger');
  * @returns {Promise<Object>} Extracted skills and requirements
  */
 async function extractSkillsWithAI(jobDescription) {
-  logger.info('🤖 AI Skill Extraction: Starting');
+  // Check cache first
+  const cacheKey = getCacheKey(jobDescription);
+  const cached = await cacheManager.get(cacheKey);
   
-  const prompt = `You are an expert technical recruiter and ATS system. Analyze this job description and extract ALL skills, technologies, and requirements.
+  if (cached) {
+    logger.info('✅ AI Skill Extraction: Cache hit', {
+      required_count: cached.required_skills?.length || 0,
+      preferred_count: cached.preferred_skills?.length || 0
+    });
+    return cached;
+  }
+  
+  // Single-flight: if identical extraction is in-flight, await it
+  if (inflightExtractions.has(cacheKey)) {
+    logger.info('🛫 AI Skill Extraction: Joining inflight request', { cacheKey });
+    try {
+      return await inflightExtractions.get(cacheKey);
+    } catch (e) {
+      logger.warn('🛬 AI Skill Extraction: Inflight failed, retrying', { error: e.message });
+      inflightExtractions.delete(cacheKey);
+    }
+  }
+
+  logger.info('🤖 AI Skill Extraction: Starting (cache miss)');
+  
+  const prompt = `You are an expert technical recruiter and ATS system. Analyze this job description and extract ALL ACTUAL SKILLS and TECHNOLOGIES.
 
 Job Description:
 """
@@ -29,22 +74,39 @@ ${jobDescription}
 """
 
 Extract and return a JSON object with:
-1. **required_skills**: Skills explicitly marked as required/must-have (array of strings)
-2. **preferred_skills**: Nice-to-have skills (array of strings)
-3. **implicit_skills**: Skills not mentioned but commonly needed for this role (array of strings)
+1. **required_skills**: ACTUAL technical skills/tools marked as required (array of strings)
+2. **preferred_skills**: ACTUAL nice-to-have technical skills/tools (array of strings)
+3. **implicit_skills**: Related skills commonly needed for this role (array of strings)
 4. **experience_requirements**: For key skills, extract years and proficiency level
 5. **role_type**: The primary role category (e.g., "Data Engineer", "Frontend Developer", "Full Stack")
 6. **seniority_level**: junior, mid, senior, or staff
 7. **industry_context**: Any industry-specific requirements
 
-Rules:
-- Include variations and related technologies (e.g., if "React" mentioned, include "JavaScript", "HTML", "CSS")
-- Recognize acronyms and expand them (e.g., "ML" → "Machine Learning")
-- For data roles, include ETL, databases, cloud platforms even if not explicitly mentioned
-- For frontend roles, include responsive design, cross-browser compatibility
-- For backend roles, include APIs, databases, security
-- Extract numeric requirements (years of experience, team size, scale metrics)
-- If a skill family is mentioned (e.g., "cloud platforms"), list specific ones (AWS, Azure, GCP)
+CRITICAL RULES - What qualifies as a "skill":
+✅ DO EXTRACT:
+- Programming languages: Python, JavaScript, Java, C++, etc.
+- Frameworks/libraries: React, Django, Spring, etc.
+- Tools/software: Figma, AutoCAD, SAP, Epic, Tableau, etc.
+- Technologies: Docker, Kubernetes, AWS, REST APIs, etc.
+- Databases: PostgreSQL, MongoDB, MySQL, etc.
+- Methodologies: Agile, Scrum, TDD (when named specifically)
+- Certifications: CPA, PMP, AWS Certified, etc.
+- Domain expertise: Machine Learning, Data Engineering, UX Design, etc.
+
+❌ DO NOT EXTRACT (these are NOT skills):
+- Generic words: "required", "qualifications", "experience", "strong", "excellent"
+- Common verbs: "develop", "design", "build", "create", "manage"
+- Job attributes: "team", "role", "position", "candidate"
+- Degree names: "Bachelor's", "Master's" (unless it's a specific degree like "BS in Computer Science")
+- Generic terms: "field", "related", "relevant", "appropriate"
+- Time periods: "years", "months", "experience"
+- Descriptions: "Human-Computer Interaction" → extract "HCI" as the skill, not the words
+
+EXAMPLES:
+- "3-5 years of UI/UX design experience" → Extract: ["UI Design", "UX Design"]
+- "Bachelor's degree in HCI or related field" → Extract: ["HCI"]  (NOT "field", "related", "bachelor")
+- "Strong proficiency in Figma and Adobe XD required" → Extract: ["Figma", "Adobe XD"]  (NOT "strong", "proficiency", "required")
+- "Experience with RESTful APIs and microservices" → Extract: ["REST API", "Microservices"]
 
 Return ONLY valid JSON, no markdown formatting:
 {
@@ -60,15 +122,15 @@ Return ONLY valid JSON, no markdown formatting:
   "industry_context": "Financial services, real-time data processing"
 }`;
 
-  try {
-    const result = await generateText(prompt, {
+  const extractionPromise = (async () => {
+    const llmResponse = await generateText(prompt, {
       model: 'gpt-4o-mini', // Use gpt-4o-mini for cost efficiency
       temperature: 0.1, // Low temperature for consistent, factual extraction
       max_tokens: 2000,
       timeout: 90000 // 90 seconds for skill extraction (handles long job descriptions)
     });
     
-    const response = result.text;
+    const response = llmResponse.text;
 
     // Parse JSON response
     let extracted;
@@ -97,7 +159,7 @@ Return ONLY valid JSON, no markdown formatting:
       role_type: extracted.role_type
     });
 
-    return {
+    const skillResult = {
       required_skills: extracted.required_skills || [],
       preferred_skills: extracted.preferred_skills || [],
       implicit_skills: extracted.implicit_skills || [],
@@ -108,13 +170,23 @@ Return ONLY valid JSON, no markdown formatting:
       extraction_method: 'ai',
       timestamp: new Date().toISOString()
     };
+    
+    // Cache the result for 24 hours
+    await cacheManager.set(cacheKey, skillResult, CACHE_TTL);
+    logger.debug('💾 Cached AI skill extraction result');
+    return skillResult;
+  })();
 
+  inflightExtractions.set(cacheKey, extractionPromise);
+
+  try {
+    return await extractionPromise;
   } catch (error) {
     logger.error('❌ AI Skill Extraction: Failed', { error: error.message });
-    
-    // Fallback to basic extraction if AI fails
     logger.info('🔄 Falling back to basic extraction');
     return fallbackSkillExtraction(jobDescription);
+  } finally {
+    inflightExtractions.delete(cacheKey);
   }
 }
 

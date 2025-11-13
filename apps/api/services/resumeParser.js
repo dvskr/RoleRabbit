@@ -1237,9 +1237,63 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
   }
 }
 
+/**
+ * Parse resume by fileHash (from cache or storage file)
+ * Used for lazy parsing when resume is activated
+ */
+async function parseResumeByFileHash({ userId, fileHash, storageFileId }) {
+  if (!fileHash && !storageFileId) {
+    throw new Error('Either fileHash or storageFileId is required for parsing');
+  }
+
+  // If we have fileHash, check cache first
+  if (fileHash) {
+    const cached = await prisma.resumeCache.findUnique({ where: { fileHash } });
+    if (cached) {
+      logger.info('Resume parse served from cache by fileHash', { userId, fileHash });
+      return {
+        cacheHit: true,
+        fileHash,
+        method: cached.method,
+        confidence: cached.confidence,
+        structuredResume: cached.data
+      };
+    }
+  }
+
+  // Need to fetch file from storage
+  if (!storageFileId) {
+    throw new Error('storageFileId is required to fetch file for parsing');
+  }
+
+  const storageFile = await prisma.storageFile.findFirst({
+    where: { id: storageFileId, userId },
+    select: { storagePath: true, contentType: true, fileName: true, fileHash: true }
+  });
+
+  if (!storageFile) {
+    throw new Error('Storage file not found');
+  }
+
+  // Read file from storage
+  const storageHandler = require('../utils/storageHandler');
+  const buffer = await storageHandler.downloadAsBuffer(storageFile.storagePath);
+
+  // Parse the buffer
+  const result = await parseResumeBuffer({
+    userId,
+    buffer,
+    fileName: storageFile.fileName,
+    mimeType: storageFile.contentType
+  });
+
+  return result;
+}
+
 module.exports = {
   detectDocumentType,
   parseResumeBuffer,
   extractContactDetailsFromText,
-  normalizeStructuredResume
+  normalizeStructuredResume,
+  parseResumeByFileHash
 };

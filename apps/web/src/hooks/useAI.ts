@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../types/ai';
 import { useTailoringPreferences } from './useTailoringPreferences';
 
@@ -24,6 +24,10 @@ export const useAI = () => {
 
   // Load user preferences
   const { preferences, updatePreferences, resetPreferences, loading: prefsLoading } = useTailoringPreferences();
+  
+  // Track if preferences have been initialized to prevent auto-save on first load
+  const [prefsInitialized, setPrefsInitialized] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
   // Apply loaded preferences to state (only once when preferences load)
   useEffect(() => {
@@ -31,25 +35,35 @@ export const useAI = () => {
       setTailorEditMode(preferences.mode);
       setSelectedTone(preferences.tone);
       setSelectedLength(preferences.length);
+      // Mark as initialized after applying loaded preferences
+      // Use setTimeout to ensure state updates complete before marking as initialized
+      setTimeout(() => {
+        setPrefsInitialized(true);
+        isInitialLoadRef.current = false;
+      }, 100);
     }
   }, [prefsLoading, preferences]);
 
   // Auto-save preferences when they change (with debounce)
+  // BUT: Skip auto-save until preferences have been initialized from the server
   useEffect(() => {
-    if (!prefsLoading) {
-      const timer = setTimeout(() => {
-        updatePreferences({
-          mode: tailorEditMode,
-          tone: selectedTone,
-          length: selectedLength,
-        }).catch(() => {
-          // Silent fail - preferences will be restored on next load
-        });
-      }, 500); // 500ms debounce
-
-      return () => clearTimeout(timer);
+    // Skip if still loading, not initialized, or this is the initial load
+    if (prefsLoading || !prefsInitialized || isInitialLoadRef.current) {
+      return;
     }
-  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, updatePreferences]);
+    
+    const timer = setTimeout(() => {
+      updatePreferences({
+        mode: tailorEditMode,
+        tone: selectedTone,
+        length: selectedLength,
+      }).catch(() => {
+        // Silent fail - preferences will be restored on next load
+      });
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, prefsInitialized, updatePreferences]);
 
   return {
     aiMode,

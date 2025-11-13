@@ -51,8 +51,11 @@ import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
 import { Loading } from '../../components/Loading';
 import { useToasts, ToastContainer } from '../../components/Toast';
+import { apiService } from '../../services/apiService';
 import { useAIProgress } from '../../hooks/useAIProgress';
 import { ConflictIndicator } from '../../components/ConflictIndicator';
+import { DraftStatusIndicator } from '../../components/features/ResumeEditor/DraftStatusIndicator';
+import { DraftDiffViewer } from '../../components/features/ResumeEditor/DraftDiffViewer';
 import { PlusCircle, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 // Lazy load heavy analytics and modal components
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
@@ -287,7 +290,11 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     history, setHistory,
     historyIndex, setHistoryIndex,
     loadResumeById,
-    applyBaseResume
+    applyBaseResume,
+    // 🎯 NEW: Draft management
+    commitDraft,
+    discardDraft,
+    getDraftStatus,
   } = resumeDataHook;
   const enforcedVisibilityRef = useRef<string | null>(null);
 
@@ -308,12 +315,125 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     }
   }, [currentResumeId, sectionVisibility, setSectionVisibility]);
 
-  // Display saveError via toast notifications
+  // ❌ REMOVED: Don't show toast for save errors
+  // Auto-save should be silent - validation errors shouldn't block saving
+  // useEffect(() => {
+  //   if (saveError) {
+  //     showToast(saveError, 'error', 8000);
+  //   }
+  // }, [saveError, showToast]);
+
+  // 🎯 NEW: Draft state management
+  const [hasDraft, setHasDraft] = React.useState(false);
+  const [showDiffViewer, setShowDiffViewer] = React.useState(false);
+  const [baseResumeData, setBaseResumeData] = React.useState<any>(null);
+  const [isOnline, setIsOnline] = React.useState(true);
+
+  // Check online status
   useEffect(() => {
-    if (saveError) {
-      showToast(saveError, 'error', 8000); // Show error toast for 8 seconds
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Check draft status periodically
+  useEffect(() => {
+    const checkDraft = async () => {
+      if (!currentResumeId || activeTab !== 'editor') {
+        setHasDraft(false);
+        return;
+      }
+      
+      try {
+        const status = await getDraftStatus();
+        setHasDraft(status?.hasDraft || false);
+      } catch (error) {
+        // Silently fail - resume might have been deleted
+        logger.debug('Draft status check failed (resume may be deleted)', { currentResumeId });
+        setHasDraft(false);
+      }
+    };
+    
+    checkDraft();
+    
+    // Re-check every 5 seconds, but only when on editor tab
+    const interval = setInterval(checkDraft, 5000);
+    return () => clearInterval(interval);
+  }, [currentResumeId, getDraftStatus, activeTab]);
+
+  // Draft handlers
+  const handleCommitDraft = useCallback(async () => {
+    try {
+      const result = await commitDraft();
+      if (result?.success) {
+        showToast('Resume saved successfully!', 'success', 4000);
+        setHasDraft(false);
+      } else {
+        showToast(result?.error || 'Failed to save resume', 'error', 6000);
+      }
+    } catch (error) {
+      logger.error('Failed to commit draft', error);
+      showToast('Failed to save resume', 'error', 6000);
     }
-  }, [saveError, showToast]);
+  }, [commitDraft, showToast]);
+
+  const handleDiscardDraft = useCallback(async () => {
+    if (!currentResumeId) {
+      logger.warn('🎯 handleDiscardDraft: No current resume ID');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      '⚠️ Discard Draft?\n\n' +
+      'This will permanently delete your draft and revert to the base resume.\n' +
+      'This action cannot be undone.\n\n' +
+      'Click OK to discard, or Cancel to keep your draft.'
+    );
+    
+    if (!confirmed) {
+      logger.info('🎯 handleDiscardDraft: User cancelled');
+      return;
+    }
+    
+    try {
+      logger.info('🎯 handleDiscardDraft: User confirmed, discarding draft');
+      const result = await discardDraft();
+      if (result?.success) {
+        showToast('Draft discarded, reverted to base resume', 'success', 4000);
+        setHasDraft(false);
+      } else {
+        showToast(result?.error || 'Failed to discard draft', 'error', 6000);
+      }
+    } catch (error) {
+      logger.error('❌ handleDiscardDraft: Failed to discard draft', error);
+      showToast('Failed to discard draft', 'error', 6000);
+    }
+  }, [currentResumeId, discardDraft, showToast]);
+
+  const handleConfirmDiscardDraft = useCallback(async () => {
+    try {
+      logger.info('🎯 handleConfirmDiscardDraft: User confirmed discard');
+      const result = await discardDraft();
+      if (result?.success) {
+        showToast('Draft discarded, reverted to base resume', 'success', 4000);
+        setHasDraft(false);
+        setShowDiffViewer(false); // Close the diff viewer
+      } else {
+        showToast(result?.error || 'Failed to discard draft', 'error', 6000);
+      }
+    } catch (error) {
+      logger.error('❌ handleConfirmDiscardDraft: Failed to discard draft', error);
+      showToast('Failed to discard draft', 'error', 6000);
+    }
+  }, [discardDraft, showToast]);
 
   // Load resume data when active base resume changes
   // Use ref to track ongoing load to prevent race conditions
@@ -574,6 +694,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     isAnalyzing,
     setShowATSScore,
     applyBaseResume,
+    loadResumeById,
     tailorEditMode,
     selectedTone,
     selectedLength,
@@ -960,6 +1081,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               canRedo={historyIndex < history.length - 1}
               lastSavedAt={lastSavedAt}
               hasChanges={hasChanges}
+              hasDraft={hasDraft} // 🎯 NEW: Pass draft status
               onExport={() => setShowExportModal(true)}
               onUndo={undo}
               onRedo={redo}
@@ -972,6 +1094,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                     email: '',
                     phone: '',
                     location: '',
+                    linkedin: '', // 🔧 FIX: Added missing field
+                    github: '', // 🔧 FIX: Added missing field
+                    website: '', // 🔧 FIX: Added missing field
                     summary: '',
                     skills: [],
                     experience: [],
@@ -999,6 +1124,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                     email: '',
                     phone: '',
                     location: '',
+                    linkedin: '', // 🔧 FIX: Added missing field
+                    github: '', // 🔧 FIX: Added missing field
+                    website: '', // 🔧 FIX: Added missing field
                     summary: '',
                     skills: [],
                     experience: [],
@@ -1010,7 +1138,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 }
               }}
               onImport={handleOpenImportModal}
-              onSave={saveResume}
+              onSave={handleCommitDraft}
+              onDiscardDraft={handleDiscardDraft} // 🎯 NEW: Pass discard handler
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
               onShowMobileMenu={() => setShowMobileMenu(true)}
@@ -1043,6 +1172,92 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               iconColor={getDashboardTabIconColor(activeTab)}
             />
           ) : null}
+
+          {/* 🎯 PREMIUM: Minimal Draft Indicator with All Features */}
+          {activeTab === 'editor' && currentResumeId && hasDraft && (
+            <div 
+              className="flex items-center justify-between px-6 py-2.5 border-b transition-all duration-200"
+              style={{ 
+                background: 'linear-gradient(to right, #EFF6FF, #DBEAFE)',
+                borderColor: '#93C5FD'
+              }}
+            >
+              {/* Left: Status */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm">
+                  {isSaving ? (
+                    <span className="flex items-center gap-2 text-blue-600">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-blue-700">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Draft auto-saved {lastSavedAt ? new Date(lastSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'just now'}
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs text-orange-600 font-medium">• Not saved to base</span>
+              </div>
+
+              {/* Right: Action Buttons */}
+              <div className="flex items-center gap-2">
+                {/* View Changes */}
+                <button
+                  onClick={async () => {
+                    if (!currentResumeId) return;
+                    try {
+                      const baseResume = await apiService.getBaseResume(currentResumeId);
+                      setBaseResumeData(baseResume?.data || null);
+                      setShowDiffViewer(true);
+                    } catch (error) {
+                      showToast('Failed to load comparison', 'error', 4000);
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded-md hover:bg-blue-50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  title="View changes before saving or discarding"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  View Changes
+                </button>
+
+                {/* Save to Base */}
+                <button
+                  onClick={handleCommitDraft}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                  title="Save draft to base resume"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {isSaving ? 'Saving...' : 'Save to Base'}
+                </button>
+
+                {/* Discard Draft */}
+                <button
+                  onClick={handleDiscardDraft}
+                  disabled={isSaving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  title="Discard draft and revert to base resume"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Discard
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Main Content */}
           <div className={`flex-1 min-h-0 flex ${activeTab === 'editor' ? 'overflow-hidden' : ''}`}>
@@ -1262,6 +1477,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             email: '',
             phone: '',
             location: '',
+            linkedin: '', // 🔧 FIX: Added missing field
+            github: '', // 🔧 FIX: Added missing field
+            website: '', // 🔧 FIX: Added missing field
             summary: '',
             skills: [],
             experience: [],
@@ -1300,6 +1518,16 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         }}
         onDismiss={() => setHasConflict(false)}
       />
+      
+          {/* 🎯 Draft Diff Viewer Modal (View Only) */}
+          {showDiffViewer && baseResumeData && (
+            <DraftDiffViewer
+              draftData={resumeData}
+              baseData={baseResumeData}
+              onClose={() => setShowDiffViewer(false)}
+            />
+          )}
+      
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </ErrorBoundary>

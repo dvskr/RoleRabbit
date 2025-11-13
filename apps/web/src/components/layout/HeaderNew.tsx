@@ -13,10 +13,17 @@ interface HeaderProps {
   isPreviewMode?: boolean;
   lastSavedAt?: Date | null; // Last manual save time
   hasChanges?: boolean; // Whether there are unsaved changes
+  hasDraft?: boolean; // 🎯 NEW: Whether there's a working draft
+  canUndo?: boolean; // 🔧 FIX: Added missing prop
+  canRedo?: boolean; // 🔧 FIX: Added missing prop
   onExport: () => void;
   onClear: () => void;
   onImport: () => void;
   onSave: () => void;
+  onUndo?: () => void; // 🔧 FIX: Added missing prop
+  onRedo?: () => void; // 🔧 FIX: Added missing prop
+  onDiscardDraft?: () => void; // 🎯 NEW: Discard draft handler
+  onToggleAIPanel?: () => void; // 🔧 FIX: Added missing prop
   onTogglePreview?: () => void;
   onShowMobileMenu: () => void;
   setPreviousSidebarState: (state: boolean) => void;
@@ -38,10 +45,17 @@ export default function HeaderNew({
   isPreviewMode,
   lastSavedAt,
   hasChanges,
+  hasDraft, // 🎯 NEW
+  canUndo, // 🔧 FIX
+  canRedo, // 🔧 FIX
   onExport,
   onClear,
   onImport,
   onSave,
+  onUndo, // 🔧 FIX
+  onRedo, // 🔧 FIX
+  onDiscardDraft, // 🎯 NEW
+  onToggleAIPanel, // 🔧 FIX
   onTogglePreview,
   onShowMobileMenu,
   setPreviousSidebarState: _setPreviousSidebarState,
@@ -77,17 +91,22 @@ export default function HeaderNew({
   }, [isSaving, lastSavedAt, hasChanges]);
   
   const handleToggleAIPanel = () => {
-    if (!showRightPanel) {
-      if (setPreviousMainSidebarState && mainSidebarCollapsed !== undefined) {
-        setPreviousMainSidebarState(mainSidebarCollapsed);
-        setMainSidebarCollapsed?.(true);
-      }
+    if (onToggleAIPanel) {
+      onToggleAIPanel();
     } else {
-      if (setMainSidebarCollapsed) {
-        setMainSidebarCollapsed(false);
+      // Fallback to old behavior if prop not provided
+      if (!showRightPanel) {
+        if (setPreviousMainSidebarState && mainSidebarCollapsed !== undefined) {
+          setPreviousMainSidebarState(mainSidebarCollapsed);
+          setMainSidebarCollapsed?.(true);
+        }
+      } else {
+        if (setMainSidebarCollapsed) {
+          setMainSidebarCollapsed(false);
+        }
       }
+      setShowRightPanel(!showRightPanel);
     }
-    setShowRightPanel(!showRightPanel);
   };
 
   const actionButtons = [
@@ -135,35 +154,10 @@ export default function HeaderNew({
         )}
         
         {/* Sidebar toggle handled inside ResumeEditor to align with vertical icons */}
-        
-        {/* Auto-save feedback indicator */}
-        {hasChanges && !isSaving && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: colors.badgeWarningText }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: colors.badgeWarningText }}></div>
-            <span>Unsaved changes</span>
-          </div>
-        )}
-        {isSaving && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: colors.primaryBlue }}>
-            <div 
-              className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: colors.primaryBlue }}
-            ></div>
-            <span>Auto-saving...</span>
-          </div>
-        )}
       </div>
 
       {/* Action Buttons */}
       <div className="flex items-center gap-2">
-        {/* All changes saved status */}
-        {!hasChanges && !isSaving && lastSavedAt && (
-          <div className="flex items-center gap-2 text-xs" style={{ color: colors.successGreen }}>
-            <div className="w-2 h-2 rounded-full" style={{ background: colors.successGreen }}></div>
-            <span>All changes saved</span>
-          </div>
-        )}
-        
         {/* Clear Button - Destructive action */}
         <button
           onClick={onClear}
@@ -226,65 +220,6 @@ export default function HeaderNew({
         >
           <Sparkles size={16} />
           AI Assistant
-        </button>
-
-        {/* Save */}
-        <button 
-          onClick={onSave}
-          disabled={isSaving || saveStatus === 'saving'}
-          className="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm transition-all"
-          style={{
-            background: saveStatus === 'saving'
-              ? (isLightMode ? '#DBEAFE' : '#1E3A5F')
-              : saveStatus === 'saved'
-              ? (isLightMode ? '#D1FAE5' : '#1E3A5F')
-              : (isLightMode ? '#ffffff' : colors.inputBackground),
-            border: `1px solid ${
-              saveStatus === 'saving'
-                ? colors.primaryBlue
-                : saveStatus === 'saved'
-                ? colors.successGreen
-                : colors.border
-            }`,
-            color: saveStatus === 'saving'
-              ? colors.primaryBlue
-              : saveStatus === 'saved'
-              ? colors.successGreen
-              : colors.secondaryText,
-            cursor: (isSaving || saveStatus === 'saving') ? 'wait' : 'pointer',
-            opacity: (isSaving || saveStatus === 'saving') ? 0.7 : 1,
-          }}
-          onMouseEnter={(e) => {
-            if (!isSaving && saveStatus !== 'saving') {
-              e.currentTarget.style.color = isLightMode ? colors.primaryText : '#ffffff';
-              e.currentTarget.style.borderColor = colors.successGreen;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isSaving && saveStatus !== 'saving') {
-              e.currentTarget.style.color = saveStatus === 'saved' ? colors.successGreen : colors.secondaryText;
-              e.currentTarget.style.borderColor = saveStatus === 'saved' ? colors.successGreen : colors.border;
-            }
-          }}
-          title={
-            saveStatus === 'saving' 
-              ? "Saving..." 
-              : saveStatus === 'saved'
-              ? "Saved!"
-              : "Save Resume"
-          }
-        >
-          <Save 
-            size={16} 
-            className={saveStatus === 'saving' ? 'animate-pulse' : ''}
-          />
-          <span>
-            {saveStatus === 'saving' 
-              ? 'Saving...' 
-              : saveStatus === 'saved'
-              ? 'Saved'
-              : 'Save'}
-          </span>
         </button>
       </div>
     </header>

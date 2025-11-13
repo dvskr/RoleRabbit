@@ -76,7 +76,8 @@ export default function ImportModal({
     setSelectedId((prev) => prev || activeId || null);
     // Refresh resumes to ensure latest active state
     refresh({ showSpinner: false });
-  }, [showImportModal, activeId, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showImportModal, activeId]);
 
   // File inputs for per-slot upload/replace
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -210,33 +211,71 @@ export default function ImportModal({
   const uploadToCreate = useCallback(async (file: File) => {
     const nameFromFile = file.name.replace(/\.[^.]+$/, '');
     try {
-      // Create placeholder slot immediately (no parsing yet)
+      showToast('Uploading resume...', 'info', 2000);
+      
+      // 1. Upload file to storage first
+      const uploadResult = await apiService.uploadFile(file, {
+        name: nameFromFile,
+        type: 'resume',
+        isPublic: false
+      });
+      
+      if (!uploadResult?.file) {
+        throw new Error('File upload failed');
+      }
+      
+      // 2. Create BaseResume linked to the uploaded file
       const created = await createResume({
         name: nameFromFile,
-        data: {}
+        data: {}, // Empty data - will be parsed on activation
+        storageFileId: uploadResult.file.id,
+        fileHash: uploadResult.file.fileHash
       });
+      
       if (created?.id) {
-        // Mark this new slot as pending parse
-        setPendingFiles(prev => ({ ...prev, [created.id]: file }));
         setSelectedId(created.id);
         setLastStagedId(created.id);
-        showToast('Uploaded. Will parse on Apply.', 'info', 4000);
-    } else {
-        showToast('Upload succeeded but creation failed', 'error', 6000);
+        showToast('Resume uploaded successfully!', 'success', 3000);
+      } else {
+        showToast('Upload succeeded but slot creation failed', 'error', 6000);
       }
     } catch (createErr: any) {
-      showToast(createErr?.message || 'Failed to create resume slot', 'error', 6000);
+      showToast(createErr?.message || 'Failed to upload resume', 'error', 6000);
     }
   }, [createResume, showToast]);
 
   const markReplacePending = useCallback(async (resumeId: string, file: File) => {
-    // Defer parsing until Apply; keep current data visible
-    setPendingFiles(prev => ({ ...prev, [resumeId]: file }));
-    // Ensure Apply targets the slot we just staged
-    setSelectedId(resumeId);
-    setLastStagedId(resumeId);
-    showToast('File staged. Will parse on Apply.', 'info', 4000);
-  }, [showToast]);
+    try {
+      showToast('Uploading resume...', 'info', 2000);
+      
+      // 1. Upload file to storage
+      const uploadResult = await apiService.uploadFile(file, {
+        name: file.name.replace(/\.[^.]+$/, ''),
+        type: 'resume',
+        isPublic: false
+      });
+      
+      if (!uploadResult?.file) {
+        throw new Error('File upload failed');
+      }
+      
+      // 2. Update BaseResume with new file reference
+      await apiService.updateBaseResume(resumeId, {
+        data: {}, // Clear data - will be re-parsed on activation
+        storageFileId: uploadResult.file.id,
+        fileHash: uploadResult.file.fileHash
+      });
+      
+      setSelectedId(resumeId);
+      setLastStagedId(resumeId);
+      showToast('Resume uploaded successfully!', 'success', 3000);
+      
+      // Refresh to get updated resume
+      await refresh({ showSpinner: false });
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to upload resume', 'error', 6000);
+    }
+  }, [showToast, refresh]);
 
   // Parse and replace data for an existing resume
   const parseAndReplace = useCallback(async (resumeId: string, file: File, preParsed?: any) => {
@@ -286,7 +325,7 @@ export default function ImportModal({
     }
   }, [selectedId, markReplacePending, uploadToCreate]);
 
-  // Direct activation handler - parses any staged file and activates the resume
+  // Direct activation handler - only activates the resume (no parsing)
   const handleActivateResume = useCallback(async (resumeId: string) => {
     if (activatingId && activatingId !== resumeId) {
       showToast('Please wait for the current activation to finish.', 'info', 3000);
@@ -311,48 +350,77 @@ export default function ImportModal({
     setSelectedId(resumeId);
 
     try {
-      let updatedRecord: any = resume;
-      const pendingFile = pendingFiles[resumeId];
-
-      if (pendingFile instanceof File && pendingFile.size > 0) {
-        showToast('File staged. Activate this resume, then use Parse & Apply to process the new upload.', 'info', 5000);
-      } else if (!validateResumeData(resume.data)) {
-        showToast('Activate this slot after uploading a resume or using Parse & Apply.', 'info', 4000);
-      }
-
+      // Just activate the resume (no parsing)
+      showToast('🔄 Activating resume...', 'info', 3000);
       await activateResume(resumeId);
-
-      // Ensure we have the latest version of the resume record for callback consumers
-      let latestRecord = updatedRecord;
-      if (!latestRecord || !validateResumeData(latestRecord?.data)) {
-        try {
-          const fetched = await apiService.getBaseResume(resumeId);
-          latestRecord = fetched?.resume ?? latestRecord;
-        } catch (fetchErr: any) {
-          // If fetching fails, fall back to whatever data we already have
-          latestRecord = latestRecord ?? resume;
-        }
-      }
-
-      if (onResumeApplied && latestRecord) {
-        try {
-          await onResumeApplied(resumeId, latestRecord);
-        } catch (callbackErr) {
-          // Ignore callback errors – activation already succeeded
-        }
-      }
-
-      if (latestRecord) {
-        upsertResume(latestRecord);
-      }
-
-      showToast('Resume activated successfully', 'success', 3000);
+      
+      showToast('✅ Resume activated! Now click "Parse & Apply" to populate the editor.', 'success', 4000);
+      await refresh();
     } catch (err: any) {
       showToast(err?.message || 'Failed to activate resume', 'error', 6000);
     } finally {
       setActivatingId(null);
     }
-  }, [activatingId, resumes, pendingFiles, validateResumeData, parseAndReplace, activateResume, showToast, onResumeApplied, upsertResume]);
+  }, [activatingId, resumes, activateResume, showToast, refresh]);
+
+  // Parse & Apply handler - parses the active resume and populates editor
+  const [parsingId, setParsingId] = useState<string | null>(null);
+  
+  const handleParseAndApply = useCallback(async (resumeId: string) => {
+    const resume = resumes.find(r => r.id === resumeId);
+    if (!resume) {
+      showToast('Resume not found', 'error', 3000);
+      return;
+    }
+
+    if (!resume.isActive) {
+      showToast('Please activate this resume first before parsing', 'warning', 4000);
+      return;
+    }
+
+    if (parsingId === resumeId) {
+      return;
+    }
+
+    setParsingId(resumeId);
+
+    try {
+      showToast('🔄 Parsing resume...', 'info', 30000);
+      
+      // Parse the resume by calling the backend parse endpoint
+      const response = await apiService.request(`/api/base-resumes/${resumeId}/parse`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to parse resume');
+      }
+
+      // Fetch the latest data
+      const fetched = await apiService.getBaseResume(resumeId);
+      const latestRecord = fetched?.resume;
+
+      if (latestRecord) {
+        upsertResume(latestRecord);
+      }
+
+      // Call the onResumeApplied callback to populate the editor
+      if (onResumeApplied && latestRecord) {
+        await onResumeApplied(resumeId, latestRecord);
+      }
+
+      // Close modal and show success
+      setShowImportModal(false);
+      dismissToast();
+      showToast('✅ Resume parsed and applied to editor!', 'success', 4000);
+    } catch (err: any) {
+      dismissToast();
+      showToast(err?.message || 'Failed to parse resume', 'error', 6000);
+    } finally {
+      setParsingId(null);
+    }
+  }, [resumes, parsingId, showToast, dismissToast, upsertResume, onResumeApplied, setShowImportModal]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -664,6 +732,33 @@ export default function ImportModal({
               </div>
             )}
           </button>
+          {resume.isActive && (
+            <button
+              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
+              title={parsingId === resume.id ? 'Parsing...' : 'Parse & Apply to editor'}
+              aria-label="Parse and apply resume"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleParseAndApply(resume.id);
+              }}
+              disabled={parsingId === resume.id}
+              style={{
+                background: parsingId === resume.id ? colors.border : colors.activeBlueText,
+                color: '#ffffff',
+                opacity: parsingId === resume.id ? 0.6 : 1,
+                cursor: parsingId === resume.id ? 'default' : 'pointer'
+              }}
+            >
+              {parsingId === resume.id ? (
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Parsing...</span>
+                </div>
+              ) : (
+                'Parse & Apply'
+              )}
+            </button>
+          )}
           <button
             className="p-2 rounded-lg"
             title="Replace from file"
@@ -809,39 +904,16 @@ export default function ImportModal({
         {availableSlots > 0 &&
           Array.from({ length: availableSlots }, (_, idx) => renderEmptySlot(idx))}
 
-        <div className="mt-4 flex items-center justify-between">
-          <div>
-            <div className="text-sm" style={{ color: colors.tertiaryText }}>
-              {totalSlotsUsed} of {maxSlots} slots filled
-            </div>
-            {applyHelperMessage && (
-              <div className="text-xs mt-1" style={{ color: colors.errorRed }}>
-                {applyHelperMessage}
-              </div>
-            )}
+        <div className="mt-4">
+          <div className="text-sm" style={{ color: colors.tertiaryText }}>
+            {totalSlotsUsed} of {maxSlots} slots filled
           </div>
-          <div className="flex gap-3">
-                  <button
-              onClick={() => setShowImportModal(false)}
-              className="px-4 py-2 rounded-xl"
-                    style={{
-                background: theme.mode === 'light' ? '#f3f4f6' : colors.hoverBackground,
-                color: colors.primaryText
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleApply}
-              disabled={isApplying}
-              className={`inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isApplying ? 'bg-blue-400 cursor-not-allowed opacity-70' : 'bg-blue-600 hover:bg-blue-500'}`}
-              title={!activeId ? 'Activate a resume first using the toggle switch' : (isApplying ? 'Parsing...' : 'Parse and apply the active resume')}
-            >
-              {isApplying ? 'Parsing…' : 'Parse & Apply'}
-                  </button>
+          {applyHelperMessage && (
+            <div className="text-xs mt-1" style={{ color: colors.errorRed }}>
+              {applyHelperMessage}
             </div>
-          </div>
+          )}
+        </div>
         </div>
     </div>
   );

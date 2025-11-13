@@ -323,6 +323,7 @@ model StorageFile {
   size        BigInt // File size in bytes
   storagePath String // Path in Supabase Storage or local filesystem
   publicUrl   String? // Public URL if bucket is public
+  fileHash    String? // SHA-256 hash of file content for change detection
 
   // Metadata
   description String? // File description
@@ -349,6 +350,7 @@ model StorageFile {
   comments                 FileComment[]
   accessLogs               FileAccessLog[]
   credentials              Credential[]
+  baseResumes              BaseResume[]
 
   @@index([userId])
   @@index([folderId])
@@ -356,6 +358,7 @@ model StorageFile {
   @@index([deletedAt])
   @@index([isStarred])
   @@index([isArchived])
+  @@index([fileHash])
   @@map("storage_files")
 }
 
@@ -559,12 +562,16 @@ model BaseResume {
   parsingConfidence    Float?
   embedding            String?   @db.Text // pgvector embedding stored as text
   embeddingUpdatedAt   DateTime? @map("embedding_updated_at")
+  storageFileId        String?   // Link to uploaded file for parsing
+  fileHash             String?   // SHA-256 hash for cache lookup
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user               User                 @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
   activeUser         User?                @relation("ActiveBaseResume")
+  storageFile        StorageFile?         @relation(fields: [storageFileId], references: [id], onDelete: SetNull)
+  workingDraft       WorkingDraft?        // One-to-one relation with working draft
   tailoredVersions   TailoredVersion[]
   generatedDocuments GeneratedDocument[]
   resumeCaches       ResumeCache[]
@@ -574,7 +581,25 @@ model BaseResume {
 
   @@unique([userId, slotNumber])
   @@index([userId, isActive])
+  @@index([storageFileId])
+  @@index([fileHash])
   @@map("base_resumes")
+}
+
+model WorkingDraft {
+  id           String   @id @default(cuid())
+  baseResumeId String   @unique
+  data         Json     // Current edits (not yet committed to base)
+  formatting   Json?    @default("{}")
+  metadata     Json?    @default("{}")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  baseResume BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+
+  @@index([baseResumeId])
+  @@map("working_drafts")
 }
 
 model TailoredVersion {

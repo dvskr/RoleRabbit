@@ -130,6 +130,7 @@ export interface UseDashboardHandlersParams {
   isAnalyzing: boolean;
   setShowATSScore: (show: boolean) => void;
   applyBaseResume?: (record?: BaseResumeRecord | null) => void;
+  loadResumeById: (id: string) => Promise<any>;
   tailorEditMode: string;
   selectedTone: string;
   selectedLength: string;
@@ -201,11 +202,13 @@ export const applyTailoredResumeChanges = async ({
     return false;
   }
 
-  const success = await saveResume();
-  if (success) {
-    clearTailorResult();
-  }
-  return success;
+  // Note: The tailored content is already saved to the working draft by the backend
+  // and the editor has already been reloaded with the tailored data via loadResumeById
+  // This "Apply Changes" button just confirms the user wants to keep these changes
+  // and clears the tailor result UI (no need to save again)
+  
+  clearTailorResult();
+  return true;
 };
 
 /**
@@ -284,6 +287,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     isAnalyzing,
     setShowATSScore,
     applyBaseResume,
+    loadResumeById,
     tailorEditMode,
     selectedTone,
     selectedLength,
@@ -625,22 +629,13 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       });
 
       if (response?.tailoredResume) {
+        // Convert tailored resume to editor format (for TailorResult only)
         const tailoredEditorData = normalizedDataToResumeData(response.tailoredResume as any);
-        let mergedResume: ResumeData | null = null;
-
-        setResumeData((previous) => {
-          const merged = mergeTailoredResume(previous, tailoredEditorData);
-          const deduped = removeDuplicateResumeEntries(merged).data;
-          mergedResume = deduped;
-          return deduped;
-        });
-
-        if (!mergedResume) {
-          const merged = mergeTailoredResume(resumeData, tailoredEditorData);
-          mergedResume = removeDuplicateResumeEntries(merged).data;
-        }
-
-        setHasChanges(true);
+        const merged = mergeTailoredResume(resumeData, tailoredEditorData);
+        const mergedResume = removeDuplicateResumeEntries(merged).data;
+        
+        // DON'T call setResumeData() - we'll force a full reload from backend instead
+        // This ensures the editor shows the exact data that was saved to the database
         
         const result: TailorResult = {
           tailoredResume: mergedResume,
@@ -675,6 +670,19 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           message: `Score improved from ${beforeScore} to ${afterScore} (+${improvement} points)`,
           duration: 7000
         });
+        
+        // Force a complete reload from the backend
+        console.log('🔄 [TAILOR] Force reloading resume data from backend after tailoring...');
+        console.log('🔄 [TAILOR] Resume ID:', effectiveResumeId);
+        
+        // Directly call loadResumeById to force a fresh fetch from the backend
+        // This bypasses the useEffect guard that prevents reloading the same resume
+        try {
+          await loadResumeById(effectiveResumeId);
+          console.log('✅ [TAILOR] Resume reloaded successfully from backend!');
+        } catch (reloadError) {
+          console.error('❌ [TAILOR] Failed to reload resume:', reloadError);
+        }
       }
 
       return response;

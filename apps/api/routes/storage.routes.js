@@ -305,6 +305,10 @@ async function storageRoutes(fastify, _options) {
           const buffer = Buffer.concat(chunks);
           fileSize = buffer.length;
           
+          // Compute fileHash for resume files
+          const crypto = require('crypto');
+          fileData.fileHash = crypto.createHash('sha256').update(buffer).digest('hex');
+          
           // Create a new readable stream from buffer for storage handler
           const { Readable } = require('stream');
           fileData.file = Readable.from(buffer);
@@ -437,6 +441,7 @@ async function storageRoutes(fastify, _options) {
             size: BigInt(fileSize),
             storagePath: storageResult.path,
             publicUrl: storageResult.publicUrl || null,
+            fileHash: fileData.fileHash || null,
             description: description || null,
             isPublic: isPublic,
             folderId: folderId || null
@@ -481,6 +486,7 @@ async function storageRoutes(fastify, _options) {
         size: Number(savedFile.size),
         storagePath: savedFile.storagePath,
         publicUrl: savedFile.publicUrl,
+        fileHash: savedFile.fileHash,  // ✅ ADD: Include fileHash for resume parsing
         description: savedFile.description,
         isPublic: savedFile.isPublic,
         folderId: savedFile.folderId,
@@ -496,6 +502,7 @@ async function storageRoutes(fastify, _options) {
         size: fileSize,
         storagePath: storageResult.path,
         publicUrl: storageResult.publicUrl || null,
+        fileHash: fileData.fileHash || null,  // ✅ ADD: Include fileHash for resume parsing
         description: description || null,
         isPublic: isPublic,
         folderId: folderId || null,
@@ -562,6 +569,7 @@ async function storageRoutes(fastify, _options) {
               size: fileMetadata.size,
               storagePath: fileMetadata.storagePath,
               publicUrl: fileMetadata.publicUrl,
+              fileHash: fileMetadata.fileHash || null,  // ✅ CRITICAL: Include fileHash for resume parsing!
               description: fileMetadata.description || null,
               isPublic: fileMetadata.isPublic || false,
               folderId: fileMetadata.folderId || null,

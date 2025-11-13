@@ -14,6 +14,90 @@ const { extractSkillsWithAI } = require('../ats/aiSkillExtractor');
 const { extractSkills, matchAllSkills, getMissingSkills, getMatchedSkills, generateMatchExplanation } = require('../ats/skillMatcher');
 const { detectSeniorityLevel, compareSeniority, detectDomain, matchDomain, detectKeywordStuffing } = require('../ats/contextAnalyzer');
 
+// SMART KEYWORD EXTRACTION - Filters out generic words
+const { extractSmartKeywords, calculateMissingSkills } = require('../ats/smartKeywordExtractor');
+
+/**
+ * Smart truncation for huge resumes
+ * Keeps most important sections for skill extraction
+ * @param {Object} resumeData - Resume data object
+ * @param {number} maxChars - Maximum characters allowed (default: 30000)
+ * @returns {string} Truncated resume JSON string
+ */
+function smartTruncateResume(resumeData, maxChars = 30000) {
+  const fullResume = JSON.stringify(resumeData);
+  
+  // Check if truncation is needed
+  if (fullResume.length <= maxChars) {
+    logger.debug('Resume within limits, no truncation needed', {
+      size: fullResume.length,
+      limit: maxChars
+    });
+    return fullResume;
+  }
+  
+  // Truncation needed
+  logger.warn('Resume exceeds limit, applying smart truncation', {
+    original: fullResume.length,
+    limit: maxChars,
+    reduction: fullResume.length - maxChars,
+    reductionPercent: Math.round((1 - maxChars / fullResume.length) * 100)
+  });
+  
+  // PRIORITY 1: CRITICAL - Always include
+  const truncated = {
+    summary: resumeData.summary || '',
+    skills: resumeData.skills || {},
+    experience: (resumeData.experience || [])
+      .slice(0, 5)  // Top 5 most recent jobs
+      .map(exp => ({
+        company: exp.company,
+        role: exp.role,
+        startDate: exp.startDate,
+        endDate: exp.endDate,
+        location: exp.location,
+        bullets: (exp.bullets || []).slice(0, 5)  // Top 5 bullets per job
+      }))
+  };
+  
+  let currentSize = JSON.stringify(truncated).length;
+  
+  // PRIORITY 2: IMPORTANT - Include if space allows
+  if (currentSize < maxChars * 0.8) {
+    truncated.projects = (resumeData.projects || [])
+      .slice(0, 3)  // Top 3 projects
+      .map(proj => ({
+        title: proj.title,
+        description: (proj.description || '').substring(0, 200),  // Truncate descriptions
+        technologies: proj.technologies || [],
+        date: proj.date,
+        link: proj.link
+      }));
+    
+    currentSize = JSON.stringify(truncated).length;
+  }
+  
+  // PRIORITY 3: OPTIONAL - Include if still space
+  if (currentSize < maxChars * 0.9) {
+    truncated.certifications = resumeData.certifications || [];
+    truncated.education = resumeData.education || [];
+  }
+  
+  // Final safety truncation
+  const result = JSON.stringify(truncated);
+  const finalSize = Math.min(result.length, maxChars);
+  
+  logger.info('Resume truncation complete', {
+    original: fullResume.length,
+    truncated: finalSize,
+    reduction: fullResume.length - finalSize,
+    reductionPercent: Math.round((1 - finalSize / fullResume.length) * 100),
+    sectionsKept: Object.keys(truncated)
+  });
+  
+  return result.substring(0, maxChars);
+}
+
 /**
  * Extract keywords from text (simple approach)
  * @param {string} text - Text to extract keywords from
@@ -36,49 +120,115 @@ function extractKeywords(text) {
 }
 
 /**
- * Find matched and missing keywords
+ * Find matched and missing keywords using AI (WORLD-CLASS ACCURACY)
+ * @param {Object} resumeData - Resume data
+ * @param {string} jobDescription - Job description
+ * @returns {Promise<Object>} Matched and missing keywords
+ */
+async function analyzeKeywordsWithAI(resumeData, jobDescription) {
+  try {
+    // Apply smart truncation for huge resumes
+    const resumeText = smartTruncateResume(resumeData, 30000);
+    
+    // PRIMARY: AI-powered skill extraction
+    logger.info('🤖 Using AI for skill extraction (unlimited coverage)');
+    
+    const [jobAnalysis, resumeAnalysis] = await Promise.all([
+      extractSkillsWithAI(jobDescription),
+      extractSkillsWithAI(resumeText)
+    ]);
+    
+    // Combine all required and preferred skills from job
+    const jobSkills = [
+      ...jobAnalysis.required_skills,
+      ...jobAnalysis.preferred_skills
+    ];
+    
+    // Combine all skills from resume
+    const resumeSkillsLower = [
+      ...resumeAnalysis.required_skills,
+      ...resumeAnalysis.preferred_skills,
+      ...resumeAnalysis.implicit_skills
+    ].map(s => s.toLowerCase());
+    
+    // Find matched skills
+    const matched = jobSkills.filter(jobSkill => 
+      resumeSkillsLower.some(rs => 
+        rs === jobSkill.toLowerCase() ||
+        rs.includes(jobSkill.toLowerCase()) ||
+        jobSkill.toLowerCase().includes(rs)
+      )
+    );
+    
+    // Find missing skills
+    const missing = jobSkills.filter(jobSkill => !matched.includes(jobSkill));
+    
+    logger.info('✅ AI Skill Analysis Complete', {
+      jobSkills: jobSkills.length,
+      resumeSkills: resumeSkillsLower.length,
+      matched: matched.length,
+      missing: missing.length
+    });
+
+    return {
+      matched: [...new Set(matched)],
+      missing: [...new Set(missing)],
+      totalKeywords: jobSkills.length,
+      aiPowered: true
+    };
+
+  } catch (error) {
+    logger.warn('AI skill extraction failed, using pattern fallback', { 
+      error: error.message 
+    });
+    
+    // FALLBACK: Pattern-based extraction (if AI fails)
+    return analyzeKeywordsWithPatterns(resumeData, jobDescription);
+  }
+}
+
+/**
+ * Pattern-based keyword analysis (FALLBACK ONLY)
  * @param {Object} resumeData - Resume data
  * @param {string} jobDescription - Job description
  * @returns {Object} Matched and missing keywords
  */
-function analyzeKeywords(resumeData, jobDescription) {
+function analyzeKeywordsWithPatterns(resumeData, jobDescription) {
   try {
-    // Extract resume text
-    const resumeText = JSON.stringify(resumeData).toLowerCase();
+    // Apply smart truncation for huge resumes
+    const resumeText = smartTruncateResume(resumeData, 30000);
     
-    // Extract job keywords (focus on important ones)
-    const jobWords = extractKeywords(jobDescription);
-    
-    // Common technical skills and important keywords to prioritize
-    const importantKeywords = jobWords.filter(word => {
-      return (
-        word.length >= 3 &&
-        !['the', 'and', 'for', 'with', 'you', 'will', 'are', 'have', 'this', 'that', 'from', 'they', 'been', 'your', 'our', 'can', 'all', 'has', 'had', 'but', 'not', 'what', 'about', 'into', 'other', 'than', 'then', 'when', 'there', 'some', 'could', 'would', 'should', 'these', 'those', 'their', 'more', 'also', 'only', 'such', 'make', 'must', 'work', 'years', 'experience', 'strong', 'able', 'team', 'plus'].includes(word)
-      );
+    // Extract skills using patterns
+    const jobSkills = extractSmartKeywords(jobDescription, 50);
+    const resumeSkills = extractSmartKeywords(resumeText, 100);
+
+    logger.info('📊 Pattern-based extraction (fallback)', {
+      jobSkills: jobSkills.length,
+      resumeSkills: resumeSkills.length
     });
-
-    // Find matched keywords
-    const matched = importantKeywords.filter(keyword => 
-      resumeText.includes(keyword)
-    );
-
-    // Find missing keywords
-    const missing = importantKeywords.filter(keyword => 
-      !resumeText.includes(keyword)
+    
+    // Calculate missing skills
+    const missing = calculateMissingSkills(jobSkills, resumeSkills);
+    
+    // Calculate matched skills
+    const matched = jobSkills.filter(jobSkill => 
+      !missing.includes(jobSkill)
     );
 
     return {
       matched: [...new Set(matched)],
       missing: [...new Set(missing)],
-      totalKeywords: importantKeywords.length
+      totalKeywords: jobSkills.length,
+      aiPowered: false
     };
 
   } catch (error) {
-    logger.error('Keyword analysis failed', { error: error.message });
+    logger.error('Pattern analysis failed', { error: error.message });
     return {
       matched: [],
       missing: [],
-      totalKeywords: 0
+      totalKeywords: 0,
+      aiPowered: false
     };
   }
 }
@@ -150,10 +300,10 @@ async function scoreResumeWithEmbeddings(options) {
       { includeDetails }
     );
 
-    // Step 3: Keyword analysis (fast, no AI)
-    logger.debug('Step 3: Analyzing keywords');
+    // Step 3: AI-powered keyword analysis (unlimited skill coverage)
+    logger.debug('Step 3: Analyzing keywords with AI');
     
-    const keywordAnalysis = analyzeKeywords(resumeData, jobDescription);
+    const keywordAnalysis = await analyzeKeywordsWithAI(resumeData, jobDescription);
 
     // Step 4: Combine scores
     // Semantic similarity is the primary score
@@ -173,7 +323,8 @@ async function scoreResumeWithEmbeddings(options) {
       semanticScore,
       keywordMatchRate: keywordMatchRate.toFixed(1),
       duration,
-      fromCache
+      fromCache,
+      aiSkillExtraction: keywordAnalysis.aiPowered ? 'AI (unlimited)' : 'Patterns (fallback)'
     });
 
     // Build result
@@ -187,7 +338,8 @@ async function scoreResumeWithEmbeddings(options) {
       performance: {
         duration,
         fromCache,
-        method: 'embedding'
+        method: 'embedding',
+        aiPowered: keywordAnalysis.aiPowered || false // AI skill extraction
       }
     };
 
@@ -256,16 +408,19 @@ async function scoreResumeWithEnhancedATS(options) {
     ]);
 
     // Extract skills from resume
-    const resumeText = JSON.stringify(resumeData).toLowerCase();
+    const resumeText = JSON.stringify(resumeData);
+    const resumeSkillsForAI = extractSmartKeywords(resumeText, 100);
     
-    // Check which AI-extracted skills are in the resume
+    // Check which AI-extracted skills are in the resume (filter generic words)
     const aiMatchedSkills = jobAnalysis.skills.filter(skill => 
-      resumeText.includes(skill.toLowerCase())
+      resumeSkillsForAI.some(rSkill => 
+        rSkill.toLowerCase() === skill.toLowerCase() ||
+        rSkill.toLowerCase().includes(skill.toLowerCase()) ||
+        skill.toLowerCase().includes(rSkill.toLowerCase())
+      )
     );
 
-    const aiMissingSkills = jobAnalysis.skills.filter(skill => 
-      !resumeText.includes(skill.toLowerCase())
-    );
+    const aiMissingSkills = calculateMissingSkills(jobAnalysis.skills, resumeSkillsForAI);
 
     // Calculate AI skill match rate
     const aiSkillMatchRate = jobAnalysis.skills.length > 0
@@ -665,6 +820,11 @@ module.exports = {
   scoreResumeWithIntelligentATS,  // NEW: World-class intelligent scoring
   batchScoreResumes,
   extractKeywords,
-  analyzeKeywords
+  // Expose AI and fallback analyzers; maintain backward compat alias
+  analyzeKeywordsWithAI,
+  analyzeKeywordsWithPatterns,
+  analyzeKeywords: analyzeKeywordsWithAI,
+  // Export smart truncation for reuse in tailoring
+  smartTruncateResume
 };
 
