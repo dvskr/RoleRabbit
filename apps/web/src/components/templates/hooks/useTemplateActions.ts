@@ -55,12 +55,14 @@ interface UseTemplateActionsReturn {
   addedTemplateId: string | null;
   favorites: string[];
   uploadedFile: File | null;
+  error: string | null;
 
   // Setters
   setSelectedTemplate: (id: string | null) => void;
   setShowPreviewModal: (show: boolean) => void;
   setShowUploadModal: (show: boolean) => void;
   setUploadedFile: (file: File | null) => void;
+  clearError: () => void;
 
   // Actions
   handlePreviewTemplate: (templateId: string) => void;
@@ -85,6 +87,9 @@ export const useTemplateActions = (
   const [addedTemplateId, setAddedTemplateId] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<string[]>(() => loadFavoritesFromStorage());
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = useCallback(() => setError(null), []);
 
   // Persist favorites to localStorage whenever they change
   useEffect(() => {
@@ -127,21 +132,41 @@ export const useTemplateActions = (
   );
 
   const handleDownloadTemplate = useCallback(() => {
-    if (!currentSelectedTemplate) return;
-    logger.debug('Downloading template:', currentSelectedTemplate.name);
+    if (!currentSelectedTemplate) {
+      setError('No template selected for download');
+      return;
+    }
 
-    const htmlContent = getTemplateDownloadHTML(currentSelectedTemplate);
-    downloadTemplateAsHTML(currentSelectedTemplate, htmlContent);
+    try {
+      logger.debug('Downloading template:', currentSelectedTemplate.name);
+      const htmlContent = getTemplateDownloadHTML(currentSelectedTemplate);
+      downloadTemplateAsHTML(currentSelectedTemplate, htmlContent);
+      setError(null); // Clear any previous errors
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to download template';
+      logger.error('Error downloading template:', err);
+      setError(errorMessage);
+    }
   }, [currentSelectedTemplate]);
 
   const handleShareTemplate = useCallback(async () => {
-    if (!currentSelectedTemplate) return;
-    logger.debug('Sharing template:', currentSelectedTemplate.name);
+    if (!currentSelectedTemplate) {
+      setError('No template selected for sharing');
+      return;
+    }
 
-    await shareTemplate({
-      name: currentSelectedTemplate.name,
-      description: currentSelectedTemplate.description,
-    });
+    try {
+      logger.debug('Sharing template:', currentSelectedTemplate.name);
+      await shareTemplate({
+        name: currentSelectedTemplate.name,
+        description: currentSelectedTemplate.description,
+      });
+      setError(null); // Clear any previous errors
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to share template';
+      logger.error('Error sharing template:', err);
+      setError(errorMessage);
+    }
   }, [currentSelectedTemplate]);
 
   const toggleFavorite = useCallback((templateId: string) => {
@@ -160,12 +185,14 @@ export const useTemplateActions = (
     addedTemplateId,
     favorites,
     uploadedFile,
+    error,
 
     // Setters
     setSelectedTemplate,
     setShowPreviewModal,
     setShowUploadModal,
     setUploadedFile,
+    clearError,
 
     // Actions
     handlePreviewTemplate,

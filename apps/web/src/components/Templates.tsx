@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { TemplatesProps, TemplateViewMode } from './templates/types';
 import { useTemplateFilters } from './templates/hooks/useTemplateFilters';
@@ -82,6 +82,32 @@ export default function Templates({
         setShowPremiumOnly={filterState.setShowPremiumOnly}
         colors={colors}
       />
+
+      {/* Error Banner */}
+      {actionsState.error && (
+        <div
+          className="mx-4 mt-3 p-3 rounded-lg flex items-start gap-3"
+          style={{
+            background: `${colors.errorRed}15`,
+            border: `1px solid ${colors.errorRed}40`
+          }}
+        >
+          <AlertCircle size={20} style={{ color: colors.errorRed, flexShrink: 0 }} />
+          <div className="flex-1">
+            <p style={{ color: colors.errorRed }} className="text-sm font-medium">
+              {actionsState.error}
+            </p>
+          </div>
+          <button
+            onClick={actionsState.clearError}
+            className="p-1 rounded hover:bg-black/5 transition-colors"
+            style={{ color: colors.errorRed }}
+            aria-label="Dismiss error"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <div
