@@ -1,5 +1,6 @@
 /**
  * TemplateCard - Grid view template card component
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
 import React from 'react';
@@ -29,7 +30,7 @@ interface TemplateCardProps {
   onRemove?: (templateId: string) => void;
 }
 
-export default function TemplateCard({
+function TemplateCard({
   template,
   isAdded,
   isFavorite,
@@ -289,3 +290,16 @@ export default function TemplateCard({
   );
 }
 
+/**
+ * Memoized export to prevent unnecessary re-renders
+ * Only re-renders when props actually change
+ */
+export default React.memo(TemplateCard, (prevProps, nextProps) => {
+  return (
+    prevProps.template.id === nextProps.template.id &&
+    prevProps.isAdded === nextProps.isAdded &&
+    prevProps.isFavorite === nextProps.isFavorite &&
+    prevProps.addedTemplateId === nextProps.addedTemplateId
+    // colors and callbacks are assumed stable
+  );
+});

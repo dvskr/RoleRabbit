@@ -16,6 +16,7 @@ import UploadTemplateModal from './templates/components/UploadTemplateModal';
 import PaginationControls from './templates/components/PaginationControls';
 import EmptyState from './templates/components/EmptyState';
 import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundary';
+import FilterChips from './templates/components/FilterChips';
 
 /**
  * Templates Component (Internal)
@@ -92,6 +93,26 @@ function TemplatesInternal({
       >
         {/* Stats */}
         <TemplateStats colors={colors} />
+
+        {/* Filter Chips */}
+        <FilterChips
+          selectedCategory={filterState.selectedCategory}
+          selectedDifficulty={filterState.selectedDifficulty}
+          selectedLayout={filterState.selectedLayout}
+          selectedColorScheme={filterState.selectedColorScheme}
+          showFreeOnly={filterState.showFreeOnly}
+          showPremiumOnly={filterState.showPremiumOnly}
+          sortBy={filterState.sortBy}
+          setSelectedCategory={filterState.setSelectedCategory}
+          setSelectedDifficulty={filterState.setSelectedDifficulty}
+          setSelectedLayout={filterState.setSelectedLayout}
+          setSelectedColorScheme={filterState.setSelectedColorScheme}
+          setShowFreeOnly={filterState.setShowFreeOnly}
+          setShowPremiumOnly={filterState.setShowPremiumOnly}
+          setSortBy={filterState.setSortBy}
+          clearAllFilters={filterState.clearAllFilters}
+          colors={colors}
+        />
 
         {/* Added Templates Section */}
         {addedTemplatesList.length > 0 && (
