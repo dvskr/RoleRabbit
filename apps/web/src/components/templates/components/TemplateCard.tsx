@@ -217,6 +217,35 @@ export default function TemplateCard({
           </span>
         </div>
 
+        {/* Tags - Display first 3 tags */}
+        {template.tags && template.tags.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {template.tags.slice(0, 3).map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-0.5 rounded text-xs"
+                style={{
+                  background: `${colors.primaryBlue}15`,
+                  color: colors.primaryBlue,
+                  border: `1px solid ${colors.primaryBlue}30`,
+                }}
+                title={tag}
+              >
+                {tag}
+              </span>
+            ))}
+            {template.tags.length > 3 && (
+              <span
+                className="text-xs"
+                style={{ color: colors.tertiaryText }}
+                title={`+${template.tags.length - 3} more tags`}
+              >
+                +{template.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mt-auto">
           <div
             className="flex items-center gap-1 text-sm"

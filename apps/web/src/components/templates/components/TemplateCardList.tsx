@@ -186,6 +186,35 @@ export default function TemplateCardList({
             </span>
           </div>
 
+          {/* Tags - Display first 4 tags */}
+          {template.tags && template.tags.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+              {template.tags.slice(0, 4).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    background: `${colors.primaryBlue}15`,
+                    color: colors.primaryBlue,
+                    border: `1px solid ${colors.primaryBlue}30`,
+                  }}
+                  title={tag}
+                >
+                  {tag}
+                </span>
+              ))}
+              {template.tags.length > 4 && (
+                <span
+                  className="text-xs"
+                  style={{ color: colors.tertiaryText }}
+                  title={`${template.tags.slice(4).join(', ')}`}
+                >
+                  +{template.tags.length - 4} more
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               {template.features.slice(0, 3).map(feature => (
