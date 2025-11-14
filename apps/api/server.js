@@ -337,6 +337,7 @@ fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/userPreferences.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
+fastify.register(require('./routes/advanced-features.routes'), { prefix: '/api/storage' });
 fastify.register(require('./routes/resume.routes'));
 fastify.register(require('./routes/baseResume.routes'));
 fastify.register(require('./routes/workingDraft.routes'));

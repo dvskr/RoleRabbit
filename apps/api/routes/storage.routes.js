@@ -536,6 +536,21 @@ async function storageRoutes(fastify, _options) {
 
       logger.info(`File uploaded successfully: ${storageResult.path}`);
 
+      // Log file activity
+      if (savedFile && fastify.logFileActivity) {
+        try {
+          await fastify.logFileActivity(
+            savedFile.id,
+            userId,
+            'uploaded',
+            { fileName: savedFile.fileName, size: fileSize, contentType: contentType },
+            request
+          );
+        } catch (activityError) {
+          logger.warn('Failed to log file activity:', activityError.message);
+        }
+      }
+
       // Emit real-time event for file creation
       if (socketIOServer.isInitialized()) {
         socketIOServer.notifyFileCreated(userId, fileMetadata);
@@ -737,6 +752,21 @@ async function storageRoutes(fastify, _options) {
 
       logger.info(`✅ File soft deleted (moved to recycle bin): ${fileId}`);
 
+      // Log file activity
+      if (fastify.logFileActivity) {
+        try {
+          await fastify.logFileActivity(
+            fileId,
+            userId,
+            'deleted',
+            { permanent: false },
+            request
+          );
+        } catch (activityError) {
+          logger.warn('Failed to log file activity:', activityError.message);
+        }
+      }
+
       // Emit real-time event for file deletion
       if (socketIOServer.isInitialized()) {
         socketIOServer.notifyFileDeleted(userId, fileId, false);
@@ -807,6 +837,21 @@ async function storageRoutes(fastify, _options) {
       });
 
       logger.info(`✅ File restored from recycle bin: ${fileId}`);
+
+      // Log file activity
+      if (fastify.logFileActivity) {
+        try {
+          await fastify.logFileActivity(
+            fileId,
+            userId,
+            'restored',
+            {},
+            request
+          );
+        } catch (activityError) {
+          logger.warn('Failed to log file activity:', activityError.message);
+        }
+      }
 
       // Format file for real-time event
       const restoredFile = {
@@ -1117,6 +1162,21 @@ async function storageRoutes(fastify, _options) {
         logger.debug(`File downloaded via share: ${permissionCheck.share.id}`);
       }
 
+      // Log file activity
+      if (fastify.logFileActivity) {
+        try {
+          await fastify.logFileActivity(
+            fileId,
+            userId,
+            'downloaded',
+            {},
+            request
+          );
+        } catch (activityError) {
+          logger.warn('Failed to log file activity:', activityError.message);
+        }
+      }
+
       // Set appropriate headers
       reply.type(file.contentType || 'application/octet-stream');
       reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName || file.name)}"`);
@@ -1296,6 +1356,21 @@ async function storageRoutes(fastify, _options) {
           // Don't fail the share if email fails - just notify the user
         }
 
+        // Log file activity for external share
+        if (fastify.logFileActivity) {
+          try {
+            await fastify.logFileActivity(
+              fileId,
+              userId,
+              'shared',
+              { sharedWith: userEmail, shareType: 'link' },
+              request
+            );
+          } catch (activityError) {
+            logger.warn('Failed to log file activity:', activityError.message);
+          }
+        }
+
         return reply.send({
           success: true,
           share: {
@@ -1381,6 +1456,21 @@ async function storageRoutes(fastify, _options) {
           logger.error('Failed to send share email:', err);
           emailError = err?.message || 'Failed to send email notification';
           // Don't fail the share if email fails - just notify the user
+        }
+      }
+
+      // Log file activity for user share
+      if (fastify.logFileActivity && sharedUser) {
+        try {
+          await fastify.logFileActivity(
+            fileId,
+            userId,
+            'shared',
+            { sharedWith: userEmail, shareType: 'user' },
+            request
+          );
+        } catch (activityError) {
+          logger.warn('Failed to log file activity:', activityError.message);
         }
       }
 
