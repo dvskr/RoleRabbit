@@ -1,147 +1,355 @@
+/**
+ * Job Tracker Routes Module
+ * Handles job application tracking with database persistence
+ */
+
 'use strict';
 
-const { randomUUID } = require('crypto');
 const { authenticate } = require('../middleware/auth');
+const { createRateLimitMiddleware } = require('../middleware/rateLimit');
+const { prisma, safeQuery } = require('../utils/db');
+const { validateJobData } = require('../utils/jobValidation');
+const {
+  jobGetLimiter,
+  jobPostLimiter,
+  jobPutLimiter,
+  jobDeleteLimiter
+} = require('../utils/rateLimiter');
 const logger = require('../utils/logger');
 
-const jobsStore = new Map();
+// Create rate limit middleware instances
+const jobGetRateLimit = createRateLimitMiddleware(jobGetLimiter);
+const jobPostRateLimit = createRateLimitMiddleware(jobPostLimiter);
+const jobPutRateLimit = createRateLimitMiddleware(jobPutLimiter);
+const jobDeleteRateLimit = createRateLimitMiddleware(jobDeleteLimiter);
 
-function getUserJobs(userId) {
-  if (!jobsStore.has(userId)) {
-    jobsStore.set(userId, []);
-  }
-  return jobsStore.get(userId);
-}
-
-function ensureSampleJobs(userId) {
-  const jobs = getUserJobs(userId);
-  if (jobs.length === 0) {
-    const sampleJob = {
-      id: randomUUID(),
-      title: 'Senior Product Manager',
-      company: 'Aurora Analytics',
-      location: 'Remote • United States',
-      status: 'applied',
-      appliedDate: new Date().toISOString().split('T')[0],
-      priority: 'high',
-      url: 'https://jobs.aurora-analytics.com/senior-product-manager',
-      notes: 'Follow up with hiring manager next week',
-      contact: {
-        name: 'Jamie Chen',
-        email: 'jamie.chen@aurora-analytics.com',
-      },
-      requirements: [
-        '7+ years product management experience',
-        'Experience with B2B SaaS analytics products',
-        'Strong stakeholder communication skills',
-      ],
-      remote: true,
-      companySize: '201-500 employees',
-      industry: 'Technology',
-      createdAt: new Date().toISOString(),
-      lastUpdated: new Date().toISOString(),
-    };
-    jobs.push(sampleJob);
-  }
-  return jobs;
-}
-
+/**
+ * Register all job routes with Fastify instance
+ * @param {FastifyInstance} fastify - Fastify instance
+ */
 module.exports = async function jobsRoutes(fastify) {
-  fastify.get('/api/jobs', { preHandler: authenticate }, async (request) => {
-    const userId = request.user?.userId || request.user?.id;
-    if (!userId) {
-      return { success: false, jobs: [] };
+  // Log route registration
+  logger.info('💼 Job Tracker routes registered: /api/jobs/*');
+  logger.info('   → GET    /api/jobs');
+  logger.info('   → POST   /api/jobs');
+  logger.info('   → PUT    /api/jobs/:id');
+  logger.info('   → DELETE /api/jobs/:id');
+
+  /**
+   * GET /api/jobs
+   * Fetch all jobs for authenticated user
+   */
+  fastify.get(
+    '/api/jobs',
+    {
+      preHandler: [authenticate, jobGetRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        // Fetch jobs from database with retry logic
+        const jobs = await safeQuery(async () => {
+          return await prisma.job.findMany({
+            where: {
+              userId,
+              deletedAt: null // Exclude soft-deleted jobs
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          });
+        });
+
+        logger.debug('Jobs fetched for user', { userId, count: jobs.length });
+
+        return reply.send({
+          success: true,
+          jobs
+        });
+      } catch (error) {
+        logger.error('Failed to fetch jobs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to fetch jobs. Please try again.',
+          message: error.message
+        });
+      }
     }
+  );
 
-    const jobs = ensureSampleJobs(userId);
-    return {
-      success: true,
-      jobs,
-    };
-  });
+  /**
+   * POST /api/jobs
+   * Create new job application
+   */
+  fastify.post(
+    '/api/jobs',
+    {
+      preHandler: [authenticate, jobPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
 
-  fastify.post('/api/jobs', { preHandler: authenticate }, async (request, reply) => {
-    const userId = request.user?.userId || request.user?.id;
-    if (!userId) {
-      return reply.status(401).send({ success: false, error: 'User not authenticated' });
+        const payload = request.body || {};
+
+        // Validate input data
+        const validation = validateJobData(payload);
+        if (!validation.valid) {
+          logger.warn('Job validation failed', { userId, errors: validation.errors });
+          return reply.status(400).send({
+            success: false,
+            error: 'Validation failed',
+            errors: validation.errors
+          });
+        }
+
+        // Prepare job data for database
+        const jobData = {
+          userId,
+          title: payload.title,
+          company: payload.company,
+          location: payload.location,
+          status: payload.status || 'APPLIED',
+          priority: payload.priority || 'MEDIUM',
+          appliedDate: payload.appliedDate,
+          salary: payload.salary || null,
+          description: payload.description || null,
+          url: payload.url || null,
+          notes: payload.notes || null,
+          nextStep: payload.nextStep || null,
+          nextStepDate: payload.nextStepDate || null,
+          contact: payload.contact || null,
+          requirements: payload.requirements || [],
+          benefits: payload.benefits || [],
+          remote: payload.remote !== undefined ? !!payload.remote : false,
+          companySize: payload.companySize || null,
+          industry: payload.industry || null,
+          isFavorite: payload.isFavorite !== undefined ? !!payload.isFavorite : false
+        };
+
+        // Create job in database with retry logic
+        const job = await safeQuery(async () => {
+          return await prisma.job.create({
+            data: jobData
+          });
+        });
+
+        logger.info('Job created successfully', { userId, jobId: job.id, title: job.title });
+
+        return reply.status(201).send({
+          success: true,
+          job
+        });
+      } catch (error) {
+        logger.error('Failed to create job:', error);
+
+        // Check for specific Prisma errors
+        if (error.code === 'P2002') {
+          return reply.status(409).send({
+            success: false,
+            error: 'A job with these details already exists'
+          });
+        }
+
+        if (error.code === 'P2003') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid user reference'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create job. Please try again.',
+          message: error.message
+        });
+      }
     }
+  );
 
-    const payload = request.body || {};
-    const newJob = {
-      id: randomUUID(),
-      title: payload.title || 'Untitled Job',
-      company: payload.company || '',
-      location: payload.location || '',
-      status: payload.status || 'applied',
-      appliedDate: payload.appliedDate || new Date().toISOString().split('T')[0],
-      lastUpdated: new Date().toISOString(),
-      priority: payload.priority || 'medium',
-      salary: payload.salary || '',
-      description: payload.description || '',
-      url: payload.url || '',
-      notes: payload.notes || '',
-      contact: payload.contact || {},
-      requirements: Array.isArray(payload.requirements) ? payload.requirements : [],
-      benefits: Array.isArray(payload.benefits) ? payload.benefits : [],
-      remote: !!payload.remote,
-      companySize: payload.companySize || '',
-      industry: payload.industry || '',
-      nextStep: payload.nextStep || '',
-      nextStepDate: payload.nextStepDate || null,
-      createdAt: new Date().toISOString(),
-      deletedAt: payload.deletedAt || undefined,
-    };
+  /**
+   * PUT /api/jobs/:id
+   * Update existing job
+   */
+  fastify.put(
+    '/api/jobs/:id',
+    {
+      preHandler: [authenticate, jobPutRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
 
-    const jobs = getUserJobs(userId);
-    jobs.push(newJob);
-    logger.debug('Job saved for user', { userId, jobId: newJob.id });
+        const { id } = request.params;
+        const payload = request.body || {};
 
-    return reply.status(201).send({ success: true, job: newJob });
-  });
+        // Check if job exists and belongs to user
+        const existingJob = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: {
+              id,
+              userId
+            }
+          });
+        });
 
-  fastify.put('/api/jobs/:id', { preHandler: authenticate }, async (request, reply) => {
-    const userId = request.user?.userId || request.user?.id;
-    if (!userId) {
-      return reply.status(401).send({ success: false, error: 'User not authenticated' });
+        if (!existingJob) {
+          logger.warn('Job not found or unauthorized', { userId, jobId: id });
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Validate update data (partial validation)
+        if (Object.keys(payload).length > 0) {
+          const validation = validateJobData({ ...existingJob, ...payload });
+          if (!validation.valid) {
+            logger.warn('Job update validation failed', { userId, jobId: id, errors: validation.errors });
+            return reply.status(400).send({
+              success: false,
+              error: 'Validation failed',
+              errors: validation.errors
+            });
+          }
+        }
+
+        // Prepare update data (only include fields that are present in payload)
+        const updateData = {};
+        const allowedFields = [
+          'title', 'company', 'location', 'status', 'priority', 'appliedDate',
+          'salary', 'description', 'url', 'notes', 'nextStep', 'nextStepDate',
+          'contact', 'requirements', 'benefits', 'remote', 'companySize',
+          'industry', 'isFavorite'
+        ];
+
+        allowedFields.forEach(field => {
+          if (payload[field] !== undefined) {
+            updateData[field] = payload[field];
+          }
+        });
+
+        // Update job in database with retry logic
+        const updatedJob = await safeQuery(async () => {
+          return await prisma.job.update({
+            where: { id },
+            data: updateData
+          });
+        });
+
+        logger.info('Job updated successfully', { userId, jobId: id });
+
+        return reply.send({
+          success: true,
+          job: updatedJob
+        });
+      } catch (error) {
+        logger.error('Failed to update job:', error);
+
+        if (error.code === 'P2025') {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update job. Please try again.',
+          message: error.message
+        });
+      }
     }
+  );
 
-    const jobs = getUserJobs(userId);
-    const { id } = request.params;
-    const index = jobs.findIndex((job) => job.id === id);
-    if (index === -1) {
-      return reply.status(404).send({ success: false, error: 'Job not found' });
+  /**
+   * DELETE /api/jobs/:id
+   * Permanently delete job (hard delete)
+   * Note: Soft delete is handled via PUT with deletedAt field
+   */
+  fastify.delete(
+    '/api/jobs/:id',
+    {
+      preHandler: [authenticate, jobDeleteRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id } = request.params;
+
+        // Check if job exists and belongs to user
+        const existingJob = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: {
+              id,
+              userId
+            }
+          });
+        });
+
+        if (!existingJob) {
+          logger.warn('Job not found or unauthorized', { userId, jobId: id });
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Permanently delete job from database with retry logic
+        await safeQuery(async () => {
+          return await prisma.job.delete({
+            where: { id }
+          });
+        });
+
+        logger.info('Job deleted permanently', { userId, jobId: id });
+
+        return reply.send({
+          success: true,
+          message: 'Job deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete job:', error);
+
+        if (error.code === 'P2025') {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete job. Please try again.',
+          message: error.message
+        });
+      }
     }
-
-    const updates = request.body || {};
-    const updatedJob = {
-      ...jobs[index],
-      ...updates,
-      lastUpdated: new Date().toISOString(),
-    };
-    jobs[index] = updatedJob;
-    logger.debug('Job updated for user', { userId, jobId: id });
-
-    return { success: true, job: updatedJob };
-  });
-
-  fastify.delete('/api/jobs/:id', { preHandler: authenticate }, async (request, reply) => {
-    const userId = request.user?.userId || request.user?.id;
-    if (!userId) {
-      return reply.status(401).send({ success: false, error: 'User not authenticated' });
-    }
-
-    const jobs = getUserJobs(userId);
-    const { id } = request.params;
-    const index = jobs.findIndex((job) => job.id === id);
-    if (index === -1) {
-      return reply.status(404).send({ success: false, error: 'Job not found' });
-    }
-
-    jobs.splice(index, 1);
-    logger.debug('Job deleted for user', { userId, jobId: id });
-
-    return { success: true };
-  });
+  );
 };
-
-
