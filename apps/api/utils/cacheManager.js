@@ -12,16 +12,43 @@ const memoryCache = new LRUCache({
 
 let redisClient = null;
 let redisStatus = 'disabled';
+let redisLastError = null;
+let redisLastErrorTime = null;
+let redisReconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 10;
+
+// Track Redis metrics
+const redisMetrics = {
+  hits: 0,
+  misses: 0,
+  errors: 0,
+  reconnects: 0,
+  lastHealthCheck: null,
+  lastHealthCheckResult: null
+};
 
 function buildRedisOptions() {
   const options = {
     lazyConnect: cacheConfig.redisLazyConnect,
-    maxRetriesPerRequest: 1,
-    enableAutoPipelining: true
+    maxRetriesPerRequest: 3, // Increased from 1 for better reliability
+    enableAutoPipelining: true,
+    retryStrategy: (times) => {
+      // Exponential backoff with max 10 seconds
+      const delay = Math.min(times * 1000, 10000);
+      logger.info(`Redis retry attempt ${times}, waiting ${delay}ms`);
+      return delay;
+    },
+    reconnectOnError: (err) => {
+      // Reconnect on specific errors
+      const targetErrors = ['READONLY', 'ECONNREFUSED', 'ETIMEDOUT'];
+      return targetErrors.some(targetError => err.message.includes(targetError));
+    }
   };
 
   if (cacheConfig.redisTls) {
-    options.tls = {};
+    options.tls = {
+      rejectUnauthorized: process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false'
+    };
   }
 
   return options;
@@ -37,27 +64,67 @@ function initializeRedis() {
 
   redisClient.on('ready', () => {
     redisStatus = 'ready';
-    logger.info('Redis cache connected');
+    redisReconnectAttempts = 0;
+    redisLastError = null;
+    logger.info('✅ Redis cache connected and ready');
+  });
+
+  redisClient.on('connect', () => {
+    logger.info('Redis cache connecting...');
+  });
+
+  redisClient.on('reconnecting', (delay) => {
+    redisStatus = 'reconnecting';
+    redisReconnectAttempts++;
+    redisMetrics.reconnects++;
+    logger.warn(`Redis reconnecting (attempt ${redisReconnectAttempts}), delay: ${delay}ms`);
+    
+    if (redisReconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
+      logger.error(`Redis max reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached, giving up`);
+      redisClient.disconnect();
+      redisStatus = 'failed';
+    }
   });
 
   redisClient.on('error', (error) => {
     redisStatus = 'error';
-    logger.error('Redis cache error', { error: error.message });
+    redisLastError = error.message;
+    redisLastErrorTime = new Date().toISOString();
+    redisMetrics.errors++;
+    
+    // Log error but don't spam logs
+    if (redisMetrics.errors % 10 === 1) { // Log every 10th error
+      logger.error('Redis cache error', { 
+        error: error.message,
+        errorCount: redisMetrics.errors,
+        reconnectAttempts: redisReconnectAttempts
+      });
+    }
   });
 
   redisClient.on('end', () => {
     redisStatus = 'disconnected';
-    if (cacheConfig.redisReconnectIntervalMs > 0) {
+    logger.warn('Redis connection ended');
+    
+    // Automatic reconnection is handled by ioredis retryStrategy
+    // Manual reconnection as fallback
+    if (cacheConfig.redisReconnectIntervalMs > 0 && redisReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       setTimeout(() => {
         try {
+          logger.info('Attempting manual Redis reconnection...');
           redisClient.connect().catch((error) => {
-            logger.error('Redis reconnect failed', { error: error.message });
+            logger.error('Manual Redis reconnect failed', { error: error.message });
           });
         } catch (error) {
-          logger.error('Redis reconnect threw', { error: error.message });
+          logger.error('Manual Redis reconnect threw', { error: error.message });
         }
       }, cacheConfig.redisReconnectIntervalMs);
     }
+  });
+
+  redisClient.on('close', () => {
+    redisStatus = 'closed';
+    logger.warn('Redis connection closed');
   });
 }
 
@@ -77,16 +144,20 @@ function toRedisKey(key) {
 
 async function readRedis(key) {
   if (!isRedisReady()) {
+    redisMetrics.misses++;
     return undefined;
   }
 
   try {
     const raw = await redisClient.get(toRedisKey(key));
     if (!raw) {
+      redisMetrics.misses++;
       return undefined;
     }
+    redisMetrics.hits++;
     return JSON.parse(raw);
   } catch (error) {
+    redisMetrics.errors++;
     logger.error('Failed to read value from Redis cache', { error: error.message, key });
     return undefined;
   }
@@ -198,12 +269,124 @@ async function wrap({ namespace, keyParts, ttl, fetch, forceRefresh = false, ski
   return { value, hit: false };
 }
 
+/**
+ * Perform Redis health check
+ */
+async function checkRedisHealth() {
+  if (!cacheConfig.redisEnabled) {
+    return {
+      status: 'disabled',
+      message: 'Redis is not enabled'
+    };
+  }
+
+  if (!redisClient) {
+    return {
+      status: 'not_initialized',
+      message: 'Redis client not initialized'
+    };
+  }
+
+  try {
+    const startTime = Date.now();
+    await redisClient.ping();
+    const responseTime = Date.now() - startTime;
+    
+    // Get Redis info
+    const info = await redisClient.info('memory');
+    const memoryMatch = info.match(/used_memory_human:([^\r\n]+)/);
+    const memoryUsed = memoryMatch ? memoryMatch[1] : 'unknown';
+    
+    redisMetrics.lastHealthCheck = new Date().toISOString();
+    redisMetrics.lastHealthCheckResult = 'healthy';
+    
+    return {
+      status: 'healthy',
+      responseTime: `${responseTime}ms`,
+      memoryUsed,
+      connectionStatus: redisStatus,
+      reconnectAttempts: redisReconnectAttempts,
+      lastError: redisLastError,
+      lastErrorTime: redisLastErrorTime
+    };
+  } catch (error) {
+    redisMetrics.lastHealthCheck = new Date().toISOString();
+    redisMetrics.lastHealthCheckResult = 'unhealthy';
+    redisMetrics.errors++;
+    
+    return {
+      status: 'unhealthy',
+      error: error.message,
+      connectionStatus: redisStatus,
+      reconnectAttempts: redisReconnectAttempts,
+      lastError: redisLastError,
+      lastErrorTime: redisLastErrorTime
+    };
+  }
+}
+
+/**
+ * Get Redis memory usage
+ */
+async function getRedisMemoryUsage() {
+  if (!isRedisReady()) {
+    return null;
+  }
+
+  try {
+    const info = await redisClient.info('memory');
+    const stats = {};
+    
+    // Parse memory info
+    const patterns = {
+      used_memory: /used_memory:(\d+)/,
+      used_memory_human: /used_memory_human:([^\r\n]+)/,
+      used_memory_peak: /used_memory_peak:(\d+)/,
+      used_memory_peak_human: /used_memory_peak_human:([^\r\n]+)/,
+      maxmemory: /maxmemory:(\d+)/,
+      maxmemory_human: /maxmemory_human:([^\r\n]+)/
+    };
+    
+    for (const [key, pattern] of Object.entries(patterns)) {
+      const match = info.match(pattern);
+      if (match) {
+        stats[key] = match[1];
+      }
+    }
+    
+    return stats;
+  } catch (error) {
+    logger.error('Failed to get Redis memory usage', { error: error.message });
+    return null;
+  }
+}
+
 function getStats() {
+  const totalRequests = redisMetrics.hits + redisMetrics.misses;
+  const hitRate = totalRequests > 0 
+    ? ((redisMetrics.hits / totalRequests) * 100).toFixed(2)
+    : 0;
+
   return {
-    memoryEntries: memoryCache.size,
-    memoryCapacity: cacheConfig.lruMaxItems,
-    redisEnabled: cacheConfig.redisEnabled,
-    redisStatus
+    memory: {
+      entries: memoryCache.size,
+      capacity: cacheConfig.lruMaxItems,
+      utilizationPercent: ((memoryCache.size / cacheConfig.lruMaxItems) * 100).toFixed(2)
+    },
+    redis: {
+      enabled: cacheConfig.redisEnabled,
+      status: redisStatus,
+      hits: redisMetrics.hits,
+      misses: redisMetrics.misses,
+      errors: redisMetrics.errors,
+      reconnects: redisMetrics.reconnects,
+      hitRate: `${hitRate}%`,
+      lastHealthCheck: redisMetrics.lastHealthCheck,
+      lastHealthCheckResult: redisMetrics.lastHealthCheckResult,
+      lastError: redisLastError,
+      lastErrorTime: redisLastErrorTime,
+      reconnectAttempts: redisReconnectAttempts
+    }
   };
 }
 
@@ -213,5 +396,8 @@ module.exports = {
   del,
   wrap,
   invalidateNamespace,
-  getStats
+  getStats,
+  checkRedisHealth,
+  getRedisMemoryUsage,
+  isRedisReady: () => isRedisReady()
 };

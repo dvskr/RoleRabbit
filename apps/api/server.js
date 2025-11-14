@@ -1,6 +1,20 @@
 // Load environment variables FIRST before anything else
 require('dotenv').config();
 
+// SECURITY: Validate environment variables on startup
+const { validateEnv, printEnvStatus } = require('./utils/envValidator');
+
+// Validate required environment variables
+validateEnv({
+  exitOnError: process.env.NODE_ENV === 'production', // Exit on error in production
+  logResults: true
+});
+
+// Print environment status (only in development)
+if (process.env.NODE_ENV !== 'production') {
+  printEnvStatus();
+}
+
 const fastify = require('fastify')({
   bodyLimit: 10485760, // 10MB body limit for JSON requests
   requestTimeout: 300000, // 300 second (5 minute) request timeout for AI operations
@@ -103,7 +117,7 @@ const {
 } = require('./utils/versioning');
 
 // Sanitization utilities
-const { sanitizationMiddleware } = require('./utils/sanitizer');
+const { sanitizeRequestBody } = require('./utils/sanitizer');
 
 
 // Register compression with disabled global compression to prevent premature close warnings
@@ -121,7 +135,36 @@ try {
 
 // Register security headers (helmet)
 fastify.register(require('@fastify/helmet'), {
-  contentSecurityPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false, // Disable for API
+  crossOriginOpenerPolicy: false, // Disable for API
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow cross-origin for API
+  dnsPrefetchControl: { allow: false },
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  ieNoOpen: true,
+  noSniff: true,
+  originAgentCluster: true,
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xssFilter: true
 });
 
 // Register CORS
@@ -221,9 +264,6 @@ fastify.addHook('preValidation', async (request, _reply) => {
   if (request.query && typeof request.query === 'object') {
     request.query = sanitizeInput(request.query);
   }
-  
-  // Apply additional sanitization
-  sanitizationMiddleware()(request, _reply);
 });
 
 // Hook to handle response completion and ensure proper serialization
@@ -257,22 +297,6 @@ fastify.addHook('onResponse', async (_request, reply) => {
 // Note: Global error handler is set later in the file
 // The premature close errors are handled via stream filtering above
 
-// Health check
-// Health check endpoint with detailed status
-fastify.get('/health', async (request, reply) => {
-  try {
-    const healthStatus = await getHealthStatus();
-    const statusCode = healthStatus.status === 'healthy' ? 200 : 503;
-    reply.status(statusCode).send(healthStatus);
-  } catch (error) {
-    reply.status(503).send({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
 // API status with versioning info
 fastify.get('/api/status', async () => ({
   message: 'RoleReady Node.js API is running',
@@ -284,7 +308,12 @@ fastify.get('/api/status', async () => ({
   }
 }));
 
+// Register Performance Monitoring Plugin
+const { performanceMonitorPlugin } = require('./utils/performanceMonitor');
+fastify.register(performanceMonitorPlugin);
+
 // Register route modules
+fastify.register(require('./routes/health.routes')); // Health check routes
 fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/userPreferences.routes'));
@@ -295,6 +324,11 @@ fastify.register(require('./routes/workingDraft.routes'));
 fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));
+fastify.register(require('./routes/spending.routes')); // Spending/cost tracking routes
+fastify.register(require('./routes/admin/costMonitoring.routes')); // Admin cost monitoring
+fastify.register(require('./routes/analytics.routes')); // Analytics tracking
+fastify.register(require('./routes/monitoring.routes')); // Success rate monitoring
+fastify.register(require('./routes/queue.routes')); // Job queue management
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -418,6 +452,21 @@ const start = async () => {
       // Don't fail server startup if Socket.IO fails
     }
     
+    // Initialize job queues and workers (optional - only if Redis is available)
+    if (process.env.ENABLE_JOB_QUEUE !== 'false') {
+      try {
+        const { initializeQueues } = require('./services/queue/queueManager');
+        const { initializeWorkers } = require('./services/queue/workers');
+        
+        initializeQueues();
+        initializeWorkers();
+        logger.info('✅ Job queues and workers initialized');
+      } catch (queueError) {
+        logger.warn('⚠️ Failed to initialize job queues (server will continue with direct processing):', queueError.message);
+        // Don't fail server startup if queue initialization fails
+      }
+    }
+    
     logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
     logger.info(`📊 Health check: http://${host}:${port}/health`);
     logger.info(`📋 API status: http://${host}:${port}/api/status`);
@@ -450,6 +499,20 @@ process.on('uncaughtException', (error) => {
 async function shutdown(signal) {
   logger.info(`🛑 Shutting down server (${signal})...`);
   try {
+    // Close job queues and workers
+    if (process.env.ENABLE_JOB_QUEUE !== 'false') {
+      try {
+        const { closeAll } = require('./services/queue/queueManager');
+        const { closeAllWorkers } = require('./services/queue/workers');
+        
+        await closeAllWorkers();
+        await closeAll();
+        logger.info('✅ Job queues and workers closed');
+      } catch (queueError) {
+        logger.warn('⚠️ Error closing queues:', queueError.message);
+      }
+    }
+    
     await fastify.close();
     await disconnectDB();
     logger.info('✅ Server shut down gracefully');

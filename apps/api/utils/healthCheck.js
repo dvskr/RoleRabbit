@@ -3,7 +3,8 @@
  * Provides system health status
  */
 
-const { prisma } = require('./db');
+const { prisma, getPoolStats } = require('./db');
+const { checkRedisHealth, getStats: getCacheStats } = require('./cacheManager');
 const logger = require('./logger');
 
 /**
@@ -43,13 +44,18 @@ function checkMemoryHealth() {
 async function getHealthStatus() {
   const startTime = Date.now();
   
-  const [dbHealth, memory] = await Promise.all([
+  const [dbHealth, memory, poolStats, redisHealth, cacheStats] = await Promise.all([
     checkDatabaseHealth(),
-    Promise.resolve(checkMemoryHealth())
+    Promise.resolve(checkMemoryHealth()),
+    Promise.resolve(getPoolStats()),
+    checkRedisHealth(),
+    Promise.resolve(getCacheStats())
   ]);
   
   const responseTime = Date.now() - startTime;
   
+  // Overall status is healthy only if critical components are healthy
+  // Redis is not critical (app works without it, just slower)
   const overallStatus = dbHealth.status === 'healthy' && memory.status === 'healthy' 
     ? 'healthy' 
     : 'degraded';
@@ -63,9 +69,19 @@ async function getHealthStatus() {
     checks: {
       database: {
         ...dbHealth,
-        responseTime: dbHealth.responseTime || `${responseTime}ms`
+        responseTime: dbHealth.responseTime || `${responseTime}ms`,
+        pool: {
+          connectionLimit: poolStats.config.connectionLimit,
+          poolTimeout: poolStats.config.poolTimeout,
+          connectTimeout: poolStats.config.connectTimeout,
+          pgbouncer: poolStats.config.pgbouncer,
+          isConnected: poolStats.isConnected,
+          reconnectAttempts: poolStats.reconnectAttempts
+        }
       },
-      memory
+      memory,
+      redis: redisHealth,
+      cache: cacheStats
     }
   };
 }
@@ -78,9 +94,52 @@ async function isHealthy() {
   return health.status === 'healthy';
 }
 
+/**
+ * Kubernetes Liveness Probe
+ * Checks if the application is alive and should not be restarted
+ */
+async function getLivenessStatus() {
+  // Basic check: Is the process running and responsive?
+  return {
+    status: 'alive',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  };
+}
+
+/**
+ * Kubernetes Readiness Probe
+ * Checks if the application is ready to receive traffic
+ */
+async function getReadinessStatus() {
+  try {
+    // Check critical dependencies
+    const dbHealth = await checkDatabaseHealth();
+    
+    const isReady = dbHealth.status === 'healthy';
+    
+    return {
+      status: isReady ? 'ready' : 'not_ready',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: dbHealth.status
+      }
+    };
+  } catch (error) {
+    logger.error('Readiness check failed', error);
+    return {
+      status: 'not_ready',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   checkDatabaseHealth,
   checkMemoryHealth,
   getHealthStatus,
-  isHealthy
+  isHealthy,
+  getLivenessStatus,
+  getReadinessStatus
 };

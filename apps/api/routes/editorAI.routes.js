@@ -1,6 +1,8 @@
 const { authenticate } = require('../middleware/auth');
+const { createAIRateLimitMiddleware } = require('../middleware/simpleRateLimit');
 const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
+const { sanitizeJobDescription, sanitizeInstructions, hasSQLInjectionPattern } = require('../utils/sanitizer');
 const cacheManager = require('../utils/cacheManager');
 const { CACHE_NAMESPACES } = require('../utils/cacheKeys');
 const { generateSectionDraft } = require('../services/ai/generateContentService');
@@ -15,6 +17,7 @@ const { recordAIRequest, AIUsageError, ensureActionAllowed } = require('../servi
 const cacheConfig = require('../config/cacheConfig');
 const crypto = require('crypto');
 const { AIAction } = require('@prisma/client');
+const socketIOServer = require('../utils/socketIOServer');
 
 // Hash function for job description caching
 function hashJobDescription(jobDescription = '') {
@@ -190,7 +193,9 @@ module.exports = async function editorAIRoutes(fastify) {
     }
   });
 
-  fastify.post('/api/editor/ai/ats-check', { preHandler: authenticate }, async (request, reply) => {
+  fastify.post('/api/editor/ai/ats-check', { 
+    preHandler: [authenticate, createAIRateLimitMiddleware('ATS_SCORE')] 
+  }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
       const payload = parseBodyOrSendError({
@@ -202,7 +207,29 @@ module.exports = async function editorAIRoutes(fastify) {
       if (!payload) {
         return;
       }
-      const { resumeId, jobDescription } = payload;
+      let { resumeId, jobDescription } = payload;
+
+      // SECURITY: Sanitize job description
+      const sanitizationResult = sanitizeJobDescription(jobDescription, { maxLength: 50000 });
+      jobDescription = sanitizationResult.sanitized;
+      
+      if (sanitizationResult.warnings.length > 0) {
+        logger.warn('[SECURITY] Job description sanitized', {
+          userId: request.user.userId,
+          warnings: sanitizationResult.warnings
+        });
+      }
+
+      // SECURITY: Check for SQL injection patterns
+      if (hasSQLInjectionPattern(jobDescription)) {
+        logger.error('[SECURITY] SQL injection attempt detected in job description', {
+          userId: request.user.userId
+        });
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid input detected. Please remove special characters and try again.'
+        });
+      }
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -358,7 +385,17 @@ module.exports = async function editorAIRoutes(fastify) {
     }
   });
 
-  fastify.post('/api/editor/ai/tailor', { preHandler: authenticate }, async (request, reply) => {
+  fastify.post('/api/editor/ai/tailor', { 
+    preHandler: [
+      authenticate, 
+      async (request, reply) => {
+        // Determine rate limit based on mode
+        const mode = request.body?.mode || 'PARTIAL';
+        const action = mode === 'FULL' ? 'TAILOR_FULL' : 'TAILOR_PARTIAL';
+        return createAIRateLimitMiddleware(action)(request, reply);
+      }
+    ] 
+  }, async (request, reply) => {
     try {
       setCorsHeaders(request, reply);
       const payload = parseBodyOrSendError({
@@ -370,13 +407,35 @@ module.exports = async function editorAIRoutes(fastify) {
       if (!payload) {
         return;
       }
-      const {
+      let {
         resumeId,
         jobDescription,
         mode,
         tone,
         length
       } = payload;
+
+      // SECURITY: Sanitize job description
+      const jobSanitizationResult = sanitizeJobDescription(jobDescription, { maxLength: 50000 });
+      jobDescription = jobSanitizationResult.sanitized;
+      
+      if (jobSanitizationResult.warnings.length > 0) {
+        logger.warn('[SECURITY] Job description sanitized in tailor', {
+          userId: request.user.userId,
+          warnings: jobSanitizationResult.warnings
+        });
+      }
+
+      // SECURITY: Check for SQL injection patterns
+      if (hasSQLInjectionPattern(jobDescription)) {
+        logger.error('[SECURITY] SQL injection attempt detected in tailor request', {
+          userId: request.user.userId
+        });
+        return reply.status(400).send({
+          success: false,
+          error: 'Invalid input detected. Please remove special characters and try again.'
+        });
+      }
 
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
@@ -395,13 +454,24 @@ module.exports = async function editorAIRoutes(fastify) {
         });
       }
 
+      // Generate operation ID for progress tracking
+      const operationId = `tailor_${userId}_${Date.now()}`;
+
+      // Create progress callback that emits to Socket.IO
+      const onProgress = (progressData) => {
+        if (socketIOServer.isInitialized()) {
+          socketIOServer.notifyTailoringProgress(userId, operationId, progressData);
+        }
+      };
+
       const result = await tailorResume({
         user,
         resumeId,
         jobDescription,
         mode,
         tone,
-        length
+        length,
+        onProgress // Pass progress callback
       });
 
       setCorsHeaders(request, reply);
