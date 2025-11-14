@@ -103,6 +103,9 @@ const { sanitizeInput } = require('./utils/security');
 // Database connection
 const { connectDB, disconnectDB } = require('./utils/db');
 
+// Redis cache
+const redisCache = require('./utils/redisCache');
+
 // Socket.IO Server
 const socketIOServer = require('./utils/socketIOServer');
 
@@ -433,7 +436,15 @@ const start = async () => {
     if (!dbConnected) {
       logger.error('❌ Failed to connect to database after multiple attempts. Server will continue but database operations may fail.');
     }
-    
+
+    // Initialize Redis cache (optional - server continues without cache if unavailable)
+    try {
+      redisCache.initializeRedis();
+      logger.info('🔄 Redis cache initialization started (will connect asynchronously)');
+    } catch (cacheError) {
+      logger.warn('⚠️ Redis cache initialization failed (server will continue without cache):', cacheError.message);
+    }
+
     fastify.get('/metrics', async (request, reply) => {
       reply.header('Content-Type', metrics.register.contentType);
       return metrics.register.metrics();
@@ -519,7 +530,14 @@ async function shutdown(signal) {
         logger.warn('⚠️ Error closing queues:', queueError.message);
       }
     }
-    
+
+    // Close Redis cache connection
+    try {
+      await redisCache.close();
+    } catch (cacheError) {
+      logger.warn('⚠️ Error closing Redis cache:', cacheError.message);
+    }
+
     await fastify.close();
     await disconnectDB();
     logger.info('✅ Server shut down gracefully');

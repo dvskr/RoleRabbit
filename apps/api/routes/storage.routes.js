@@ -10,6 +10,7 @@ const { validateFileUpload, validateFileType } = require('../utils/storageValida
 const { checkFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
+const redisCache = require('../utils/redisCache');
 const {
   listFilesSchema,
   uploadFileSchema,
@@ -95,6 +96,24 @@ async function storageRoutes(fastify, _options) {
       const page = parseInt(request.query.page) || 1;
       const limit = parseInt(request.query.limit) || 50; // Default 50 files per page
       const skip = (page - 1) * limit;
+
+      // Try to get from cache (skip cache for search queries)
+      if (!search && redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFileListKey(userId, {
+          folderId,
+          type,
+          page,
+          limit,
+          showDeleted: includeDeleted,
+          showArchived: request.query.showArchived === 'true'
+        });
+
+        const cachedData = await redisCache.get(cacheKey);
+        if (cachedData) {
+          logger.debug(`[CACHE HIT] File list for user ${userId}`);
+          return reply.send(cachedData);
+        }
+      }
 
       // Build where clause
       const where = {
@@ -271,7 +290,7 @@ async function storageRoutes(fastify, _options) {
         logger.warn('Failed to fetch storage quota:', error.message);
       }
 
-      return reply.send({
+      const responseData = {
         success: true,
         files: formattedFiles,
         storage: storageInfo,
@@ -283,7 +302,22 @@ async function storageRoutes(fastify, _options) {
           totalPages: Math.ceil(totalCount / limit),
           hasMore: skip + formattedFiles.length < totalCount
         }
-      });
+      };
+
+      // Cache the response (skip cache for search queries)
+      if (!search && redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFileListKey(userId, {
+          folderId,
+          type,
+          page,
+          limit,
+          showDeleted: includeDeleted,
+          showArchived: request.query.showArchived === 'true'
+        });
+        await redisCache.set(cacheKey, responseData, redisCache.TTL.FILE_LIST);
+      }
+
+      return reply.send(responseData);
 
     } catch (error) {
       logger.error('Error fetching files:', error);
@@ -615,6 +649,12 @@ async function storageRoutes(fastify, _options) {
         socketIOServer.notifyFileCreated(userId, fileMetadata);
       }
 
+      // Invalidate file list cache
+      if (redisCache.isAvailable()) {
+        await redisCache.invalidateFileList(userId);
+        logger.debug(`[CACHE INVALIDATE] File list for user ${userId} after upload`);
+      }
+
           reply.status(201).send({
             success: true,
             file: {
@@ -763,6 +803,12 @@ async function storageRoutes(fastify, _options) {
         socketIOServer.notifyFileUpdated(userId, formattedFile, updates);
       }
 
+      // Invalidate file list cache
+      if (redisCache.isAvailable()) {
+        await redisCache.invalidateFileList(userId);
+        await redisCache.invalidateFile(userId, fileId);
+      }
+
       return reply.send({
         success: true,
         file: formattedFile
@@ -816,6 +862,12 @@ async function storageRoutes(fastify, _options) {
       // Emit real-time event for file deletion
       if (socketIOServer.isInitialized()) {
         socketIOServer.notifyFileDeleted(userId, fileId, false);
+      }
+
+      // Invalidate file list cache
+      if (redisCache.isAvailable()) {
+        await redisCache.invalidateFileList(userId);
+        await redisCache.invalidateFile(userId, fileId);
       }
 
       return reply.send({
@@ -1797,6 +1849,16 @@ async function storageRoutes(fastify, _options) {
         });
       }
 
+      // Try to get from cache
+      if (redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFolderListKey(userId);
+        const cachedData = await redisCache.get(cacheKey);
+        if (cachedData) {
+          logger.debug(`[CACHE HIT] Folder list for user ${userId}`);
+          return reply.send(cachedData);
+        }
+      }
+
       const folders = await prisma.storageFolder.findMany({
         where: { userId },
         orderBy: { createdAt: 'asc' },
@@ -1815,7 +1877,7 @@ async function storageRoutes(fastify, _options) {
 
       logger.info(`✅ Retrieved ${folders.length} folders for user: ${userId}`);
 
-      return reply.send({
+      const responseData = {
         success: true,
         folders: folders.map(folder => ({
           id: folder.id,
@@ -1825,7 +1887,15 @@ async function storageRoutes(fastify, _options) {
           createdAt: folder.createdAt.toISOString(),
           updatedAt: folder.updatedAt.toISOString()
         }))
-      });
+      };
+
+      // Cache the response
+      if (redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFolderListKey(userId);
+        await redisCache.set(cacheKey, responseData, redisCache.TTL.FOLDER_LIST);
+      }
+
+      return reply.send(responseData);
 
     } catch (error) {
       logger.error('Error retrieving folders:', error);
