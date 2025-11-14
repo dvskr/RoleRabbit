@@ -195,24 +195,37 @@ export interface ConfirmTailorResultOptions {
   tailorResult: TailorResult | null;
   saveResume: () => Promise<boolean>;
   clearTailorResult: () => void;
+  setResumeData: (data: ResumeData) => void;
 }
 
 export const applyTailoredResumeChanges = async ({
   tailorResult,
   saveResume,
   clearTailorResult,
+  setResumeData,
 }: ConfirmTailorResultOptions): Promise<boolean> => {
-  if (!tailorResult) {
+  if (!tailorResult || !tailorResult.tailoredResume) {
     return false;
   }
 
-  // Note: The tailored content is already saved to the working draft by the backend
-  // and the editor has already been reloaded with the tailored data via loadResumeById
-  // This "Apply Changes" button just confirms the user wants to keep these changes
-  // and clears the tailor result UI (no need to save again)
+  console.log('✅ [APPLY CHANGES] Applying tailored resume to editor...');
   
-  clearTailorResult();
-  return true;
+  // Apply the tailored resume to the editor
+  setResumeData(tailorResult.tailoredResume);
+  
+  // Save the tailored resume to the backend (as a draft)
+  console.log('💾 [APPLY CHANGES] Saving tailored resume to backend...');
+  const saved = await saveResume();
+  
+  if (saved) {
+    console.log('✅ [APPLY CHANGES] Tailored resume saved successfully!');
+    // Clear the tailor result UI
+    clearTailorResult();
+    return true;
+  } else {
+    console.error('❌ [APPLY CHANGES] Failed to save tailored resume');
+    return false;
+  }
 };
 
 /**
@@ -741,23 +754,11 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           duration: 7000
         });
         
-        // Force a complete reload from the backend
-        console.log('🔄 [TAILOR] Force reloading resume data from backend after tailoring...');
-        console.log('🔄 [TAILOR] Resume ID:', effectiveResumeId);
-        console.log('🔄 [TAILOR] loadResumeById available:', typeof loadResumeById);
-        
-        // Directly call loadResumeById to force a fresh fetch from the backend
-        // This bypasses the useEffect guard that prevents reloading the same resume
-        if (loadResumeById && typeof loadResumeById === 'function') {
-          try {
-            await loadResumeById(effectiveResumeId);
-            console.log('✅ [TAILOR] Resume reloaded successfully from backend!');
-          } catch (reloadError) {
-            console.error('❌ [TAILOR] Failed to reload resume:', reloadError);
-          }
-        } else {
-          console.error('❌ [TAILOR] loadResumeById is not available!');
-        }
+        // DO NOT reload the resume from backend here!
+        // The tailored content should only be visible in the diff banner/preview
+        // The editor should continue showing the original (base) resume until user clicks "Apply Changes"
+        console.log('✅ [TAILOR] Tailoring complete. Changes stored in tailorResult for preview.');
+        console.log('📋 [TAILOR] Editor will continue showing base resume until "Apply Changes" is clicked.');
       }
 
       return response;
@@ -1037,8 +1038,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       tailorResult,
       saveResume,
       clearTailorResult: () => setTailorResult(null),
+      setResumeData,
     });
-  }, [tailorResult, saveResume, setTailorResult]);
+  }, [tailorResult, saveResume, setTailorResult, setResumeData]);
 
   const undo = useCallback(() => {
     resumeHelpers.undo(history, historyIndex, setHistoryIndex, setResumeData);

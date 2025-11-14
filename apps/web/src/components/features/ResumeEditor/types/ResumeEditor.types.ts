@@ -58,5 +58,11 @@ export interface ResumeEditorProps {
   showDiffHighlighting?: boolean;
   onToggleDiffHighlighting?: () => void;
   onCloseDiffBanner?: () => void;
+  onApplyDiffChanges?: () => Promise<void>;
+  atsScoreImprovement?: {
+    before: number;
+    after: number;
+    improvement: number;
+  };
 }
 

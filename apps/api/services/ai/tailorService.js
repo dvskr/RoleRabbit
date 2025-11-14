@@ -314,13 +314,27 @@ async function tailorResume({
       potentialImprovement: targetScore - atsBefore.overall
     });
     
-    logger.info('Starting AI tailoring', {
+    logger.info('🤖 [OPENAI_REQUEST] Tailoring resume content', {
       userId: user.id,
       resumeId,
+      model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
       mode: tailorMode,
       tone,
       length,
-      promptLength: prompt.length
+      temperature: 0.3,
+      max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000,
+      timeout: 240000,
+      promptLength: prompt.length,
+      inputData: {
+        currentSummaryLength: resume.data?.summary?.length || 0,
+        currentExperienceCount: resume.data?.experience?.length || 0,
+        currentSkillsCount: resume.data?.skills ? 
+          (resume.data.skills.technical?.length || 0) + 
+          (resume.data.skills.tools?.length || 0) : 0,
+        jobDescriptionLength: jobDescription.length,
+        missingKeywordsCount: prioritizedGaps.slice(0, flexibleLimit).length,
+        targetScore
+      }
     });
 
     const response = await generateText(prompt, {
@@ -331,8 +345,9 @@ async function tailorResume({
       userId: user.id
     });
 
-    logger.info('AI tailoring response received', {
+    logger.info('✅ [OPENAI_RESPONSE] Tailored content received', {
       userId: user.id,
+      model: response.model,
       responseLength: response.text?.length || 0,
       tokensUsed: response.usage?.total_tokens
     });
@@ -358,6 +373,18 @@ async function tailorResume({
 
     // Normalize the tailored resume data to convert objects with numeric keys to arrays
     const normalizedTailoredResume = normalizeResumeData(payload.tailoredResume);
+
+    logger.info('📝 [TAILOR_CONTENT] Tailored resume content preview', {
+      summaryPreview: normalizedTailoredResume.summary?.substring(0, 200) + '...',
+      experienceCount: normalizedTailoredResume.experience?.length || 0,
+      firstExperienceBullets: normalizedTailoredResume.experience?.[0]?.bullets?.length || 0,
+      skillsPreview: normalizedTailoredResume.skills ? {
+        technical: normalizedTailoredResume.skills.technical?.slice(0, 8),
+        tools: normalizedTailoredResume.skills.tools?.slice(0, 8)
+      } : null,
+      diffCount: payload.diff?.length || 0,
+      warnings: payload.warnings
+    });
 
     // 🎯 Stage 7: Score the tailored resume
     progressTracker.update('SCORING');
@@ -430,12 +457,34 @@ async function tailorResume({
       draftUpdatedAt: draftSaved?.updatedAt,
       hasDraft: !!draftSaved
     });
-    logger.info('Tailoring complete - Score improvement', {
+    logger.info('📊 [TAILOR_COMPLETE] Tailoring complete - Score improvement', {
       before: atsBefore.overall,
       after: atsAfter.overall,
       improvement: scoreImprovement,
       targetWas: targetScore,
       metTarget: atsAfter.overall >= targetScore
+    });
+    logger.info('📤 [EDITOR_UPDATE] Data that will be sent to editor', {
+      baseResumeId: resume.id,
+      isDraft: true,
+      draftUpdatedAt: draftSaved?.updatedAt,
+      dataPreview: {
+        contact: normalizedTailoredResume.contact ? {
+          name: normalizedTailoredResume.contact.name,
+          email: normalizedTailoredResume.contact.email
+        } : null,
+        summaryPreview: normalizedTailoredResume.summary?.substring(0, 150) + '...',
+        experienceCount: normalizedTailoredResume.experience?.length || 0,
+        firstExperiencePreview: normalizedTailoredResume.experience?.[0] ? {
+          company: normalizedTailoredResume.experience[0].company,
+          role: normalizedTailoredResume.experience[0].role,
+          bulletsCount: normalizedTailoredResume.experience[0].bullets?.length || 0,
+          firstBullet: normalizedTailoredResume.experience[0].bullets?.[0]?.substring(0, 100) + '...'
+        } : null,
+        skillsCount: normalizedTailoredResume.skills ? 
+          (normalizedTailoredResume.skills.technical?.length || 0) + 
+          (normalizedTailoredResume.skills.tools?.length || 0) : 0
+      }
     });
 
     // 🚀 PERFORMANCE: Make logging/metrics non-blocking (fire-and-forget)

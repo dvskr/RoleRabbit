@@ -24,7 +24,8 @@ export const createApplyChangesHandler =
         return;
       }
       setBeforeScore(null);
-      await analyzeJobDescription?.();
+      // Don't re-run ATS analysis - keep the success panel visible
+      // await analyzeJobDescription?.();
     } catch (error: any) {
       const message =
         typeof error?.message === 'string' ? error.message : 'Failed to save tailored changes. Please try again.';
@@ -73,10 +74,18 @@ export default function AIPanelRedesigned({
   const [showDiffPreview, setShowDiffPreview] = useState(false);
   const [beforeScore, setBeforeScore] = useState<number | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [changesApplied, setChangesApplied] = useState(false);
 
   // Enhanced progress tracking
   const tailorProgressSimulator = useSimulatedProgress('tailor');
   const atsProgressSimulator = useSimulatedProgress('ats');
+
+  // Reset changesApplied when tailorResult changes (new tailoring)
+  useEffect(() => {
+    if (tailorResult) {
+      setChangesApplied(false);
+    }
+  }, [tailorResult]);
 
   // Calculate score color and label
   const getScoreColor = (score: number) => {
@@ -144,13 +153,16 @@ export default function AIPanelRedesigned({
   }, [isAnalyzing, atsProgressSimulator]);
 
   const handleApplyChanges = useCallback(
-    () =>
-      createApplyChangesHandler({
+    async () => {
+      await createApplyChangesHandler({
         confirmTailorChanges: onConfirmTailorChanges,
         analyzeJobDescription: onAnalyzeJobDescription,
         setApplyError,
         setBeforeScore,
-      })(),
+      })();
+      // After applying changes, hide the Apply Changes button
+      setChangesApplied(true);
+    },
     [onConfirmTailorChanges, onAnalyzeJobDescription, setApplyError, setBeforeScore]
   );
 
@@ -353,354 +365,313 @@ export default function AIPanelRedesigned({
           )}
         </div>
 
-        {/* Step 2: ATS Results */}
-        {showATSScore && matchScore && (
+        {/* Step 2: ATS Score Panel */}
+        {showATSScore && matchScore && !tailorResult && (
           <div
             className="p-4 rounded-lg space-y-3"
             style={{
-              background: theme.mode === 'light' ? '#fafafa' : colors.hoverBackground,
-              border: `1px solid ${colors.border}`,
+              background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
+              border: `2px solid ${scoreInfo.color}`,
               width: '100%',
               maxWidth: '100%',
-              boxSizing: 'border-box',
-              overflowX: 'hidden'
+              boxSizing: 'border-box'
             }}
           >
+            {/* Score Header with Premium Badge */}
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium" style={{ color: colors.text }}>
-                {beforeScore ? 'Before' : 'ATS Score'}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold" style={{ color: scoreInfo.color }}>
-                  {matchScore.overall}/100
-                </span>
-                <span
-                  className="text-xs font-medium px-2 py-1 rounded"
-                  style={{ background: scoreInfo.bg, color: scoreInfo.color }}
-                >
-                  {scoreInfo.label}
-                </span>
-              </div>
-            </div>
-
-            {/* Progress Bar */}
-            <div 
-              className="w-full h-2 rounded-full" 
-              style={{ 
-                background: colors.border, 
-                width: '100%',
-                maxWidth: '100%',
-                overflow: 'hidden'
-              }}
-            >
-              <div
-                className="h-full transition-all duration-500 rounded-full"
-                style={{
-                  width: `${matchScore.overall}%`,
-                  background: scoreInfo.color
-                }}
-              />
-            </div>
-
-            {/* Quick Summary */}
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                {effectiveMatchedKeywords.length > 0 ? (
-                  <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#10b981' }} />
-                ) : (
-                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#f59e0b' }} />
-                )}
-                <span className="text-xs" style={{ color: colors.textSecondary }}>
-                  {effectiveMatchedKeywords.length} skills matched
-                </span>
-              </div>
-              
-              {topMissingSkills.length > 0 && (
-                <div className="space-y-1" style={{ width: '100%', maxWidth: '100%' }}>
-                  <span className="text-xs font-medium" style={{ color: colors.text }}>
-                    Missing Skills:
-                  </span>
-                  <div className="flex flex-wrap gap-1" style={{ width: '100%', maxWidth: '100%' }}>
-                    {topMissingSkills.map((keyword, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs px-2 py-1 rounded"
-                        style={{
-                          background: '#fee2e2',
-                          color: '#ef4444',
-                          wordBreak: 'break-word',
-                          maxWidth: '100%',
-                          display: 'inline-block'
-                        }}
-                      >
-                        {keyword}
-                      </span>
-                    ))}
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <div className="text-4xl font-bold" style={{ color: scoreInfo.color }}>
+                    {matchScore.overall}
+                  </div>
+                  <div className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+                    /100
                   </div>
                 </div>
-              )}
+                <div className="flex flex-col gap-1">
+                  <span
+                    className="text-xs font-bold px-3 py-1 rounded-full"
+                    style={{ 
+                      background: scoreInfo.bg, 
+                      color: scoreInfo.color,
+                      border: `1px solid ${scoreInfo.color}`
+                    }}
+                  >
+                    {scoreInfo.label}
+                  </span>
+                  <span
+                    className="text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"
+                    style={{ 
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: '#ffffff'
+                    }}
+                  >
+                    ✨ Premium Analysis
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Show Details Toggle */}
             <button
               onClick={() => setShowDetailedBreakdown(!showDetailedBreakdown)}
-              className="w-full py-2 px-3 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+              className="w-full py-2 px-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all"
               style={{
-                color: colors.activeBlueText,
-                background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground
+                background: colors.inputBackground,
+                color: colors.primaryText,
+                border: `1px solid ${colors.border}`
               }}
             >
               {showDetailedBreakdown ? 'Hide Details' : 'Show Details'}
-              {showDetailedBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {showDetailedBreakdown ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
 
             {/* Detailed Breakdown */}
             {showDetailedBreakdown && (
-              <div className="space-y-2 pt-2 border-t" style={{ borderColor: colors.border }}>
-                <div className="text-xs font-medium" style={{ color: colors.text }}>
-                  Breakdown:
-                </div>
-                {matchScore.keywords !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: colors.textSecondary }}>Keywords</span>
-                    <span className="text-xs font-medium" style={{ color: colors.text }}>{matchScore.keywords}/100</span>
-                  </div>
-                )}
-                {matchScore.experience !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: colors.textSecondary }}>Experience</span>
-                    <span className="text-xs font-medium" style={{ color: colors.text }}>{matchScore.experience}/100</span>
-                  </div>
-                )}
-                {matchScore.format !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: colors.textSecondary }}>Format</span>
-                    <span className="text-xs font-medium" style={{ color: colors.text }}>{matchScore.format}/100</span>
-                  </div>
-                )}
-                
-                {improvements.length > 0 && (
-                  <div className="pt-2 space-y-1">
-                    <div className="text-xs font-medium" style={{ color: colors.text }}>
-                      Quick Wins:
+              <div className="space-y-3 pt-2 border-t" style={{ borderColor: colors.border }}>
+                {/* Skills Matched */}
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#10b981' }} />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium" style={{ color: colors.text }}>
+                      {effectiveMatchedKeywords.length} Skills Matched
                     </div>
-                    {improvements.map((imp, idx) => (
-                      <div key={idx} className="text-xs pl-3" style={{ color: colors.textSecondary }}>
-                        • {imp}
+                    {effectiveMatchedKeywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {effectiveMatchedKeywords.slice(0, 10).map((keyword, idx) => (
+                          <span
+                            key={idx}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                              background: '#d1fae5',
+                              color: '#065f46',
+                              border: '1px solid #10b981'
+                            }}
+                          >
+                            ✓ {keyword}
+                          </span>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                  </div>
+                </div>
+
+                {/* Missing Skills with Proofs */}
+                {topMissingSkills.length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#ef4444' }} />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium" style={{ color: colors.text }}>
+                        Missing Skills ({topMissingSkills.length})
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: colors.textSecondary }}>
+                        Adding these skills could improve your score
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {topMissingSkills.map((keyword, idx) => (
+                          <span
+                            key={idx}
+                            className="text-xs px-2 py-1 rounded"
+                            style={{
+                              background: '#fee2e2',
+                              color: '#991b1b',
+                              border: '1px solid #ef4444'
+                            }}
+                          >
+                            ✕ {keyword}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Score Breakdown */}
+                {(matchScore.keywords !== undefined || matchScore.experience !== undefined || matchScore.format !== undefined) && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium" style={{ color: colors.text }}>
+                      Score Breakdown
+                    </div>
+                    {matchScore.keywords !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs" style={{ color: colors.textSecondary }}>Keywords</span>
+                        <span className="text-xs font-bold" style={{ color: colors.text }}>{matchScore.keywords}/100</span>
+                      </div>
+                    )}
+                    {matchScore.experience !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs" style={{ color: colors.textSecondary }}>Experience</span>
+                        <span className="text-xs font-bold" style={{ color: colors.text }}>{matchScore.experience}/100</span>
+                      </div>
+                    )}
+                    {matchScore.format !== undefined && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs" style={{ color: colors.textSecondary }}>Format</span>
+                        <span className="text-xs font-bold" style={{ color: colors.text }}>{matchScore.format}/100</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
-
-            {/* Step 3: Auto-Tailor Button or Progress */}
-            {!tailorResult && (
-              <>
-                {/* Resume Quality Check */}
-                <ResumeQualityIndicator 
-                  resumeData={resumeData} 
-                  colors={colors}
-                />
-                
-                {isTailoring && tailorProgressSimulator.progressState.isActive ? (
-                  <EnhancedProgressTracker
-                    operation="tailor"
-                    currentStage={tailorProgressSimulator.progressState.stage}
-                    progress={tailorProgressSimulator.progressState.progress}
-                    message={tailorProgressSimulator.progressState.message}
-                    elapsedTime={tailorProgressSimulator.progressState.elapsedTime}
-                    estimatedTimeRemaining={tailorProgressSimulator.progressState.estimatedTimeRemaining}
-                    colors={colors}
-                  />
-                ) : (
-                  <button
-                    onClick={handleAutoTailor}
-                    disabled={isTailoring || !jobDescription || jobDescription.length < 100 || jobDescription.length > 15000}
-                    className="w-full py-2.5 px-4 rounded-lg font-medium text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{
-                      background: '#10b981',
-                      opacity: isTailoring ? 0.5 : 1,
-                      width: '100%',
-                      maxWidth: '100%',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    {isTailoring ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Tailoring Resume...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4" />
-                        Auto-Tailor Resume
-                      </>
-                    )}
-                  </button>
-                )}
-              </>
-            )}
           </div>
         )}
 
-        {/* Tailor Results - After Score */}
-        {tailorResult && (
-          <div
-            className="p-4 rounded-lg space-y-3"
+        {/* Step 3: Tailor Resume Button */}
+        {showATSScore && matchScore && !tailorResult && (
+          <button
+            onClick={handleAutoTailor}
+            disabled={isTailoring || !jobDescription || jobDescription.length < 100}
+            className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
-              background: '#d1fae5',
-              border: `1px solid #10b981`
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
             }}
           >
+            {isTailoring ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Tailoring Resume...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Tailor Resume
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Step 4: Tailoring Results */}
+        {tailorResult && (
+          <div
+            className="p-4 rounded-lg space-y-4"
+            style={{
+              background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+              border: '2px solid #10b981'
+            }}
+          >
+            {/* Success Header */}
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" style={{ color: '#10b981' }} />
-              <span className="text-sm font-bold" style={{ color: '#065f46' }}>
+              <CheckCircle2 className="w-6 h-6" style={{ color: '#065f46' }} />
+              <span className="text-lg font-bold" style={{ color: '#065f46' }}>
                 Resume Tailored Successfully!
               </span>
             </div>
 
-            {/* Before/After Comparison */}
+            {/* Score Improvement */}
             {beforeTailorScore !== null && afterTailorScore !== null && (
-              <div className="flex items-center justify-between py-2">
-                <div className="text-center flex-1">
-                  <div className="text-xs" style={{ color: '#065f46' }}>Before</div>
-                  <div className="text-2xl font-bold" style={{ color: '#f59e0b' }}>{beforeTailorScore}</div>
+              <div className="flex items-center justify-around py-3 px-4 rounded-lg" style={{ background: '#ffffff' }}>
+                <div className="text-center">
+                  <div className="text-xs font-medium" style={{ color: '#6b7280' }}>Before</div>
+                  <div className="text-3xl font-bold" style={{ color: '#f59e0b' }}>{beforeTailorScore}</div>
                 </div>
-                <div className="text-2xl font-bold" style={{ color: '#065f46' }}>→</div>
-                <div className="text-center flex-1">
-                  <div className="text-xs" style={{ color: '#065f46' }}>After</div>
-                  <div className="text-2xl font-bold" style={{ color: '#10b981' }}>{afterTailorScore}</div>
+                <div className="text-3xl font-bold" style={{ color: '#10b981' }}>→</div>
+                <div className="text-center">
+                  <div className="text-xs font-medium" style={{ color: '#6b7280' }}>After</div>
+                  <div className="text-3xl font-bold" style={{ color: '#10b981' }}>{afterTailorScore}</div>
                 </div>
-                <div className="text-center flex-1">
-                  <div className="text-xs" style={{ color: '#065f46' }}>Improvement</div>
-                  <div className="text-xl font-bold" style={{ color: '#10b981' }}>
+                <div className="text-center">
+                  <div className="text-xs font-medium" style={{ color: '#6b7280' }}>Improvement</div>
+                  <div className="text-2xl font-bold" style={{ color: '#10b981' }}>
                     +{afterTailorScore - beforeTailorScore}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Changes Summary */}
-            {tailorResult.diff && tailorResult.diff.length > 0 && (
-              <div className="space-y-2">
+            {/* Improvements Summary */}
+            <div className="space-y-2">
+              <div className="text-sm font-bold" style={{ color: '#065f46' }}>
+                What Changed:
+              </div>
+              {tailorResult.diff && tailorResult.diff.length > 0 && (
                 <div className="space-y-1">
-                  <div className="text-xs font-medium" style={{ color: '#065f46' }}>
-                    Changes Made:
-                  </div>
-                  <div className="text-xs" style={{ color: '#065f46' }}>
-                    • Modified {tailorResult.diff.length} {tailorResult.diff.length === 1 ? 'section' : 'sections'}
+                  <div className="text-sm" style={{ color: '#047857' }}>
+                    ✓ Modified {tailorResult.diff.length} {tailorResult.diff.length === 1 ? 'section' : 'sections'}
                   </div>
                   {tailorResult.recommendedKeywords && tailorResult.recommendedKeywords.length > 0 && (
-                    <div className="text-xs" style={{ color: '#065f46' }}>
-                      • Added {tailorResult.recommendedKeywords.length}{' '}
-                      {tailorResult.recommendedKeywords.length === 1 ? 'keyword' : 'keywords'}
+                    <div className="text-sm" style={{ color: '#047857' }}>
+                      ✓ Added {tailorResult.recommendedKeywords.length} relevant {tailorResult.recommendedKeywords.length === 1 ? 'keyword' : 'keywords'}
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => setShowDiffPreview((current) => !current)}
-                  className="w-full py-2 px-3 rounded-md text-xs font-medium transition-colors flex items-center justify-center gap-1"
-                  style={{
-                    background: '#ffffff',
-                    color: '#047857',
-                    border: '1px solid rgba(4, 120, 87, 0.2)',
-                  }}
-                >
-                  {showDiffPreview ? 'Hide Detailed Changes' : 'View Detailed Changes'}
-                  {showDiffPreview ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                </button>
-                {showDiffPreview && (
+              )}
+            </div>
+
+            {/* View Details */}
+            <button
+              onClick={() => setShowDiffPreview(!showDiffPreview)}
+              className="w-full py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+              style={{
+                background: '#ffffff',
+                color: '#047857',
+                border: '1px solid #10b981'
+              }}
+            >
+              {showDiffPreview ? 'Hide' : 'View'} Detailed Changes
+              {showDiffPreview ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {showDiffPreview && (
+              <div
+                className="space-y-3 p-3 rounded-lg max-h-96 overflow-y-auto"
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #10b981'
+                }}
+              >
+                {diffPreviewEntries.map((entry, index) => (
                   <div
-                    className="space-y-3 p-3 rounded-md"
-                    style={{
-                      background: '#ecfdf5',
-                      border: '1px solid rgba(5, 150, 105, 0.25)',
-                      maxHeight: '240px',
-                      overflowY: 'auto',
-                    }}
+                    key={`${entry.path}-${index}`}
+                    className="p-3 rounded-lg text-sm"
+                    style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}
                   >
-                    {diffPreviewEntries.map((entry, index) => (
-                      <div
-                        key={`${entry.path}-${index}`}
-                        className="space-y-2 text-xs"
-                        style={{ color: '#065f46' }}
-                      >
-                        <div className="font-semibold break-words">{entry.path || 'Unknown path'}</div>
-                        <div className="grid grid-cols-1 gap-2">
-                          <div>
-                            <div className="uppercase tracking-wide text-[10px] font-semibold opacity-70">
-                              Before
-                            </div>
-                            <pre
-                              className="mt-1 text-[11px] leading-snug whitespace-pre-wrap break-words border rounded-md p-2 bg-white/70"
-                              style={{ borderColor: 'rgba(5, 150, 105, 0.15)', color: '#064e3b' }}
-                            >
-                              {formatDiffValue(entry.before)}
-                            </pre>
-                          </div>
-                          <div>
-                            <div className="uppercase tracking-wide text-[10px] font-semibold opacity-70">
-                              After
-                            </div>
-                            <pre
-                              className="mt-1 text-[11px] leading-snug whitespace-pre-wrap break-words border rounded-md p-2 bg-white"
-                              style={{ borderColor: 'rgba(5, 150, 105, 0.25)', color: '#047857' }}
-                            >
-                              {formatDiffValue(entry.after)}
-                            </pre>
-                          </div>
-                        </div>
-                        {typeof entry.confidence === 'number' && (
-                          <div className="text-[10px] uppercase opacity-70">
-                            Confidence: {(entry.confidence * 100).toFixed(0)}%
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {tailorResult.diff.length > diffPreviewEntries.length && (
-                      <div className="text-[11px]" style={{ color: '#047857' }}>
-                        Showing first {diffPreviewEntries.length} of {tailorResult.diff.length} changes.
-                      </div>
-                    )}
+                    <div className="font-bold mb-2 text-base" style={{ color: '#065f46' }}>
+                      {entry.path}
+                    </div>
+                    <div className="text-green-700 leading-relaxed whitespace-pre-wrap">
+                      {formatDiffValue(entry.after)}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
             )}
 
-            <div className="flex gap-2">
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2 pt-2">
+              {!changesApplied && (
+                <button
+                  onClick={handleApplyChanges}
+                  disabled={isSavingResume}
+                  className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-all disabled:opacity-60"
+                  style={{ background: '#10b981' }}
+                >
+                  {isSavingResume ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                      Applying Changes...
+                    </>
+                  ) : (
+                    'Apply Changes to Resume'
+                  )}
+                </button>
+              )}
               <button
-                onClick={handleApplyChanges}
-                disabled={isSavingResume}
-                className="flex-1 py-2 px-4 rounded-lg font-medium text-white disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                style={{ background: '#10b981' }}
-              >
-                {isSavingResume ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Apply Changes'
-                )}
-              </button>
-              <button
-                onClick={() => setTailorResult?.(null)}
-                className="px-4 py-2 rounded-lg font-medium"
+                onClick={() => {
+                  setTailorResult?.(null);
+                  setChangesApplied(false);
+                }}
+                className="w-full py-2 px-4 rounded-lg font-medium text-sm transition-all"
                 style={{
-                  color: '#065f46',
-                  background: '#ffffff'
+                  background: '#ffffff',
+                  color: '#047857',
+                  border: '1px solid #10b981'
                 }}
               >
-                Dismiss
+                Start New Analysis
               </button>
             </div>
-            {applyError && (
-              <div className="flex items-start gap-2 mt-2 text-xs" style={{ color: '#b91c1c' }}>
-                <AlertCircle className="w-4 h-4 mt-0.5" />
-                <span>{applyError}</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -739,23 +710,23 @@ export default function AIPanelRedesigned({
                 </label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setTailorEditMode?.('PARTIAL')}
-                    className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors"
+                    onClick={() => setTailorEditMode?.('partial')}
+                    className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all"
                     style={{
-                      background: (!tailorEditMode || tailorEditMode === 'PARTIAL') ? colors.activeBlueText : colors.inputBackground,
-                      color: (!tailorEditMode || tailorEditMode === 'PARTIAL') ? '#ffffff' : colors.text,
-                      border: `1px solid ${(!tailorEditMode || tailorEditMode === 'PARTIAL') ? colors.activeBlueText : colors.border}`
+                      background: (!tailorEditMode || tailorEditMode?.toLowerCase() === 'partial') ? '#3b82f6' : colors.inputBackground,
+                      color: (!tailorEditMode || tailorEditMode?.toLowerCase() === 'partial') ? '#ffffff' : colors.text,
+                      border: `1px solid ${(!tailorEditMode || tailorEditMode?.toLowerCase() === 'partial') ? '#3b82f6' : colors.border}`
                     }}
                   >
                     Partial
                   </button>
                   <button
-                    onClick={() => setTailorEditMode?.('FULL')}
-                    className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors"
+                    onClick={() => setTailorEditMode?.('full')}
+                    className="flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all"
                     style={{
-                      background: tailorEditMode === 'FULL' ? colors.activeBlueText : colors.inputBackground,
-                      color: tailorEditMode === 'FULL' ? '#ffffff' : colors.text,
-                      border: `1px solid ${tailorEditMode === 'FULL' ? colors.activeBlueText : colors.border}`
+                      background: tailorEditMode?.toLowerCase() === 'full' ? '#3b82f6' : colors.inputBackground,
+                      color: tailorEditMode?.toLowerCase() === 'full' ? '#ffffff' : colors.text,
+                      border: `1px solid ${tailorEditMode?.toLowerCase() === 'full' ? '#3b82f6' : colors.border}`
                     }}
                   >
                     Full
@@ -773,11 +744,11 @@ export default function AIPanelRedesigned({
                     <button
                       key={tone}
                       onClick={() => setSelectedTone?.(tone)}
-                      className="py-2 px-3 rounded-lg text-xs font-medium capitalize transition-colors"
+                      className="py-2 px-3 rounded-lg text-xs font-medium capitalize transition-all"
                       style={{
-                        background: selectedTone === tone ? colors.activeBlueText : colors.inputBackground,
+                        background: selectedTone === tone ? '#3b82f6' : colors.inputBackground,
                         color: selectedTone === tone ? '#ffffff' : colors.text,
-                        border: `1px solid ${selectedTone === tone ? colors.activeBlueText : colors.border}`
+                        border: `1px solid ${selectedTone === tone ? '#3b82f6' : colors.border}`
                       }}
                     >
                       {tone}
@@ -796,11 +767,11 @@ export default function AIPanelRedesigned({
                     <button
                       key={length}
                       onClick={() => setSelectedLength?.(length)}
-                      className="flex-1 py-2 px-3 rounded-lg text-xs font-medium capitalize transition-colors"
+                      className="flex-1 py-2 px-3 rounded-lg text-xs font-medium capitalize transition-all"
                       style={{
-                        background: selectedLength === length ? colors.activeBlueText : colors.inputBackground,
+                        background: selectedLength === length ? '#3b82f6' : colors.inputBackground,
                         color: selectedLength === length ? '#ffffff' : colors.text,
-                        border: `1px solid ${selectedLength === length ? colors.activeBlueText : colors.border}`
+                        border: `1px solid ${selectedLength === length ? '#3b82f6' : colors.border}`
                       }}
                     >
                       {length}

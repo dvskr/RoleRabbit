@@ -327,41 +327,78 @@ export default function ImportModal({
 
   // Direct activation handler - only activates the resume (no parsing)
   const handleActivateResume = useCallback(async (resumeId: string) => {
-    if (activatingId && activatingId !== resumeId) {
-      showToast('Please wait for the current activation to finish.', 'info', 3000);
-      return;
-    }
-    if (activatingId === resumeId) {
-      return;
-    }
+    console.log('🎯 [handleActivateResume] Called with resumeId:', resumeId);
 
     const resume = resumes.find(r => r.id === resumeId);
+    console.log('📋 [handleActivateResume] Found resume:', resume);
+    
     if (!resume) {
+      console.error('❌ [handleActivateResume] Resume not found!');
       showToast('Resume not found. Please refresh and try again.', 'error', 4000);
       return;
     }
 
-    if (resume.isActive) {
-      showToast('This resume is already active', 'info', 3000);
-      return;
-    }
-
-    setActivatingId(resumeId);
-    setSelectedId(resumeId);
+    const wasActive = resume.isActive;
+    console.log('🔄 [handleActivateResume] wasActive:', wasActive);
 
     try {
-      // Just activate the resume (no parsing)
-      showToast('🔄 Activating resume...', 'info', 3000);
-      await activateResume(resumeId);
-      
-      showToast('✅ Resume activated! Now click "Parse & Apply" to populate the editor.', 'success', 4000);
-      await refresh();
+      if (wasActive) {
+        // Deactivate the resume
+        console.log('🔄 [DEACTIVATE] Starting deactivation for resume:', resumeId);
+        
+        // Optimistically update UI immediately for instant feedback
+        console.log('🔄 [DEACTIVATE] Optimistically updating local state...');
+        upsertResume({
+          ...resume,
+          isActive: false
+        });
+        
+        // Call deactivate API endpoint (don't await - let it happen in background)
+        apiService.request(`/api/base-resumes/${resumeId}/deactivate`, {
+          method: 'POST',
+          credentials: 'include'
+        }).then(response => {
+          console.log('✅ [DEACTIVATE] API response:', response);
+          
+          if (!response?.success) {
+            // Revert optimistic update on error
+            console.error('❌ [DEACTIVATE] API failed, reverting...');
+            upsertResume({
+              ...resume,
+              isActive: true
+            });
+            showToast('Failed to deactivate resume', 'error', 4000);
+          } else {
+            console.log('✅ [DEACTIVATE] Deactivation complete');
+            showToast('✅ Resume deactivated and editor cleared!', 'success', 2000);
+          }
+        }).catch(err => {
+          console.error('❌ [DEACTIVATE] Error:', err);
+          // Revert optimistic update on error
+          upsertResume({
+            ...resume,
+            isActive: true
+          });
+          showToast(err?.message || 'Failed to deactivate resume', 'error', 4000);
+        });
+        
+        // Clear the editor immediately (don't wait for API)
+        if (onResumeApplied) {
+          console.log('🔄 [DEACTIVATE] Clearing editor...');
+          await onResumeApplied('', null);
+        }
+      } else {
+        // Activate the resume
+        setSelectedId(resumeId);
+        await activateResume(resumeId);
+        
+        showToast('✅ Resume activated! Now click "Parse" to populate the editor.', 'success', 2000);
+      }
     } catch (err: any) {
-      showToast(err?.message || 'Failed to activate resume', 'error', 6000);
-    } finally {
-      setActivatingId(null);
+      console.error('❌ [ACTIVATE/DEACTIVATE] Error:', err);
+      showToast(err?.message || `Failed to ${wasActive ? 'deactivate' : 'activate'} resume`, 'error', 4000);
     }
-  }, [activatingId, resumes, activateResume, showToast, refresh]);
+  }, [resumes, activateResume, showToast, onResumeApplied, upsertResume]);
 
   // Parse & Apply handler - parses the active resume and populates editor
   const [parsingId, setParsingId] = useState<string | null>(null);
@@ -643,13 +680,13 @@ export default function ImportModal({
             {slotNumber}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <div className="font-semibold" style={{ color: colors.primaryText }}>
-                {resume.name || `Resume ${slotNumber}`}
-              </div>
+            <div className="font-semibold" style={{ color: colors.primaryText }}>
+              {resume.name || `Resume ${slotNumber}`}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
               {resume.isActive && (
                 <span
-                  className="text-xs px-2 py-0.5 rounded-full"
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
                   style={{
                     background: colors.badgeInfoBg,
                     color: colors.badgeInfoText,
@@ -671,72 +708,57 @@ export default function ImportModal({
                   Legacy Slot
                 </span>
               )}
+              {resume.createdAt && (
+                <div className="text-xs" style={{ color: colors.tertiaryText }}>
+                  {new Date(resume.createdAt).toLocaleDateString()}
+                </div>
+              )}
             </div>
-            {resume.createdAt && (
-              <div className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
-                {new Date(resume.createdAt).toLocaleDateString()}
-              </div>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="relative inline-flex items-center transition-all focus:outline-none"
-            title={
-              resume.isActive
-                ? 'Currently active'
-                : activatingId === resume.id
-                  ? 'Activating...'
-                  : 'Activate resume'
-            }
-            aria-label={resume.isActive ? 'Currently active' : 'Activate resume'}
+            className="relative inline-flex items-center transition-all focus:outline-none hover:opacity-80"
+            title={resume.isActive ? 'Click to deactivate (will clear editor)' : 'Click to activate resume'}
+            aria-label={resume.isActive ? 'Deactivate resume' : 'Activate resume'}
             onClick={(e) => {
               e.stopPropagation();
-              if (resume.isActive || activatingId === resume.id) {
-                return;
-              }
+              console.log('🔘 [TOGGLE] Clicked!', { 
+                resumeId: resume.id, 
+                isActive: resume.isActive
+              });
+              console.log('✅ [TOGGLE] Calling handleActivateResume...');
               handleActivateResume(resume.id);
             }}
-            disabled={activatingId === resume.id}
-            style={{
-              opacity: activatingId === resume.id || resume.isActive ? 0.6 : 1,
-              cursor: resume.isActive ? 'default' : 'pointer'
-            }}
           >
-            {activatingId === resume.id ? (
-              <div className="w-11 h-6 flex items-center justify-center">
-                <RefreshCw size={16} className="animate-spin" style={{ color: colors.activeBlueText }} />
-              </div>
-            ) : (
-              <div
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                  resume.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+            <div
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ease-in-out ${
+                resume.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+              style={{
+                backgroundColor: resume.isActive
+                  ? colors.successGreen
+                  : theme.mode === 'light'
+                    ? '#d1d5db'
+                    : '#4b5563'
+              }}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ease-in-out ${
+                  resume.isActive ? 'translate-x-6' : 'translate-x-1'
                 }`}
                 style={{
-                  backgroundColor: resume.isActive
-                    ? colors.successGreen
-                    : theme.mode === 'light'
-                      ? '#d1d5db'
-                      : '#4b5563'
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                    resume.isActive ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                  style={{
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }}
-                />
-              </div>
-            )}
+              />
+            </div>
           </button>
           {resume.isActive && (
             <button
-              className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-              title={parsingId === resume.id ? 'Parsing...' : 'Parse & Apply to editor'}
-              aria-label="Parse and apply resume"
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
+              title={parsingId === resume.id ? 'Parsing...' : 'Parse resume and apply to editor'}
+              aria-label="Parse resume"
               onClick={(e) => {
                 e.stopPropagation();
                 handleParseAndApply(resume.id);
@@ -755,7 +777,7 @@ export default function ImportModal({
                   <span>Parsing...</span>
                 </div>
               ) : (
-                'Parse & Apply'
+                'Parse'
               )}
             </button>
           )}

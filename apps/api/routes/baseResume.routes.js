@@ -146,6 +146,43 @@ module.exports = async function baseResumeRoutes(fastify) {
     }
   });
 
+  fastify.post('/api/base-resumes/:id/deactivate', { preHandler: authenticate }, async (request, reply) => {
+    try {
+      const userId = request.user.userId;
+      const baseResumeId = request.params.id;
+      
+      logger.info('🔄 Deactivating BaseResume', { userId, baseResumeId });
+      
+      // Verify the resume exists and belongs to the user
+      const resume = await prisma.baseResume.findFirst({
+        where: {
+          id: baseResumeId,
+          userId: userId
+        }
+      });
+
+      if (!resume) {
+        return reply.status(404).send({ 
+          success: false, 
+          error: 'Resume not found or does not belong to you' 
+        });
+      }
+      
+      // Set activeBaseResumeId to null in the database
+      await prisma.user.update({
+        where: { id: userId },
+        data: { activeBaseResumeId: null }
+      });
+      
+      logger.info('✅ BaseResume deactivated successfully', { userId, baseResumeId });
+      
+      return reply.send({ success: true });
+    } catch (error) {
+      logger.error('❌ Failed to deactivate base resume', { error: error.message, stack: error.stack });
+      return reply.status(500).send({ success: false, error: 'Failed to deactivate base resume' });
+    }
+  });
+
   fastify.delete('/api/base-resumes/:id', { preHandler: authenticate }, async (request, reply) => {
     try {
       const userId = request.user.userId;

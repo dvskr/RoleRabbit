@@ -64,7 +64,13 @@ async function extractSkillsWithAI(jobDescription) {
     }
   }
 
-  logger.info('🤖 AI Skill Extraction: Starting (cache miss)');
+  logger.info('🤖 [OPENAI_REQUEST] AI Skill Extraction starting (cache miss)', {
+    model: 'gpt-4o-mini',
+    temperature: 0.1,
+    max_tokens: 2000,
+    jobDescriptionLength: jobDescription.length,
+    jobDescriptionPreview: jobDescription.substring(0, 200) + '...'
+  });
   
   const prompt = `You are an expert technical recruiter and ATS system. Analyze this job description and extract ALL ACTUAL SKILLS and TECHNOLOGIES.
 
@@ -152,11 +158,15 @@ Return ONLY valid JSON, no markdown formatting:
       extracted.required_skills = [];
     }
 
-    logger.info('✅ AI Skill Extraction: Success', {
+    logger.info('✅ [OPENAI_RESPONSE] AI Skill Extraction success', {
       required_count: extracted.required_skills.length,
       preferred_count: extracted.preferred_skills?.length || 0,
       implicit_count: extracted.implicit_skills?.length || 0,
-      role_type: extracted.role_type
+      role_type: extracted.role_type,
+      seniority_level: extracted.seniority_level,
+      requiredSkillsPreview: extracted.required_skills.slice(0, 10),
+      preferredSkillsPreview: extracted.preferred_skills?.slice(0, 5),
+      implicitSkillsPreview: extracted.implicit_skills?.slice(0, 5)
     });
 
     const skillResult = {

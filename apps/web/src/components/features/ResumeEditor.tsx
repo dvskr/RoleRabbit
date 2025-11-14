@@ -12,7 +12,6 @@ import SectionsList from './ResumeEditor/components/SectionsList';
 import NameInput from './ResumeEditor/components/NameInput';
 import ContactFieldsGrid from './ResumeEditor/components/ContactFieldsGrid';
 import FormattingPanel from './ResumeEditor/components/FormattingPanel';
-import { DiffHighlightBanner } from './ResumeEditor/DiffHighlightBanner';
 import { getTemplateClasses } from '../../app/dashboard/utils/templateClassesHelper';
 import { PanelLeftClose } from 'lucide-react';
 
@@ -61,6 +60,8 @@ export default function ResumeEditor({
   showDiffHighlighting = false,
   onToggleDiffHighlighting,
   onCloseDiffBanner,
+  onApplyDiffChanges,
+  atsScoreImprovement,
 }: ResumeEditorProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -275,15 +276,7 @@ export default function ResumeEditor({
           });
           return null;
         })()}
-        {showDiffBanner && diffChanges && diffChanges.length > 0 && (
-          <DiffHighlightBanner
-            diffChanges={diffChanges}
-            showHighlighting={showDiffHighlighting}
-            onToggleHighlighting={onToggleDiffHighlighting || (() => {})}
-            onClose={onCloseDiffBanner || (() => {})}
-            colors={colors}
-          />
-        )}
+        {/* Diff Banner - REMOVED */}
         
         {/* Resume Content */}
         <div

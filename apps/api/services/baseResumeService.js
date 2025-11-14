@@ -86,7 +86,20 @@ async function getBaseResume({ userId, baseResumeId }) {
     isDraft: currentData.isDraft,
     dataKeys: Object.keys(currentData.data || {}),
     hasSummary: !!currentData.data?.summary,
-    summaryLength: currentData.data?.summary?.length || 0
+    summaryLength: currentData.data?.summary?.length || 0,
+    contactPreview: currentData.data?.contact ? {
+      name: currentData.data.contact.name,
+      email: currentData.data.contact.email,
+      hasPhone: !!currentData.data.contact.phone,
+      hasLinks: currentData.data.contact.links?.length > 0
+    } : null,
+    summaryPreview: currentData.data?.summary?.substring(0, 150) + '...',
+    experienceCount: currentData.data?.experience?.length || 0,
+    educationCount: currentData.data?.education?.length || 0,
+    skillsCount: currentData.data?.skills ? 
+      (currentData.data.skills.technical?.length || 0) + 
+      (currentData.data.skills.tools?.length || 0) + 
+      (currentData.data.skills.soft?.length || 0) : 0
   });
   
   return {

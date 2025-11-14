@@ -284,8 +284,25 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   }, [runWithoutTracking, setHasChanges, setSaveError]);
 
   const applyBaseResume = useCallback((record?: BaseResumeRecord | null) => {
+    console.log('🔄 [APPLY] Applying base resume to editor:', {
+      resumeId: record?.id,
+      hasData: !!record?.data,
+      dataKeys: record?.data ? Object.keys(record.data) : [],
+      hasSummary: !!record?.data?.summary,
+      summaryLength: record?.data?.summary?.length,
+      summaryPreview: record?.data?.summary?.substring(0, 150)
+    });
+    
     const snapshot = mapBaseResumeToEditor(record);
+    console.log('🔄 [APPLY] Snapshot created:', {
+      hasResumeData: !!snapshot.resumeData,
+      summaryLength: snapshot.resumeData?.summary?.length,
+      summaryPreview: snapshot.resumeData?.summary?.substring(0, 150)
+    });
+    
     applySnapshot(snapshot);
+    console.log('✅ [APPLY] Snapshot applied to editor');
+    
     runWithoutTracking(() => {
       _setResumeFileName(record?.name || 'My_Resume');
     });
@@ -458,6 +475,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
       const sanitizedPayload = sanitizeResumeData(mappedPayload);
 
       try {
+        console.log('💾 [AUTO-SAVE] Starting auto-save...', { currentResumeId });
         setIsSaving(true);
         setSaveError(null);
 
@@ -569,6 +587,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           setSaveError(friendlyError);
         }
       } finally {
+        console.log('💾 [AUTO-SAVE] Auto-save completed');
         setIsSaving(false);
       }
     }, AUTOSAVE_DEBOUNCE_MS);
