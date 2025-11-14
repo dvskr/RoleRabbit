@@ -280,6 +280,7 @@ fastify.get('/api/status', async () => ({
   endpoints: {
     auth: '/api/auth/*',
     users: '/api/users/*',
+    templates: '/api/templates/*',
     health: '/health'
   }
 }));
@@ -295,6 +296,7 @@ fastify.register(require('./routes/workingDraft.routes'));
 fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));
+fastify.register(require('./routes/templates.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -364,6 +366,7 @@ fastify.setNotFoundHandler(async (request, reply) => {
         status: 'GET /api/status',
         auth: '/api/auth/*',
         users: '/api/users/*',
+        templates: '/api/templates/*',
         storage: '/api/storage/*',
         resumes: '/api/resumes/*'
       }
