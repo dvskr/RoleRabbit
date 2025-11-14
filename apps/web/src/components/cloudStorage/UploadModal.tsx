@@ -28,6 +28,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const fileTypeOptions: ResumeFile['type'][] = [
     'resume',
@@ -47,6 +48,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
     setFileType('resume');
     setSelectedFile(null);
     setErrorMessage(null);
+    setIsDragging(false);
   };
 
   const handleUpload = async () => {
@@ -82,21 +84,75 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
     }
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const processFile = (file: File) => {
+    // Validate file type
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'txt', 'png', 'jpg', 'jpeg', 'mp4', 'webm', 'mov', 'avi'];
+
+    if (!extension || !allowedExtensions.includes(extension)) {
+      setErrorMessage(`File type not supported. Please upload ${allowedExtensions.join(', ').toUpperCase()} files only.`);
+      return;
+    }
+
+    // Validate file size (50MB max for videos, 10MB for others)
+    const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(extension);
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrorMessage(`File too large. Maximum size is ${isVideo ? '50MB' : '10MB'}.`);
+      return;
+    }
 
     setSelectedFile(file);
     setFileName(file.name.replace(/\.[^/.]+$/, ''));
     setErrorMessage(null);
 
-    const extension = file.name.split('.').pop()?.toLowerCase();
     if (extension === 'pdf') {
       setFileType('resume');
     } else if (extension === 'doc' || extension === 'docx') {
       setFileType('template');
+    } else if (['png', 'jpg', 'jpeg'].includes(extension)) {
+      setFileType('portfolio');
+    } else if (isVideo) {
+      setFileType('work_sample');
     } else {
       setFileType('document');
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    processFile(file);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set isDragging to false if we're leaving the drop zone entirely
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFile(files[0]);
     }
   };
 
@@ -170,27 +226,43 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
         </div>
 
         <div className="space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
-          <div 
-            className="border-2 border-dashed rounded-lg p-4 text-center transition-colors"
-            style={{ borderColor: colors.border }}
+          <div
+            className="border-2 border-dashed rounded-lg p-4 text-center transition-all duration-200"
+            style={{
+              borderColor: isDragging ? colors.primaryBlue : colors.border,
+              background: isDragging ? `${colors.primaryBlue}10` : 'transparent',
+              transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            }}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = colors.borderFocused;
+              if (!isDragging) {
+                e.currentTarget.style.borderColor = colors.borderFocused;
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = colors.border;
+              if (!isDragging) {
+                e.currentTarget.style.borderColor = colors.border;
+              }
             }}
           >
-            <Upload size={24} style={{ color: colors.tertiaryText }} className="mx-auto mb-1.5" />
-            <p 
-              className="text-xs mb-1.5"
-              style={{ color: colors.secondaryText }}
+            <Upload
+              size={24}
+              style={{ color: isDragging ? colors.primaryBlue : colors.tertiaryText }}
+              className="mx-auto mb-1.5"
+            />
+            <p
+              className="text-xs mb-1.5 font-medium"
+              style={{ color: isDragging ? colors.primaryBlue : colors.secondaryText }}
             >
-              Drag and drop your file here, or click to browse
+              {isDragging ? 'Drop your file here' : 'Drag and drop your file here, or click to browse'}
             </p>
             <input
               type="file"
               onChange={handleFileSelect}
-              accept=".pdf,.doc,.docx,.txt"
+              accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.mp4,.webm,.mov,.avi"
               className="hidden"
               id="file-upload"
               data-testid="storage-file-input"
@@ -208,11 +280,11 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             >
               Choose File
             </label>
-            <p 
+            <p
               className="text-[10px] mt-1.5"
               style={{ color: colors.tertiaryText }}
             >
-              Supports PDF, DOC, DOCX, TXT
+              Supports PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (Max 10MB) • MP4, WEBM, MOV, AVI (Max 50MB)
             </p>
             {selectedFile && (
               <p
