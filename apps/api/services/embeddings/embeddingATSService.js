@@ -9,6 +9,7 @@ const { generateResumeEmbedding } = require('./embeddingService');
 const { getOrGenerateJobEmbedding } = require('./embeddingCacheService');
 const { calculateSimilarity } = require('./similarityService');
 const { extractSkillsWithAI } = require('../ats/aiSkillExtractor');
+const { retryOpenAIOperation } = require('../../utils/retryWithBackoff');
 
 // NEW: Intelligent matching services
 const { extractSkills, matchAllSkills, getMissingSkills, getMatchedSkills, generateMatchExplanation } = require('../ats/skillMatcher');
@@ -272,49 +273,158 @@ async function scoreResumeWithEmbeddings(options) {
       throw new Error('Job description is required');
     }
 
-    // Step 1: Get or generate embeddings
+    // Step 1: Get or generate embeddings (with retry logic)
     logger.debug('Step 1: Generating embeddings');
     
-    const [resumeEmbedding, jobEmbeddingResult] = await Promise.all([
+    const [resumeEmbedding, jobEmbeddingResult] = await Promise.allSettled([
       providedResumeEmbedding 
         ? Promise.resolve(providedResumeEmbedding)
-        : generateResumeEmbedding(resumeData),
-      getOrGenerateJobEmbedding(jobDescription)
+        : retryOpenAIOperation(
+            async (attempt) => {
+              logger.info(`[ATS] Generating resume embedding (attempt ${attempt})`);
+              return await generateResumeEmbedding(resumeData);
+            },
+            {
+              operationName: 'ATS Resume Embedding',
+              maxAttempts: 2, // Fewer retries for embeddings (faster)
+              initialDelay: 500
+            }
+          ),
+      retryOpenAIOperation(
+        async (attempt) => {
+          logger.info(`[ATS] Generating job embedding (attempt ${attempt})`);
+          return await getOrGenerateJobEmbedding(jobDescription);
+        },
+        {
+          operationName: 'ATS Job Embedding',
+          maxAttempts: 2,
+          initialDelay: 500
+        }
+      )
     ]);
 
-    const jobEmbedding = jobEmbeddingResult.embedding;
-    const fromCache = jobEmbeddingResult.fromCache;
+    // Check for embedding failures
+    if (resumeEmbedding.status === 'rejected' && jobEmbeddingResult.status === 'rejected') {
+      logger.error('[ATS] Both embeddings failed', {
+        resumeError: resumeEmbedding.reason?.message,
+        jobError: jobEmbeddingResult.reason?.message
+      });
+      throw new Error('Failed to generate embeddings for ATS analysis. Please try again.');
+    }
 
-    logger.info('Embeddings ready', {
-      resumeEmbeddingDimensions: resumeEmbedding.length,
-      jobEmbeddingDimensions: jobEmbedding.length,
-      jobFromCache: fromCache
-    });
+    // Handle partial failures
+    let embeddingsFailed = false;
+    let jobEmbedding = null;
+    let fromCache = false;
+    let finalResumeEmbedding = null;
 
-    // Step 2: Calculate semantic similarity
-    logger.debug('Step 2: Calculating similarity');
-    
-    const similarityResult = calculateSimilarity(
-      resumeEmbedding,
-      jobEmbedding,
-      { includeDetails }
-    );
+    if (resumeEmbedding.status === 'rejected') {
+      logger.warn('[ATS] Resume embedding failed, will use keyword-only analysis', {
+        error: resumeEmbedding.reason?.message
+      });
+      embeddingsFailed = true;
+    } else {
+      finalResumeEmbedding = resumeEmbedding.value;
+    }
 
-    // Step 3: AI-powered keyword analysis (unlimited skill coverage)
+    if (jobEmbeddingResult.status === 'rejected') {
+      logger.warn('[ATS] Job embedding failed, will use keyword-only analysis', {
+        error: jobEmbeddingResult.reason?.message
+      });
+      embeddingsFailed = true;
+    } else {
+      jobEmbedding = jobEmbeddingResult.value.embedding;
+      fromCache = jobEmbeddingResult.value.fromCache;
+    }
+
+    if (!embeddingsFailed) {
+      logger.info('Embeddings ready', {
+        resumeEmbeddingDimensions: finalResumeEmbedding?.length || 0,
+        jobEmbeddingDimensions: jobEmbedding?.length || 0,
+        jobFromCache: fromCache
+      });
+    }
+
+    // Step 2: Calculate semantic similarity (if embeddings succeeded)
+    let similarityResult = null;
+    let semanticScore = 0;
+
+    if (!embeddingsFailed && finalResumeEmbedding && jobEmbedding) {
+      logger.debug('Step 2: Calculating similarity');
+      
+      similarityResult = calculateSimilarity(
+        finalResumeEmbedding,
+        jobEmbedding,
+        { includeDetails }
+      );
+      semanticScore = similarityResult.atsScore;
+    } else {
+      logger.warn('[ATS] Skipping similarity calculation due to embedding failures');
+    }
+
+    // Step 3: AI-powered keyword analysis (unlimited skill coverage) with retry
     logger.debug('Step 3: Analyzing keywords with AI');
     
-    const keywordAnalysis = await analyzeKeywordsWithAI(resumeData, jobDescription);
+    let keywordAnalysis;
+    try {
+      keywordAnalysis = await retryOpenAIOperation(
+        async (attempt) => {
+          logger.info(`[ATS] Analyzing keywords (attempt ${attempt})`);
+          return await analyzeKeywordsWithAI(resumeData, jobDescription);
+        },
+        {
+          operationName: 'ATS Keyword Analysis',
+          maxAttempts: 2,
+          initialDelay: 500
+        }
+      );
+    } catch (error) {
+      logger.error('[ATS] Keyword analysis failed after retries', {
+        error: error.message
+      });
+      
+      // If embeddings also failed, we can't continue
+      if (embeddingsFailed) {
+        throw new Error('ATS analysis failed: Unable to analyze keywords or generate embeddings. Please try again.');
+      }
+      
+      // Use empty keyword analysis if embeddings succeeded
+      logger.warn('[ATS] Using empty keyword analysis, relying on embeddings only');
+      keywordAnalysis = {
+        matched: [],
+        missing: [],
+        totalKeywords: 0,
+        aiPowered: false
+      };
+    }
 
     // Step 4: Combine scores
-    // Semantic similarity is the primary score
-    // Keyword matching provides context
-    const semanticScore = similarityResult.atsScore;
+    // Adjust weights based on what succeeded
     const keywordMatchRate = keywordAnalysis.totalKeywords > 0
       ? (keywordAnalysis.matched.length / keywordAnalysis.totalKeywords * 100)
       : 0;
 
-    // Combined score: 80% semantic, 20% keyword match
-    const overall = Math.round(semanticScore * 0.8 + keywordMatchRate * 0.2);
+    let overall;
+    let scoringMethod;
+
+    if (!embeddingsFailed && keywordAnalysis.totalKeywords > 0) {
+      // Both succeeded: 80% semantic, 20% keyword match
+      overall = Math.round(semanticScore * 0.8 + keywordMatchRate * 0.2);
+      scoringMethod = 'hybrid';
+    } else if (!embeddingsFailed) {
+      // Only embeddings succeeded: 100% semantic
+      overall = Math.round(semanticScore);
+      scoringMethod = 'semantic-only';
+      logger.warn('[ATS] Using semantic-only scoring (keywords unavailable)');
+    } else if (keywordAnalysis.totalKeywords > 0) {
+      // Only keywords succeeded: 100% keyword match
+      overall = Math.round(keywordMatchRate);
+      scoringMethod = 'keyword-only';
+      logger.warn('[ATS] Using keyword-only scoring (embeddings unavailable)');
+    } else {
+      // Both failed (shouldn't reach here due to earlier check)
+      throw new Error('ATS analysis failed: No scoring method available');
+    }
 
     const duration = Date.now() - startTime;
 
@@ -324,7 +434,9 @@ async function scoreResumeWithEmbeddings(options) {
       keywordMatchRate: keywordMatchRate.toFixed(1),
       duration,
       fromCache,
-      aiSkillExtraction: keywordAnalysis.aiPowered ? 'AI (unlimited)' : 'Patterns (fallback)'
+      scoringMethod,
+      aiSkillExtraction: keywordAnalysis.aiPowered ? 'AI (unlimited)' : 'Patterns (fallback)',
+      partialFailure: embeddingsFailed || keywordAnalysis.totalKeywords === 0
     });
 
     // Build result
@@ -332,21 +444,35 @@ async function scoreResumeWithEmbeddings(options) {
       overall,
       semanticScore,
       keywordMatchRate: Math.round(keywordMatchRate),
-      similarity: similarityResult.similarity,
+      similarity: similarityResult?.similarity || 0,
       matchedKeywords: keywordAnalysis.matched.slice(0, 20), // Top 20
       missingKeywords: keywordAnalysis.missing.slice(0, 20), // Top 20
       performance: {
         duration,
         fromCache,
-        method: 'embedding',
-        aiPowered: keywordAnalysis.aiPowered || false // AI skill extraction
+        method: scoringMethod,
+        aiPowered: keywordAnalysis.aiPowered || false, // AI skill extraction
+        partialFailure: embeddingsFailed || keywordAnalysis.totalKeywords === 0
       }
     };
 
+    // Add warning if partial failure occurred
+    if (embeddingsFailed) {
+      result.warning = 'Embeddings unavailable. Score based on keyword matching only. Results may be less accurate.';
+    } else if (keywordAnalysis.totalKeywords === 0) {
+      result.warning = 'Keyword analysis unavailable. Score based on semantic similarity only.';
+    }
+
     // Add detailed analysis if requested
-    if (includeDetails && similarityResult.details) {
+    if (includeDetails) {
+      const weights = scoringMethod === 'hybrid' 
+        ? { semantic: 0.8, keyword: 0.2 }
+        : scoringMethod === 'semantic-only'
+        ? { semantic: 1.0, keyword: 0.0 }
+        : { semantic: 0.0, keyword: 1.0 };
+
       result.details = {
-        ...similarityResult.details,
+        ...(similarityResult?.details || {}),
         keywordAnalysis: {
           totalKeywords: keywordAnalysis.totalKeywords,
           matchedCount: keywordAnalysis.matched.length,
@@ -354,10 +480,11 @@ async function scoreResumeWithEmbeddings(options) {
           matchRate: keywordMatchRate
         },
         scoring: {
-          semanticWeight: 0.8,
-          keywordWeight: 0.2,
-          semanticContribution: Math.round(semanticScore * 0.8),
-          keywordContribution: Math.round(keywordMatchRate * 0.2)
+          method: scoringMethod,
+          semanticWeight: weights.semantic,
+          keywordWeight: weights.keyword,
+          semanticContribution: Math.round(semanticScore * weights.semantic),
+          keywordContribution: Math.round(keywordMatchRate * weights.keyword)
         }
       };
     }

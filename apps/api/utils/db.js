@@ -2,15 +2,63 @@
 const { PrismaClient } = require('@prisma/client');
 const logger = require('./logger');
 
-// Build DATABASE_URL with connection pool settings to prevent connection resets
+// ============================================
+// CONNECTION POOL CONFIGURATION
+// ============================================
+// Production-ready connection pool settings
+// These values can be overridden via environment variables
+
+const POOL_CONFIG = {
+  // Maximum number of connections in the pool
+  // Default: 10 (suitable for most applications)
+  // Increase for high-traffic applications (e.g., 20-50)
+  // Formula: (number_of_app_instances * connection_limit) should not exceed database max_connections
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
+  
+  // Maximum time (in seconds) a connection can be idle before being closed
+  // Default: 20 seconds
+  poolTimeout: parseInt(process.env.DB_POOL_TIMEOUT) || 20,
+  
+  // Maximum time (in seconds) to wait for a new connection
+  // Default: 10 seconds
+  connectTimeout: parseInt(process.env.DB_CONNECT_TIMEOUT) || 10,
+  
+  // Enable connection pooling (pgBouncer compatible)
+  // Default: true
+  pgbouncer: process.env.DB_PGBOUNCER === 'true' || false,
+  
+  // Schema cache TTL (in seconds) - useful for pgBouncer
+  // Default: 300 seconds (5 minutes)
+  schemaCacheTTL: parseInt(process.env.DB_SCHEMA_CACHE_TTL) || 300
+};
+
+// Build DATABASE_URL with connection pool settings
 let databaseUrl = process.env.DATABASE_URL;
 if (databaseUrl && databaseUrl.startsWith('postgresql://')) {
-  // Add connection pool parameters to prevent connection resets
   const urlObj = new URL(databaseUrl);
-  urlObj.searchParams.set('connection_limit', '10');
-  urlObj.searchParams.set('pool_timeout', '20');
-  urlObj.searchParams.set('connect_timeout', '10');
+  
+  // Add connection pool parameters
+  urlObj.searchParams.set('connection_limit', String(POOL_CONFIG.connectionLimit));
+  urlObj.searchParams.set('pool_timeout', String(POOL_CONFIG.poolTimeout));
+  urlObj.searchParams.set('connect_timeout', String(POOL_CONFIG.connectTimeout));
+  
+  // Add pgBouncer compatibility if enabled
+  if (POOL_CONFIG.pgbouncer) {
+    urlObj.searchParams.set('pgbouncer', 'true');
+    urlObj.searchParams.set('schema_cache', String(POOL_CONFIG.schemaCacheTTL));
+  }
+  
+  // Add statement timeout (30 seconds) to prevent long-running queries
+  urlObj.searchParams.set('statement_timeout', '30000');
+  
   databaseUrl = urlObj.toString();
+  
+  logger.info('Database connection pool configured', {
+    connectionLimit: POOL_CONFIG.connectionLimit,
+    poolTimeout: POOL_CONFIG.poolTimeout,
+    connectTimeout: POOL_CONFIG.connectTimeout,
+    pgbouncer: POOL_CONFIG.pgbouncer
+  });
 }
 
 const prisma = new PrismaClient({
@@ -157,12 +205,25 @@ try {
   logger.warn('Could not set Prisma error handler:', error.message);
 }
 
+// Get connection pool statistics
+function getPoolStats() {
+  // Prisma doesn't expose pool stats directly, but we can provide configuration info
+  return {
+    config: POOL_CONFIG,
+    isConnected: isConnected,
+    reconnectAttempts: reconnectAttempts,
+    isReconnecting: isReconnecting,
+    databaseUrl: databaseUrl ? databaseUrl.replace(/:[^:@]+@/, ':****@') : 'Not configured' // Mask password
+  };
+}
+
 module.exports = {
   prisma, // Export prisma directly - routes should use safeQuery wrapper for critical operations
   connectDB,
   disconnectDB,
   reconnectDB,
   safeQuery, // Use this wrapper for database operations that need retry logic
-  isConnected: () => isConnected
+  isConnected: () => isConnected,
+  getPoolStats // Export pool statistics for monitoring
 };
 

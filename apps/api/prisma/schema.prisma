@@ -343,14 +343,14 @@ model StorageFile {
   updatedAt DateTime @updatedAt
 
   // Relations
-  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder                   StorageFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  shares                   FileShare[]
-  shareLinks               ShareLink[]
-  comments                 FileComment[]
-  accessLogs               FileAccessLog[]
-  credentials              Credential[]
-  baseResumes              BaseResume[]
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder      StorageFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  shares      FileShare[]
+  shareLinks  ShareLink[]
+  comments    FileComment[]
+  accessLogs  FileAccessLog[]
+  credentials Credential[]
+  baseResumes BaseResume[]
 
   @@index([userId])
   @@index([folderId])
@@ -476,7 +476,7 @@ model User {
 
   // Preferences (frequently accessed)
   emailNotifications Boolean @default(true)
-  
+
   // Tailoring Preferences
   tailorPreferredMode   TailorMode? @default(PARTIAL)
   tailorPreferredTone   String?     @default("professional")
@@ -518,6 +518,7 @@ model User {
   aiDrafts            AIDraft[]
   resumeCacheEntries  ResumeCache[]
   tailoringAnalytics  TailoringAnalytics[]
+  analyticsEvents     AnalyticsEvent[]     @relation("AnalyticsEvents")
   activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -550,20 +551,20 @@ model WorkExperience {
 }
 
 model BaseResume {
-  id                   String    @id @default(cuid())
-  userId               String
-  slotNumber           Int
-  name                 String
-  isActive             Boolean   @default(false)
-  data                 Json
-  formatting           Json?     @default("{}")
-  metadata             Json?     @default("{}")
-  lastAIAccessedAt     DateTime?
-  parsingConfidence    Float?
-  embedding            String?   @db.Text // pgvector embedding stored as text
-  embeddingUpdatedAt   DateTime? @map("embedding_updated_at")
-  storageFileId        String?   // Link to uploaded file for parsing
-  fileHash             String?   // SHA-256 hash for cache lookup
+  id                 String    @id @default(cuid())
+  userId             String
+  slotNumber         Int
+  name               String
+  isActive           Boolean   @default(false)
+  data               Json
+  formatting         Json?     @default("{}")
+  metadata           Json?     @default("{}")
+  lastAIAccessedAt   DateTime?
+  parsingConfidence  Float?
+  embedding          String?   @db.Text // pgvector embedding stored as text
+  embeddingUpdatedAt DateTime? @map("embedding_updated_at")
+  storageFileId      String? // Link to uploaded file for parsing
+  fileHash           String? // SHA-256 hash for cache lookup
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -571,7 +572,7 @@ model BaseResume {
   user               User                 @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
   activeUser         User?                @relation("ActiveBaseResume")
   storageFile        StorageFile?         @relation(fields: [storageFileId], references: [id], onDelete: SetNull)
-  workingDraft       WorkingDraft?        // One-to-one relation with working draft
+  workingDraft       WorkingDraft? // One-to-one relation with working draft
   tailoredVersions   TailoredVersion[]
   generatedDocuments GeneratedDocument[]
   resumeCaches       ResumeCache[]
@@ -580,19 +581,20 @@ model BaseResume {
   tailoringAnalytics TailoringAnalytics[]
 
   @@unique([userId, slotNumber])
-  @@index([userId, isActive])
+  @@index([userId, isActive]) // For finding active resume per user
+  @@index([userId, updatedAt]) // For sorting user's resumes by last modified
   @@index([storageFileId])
-  @@index([fileHash])
+  @@index([fileHash]) // For cache lookup during parsing
   @@map("base_resumes")
 }
 
 model WorkingDraft {
-  id           String   @id @default(cuid())
-  baseResumeId String   @unique
-  data         Json     // Current edits (not yet committed to base)
-  formatting   Json?    @default("{}")
-  metadata     Json?    @default("{}")
-  
+  id           String @id @default(cuid())
+  baseResumeId String @unique
+  data         Json // Current edits (not yet committed to base)
+  formatting   Json?  @default("{}")
+  metadata     Json?  @default("{}")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -628,6 +630,8 @@ model TailoredVersion {
   @@index([baseResumeId])
   @@index([userId])
   @@index([jobDescriptionHash])
+  @@index([userId, createdAt]) // For fetching user's recent tailored versions
+  @@index([baseResumeId, createdAt]) // For fetching recent versions of a resume
   @@map("tailored_versions")
 }
 
@@ -674,6 +678,9 @@ model AIRequestLog {
   @@index([baseResumeId])
   @@index([tailoredVersionId])
   @@index([action])
+  @@index([userId, createdAt]) // For fetching user's recent AI requests
+  @@index([action, createdAt]) // For analytics by action type over time
+  @@index([userId, action, createdAt]) // For user's requests by action type
   @@map("ai_request_logs")
 }
 
@@ -789,4 +796,23 @@ model TailoringAnalytics {
   @@index([mode])
   @@index([userId, timestamp])
   @@map("tailoring_analytics")
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  event      String   // Event name (e.g., 'resume_uploaded', 'ats_check_success')
+  properties String   @default("{}") // JSON string of event properties
+  sessionId  String?  // Optional session identifier
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation("AnalyticsEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([event])
+  @@index([timestamp])
+  @@index([userId, timestamp])
+  @@index([event, timestamp])
+  @@map("analytics_events")
 }

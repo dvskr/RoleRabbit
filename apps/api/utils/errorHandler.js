@@ -4,6 +4,7 @@
  */
 
 const logger = require('./logger');
+const { getUserFriendlyError, formatErrorResponse } = require('./errorMessages');
 
 /**
  * Error categories for classification

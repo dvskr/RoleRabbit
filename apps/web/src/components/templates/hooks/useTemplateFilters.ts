@@ -352,6 +352,27 @@ export const useTemplateFilters = (
     previousFreeOnly.current = showFreeOnly;
   }, [showFreeOnly]);
 
+  // Count active filters - defined early because it's used in clearAllFilters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== 'all') count++;
+    if (selectedDifficulty !== 'all') count++;
+    if (selectedLayout !== 'all') count++;
+    if (selectedColorScheme !== 'all') count++;
+    if (showPremiumOnly) count++;
+    if (showFreeOnly) count++;
+    if (debouncedSearchQuery.length > 0) count++;
+    return count;
+  }, [
+    selectedCategory,
+    selectedDifficulty,
+    selectedLayout,
+    selectedColorScheme,
+    showPremiumOnly,
+    showFreeOnly,
+    debouncedSearchQuery,
+  ]);
+
   // Clear all filters and localStorage
   const clearAllFilters = useCallback(() => {
     // Track analytics before clearing
@@ -451,27 +472,6 @@ export const useTemplateFilters = (
       showFreeOnly ||
       debouncedSearchQuery.length > 0
     );
-  }, [
-    selectedCategory,
-    selectedDifficulty,
-    selectedLayout,
-    selectedColorScheme,
-    showPremiumOnly,
-    showFreeOnly,
-    debouncedSearchQuery,
-  ]);
-
-  // Count active filters
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedCategory !== 'all') count++;
-    if (selectedDifficulty !== 'all') count++;
-    if (selectedLayout !== 'all') count++;
-    if (selectedColorScheme !== 'all') count++;
-    if (showPremiumOnly) count++;
-    if (showFreeOnly) count++;
-    if (debouncedSearchQuery.length > 0) count++;
-    return count;
   }, [
     selectedCategory,
     selectedDifficulty,

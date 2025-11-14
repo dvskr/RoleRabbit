@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Download, 
   Share2, 
   Trash2, 
@@ -17,7 +17,12 @@ import {
   Check,
   Folder,
   MoreVertical,
-  FileText
+  FileText,
+  Award,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
@@ -92,10 +97,11 @@ const FileCard = React.memo(function FileCard({
   const { user } = useAuth();
   
   // Get current user's permission for this file
+  // Default to 'admin' for owner's own files
   const userPermission = getUserFilePermission(
-    { userId: file.owner || file.userId || '', sharedWith: file.sharedWith || [] },
+    { userId: file.owner || '', sharedWith: file.sharedWith || [] },
     user?.id || ''
-  );
+  ) || 'admin'; // Fallback to admin if permission is null (for owner's files)
   
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -510,6 +516,55 @@ const FileCard = React.memo(function FileCard({
               </>
             )}
           </div>
+
+          {/* Credential Information */}
+          {file.credentialInfo && (
+            <div 
+              className="mt-3 pt-3 space-y-2"
+              style={{ borderTop: `1px solid #2D3748` }}
+            >
+              <div className="flex items-start gap-2">
+                <Award size={16} style={{ color: blueAccent, flexShrink: 0 }} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium" style={{ color: lightText }}>
+                      {file.credentialInfo.issuer}
+                    </span>
+                    <span 
+                      className="px-2 py-0.5 text-xs font-medium rounded"
+                      style={{
+                        background: 
+                          file.credentialInfo.verificationStatus === 'verified' ? '#22543D' :
+                          file.credentialInfo.verificationStatus === 'pending' ? '#744210' :
+                          file.credentialInfo.verificationStatus === 'expired' ? '#742A2A' :
+                          '#2D3748',
+                        color: 
+                          file.credentialInfo.verificationStatus === 'verified' ? '#48BB78' :
+                          file.credentialInfo.verificationStatus === 'pending' ? '#F6AD55' :
+                          file.credentialInfo.verificationStatus === 'expired' ? '#F56565' :
+                          secondaryText,
+                      }}
+                    >
+                      {file.credentialInfo.verificationStatus === 'verified' && <CheckCircle size={10} className="inline mr-1" />}
+                      {file.credentialInfo.verificationStatus === 'pending' && <Clock size={10} className="inline mr-1" />}
+                      {file.credentialInfo.verificationStatus === 'expired' && <XCircle size={10} className="inline mr-1" />}
+                      {file.credentialInfo.verificationStatus === 'revoked' && <AlertCircle size={10} className="inline mr-1" />}
+                      {file.credentialInfo.verificationStatus.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: secondaryText }}>
+                    {file.credentialInfo.credentialType.charAt(0).toUpperCase() + file.credentialInfo.credentialType.slice(1).replace('_', ' ')}
+                    {file.credentialInfo.issuedDate && (
+                      <> • Issued {new Date(file.credentialInfo.issuedDate).toLocaleDateString()}</>
+                    )}
+                    {file.credentialInfo.expirationDate && (
+                      <> • Expires {new Date(file.credentialInfo.expirationDate).toLocaleDateString()}</>
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bottom Section - Actions Grid */}
