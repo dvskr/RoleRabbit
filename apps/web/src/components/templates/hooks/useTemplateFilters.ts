@@ -1,7 +1,73 @@
 /**
- * Custom hook for template filtering and search
- * Includes localStorage persistence for filter state
- * Enhanced with Zod validation for runtime safety
+ * useTemplateFilters Hook
+ *
+ * Custom hook for template filtering, search, and sorting with localStorage persistence.
+ *
+ * @module useTemplateFilters
+ *
+ * Features:
+ * - Multi-dimensional filtering (category, difficulty, layout, color, price)
+ * - Real-time search with debouncing (300ms delay)
+ * - Sort by popularity, date, rating, or name
+ * - localStorage persistence with Zod validation for runtime safety
+ * - SSR-safe with window checks
+ * - Computed properties for active filter state
+ * - "Clear all" functionality
+ *
+ * Filter Persistence:
+ * - All filter selections are automatically saved to localStorage
+ * - Filters are restored on component mount
+ * - Validation ensures loaded data matches expected types
+ * - Can be disabled via persistFilters option
+ *
+ * Performance:
+ * - Search is debounced (300ms) to reduce filtering operations
+ * - Memoized filtered results to prevent unnecessary recalculations
+ * - Efficient filter composition with early returns
+ *
+ * @example
+ * ```tsx
+ * function TemplatesPage() {
+ *   const {
+ *     searchQuery,
+ *     setSearchQuery,
+ *     filteredTemplates,
+ *     clearAllFilters,
+ *     hasActiveFilters,
+ *     activeFilterCount
+ *   } = useTemplateFilters({
+ *     initialCategory: 'professional',
+ *     persistFilters: true
+ *   });
+ *
+ *   return (
+ *     <>
+ *       <input
+ *         value={searchQuery}
+ *         onChange={(e) => setSearchQuery(e.target.value)}
+ *       />
+ *       {hasActiveFilters && (
+ *         <button onClick={clearAllFilters}>
+ *           Clear {activeFilterCount} filters
+ *         </button>
+ *       )}
+ *       {filteredTemplates.map(template => (
+ *         <TemplateCard key={template.id} template={template} />
+ *       ))}
+ *     </>
+ *   );
+ * }
+ * ```
+ *
+ * @param {UseTemplateFiltersOptions} options - Configuration options
+ * @param {string} [options.initialCategory='all'] - Initial category filter
+ * @param {TemplateSortBy} [options.initialSortBy='popular'] - Initial sort option
+ * @param {string} [options.initialDifficulty='all'] - Initial difficulty filter
+ * @param {string} [options.initialLayout='all'] - Initial layout filter
+ * @param {string} [options.initialColorScheme='all'] - Initial color scheme filter
+ * @param {boolean} [options.persistFilters=true] - Enable localStorage persistence
+ *
+ * @returns {UseTemplateFiltersReturn} Filter state and controls
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react';

@@ -20,8 +20,52 @@ import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundar
 import FilterChips from './templates/components/FilterChips';
 
 /**
- * Templates Component (Internal)
- * Main template browsing and management component
+ * TemplatesInternal Component
+ *
+ * Main template browsing and management component with comprehensive filtering,
+ * search, pagination, and template action capabilities.
+ *
+ * @component
+ * @example
+ * ```tsx
+ * <Templates
+ *   onAddToEditor={(templateId) => console.log('Added:', templateId)}
+ *   addedTemplates={['template-1', 'template-2']}
+ *   onRemoveTemplate={(templateId) => console.log('Removed:', templateId)}
+ * />
+ * ```
+ *
+ * Features:
+ * - Template browsing with grid/list view modes
+ * - Advanced filtering (category, difficulty, layout, color, price)
+ * - Real-time search with debouncing (300ms)
+ * - Pagination with scroll-to-top
+ * - Favorites management with localStorage persistence
+ * - Template preview modal with full details
+ * - Keyboard shortcuts for power users
+ * - Usage history tracking
+ * - Mobile-responsive design
+ * - Accessible with ARIA labels and keyboard navigation
+ *
+ * Architecture:
+ * - Uses custom hooks for separation of concerns:
+ *   - useTemplateFilters: Search and filter logic
+ *   - useTemplatePagination: Pagination state and controls
+ *   - useTemplateActions: Template actions (preview, add, favorite, etc.)
+ *   - useKeyboardShortcuts: Keyboard navigation and shortcuts
+ * - Components organized by responsibility:
+ *   - Header: Search, filters, category tabs
+ *   - Stats: Template statistics dashboard
+ *   - Cards: Template display (grid/list views)
+ *   - Modals: Preview and upload functionality
+ *   - Controls: Pagination and filter chips
+ *
+ * @param {TemplatesProps} props - Component props
+ * @param {(templateId: string) => void} props.onAddToEditor - Callback when template is added to editor
+ * @param {string[]} props.addedTemplates - Array of template IDs currently added to editor (max 10)
+ * @param {(templateId: string) => void} [props.onRemoveTemplate] - Optional callback when template is removed
+ *
+ * @returns {JSX.Element} The Templates component with error boundary wrapper
  */
 function TemplatesInternal({
   onAddToEditor,
