@@ -1,6 +1,7 @@
 const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
 const { WEBHOOK_EVENTS, generateSignature } = require('../services/webhooks/webhookService');
+const { authenticate } = require('../middleware/auth');
 const crypto = require('crypto');
 
 /**
@@ -15,7 +16,7 @@ async function webhookRoutes(fastify, options) {
    * GET /api/webhooks/config
    */
   fastify.get('/config', {
-    preHandler: [fastify.authenticate]
+    preHandler: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -65,7 +66,7 @@ async function webhookRoutes(fastify, options) {
    * POST /api/webhooks/config
    */
   fastify.post('/config', {
-    preHandler: [fastify.authenticate],
+    preHandler: [authenticate],
     schema: {
       body: {
         type: 'object',
@@ -169,7 +170,7 @@ async function webhookRoutes(fastify, options) {
    * DELETE /api/webhooks/config
    */
   fastify.delete('/config', {
-    preHandler: [fastify.authenticate]
+    preHandler: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -207,7 +208,7 @@ async function webhookRoutes(fastify, options) {
    * POST /api/webhooks/test
    */
   fastify.post('/test', {
-    preHandler: [fastify.authenticate]
+    preHandler: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -296,7 +297,7 @@ async function webhookRoutes(fastify, options) {
    * GET /api/webhooks/logs
    */
   fastify.get('/logs', {
-    preHandler: [fastify.authenticate],
+    preHandler: [authenticate],
     schema: {
       querystring: {
         type: 'object',
@@ -366,7 +367,7 @@ async function webhookRoutes(fastify, options) {
    * GET /api/webhooks/stats
    */
   fastify.get('/stats', {
-    preHandler: [fastify.authenticate]
+    preHandler: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
@@ -427,7 +428,7 @@ async function webhookRoutes(fastify, options) {
    * POST /api/webhooks/regenerate-secret
    */
   fastify.post('/regenerate-secret', {
-    preHandler: [fastify.authenticate]
+    preHandler: [authenticate]
   }, async (request, reply) => {
     try {
       const userId = request.user.userId;
