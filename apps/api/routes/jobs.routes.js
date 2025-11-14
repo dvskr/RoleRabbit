@@ -34,6 +34,7 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → POST   /api/jobs');
   logger.info('   → PUT    /api/jobs/:id');
   logger.info('   → DELETE /api/jobs/:id');
+  logger.info('   → POST   /api/jobs/:id/restore');
 
   /**
    * GET /api/jobs
@@ -283,8 +284,8 @@ module.exports = async function jobsRoutes(fastify) {
 
   /**
    * DELETE /api/jobs/:id
-   * Permanently delete job (hard delete)
-   * Note: Soft delete is handled via PUT with deletedAt field
+   * Soft delete job (sets deletedAt timestamp)
+   * Job can be restored later via POST /api/jobs/:id/restore
    */
   fastify.delete(
     '/api/jobs/:id',
@@ -308,7 +309,8 @@ module.exports = async function jobsRoutes(fastify) {
           return await prisma.job.findFirst({
             where: {
               id,
-              userId
+              userId,
+              deletedAt: null // Only find non-deleted jobs
             }
           });
         });
@@ -321,18 +323,22 @@ module.exports = async function jobsRoutes(fastify) {
           });
         }
 
-        // Permanently delete job from database with retry logic
-        await safeQuery(async () => {
-          return await prisma.job.delete({
-            where: { id }
+        // Soft delete: set deletedAt timestamp
+        const deletedJob = await safeQuery(async () => {
+          return await prisma.job.update({
+            where: { id },
+            data: {
+              deletedAt: new Date()
+            }
           });
         });
 
-        logger.info('Job deleted permanently', { userId, jobId: id });
+        logger.info('Job soft-deleted successfully', { userId, jobId: id });
 
         return reply.send({
           success: true,
-          message: 'Job deleted successfully'
+          message: 'Job deleted successfully',
+          job: deletedJob
         });
       } catch (error) {
         logger.error('Failed to delete job:', error);
@@ -347,6 +353,82 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to delete job. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/jobs/:id/restore
+   * Restore a soft-deleted job (clears deletedAt timestamp)
+   */
+  fastify.post(
+    '/api/jobs/:id/restore',
+    {
+      preHandler: [authenticate, jobPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id } = request.params;
+
+        // Check if job exists, belongs to user, and is deleted
+        const existingJob = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: {
+              id,
+              userId,
+              deletedAt: { not: null } // Only find deleted jobs
+            }
+          });
+        });
+
+        if (!existingJob) {
+          logger.warn('Deleted job not found or unauthorized', { userId, jobId: id });
+          return reply.status(404).send({
+            success: false,
+            error: 'Deleted job not found'
+          });
+        }
+
+        // Restore: clear deletedAt timestamp
+        const restoredJob = await safeQuery(async () => {
+          return await prisma.job.update({
+            where: { id },
+            data: {
+              deletedAt: null
+            }
+          });
+        });
+
+        logger.info('Job restored successfully', { userId, jobId: id, title: restoredJob.title });
+
+        return reply.send({
+          success: true,
+          message: 'Job restored successfully',
+          job: restoredJob
+        });
+      } catch (error) {
+        logger.error('Failed to restore job:', error);
+
+        if (error.code === 'P2025') {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to restore job. Please try again.',
           message: error.message
         });
       }
