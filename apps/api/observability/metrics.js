@@ -41,12 +41,49 @@ const atsScoreGauge = new client.Gauge({
   labelNames: ['userId', 'resumeId']
 });
 
+// Template metrics
+const templateRequestCounter = new client.Counter({
+  name: 'rolerabbit_template_requests_total',
+  help: 'Total template API requests',
+  labelNames: ['endpoint', 'method', 'status']
+});
+
+const templateRequestDuration = new client.Histogram({
+  name: 'rolerabbit_template_request_duration_seconds',
+  help: 'Duration of template API requests',
+  labelNames: ['endpoint', 'method'],
+  buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5]
+});
+
+const templateUsageCounter = new client.Counter({
+  name: 'rolerabbit_template_usage_total',
+  help: 'Total template usage events by action',
+  labelNames: ['action', 'templateId', 'category']
+});
+
+const templateFavoritesGauge = new client.Gauge({
+  name: 'rolerabbit_template_favorites_count',
+  help: 'Current number of favorites per template',
+  labelNames: ['templateId']
+});
+
+const templateErrorCounter = new client.Counter({
+  name: 'rolerabbit_template_errors_total',
+  help: 'Total template API errors',
+  labelNames: ['endpoint', 'error_type']
+});
+
 register.registerMetric(resumeParseDuration);
 register.registerMetric(resumeParseFailures);
 register.registerMetric(aiActionCounter);
 register.registerMetric(aiActionLatency);
 register.registerMetric(atsScoreCounter);
 register.registerMetric(atsScoreGauge);
+register.registerMetric(templateRequestCounter);
+register.registerMetric(templateRequestDuration);
+register.registerMetric(templateUsageCounter);
+register.registerMetric(templateFavoritesGauge);
+register.registerMetric(templateErrorCounter);
 
 module.exports = {
   register,
@@ -55,5 +92,10 @@ module.exports = {
   aiActionCounter,
   aiActionLatency,
   atsScoreCounter,
-  atsScoreGauge
+  atsScoreGauge,
+  templateRequestCounter,
+  templateRequestDuration,
+  templateUsageCounter,
+  templateFavoritesGauge,
+  templateErrorCounter
 };

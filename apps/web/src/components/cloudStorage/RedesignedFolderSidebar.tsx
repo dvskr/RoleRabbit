@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import {
   Folder,
   FolderPlus,
@@ -12,6 +12,8 @@ import {
   Archive,
   Pencil,
   Trash,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { StorageInfo } from '../../types/cloudStorage';
@@ -21,6 +23,7 @@ interface SidebarFolder {
   name: string;
   color?: string;
   fileCount?: number;
+  parentId?: string | null;
 }
 
 interface QuickFilters {
@@ -89,9 +92,58 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
   const { theme } = useTheme();
   const palette = colors || theme.colors;
 
+  // Track which folders are expanded
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // Toggle folder expansion
+  const toggleFolderExpansion = useCallback((folderId: string) => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Organize folders into a tree structure
+  const folderTree = useMemo(() => {
+    const rootFolders: SidebarFolder[] = [];
+    const folderMap = new Map<string, SidebarFolder & { children: SidebarFolder[] }>();
+
+    // First pass: create folder map with children array
+    folders.forEach(folder => {
+      folderMap.set(folder.id, { ...folder, children: [] });
+    });
+
+    // Second pass: organize into tree
+    folders.forEach(folder => {
+      const folderWithChildren = folderMap.get(folder.id);
+      if (!folderWithChildren) return;
+
+      if (!folder.parentId || folder.parentId === null) {
+        // Root level folder
+        rootFolders.push(folderWithChildren);
+      } else {
+        // Child folder - add to parent's children
+        const parent = folderMap.get(folder.parentId);
+        if (parent) {
+          parent.children.push(folderWithChildren);
+        } else {
+          // Parent not found, treat as root
+          rootFolders.push(folderWithChildren);
+        }
+      }
+    });
+
+    return rootFolders;
+  }, [folders]);
+
   // Use passed totalFilesCount if available, otherwise calculate from folders
-  const totalFilesCount = passedFilesCount !== undefined 
-    ? passedFilesCount 
+  const totalFilesCount = passedFilesCount !== undefined
+    ? passedFilesCount
     : folders.reduce((sum, folder) => sum + (folder.fileCount || 0), 0);
 
   const toggleFilter = useCallback(
@@ -130,6 +182,124 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
   }, [storagePercentage]);
 
   const progressWidth = storagePercentage > 0 && storagePercentage < 1 ? 1 : storagePercentage;
+
+  // Recursive function to render folders and their children
+  const renderFolder = useCallback(
+    (folder: SidebarFolder & { children: SidebarFolder[] }, level: number = 0) => {
+      const hasChildren = folder.children && folder.children.length > 0;
+      const isExpanded = expandedFolders.has(folder.id);
+      const indentWidth = level * 16; // 16px per level
+
+      return (
+        <div key={folder.id}>
+          <div
+            className="group relative"
+            style={{ paddingLeft: `${indentWidth}px` }}
+          >
+            <button
+              onClick={() => onSelectFolder(folder.id)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+              style={{
+                background:
+                  selectedFolderId === folder.id
+                    ? `${palette.primaryBlue}22`
+                    : 'transparent',
+                color:
+                  selectedFolderId === folder.id
+                    ? palette.primaryBlue
+                    : palette.primaryText,
+              }}
+            >
+              {/* Expand/Collapse chevron for folders with children */}
+              {hasChildren ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFolderExpansion(folder.id);
+                  }}
+                  className="p-0.5 hover:bg-opacity-20 rounded transition-colors"
+                  style={{ color: palette.secondaryText }}
+                  aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
+                >
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+              ) : (
+                <span style={{ width: '14px', display: 'inline-block' }} />
+              )}
+
+              <Folder size={16} style={{ color: folder.color || palette.primaryBlue }} />
+              <span className="flex-1 text-left truncate">{folder.name}</span>
+
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRenameFolder(folder.id, folder.name);
+                  }}
+                  className="p-1 rounded-md transition-opacity"
+                  style={{ color: palette.primaryBlue, background: `${palette.primaryBlue}10` }}
+                  aria-label="Rename folder"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${palette.primaryBlue}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = `${palette.primaryBlue}10`;
+                  }}
+                >
+                  <Pencil size={12} />
+                </button>
+                <button
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (confirm(`Delete folder "${folder.name}"? Files will remain in All Files.`)) {
+                      onDeleteFolder(folder.id);
+                    }
+                  }}
+                  className="p-1 rounded-md transition-opacity"
+                  style={{ color: palette.errorRed, background: `${palette.errorRed}10` }}
+                  aria-label="Delete folder"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${palette.errorRed}20`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = `${palette.errorRed}10`;
+                  }}
+                >
+                  <Trash size={12} />
+                </button>
+              </div>
+
+              <span
+                className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                style={{
+                  background: palette.inputBackground,
+                  color: palette.secondaryText,
+                }}
+              >
+                {folder.fileCount || 0}
+              </span>
+            </button>
+          </div>
+
+          {/* Render children if expanded */}
+          {hasChildren && isExpanded && (
+            <div>
+              {folder.children.map(child => renderFolder(child, level + 1))}
+            </div>
+          )}
+        </div>
+      );
+    },
+    [
+      expandedFolders,
+      selectedFolderId,
+      palette,
+      toggleFolderExpansion,
+      onSelectFolder,
+      onRenameFolder,
+      onDeleteFolder,
+    ]
+  );
 
   const usedStorageLabel = useMemo(() => {
     if (safeStorageInfo.usedBytes && safeStorageInfo.usedBytes > 0) {
@@ -222,77 +392,7 @@ export const RedesignedFolderSidebar: React.FC<RedesignedFolderSidebarProps> = (
             </span>
           </button>
 
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
-              className="group relative"
-            >
-              <button
-                onClick={() => onSelectFolder(folder.id)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
-              style={{
-                background:
-                  selectedFolderId === folder.id
-                    ? `${palette.primaryBlue}22`
-                    : 'transparent',
-                color:
-                  selectedFolderId === folder.id
-                    ? palette.primaryBlue
-                    : palette.primaryText,
-              }}
-              >
-                <Folder size={16} style={{ color: folder.color || palette.primaryBlue }} />
-                <span className="flex-1 text-left truncate">{folder.name}</span>
-                <div className="flex items-center gap-0.5 flex-shrink-0">
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onRenameFolder(folder.id, folder.name);
-                  }}
-                    className="p-1 rounded-md transition-opacity"
-                  style={{ color: palette.primaryBlue, background: `${palette.primaryBlue}10` }}
-                  aria-label="Rename folder"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = `${palette.primaryBlue}20`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = `${palette.primaryBlue}10`;
-                    }}
-                >
-                  <Pencil size={12} />
-                </button>
-                <button
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (confirm(`Delete folder "${folder.name}"? Files will remain in All Files.`)) {
-                      onDeleteFolder(folder.id);
-                    }
-                  }}
-                    className="p-1 rounded-md transition-opacity"
-                  style={{ color: palette.errorRed, background: `${palette.errorRed}10` }}
-                  aria-label="Delete folder"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = `${palette.errorRed}20`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = `${palette.errorRed}10`;
-                    }}
-                >
-                  <Trash size={12} />
-                </button>
-              </div>
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                  style={{
-                    background: palette.inputBackground,
-                    color: palette.secondaryText,
-                  }}
-                >
-                  {folder.fileCount || 0}
-                </span>
-              </button>
-            </div>
-          ))}
+          {folderTree.map((folder) => renderFolder(folder, 0))}
         </div>
 
         <div className="pt-1">

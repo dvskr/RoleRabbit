@@ -1,0 +1,261 @@
+##
+## Prometheus AlertManager Configuration
+## Routes alerts to appropriate channels based on severity and team
+##
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+  smtp_from: 'alerts@rolerabbit.com'
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_auth_username: '${SMTP_USERNAME}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+
+# Templates for notification messages
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route tree for alert distribution
+route:
+  # Default receiver for all alerts
+  receiver: 'default-receiver'
+
+  # Group alerts by these labels
+  group_by: ['alertname', 'cluster', 'service']
+
+  # Wait before sending notification for grouped alerts
+  group_wait: 10s
+
+  # Wait before sending notification about new alerts in existing group
+  group_interval: 10s
+
+  # Wait before sending notification again for same alert
+  repeat_interval: 12h
+
+  # Child routes with specific handling
+  routes:
+    # Critical alerts - page immediately
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 30m
+      continue: true
+
+    # Critical alerts also go to Slack
+    - match:
+        severity: critical
+      receiver: 'slack-critical'
+      group_wait: 10s
+      continue: false
+
+    # Warning alerts - Slack only
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      group_wait: 30s
+      group_interval: 10m
+      repeat_interval: 4h
+
+    # Backend team alerts
+    - match:
+        team: backend
+      receiver: 'slack-backend'
+      group_wait: 30s
+      continue: true
+
+    # SRE team alerts
+    - match:
+        team: sre
+      receiver: 'slack-sre'
+      group_wait: 30s
+      continue: true
+
+    # Security team alerts
+    - match:
+        team: security
+      receiver: 'security-team'
+      group_wait: 10s
+      repeat_interval: 1h
+      continue: true
+
+    # Payment alerts
+    - match:
+        team: payments
+      receiver: 'payments-team'
+      group_wait: 10s
+      repeat_interval: 30m
+      continue: true
+
+    # Business metrics alerts
+    - match:
+        team: product
+      receiver: 'product-team'
+      group_wait: 1m
+      repeat_interval: 6h
+
+    # Growth team alerts
+    - match:
+        team: growth
+      receiver: 'growth-team'
+      group_wait: 1m
+      repeat_interval: 6h
+
+# Inhibition rules - suppress alerts based on other active alerts
+inhibit_rules:
+  # Suppress warnings when critical alert is active
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+  # Suppress specific alerts when service is down
+  - source_match:
+      alertname: 'ServiceDown'
+    target_match_re:
+      alertname: 'High.*|.*Slow.*|.*Degraded.*'
+    equal: ['instance']
+
+  # Suppress database query alerts when database is down
+  - source_match:
+      alertname: 'DatabaseDown'
+    target_match_re:
+      alertname: 'Database.*'
+    equal: ['instance']
+
+  # Suppress cache alerts when Redis is down
+  - source_match:
+      alertname: 'RedisDown'
+    target_match_re:
+      alertname: 'Redis.*'
+    equal: ['instance']
+
+# Receivers - notification channels
+receivers:
+  # Default receiver - catch-all
+  - name: 'default-receiver'
+    slack_configs:
+      - channel: '#alerts-general'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        send_resolved: true
+
+  # PagerDuty for critical alerts
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .CommonAnnotations.summary }}'
+        severity: '{{ .CommonLabels.severity }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          description: '{{ .CommonAnnotations.description }}'
+          runbook: '{{ .CommonAnnotations.runbook }}'
+
+  # Slack channel for critical alerts
+  - name: 'slack-critical'
+    slack_configs:
+      - channel: '#alerts-critical'
+        color: 'danger'
+        title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+        title_link: '{{ .CommonAnnotations.runbook }}'
+        text: |-
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Severity:* {{ .Labels.severity }}
+          *Team:* {{ .Labels.team }}
+          {{ if .Annotations.runbook }}*Runbook:* {{ .Annotations.runbook }}{{ end }}
+          {{ end }}
+        send_resolved: true
+        actions:
+          - type: button
+            text: 'View Runbook'
+            url: '{{ .CommonAnnotations.runbook }}'
+          - type: button
+            text: 'View in Grafana'
+            url: '${GRAFANA_URL}/d/alerts'
+
+  # Slack channel for warnings
+  - name: 'slack-warnings'
+    slack_configs:
+      - channel: '#alerts-warnings'
+        color: 'warning'
+        title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+        text: |-
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Backend team channel
+  - name: 'slack-backend'
+    slack_configs:
+      - channel: '#team-backend-alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+
+  # SRE team channel
+  - name: 'slack-sre'
+    slack_configs:
+      - channel: '#team-sre-alerts'
+        title: '{{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+
+  # Security team - email + Slack
+  - name: 'security-team'
+    email_configs:
+      - to: 'security@rolerabbit.com'
+        headers:
+          Subject: '[SECURITY ALERT] {{ .GroupLabels.alertname }}'
+        html: |-
+          <h2>Security Alert: {{ .GroupLabels.alertname }}</h2>
+          {{ range .Alerts }}
+          <p><strong>Summary:</strong> {{ .Annotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+          <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+          {{ end }}
+    slack_configs:
+      - channel: '#security-alerts'
+        color: 'danger'
+        title: '🔒 SECURITY ALERT: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+
+  # Payments team - critical path
+  - name: 'payments-team'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_PAYMENTS_KEY}'
+        description: 'Payment System Alert: {{ .CommonAnnotations.summary }}'
+    slack_configs:
+      - channel: '#team-payments-alerts'
+        color: 'danger'
+        title: '💳 PAYMENT ALERT: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+    email_configs:
+      - to: 'payments@rolerabbit.com'
+        headers:
+          Subject: '[PAYMENT ALERT] {{ .GroupLabels.alertname }}'
+
+  # Product team - business metrics
+  - name: 'product-team'
+    slack_configs:
+      - channel: '#product-metrics'
+        title: '📊 Business Metric Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true
+
+  # Growth team
+  - name: 'growth-team'
+    slack_configs:
+      - channel: '#team-growth'
+        title: '📈 Growth Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ .CommonAnnotations.description }}'
+        send_resolved: true

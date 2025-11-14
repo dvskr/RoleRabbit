@@ -10,6 +10,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { trackErrorBoundary } from '../utils/analytics';
+import { captureErrorBoundary } from '../../../services/errorTracking';
 
 interface Props {
   children: ReactNode;
@@ -51,8 +52,10 @@ export class TemplatesErrorBoundary extends Component<Props, State> {
     // Track error in analytics
     trackErrorBoundary(error, errorInfo);
 
-    // TODO: Log to error monitoring service (Sentry, LogRocket, etc.)
-    // logErrorToService(error, errorInfo);
+    // Log to error tracking service (Sentry, LogRocket, backend)
+    captureErrorBoundary(error, errorInfo, 'TemplatesErrorBoundary').catch((trackingError) => {
+      console.error('Failed to track error:', trackingError);
+    });
   }
 
   handleReset = (): void => {

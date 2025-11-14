@@ -1,0 +1,1292 @@
+openapi: 3.0.0
+info:
+  title: RoleRabbit Templates API
+  description: |
+    REST API for template browsing, management, favorites, preferences, and analytics.
+
+    ## Authentication
+    - Public routes require no authentication
+    - Authenticated routes require JWT token via Cookie or Authorization header
+    - Admin routes require authenticated user with ADMIN role
+
+    ## Features
+    - Browse and search 44+ resume templates
+    - Advanced filtering (category, difficulty, layout, color, rating)
+    - Favorites management with localStorage sync
+    - User preferences persistence
+    - Usage analytics and trending detection
+  version: 1.0.0
+  contact:
+    name: RoleRabbit API Support
+    email: support@rolerabbit.com
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.rolerabbit.com
+    description: Production server
+
+tags:
+  - name: Templates
+    description: Template browsing and management
+  - name: Favorites
+    description: User favorites management
+  - name: Preferences
+    description: User preferences
+  - name: Analytics
+    description: Usage analytics and tracking
+  - name: Admin
+    description: Admin-only operations
+
+paths:
+  /api/templates:
+    get:
+      tags:
+        - Templates
+      summary: List templates
+      description: Get paginated list of templates with filtering and sorting
+      operationId: getTemplates
+      parameters:
+        - name: search
+          in: query
+          description: Search query for name, description, tags, features
+          schema:
+            type: string
+          example: professional
+        - name: category
+          in: query
+          description: Filter by template category
+          schema:
+            type: string
+            enum: [ATS, CREATIVE, MODERN, CLASSIC, EXECUTIVE, MINIMAL, ACADEMIC, TECHNICAL, STARTUP, FREELANCE]
+          example: ATS
+        - name: difficulty
+          in: query
+          description: Filter by difficulty level
+          schema:
+            type: string
+            enum: [BEGINNER, INTERMEDIATE, ADVANCED]
+          example: BEGINNER
+        - name: layout
+          in: query
+          description: Filter by layout type
+          schema:
+            type: string
+            enum: [SINGLE_COLUMN, TWO_COLUMN, THREE_COLUMN]
+          example: SINGLE_COLUMN
+        - name: colorScheme
+          in: query
+          description: Filter by color scheme
+          schema:
+            type: string
+            enum: [BLUE, GREEN, RED, PURPLE, ORANGE, PROFESSIONAL, MODERN, CLASSIC]
+          example: BLUE
+        - name: isPremium
+          in: query
+          description: Filter by premium status
+          schema:
+            type: boolean
+          example: false
+        - name: minRating
+          in: query
+          description: Minimum rating (0-5)
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+          example: 4.0
+        - name: maxRating
+          in: query
+          description: Maximum rating (0-5)
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+          example: 5.0
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [popular, newest, rating, downloads, name]
+            default: popular
+          example: popular
+        - name: sortOrder
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          example: desc
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 12
+          example: 12
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  filters:
+                    type: object
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - Admin
+      summary: Create template
+      description: Create a new template (admin only)
+      operationId: createTemplate
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateCreate'
+      responses:
+        '200':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/search:
+    get:
+      tags:
+        - Templates
+      summary: Search templates
+      description: Full-text search across templates
+      operationId: searchTemplates
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query
+          schema:
+            type: string
+          example: professional resume
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+                  count:
+                    type: integer
+                    example: 5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/stats:
+    get:
+      tags:
+        - Templates
+      summary: Get template statistics
+      description: Get aggregate statistics across all templates
+      operationId: getTemplateStats
+      responses:
+        '200':
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 44
+                      byCategory:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                        example:
+                          ATS: 10
+                          CREATIVE: 8
+                      avgRating:
+                        type: number
+                        example: 4.5
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/{id}:
+    get:
+      tags:
+        - Templates
+      summary: Get template by ID
+      description: Get single template details
+      operationId: getTemplateById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+          example: tpl_abc123
+      responses:
+        '200':
+          description: Template found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Template'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Admin
+      summary: Update template
+      description: Update existing template (admin only)
+      operationId: updateTemplate
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpdate'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Admin
+      summary: Delete template
+      description: Soft delete template (admin only)
+      operationId: deleteTemplate
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/{id}/favorite:
+    post:
+      tags:
+        - Favorites
+      summary: Add to favorites
+      description: Add template to user's favorites
+      operationId: addFavorite
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Added to favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Favorites
+      summary: Remove from favorites
+      description: Remove template from user's favorites
+      operationId: removeFavorite
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Removed from favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/favorites/list:
+    get:
+      tags:
+        - Favorites
+      summary: List user favorites
+      description: Get all favorited templates for authenticated user
+      operationId: getUserFavorites
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: sortBy
+          in: query
+          description: Sort option
+          schema:
+            type: string
+            enum: [newest, oldest, name]
+            default: newest
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: List of favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Favorite'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/favorites/check/{id}:
+    get:
+      tags:
+        - Favorites
+      summary: Check favorite status
+      description: Check if template is favorited by user
+      operationId: checkFavorite
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Favorite status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      isFavorited:
+                        type: boolean
+                        example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/favorites/sync:
+    post:
+      tags:
+        - Favorites
+      summary: Sync favorites from localStorage
+      description: Batch sync favorites from client localStorage to database
+      operationId: syncFavorites
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - favoriteIds
+              properties:
+                favoriteIds:
+                  type: array
+                  items:
+                    type: string
+                  example: ["tpl_abc123", "tpl_def456"]
+      responses:
+        '200':
+          description: Sync complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      added:
+                        type: integer
+                        example: 3
+                      skipped:
+                        type: integer
+                        example: 1
+                      errors:
+                        type: integer
+                        example: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/{id}/track:
+    post:
+      tags:
+        - Analytics
+      summary: Track usage event
+      description: Track template usage (preview, download, use, etc.)
+      operationId: trackUsage
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+              properties:
+                action:
+                  type: string
+                  enum: [PREVIEW, DOWNLOAD, USE, FAVORITE, SHARE]
+                  example: PREVIEW
+                metadata:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    source: search
+                    query: professional
+      responses:
+        '200':
+          description: Usage tracked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/analytics/popular:
+    get:
+      tags:
+        - Analytics
+      summary: Get popular templates
+      description: Get most popular templates by usage
+      operationId: getPopularTemplates
+      parameters:
+        - name: period
+          in: query
+          description: Time period
+          schema:
+            type: string
+            enum: [week, month, year, all]
+            default: all
+        - name: category
+          in: query
+          description: Filter by category
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Popular templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      allOf:
+                        - $ref: '#/components/schemas/Template'
+                        - type: object
+                          properties:
+                            usageCount:
+                              type: integer
+                              example: 1500
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/analytics/trending:
+    get:
+      tags:
+        - Analytics
+      summary: Get trending templates
+      description: Get trending templates based on recent growth
+      operationId: getTrendingTemplates
+      parameters:
+        - name: days
+          in: query
+          description: Lookback period in days
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 30
+            default: 7
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Trending templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/analytics/history:
+    get:
+      tags:
+        - Analytics
+      summary: Get user history
+      description: Get authenticated user's template usage history
+      operationId: getUserHistory
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: action
+          in: query
+          description: Filter by action type
+          schema:
+            type: string
+            enum: [PREVIEW, DOWNLOAD, USE, FAVORITE, SHARE]
+        - name: templateId
+          in: query
+          description: Filter by template ID
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: User history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UsageHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/analytics/recent:
+    get:
+      tags:
+        - Analytics
+      summary: Get recently used templates
+      description: Get user's recently used templates
+      operationId: getRecentTemplates
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        '200':
+          description: Recent templates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/preferences:
+    get:
+      tags:
+        - Preferences
+      summary: Get user preferences
+      description: Get authenticated user's template preferences
+      operationId: getPreferences
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Preferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - Preferences
+      summary: Update preferences
+      description: Update user's template preferences
+      operationId: updatePreferences
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesUpdate'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Preferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/templates/{id}/stats:
+    get:
+      tags:
+        - Admin
+      summary: Get template statistics
+      description: Get detailed statistics for specific template (admin only)
+      operationId: getTemplateDetailedStats
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Template ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      template:
+                        $ref: '#/components/schemas/Template'
+                      stats:
+                        type: object
+                        properties:
+                          previews:
+                            type: integer
+                            example: 1500
+                          downloads:
+                            type: integer
+                            example: 500
+                          uses:
+                            type: integer
+                            example: 300
+                          favorites:
+                            type: integer
+                            example: 150
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: token
+      description: JWT token in HTTP-only cookie
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token in Authorization header
+
+  schemas:
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          example: tpl_abc123
+        name:
+          type: string
+          example: Professional Resume
+        category:
+          type: string
+          enum: [ATS, CREATIVE, MODERN, CLASSIC, EXECUTIVE, MINIMAL, ACADEMIC, TECHNICAL, STARTUP, FREELANCE]
+          example: ATS
+        description:
+          type: string
+          example: Clean, ATS-friendly resume template
+        preview:
+          type: string
+          format: uri
+          example: https://example.com/previews/professional.png
+        features:
+          type: array
+          items:
+            type: string
+          example: ["ATS optimized", "Clean layout", "Easy to customize"]
+        difficulty:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED]
+          example: BEGINNER
+        industry:
+          type: array
+          items:
+            type: string
+          example: ["Technology", "Finance"]
+        layout:
+          type: string
+          enum: [SINGLE_COLUMN, TWO_COLUMN, THREE_COLUMN]
+          example: SINGLE_COLUMN
+        colorScheme:
+          type: string
+          enum: [BLUE, GREEN, RED, PURPLE, ORANGE, PROFESSIONAL, MODERN, CLASSIC]
+          example: BLUE
+        isPremium:
+          type: boolean
+          example: false
+        rating:
+          type: number
+          minimum: 0
+          maximum: 5
+          example: 4.5
+        downloads:
+          type: integer
+          example: 1000
+        author:
+          type: string
+          example: John Doe
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["professional", "ats", "clean"]
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TemplateCreate:
+      type: object
+      required:
+        - name
+        - category
+        - description
+        - difficulty
+        - layout
+        - colorScheme
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [ATS, CREATIVE, MODERN, CLASSIC, EXECUTIVE, MINIMAL, ACADEMIC, TECHNICAL, STARTUP, FREELANCE]
+        description:
+          type: string
+        preview:
+          type: string
+          format: uri
+        features:
+          type: array
+          items:
+            type: string
+        difficulty:
+          type: string
+          enum: [BEGINNER, INTERMEDIATE, ADVANCED]
+        industry:
+          type: array
+          items:
+            type: string
+        layout:
+          type: string
+          enum: [SINGLE_COLUMN, TWO_COLUMN, THREE_COLUMN]
+        colorScheme:
+          type: string
+        isPremium:
+          type: boolean
+        author:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    TemplateUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        preview:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+        difficulty:
+          type: string
+        industry:
+          type: array
+          items:
+            type: string
+        layout:
+          type: string
+        colorScheme:
+          type: string
+        isPremium:
+          type: boolean
+        rating:
+          type: number
+        author:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    Favorite:
+      type: object
+      properties:
+        userId:
+          type: string
+        templateId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        template:
+          $ref: '#/components/schemas/Template'
+
+    Preferences:
+      type: object
+      properties:
+        userId:
+          type: string
+        filterSettings:
+          type: object
+          properties:
+            category:
+              type: string
+            difficulty:
+              type: string
+            layout:
+              type: string
+            colorScheme:
+              type: string
+            isPremium:
+              type: boolean
+            industry:
+              type: array
+              items:
+                type: string
+            minRating:
+              type: number
+            maxRating:
+              type: number
+        sortPreference:
+          type: string
+          enum: [popular, newest, rating, downloads, name]
+          default: popular
+        viewMode:
+          type: string
+          enum: [grid, list]
+          default: grid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PreferencesUpdate:
+      type: object
+      properties:
+        filterSettings:
+          type: object
+        sortPreference:
+          type: string
+          enum: [popular, newest, rating, downloads, name]
+        viewMode:
+          type: string
+          enum: [grid, list]
+
+    UsageHistory:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        templateId:
+          type: string
+        action:
+          type: string
+          enum: [PREVIEW, DOWNLOAD, USE, FAVORITE, SHARE]
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        template:
+          $ref: '#/components/schemas/Template'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 12
+        total:
+          type: integer
+          example: 44
+        totalPages:
+          type: integer
+          example: 4
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Error type
+        message:
+          type: string
+          example: Detailed error message
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Bad Request
+            message: Invalid input parameters
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Unauthorized
+            message: Authentication required
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Forbidden
+            message: Admin access required
+
+    NotFound:
+      description: Not found - resource doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Not Found
+            message: Template not found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Internal Server Error
+            message: An unexpected error occurred

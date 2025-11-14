@@ -10,6 +10,33 @@ const { validateFileUpload, validateFileType } = require('../utils/storageValida
 const { checkFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
+const redisCache = require('../utils/redisCache');
+const imageOptimizer = require('../utils/imageOptimizer');
+const {
+  listFilesSchema,
+  uploadFileSchema,
+  getFileSchema,
+  downloadFileSchema,
+  updateFileSchema,
+  deleteFileSchema,
+  restoreFileSchema,
+  listFoldersSchema,
+  createFolderSchema,
+  updateFolderSchema,
+  deleteFolderSchema,
+  batchDeleteSchema,
+  batchMoveSchema,
+  batchRestoreSchema,
+  downloadZipSchema,
+  analyticsSchema,
+  createVersionSchema,
+  listVersionsSchema,
+  restoreVersionSchema,
+  listTagsSchema,
+  createTagSchema,
+  addFileTagSchema,
+  removeFileTagSchema
+} = require('../schemas/storage.schemas');
 
 /**
  * Register all storage routes with Fastify instance
@@ -32,9 +59,22 @@ async function storageRoutes(fastify, _options) {
   logger.info('   → POST   /api/storage/files/:id/move');
   logger.info('   → PUT    /api/storage/shares/:id');
   logger.info('   → DELETE /api/storage/shares/:id');
+  logger.info('   → POST   /api/storage/files/batch/delete (batch delete)');
+  logger.info('   → POST   /api/storage/files/batch/move (batch move)');
+  logger.info('   → POST   /api/storage/files/batch/restore (batch restore)');
+  logger.info('   → POST   /api/storage/files/download/zip (ZIP download)');
+  logger.info('   → GET    /api/storage/analytics (storage analytics)');
+  logger.info('   → GET    /api/storage/files/:id/versions (file versions)');
+  logger.info('   → POST   /api/storage/files/:id/versions (create version)');
+  logger.info('   → POST   /api/storage/files/:id/versions/:versionId/restore (restore version)');
+  logger.info('   → GET    /api/storage/tags (file tags)');
+  logger.info('   → POST   /api/storage/tags (create tag)');
+  logger.info('   → POST   /api/storage/files/:id/tags (add tag to file)');
+  logger.info('   → DELETE /api/storage/files/:id/tags/:tagId (remove tag from file)');
   
   // Get all files for authenticated user
   fastify.get('/files', {
+    schema: listFilesSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -52,6 +92,29 @@ async function storageRoutes(fastify, _options) {
       const includeDeleted = request.query.includeDeleted === 'true';
       const type = request.query.type || null;
       const search = request.query.search || null;
+
+      // Pagination parameters
+      const page = parseInt(request.query.page) || 1;
+      const limit = parseInt(request.query.limit) || 50; // Default 50 files per page
+      const skip = (page - 1) * limit;
+
+      // Try to get from cache (skip cache for search queries)
+      if (!search && redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFileListKey(userId, {
+          folderId,
+          type,
+          page,
+          limit,
+          showDeleted: includeDeleted,
+          showArchived: request.query.showArchived === 'true'
+        });
+
+        const cachedData = await redisCache.get(cacheKey);
+        if (cachedData) {
+          logger.debug(`[CACHE HIT] File list for user ${userId}`);
+          return reply.send(cachedData);
+        }
+      }
 
       // Build where clause
       const where = {
@@ -76,9 +139,14 @@ async function storageRoutes(fastify, _options) {
       }
       // If folderId not provided, don't add folder filter - return all files
 
-      // Fetch files from database
+      // Get total count for pagination
+      const totalCount = await prisma.storageFile.count({ where });
+
+      // Fetch files from database with pagination
       const files = await prisma.storageFile.findMany({
         where,
+        skip,
+        take: limit,
         orderBy: {
           createdAt: 'desc'
         },
@@ -223,12 +291,34 @@ async function storageRoutes(fastify, _options) {
         logger.warn('Failed to fetch storage quota:', error.message);
       }
 
-      return reply.send({
+      const responseData = {
         success: true,
         files: formattedFiles,
         storage: storageInfo,
-        count: formattedFiles.length
-      });
+        count: formattedFiles.length,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasMore: skip + formattedFiles.length < totalCount
+        }
+      };
+
+      // Cache the response (skip cache for search queries)
+      if (!search && redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFileListKey(userId, {
+          folderId,
+          type,
+          page,
+          limit,
+          showDeleted: includeDeleted,
+          showArchived: request.query.showArchived === 'true'
+        });
+        await redisCache.set(cacheKey, responseData, redisCache.TTL.FILE_LIST);
+      }
+
+      return reply.send(responseData);
 
     } catch (error) {
       logger.error('Error fetching files:', error);
@@ -263,6 +353,7 @@ async function storageRoutes(fastify, _options) {
   
   // File Upload
   fastify.post('/files/upload', {
+    schema: uploadFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -410,23 +501,66 @@ async function storageRoutes(fastify, _options) {
         });
       }
 
+      // Convert file stream to buffer (needed for both upload and optimization)
+      logger.info(`Processing file: ${fileName} for user: ${userId}`);
+      logger.info(`File size: ${fileSize} bytes, Content-Type: ${contentType}`);
+
+      const chunks = [];
+      for await (const chunk of fileData.file) {
+        chunks.push(chunk);
+      }
+      const fileBuffer = Buffer.concat(chunks);
+
       // Upload file to storage
       // Note: storageHandler.upload() will initialize storage automatically
-      logger.info(`Uploading file: ${fileName} for user: ${userId}`);
-      logger.info(`File size: ${fileSize} bytes, Content-Type: ${contentType}`);
-      
       const storageResult = await storageHandler.upload(
-        fileData.file,
+        fileBuffer,
         userId,
         fileName,
         contentType
       );
-      
+
       if (!storageResult || !storageResult.path) {
         throw new Error('Storage upload returned invalid result');
       }
-      
+
       logger.info(`✅ File uploaded successfully: ${storageResult.path}`);
+
+      // Optimize image and generate thumbnails
+      let thumbnailUrl = null;
+      if (imageOptimizer.isEnabled() && imageOptimizer.isImage(contentType)) {
+        try {
+          logger.info('Generating optimized image variants...');
+
+          // Optimize image and generate thumbnails
+          const optimizationResult = await imageOptimizer.optimizeImage(fileBuffer, {
+            generateThumbnail: true,
+            generateSizes: ['thumbnail', 'small'],
+            preserveOriginal: false,
+            quality: 85
+          });
+
+          if (optimizationResult.success && optimizationResult.variants.thumbnail) {
+            // Upload thumbnail to storage
+            const thumbnailFileName = imageOptimizer.getOptimizedFilename(fileName, 'thumbnail');
+            const thumbnailResult = await storageHandler.upload(
+              optimizationResult.variants.thumbnail.buffer,
+              userId,
+              thumbnailFileName,
+              'image/webp'
+            );
+
+            if (thumbnailResult && thumbnailResult.path) {
+              thumbnailUrl = thumbnailResult.publicUrl;
+              logger.info(`✅ Thumbnail uploaded: ${thumbnailResult.path}`);
+              logger.info(`   Size reduction: ${optimizationResult.metadata.reduction}`);
+            }
+          }
+        } catch (optimizationError) {
+          logger.warn('Image optimization failed (continuing without thumbnails):', optimizationError.message);
+          // Continue without thumbnails - not a critical error
+        }
+      }
 
       // Save file metadata to database
       let savedFile = null;
@@ -559,6 +693,12 @@ async function storageRoutes(fastify, _options) {
         socketIOServer.notifyFileCreated(userId, fileMetadata);
       }
 
+      // Invalidate file list cache
+      if (redisCache.isAvailable()) {
+        await redisCache.invalidateFileList(userId);
+        logger.debug(`[CACHE INVALIDATE] File list for user ${userId} after upload`);
+      }
+
           reply.status(201).send({
             success: true,
             file: {
@@ -598,6 +738,7 @@ async function storageRoutes(fastify, _options) {
 
   // Update file metadata (name, type, description, visibility, etc.)
   fastify.put('/files/:id', {
+    schema: updateFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -706,6 +847,12 @@ async function storageRoutes(fastify, _options) {
         socketIOServer.notifyFileUpdated(userId, formattedFile, updates);
       }
 
+      // Invalidate file list cache
+      if (redisCache.isAvailable()) {
+        await redisCache.invalidateFileList(userId);
+        await redisCache.invalidateFile(userId, fileId);
+      }
+
       return reply.send({
         success: true,
         file: formattedFile
@@ -722,6 +869,7 @@ async function storageRoutes(fastify, _options) {
 
   // Soft delete file (move to recycle bin)
   fastify.delete('/files/:id', {
+    schema: deleteFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -760,6 +908,12 @@ async function storageRoutes(fastify, _options) {
         socketIOServer.notifyFileDeleted(userId, fileId, false);
       }
 
+      // Invalidate file list cache
+      if (redisCache.isAvailable()) {
+        await redisCache.invalidateFileList(userId);
+        await redisCache.invalidateFile(userId, fileId);
+      }
+
       return reply.send({
         success: true,
         message: 'File moved to recycle bin',
@@ -780,6 +934,7 @@ async function storageRoutes(fastify, _options) {
 
   // Restore file from recycle bin
   fastify.post('/files/:id/restore', {
+    schema: restoreFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1069,6 +1224,7 @@ async function storageRoutes(fastify, _options) {
 
   // Download file
   fastify.get('/files/:id/download', {
+    schema: downloadFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1724,6 +1880,7 @@ async function storageRoutes(fastify, _options) {
 
   // Get all folders for user
   fastify.get('/folders', {
+    schema: listFoldersSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1734,6 +1891,16 @@ async function storageRoutes(fastify, _options) {
           error: 'Unauthorized',
           message: 'User ID not found in token'
         });
+      }
+
+      // Try to get from cache
+      if (redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFolderListKey(userId);
+        const cachedData = await redisCache.get(cacheKey);
+        if (cachedData) {
+          logger.debug(`[CACHE HIT] Folder list for user ${userId}`);
+          return reply.send(cachedData);
+        }
       }
 
       const folders = await prisma.storageFolder.findMany({
@@ -1754,7 +1921,7 @@ async function storageRoutes(fastify, _options) {
 
       logger.info(`✅ Retrieved ${folders.length} folders for user: ${userId}`);
 
-      return reply.send({
+      const responseData = {
         success: true,
         folders: folders.map(folder => ({
           id: folder.id,
@@ -1764,7 +1931,15 @@ async function storageRoutes(fastify, _options) {
           createdAt: folder.createdAt.toISOString(),
           updatedAt: folder.updatedAt.toISOString()
         }))
-      });
+      };
+
+      // Cache the response
+      if (redisCache.isAvailable()) {
+        const cacheKey = redisCache.getFolderListKey(userId);
+        await redisCache.set(cacheKey, responseData, redisCache.TTL.FOLDER_LIST);
+      }
+
+      return reply.send(responseData);
 
     } catch (error) {
       logger.error('Error retrieving folders:', error);
@@ -1777,6 +1952,7 @@ async function storageRoutes(fastify, _options) {
 
   // Create folder
   fastify.post('/folders', {
+    schema: createFolderSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1830,6 +2006,7 @@ async function storageRoutes(fastify, _options) {
 
   // Update folder (rename/change color)
   fastify.put('/folders/:id', {
+    schema: updateFolderSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1893,6 +2070,7 @@ async function storageRoutes(fastify, _options) {
 
   // Delete folder
   fastify.delete('/folders/:id', {
+    schema: deleteFolderSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -2737,6 +2915,817 @@ async function storageRoutes(fastify, _options) {
       logger.error('Error downloading shared file:', error);
       return reply.status(500).send({
         error: 'Failed to download shared file',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // BATCH OPERATIONS
+  // ============================================================================
+
+  // Batch delete files
+  fastify.post('/files/batch/delete', {
+    schema: batchDeleteSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Verify all files belong to user and soft delete them
+      const deletedFiles = await prisma.storageFile.updateMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: null
+        },
+        data: {
+          deletedAt: new Date()
+        }
+      });
+
+      logger.info(`Batch deleted ${deletedFiles.count} files for user ${userId}`);
+
+      // Emit socket events for each deleted file
+      fileIds.forEach(fileId => {
+        socketIOServer.emitToUser(userId, 'file_deleted', { fileId });
+      });
+
+      return reply.send({
+        success: true,
+        deletedCount: deletedFiles.count,
+        message: `Successfully deleted ${deletedFiles.count} file(s)`
+      });
+
+    } catch (error) {
+      logger.error('Error batch deleting files:', error);
+      return reply.status(500).send({
+        error: 'Failed to batch delete files',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Batch move files
+  fastify.post('/files/batch/move', {
+    schema: batchMoveSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds, folderId } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Verify folder belongs to user if folderId is provided
+      if (folderId) {
+        const folder = await prisma.storageFolder.findFirst({
+          where: {
+            id: folderId,
+            userId
+          }
+        });
+
+        if (!folder) {
+          return reply.status(404).send({
+            error: 'Folder not found',
+            message: 'The specified folder does not exist'
+          });
+        }
+      }
+
+      // Move files to new folder
+      const movedFiles = await prisma.storageFile.updateMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: null
+        },
+        data: {
+          folderId: folderId || null
+        }
+      });
+
+      logger.info(`Batch moved ${movedFiles.count} files to folder ${folderId || 'root'} for user ${userId}`);
+
+      // Emit socket events for each moved file
+      fileIds.forEach(fileId => {
+        socketIOServer.emitToUser(userId, 'file_updated', { fileId, folderId });
+      });
+
+      return reply.send({
+        success: true,
+        movedCount: movedFiles.count,
+        message: `Successfully moved ${movedFiles.count} file(s)`
+      });
+
+    } catch (error) {
+      logger.error('Error batch moving files:', error);
+      return reply.status(500).send({
+        error: 'Failed to batch move files',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Batch restore files
+  fastify.post('/files/batch/restore', {
+    schema: batchRestoreSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Restore files
+      const restoredFiles = await prisma.storageFile.updateMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: { not: null }
+        },
+        data: {
+          deletedAt: null
+        }
+      });
+
+      logger.info(`Batch restored ${restoredFiles.count} files for user ${userId}`);
+
+      // Emit socket events
+      fileIds.forEach(fileId => {
+        socketIOServer.emitToUser(userId, 'file_restored', { fileId });
+      });
+
+      return reply.send({
+        success: true,
+        restoredCount: restoredFiles.count,
+        message: `Successfully restored ${restoredFiles.count} file(s)`
+      });
+
+    } catch (error) {
+      logger.error('Error batch restoring files:', error);
+      return reply.status(500).send({
+        error: 'Failed to batch restore files',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // ZIP ARCHIVE DOWNLOAD
+  // ============================================================================
+
+  // Download multiple files as ZIP
+  fastify.post('/files/download/zip', {
+    schema: downloadZipSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Fetch files
+      const files = await prisma.storageFile.findMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: null
+        },
+        select: {
+          id: true,
+          name: true,
+          fileName: true,
+          storagePath: true,
+          contentType: true
+        }
+      });
+
+      if (files.length === 0) {
+        return reply.status(404).send({
+          error: 'No files found',
+          message: 'No files found matching the provided IDs'
+        });
+      }
+
+      // Create ZIP archive
+      const archiver = require('archiver');
+      const archive = archiver('zip', {
+        zlib: { level: 6 } // Compression level
+      });
+
+      // Set response headers
+      reply.header('Content-Type', 'application/zip');
+      reply.header('Content-Disposition', `attachment; filename="files_${Date.now()}.zip"`);
+
+      // Pipe archive to response
+      reply.raw.on('close', () => {
+        logger.info(`ZIP download completed for ${files.length} files`);
+      });
+
+      archive.pipe(reply.raw);
+
+      // Add files to archive
+      for (const file of files) {
+        try {
+          const fileBuffer = await storageHandler.download(file.storagePath);
+          if (fileBuffer) {
+            archive.append(fileBuffer, { name: file.fileName || file.name });
+          }
+        } catch (error) {
+          logger.error(`Failed to add file ${file.id} to ZIP:`, error);
+        }
+      }
+
+      // Finalize archive
+      await archive.finalize();
+
+      return reply;
+
+    } catch (error) {
+      logger.error('Error creating ZIP archive:', error);
+      return reply.status(500).send({
+        error: 'Failed to create ZIP archive',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // STORAGE ANALYTICS
+  // ============================================================================
+
+  // Get storage analytics
+  fastify.get('/analytics', {
+    schema: analyticsSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+
+      // Get file counts by type
+      const filesByType = await prisma.storageFile.groupBy({
+        by: ['type'],
+        where: {
+          userId,
+          deletedAt: null
+        },
+        _count: true,
+        _sum: {
+          size: true
+        }
+      });
+
+      // Get total files and storage
+      const totalStats = await prisma.storageFile.aggregate({
+        where: {
+          userId,
+          deletedAt: null
+        },
+        _count: true,
+        _sum: {
+          size: true
+        }
+      });
+
+      // Get deleted files count
+      const deletedCount = await prisma.storageFile.count({
+        where: {
+          userId,
+          deletedAt: { not: null }
+        }
+      });
+
+      // Get shared files count
+      const sharedCount = await prisma.fileShare.count({
+        where: {
+          file: {
+            userId
+          }
+        }
+      });
+
+      // Get recent activity (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const recentUploads = await prisma.storageFile.count({
+        where: {
+          userId,
+          createdAt: {
+            gte: sevenDaysAgo
+          }
+        }
+      });
+
+      // Get storage quota
+      const quota = await prisma.storageQuota.findUnique({
+        where: { userId }
+      });
+
+      return reply.send({
+        filesByType: filesByType.map(item => ({
+          type: item.type,
+          count: item._count,
+          totalSize: item._sum.size || 0
+        })),
+        totalFiles: totalStats._count || 0,
+        totalSize: totalStats._sum.size || 0,
+        deletedFiles: deletedCount,
+        sharedFiles: sharedCount,
+        recentUploads,
+        quota: {
+          used: quota?.usedBytes || 0,
+          limit: quota?.limitBytes || 5368709120, // 5GB default
+          percentage: quota ? ((quota.usedBytes / quota.limitBytes) * 100).toFixed(2) : 0
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error fetching storage analytics:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch analytics',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // FILE VERSIONING
+  // ============================================================================
+
+  // Get file versions
+  fastify.get('/files/:id/versions', {
+    schema: listVersionsSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+
+      // Verify file ownership or access
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          OR: [
+            { userId },
+            {
+              shares: {
+                some: {
+                  sharedWith: userId
+                }
+              }
+            }
+          ]
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'File not found',
+          message: 'File not found or access denied'
+        });
+      }
+
+      // Get versions
+      const versions = await prisma.fileVersion.findMany({
+        where: { fileId },
+        orderBy: { versionNumber: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      return reply.send({
+        versions,
+        total: versions.length
+      });
+
+    } catch (error) {
+      logger.error('Error fetching file versions:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch file versions',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Create new file version
+  fastify.post('/files/:id/versions', {
+    schema: createVersionSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+      const { changeDescription } = request.body;
+
+      // Verify file ownership
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'File not found',
+          message: 'File not found or you do not have permission'
+        });
+      }
+
+      // Get next version number
+      const lastVersion = await prisma.fileVersion.findFirst({
+        where: { fileId },
+        orderBy: { versionNumber: 'desc' }
+      });
+
+      const nextVersionNumber = (lastVersion?.versionNumber || 0) + 1;
+
+      // Create version snapshot
+      const version = await prisma.fileVersion.create({
+        data: {
+          fileId,
+          userId,
+          versionNumber: nextVersionNumber,
+          fileName: file.fileName,
+          contentType: file.contentType,
+          size: file.size,
+          storagePath: file.storagePath,
+          fileHash: file.fileHash || '',
+          changeDescription,
+          isActive: true
+        }
+      });
+
+      // Set all other versions to inactive
+      await prisma.fileVersion.updateMany({
+        where: {
+          fileId,
+          id: { not: version.id }
+        },
+        data: {
+          isActive: false
+        }
+      });
+
+      logger.info(`Created version ${nextVersionNumber} for file ${fileId}`);
+
+      return reply.send({
+        version,
+        message: `Version ${nextVersionNumber} created successfully`
+      });
+
+    } catch (error) {
+      logger.error('Error creating file version:', error);
+      return reply.status(500).send({
+        error: 'Failed to create file version',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Restore file version
+  fastify.post('/files/:id/versions/:versionId/restore', {
+    schema: restoreVersionSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { id: fileId, versionId } = request.params;
+
+      // Verify file ownership
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'File not found',
+          message: 'File not found or you do not have permission'
+        });
+      }
+
+      // Get version
+      const version = await prisma.fileVersion.findFirst({
+        where: {
+          id: versionId,
+          fileId
+        }
+      });
+
+      if (!version) {
+        return reply.status(404).send({
+          error: 'Version not found',
+          message: 'Version not found'
+        });
+      }
+
+      // Restore file to this version
+      await prisma.storageFile.update({
+        where: { id: fileId },
+        data: {
+          fileName: version.fileName,
+          contentType: version.contentType,
+          size: version.size,
+          storagePath: version.storagePath,
+          fileHash: version.fileHash
+        }
+      });
+
+      // Set this version as active
+      await prisma.fileVersion.updateMany({
+        where: { fileId },
+        data: { isActive: false }
+      });
+
+      await prisma.fileVersion.update({
+        where: { id: versionId },
+        data: { isActive: true }
+      });
+
+      logger.info(`Restored file ${fileId} to version ${version.versionNumber}`);
+
+      return reply.send({
+        success: true,
+        message: `File restored to version ${version.versionNumber}`
+      });
+
+    } catch (error) {
+      logger.error('Error restoring file version:', error);
+      return reply.status(500).send({
+        error: 'Failed to restore file version',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // FILE TAGGING
+  // ============================================================================
+
+  // Get user's tags
+  fastify.get('/tags', {
+    schema: listTagsSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+
+      const tags = await prisma.fileTag.findMany({
+        where: {
+          OR: [
+            { userId }, // User's tags
+            { userId: null } // System tags
+          ]
+        },
+        include: {
+          _count: {
+            select: { files: true }
+          }
+        },
+        orderBy: { name: 'asc' }
+      });
+
+      return reply.send({
+        tags: tags.map(tag => ({
+          ...tag,
+          fileCount: tag._count.files
+        }))
+      });
+
+    } catch (error) {
+      logger.error('Error fetching tags:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch tags',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Create new tag
+  fastify.post('/tags', {
+    schema: createTagSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { name, color } = request.body;
+
+      if (!name || !name.trim()) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'Tag name is required'
+        });
+      }
+
+      // Check if tag already exists for user
+      const existing = await prisma.fileTag.findFirst({
+        where: {
+          userId,
+          name: name.trim()
+        }
+      });
+
+      if (existing) {
+        return reply.status(409).send({
+          error: 'Tag already exists',
+          message: 'A tag with this name already exists'
+        });
+      }
+
+      const tag = await prisma.fileTag.create({
+        data: {
+          userId,
+          name: name.trim(),
+          color: color || '#4285F4'
+        }
+      });
+
+      logger.info(`Created tag "${name}" for user ${userId}`);
+
+      return reply.send({
+        tag,
+        message: 'Tag created successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error creating tag:', error);
+      return reply.status(500).send({
+        error: 'Failed to create tag',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Add tag to file
+  fastify.post('/files/:id/tags', {
+    schema: addFileTagSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+      const { tagId } = request.body;
+
+      // Verify file ownership
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'File not found',
+          message: 'File not found or you do not have permission'
+        });
+      }
+
+      // Verify tag belongs to user or is system tag
+      const tag = await prisma.fileTag.findFirst({
+        where: {
+          id: tagId,
+          OR: [
+            { userId },
+            { userId: null }
+          ]
+        }
+      });
+
+      if (!tag) {
+        return reply.status(404).send({
+          error: 'Tag not found',
+          message: 'Tag not found'
+        });
+      }
+
+      // Check if already tagged
+      const existing = await prisma.fileTagging.findFirst({
+        where: {
+          fileId,
+          tagId
+        }
+      });
+
+      if (existing) {
+        return reply.status(409).send({
+          error: 'Already tagged',
+          message: 'File is already tagged with this tag'
+        });
+      }
+
+      // Add tag to file
+      const tagging = await prisma.fileTagging.create({
+        data: {
+          fileId,
+          tagId
+        }
+      });
+
+      logger.info(`Tagged file ${fileId} with tag ${tagId}`);
+
+      return reply.send({
+        tagging,
+        message: 'Tag added to file successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error adding tag to file:', error);
+      return reply.status(500).send({
+        error: 'Failed to add tag to file',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Remove tag from file
+  fastify.delete('/files/:id/tags/:tagId', {
+    schema: removeFileTagSchema,
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { id: fileId, tagId } = request.params;
+
+      // Verify file ownership
+      const file = await prisma.storageFile.findFirst({
+        where: {
+          id: fileId,
+          userId
+        }
+      });
+
+      if (!file) {
+        return reply.status(404).send({
+          error: 'File not found',
+          message: 'File not found or you do not have permission'
+        });
+      }
+
+      // Remove tag from file
+      const deleted = await prisma.fileTagging.deleteMany({
+        where: {
+          fileId,
+          tagId
+        }
+      });
+
+      if (deleted.count === 0) {
+        return reply.status(404).send({
+          error: 'Tag not found',
+          message: 'File is not tagged with this tag'
+        });
+      }
+
+      logger.info(`Removed tag ${tagId} from file ${fileId}`);
+
+      return reply.send({
+        success: true,
+        message: 'Tag removed from file successfully'
+      });
+
+    } catch (error) {
+      logger.error('Error removing tag from file:', error);
+      return reply.status(500).send({
+        error: 'Failed to remove tag from file',
         message: error.message || 'An error occurred'
       });
     }

@@ -1,0 +1,166 @@
+##
+## Filebeat Configuration for RoleRabbit
+## Collects and ships logs to Logstash/Elasticsearch
+##
+
+filebeat.inputs:
+  # Application logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/rolerabbit/api/*.log
+      - /var/log/rolerabbit/web/*.log
+    fields:
+      service: rolerabbit-api
+      environment: ${ENVIRONMENT:production}
+    multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+    multiline.negate: true
+    multiline.match: after
+
+  # Nginx access logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/nginx/access.log
+    fields:
+      service: nginx
+      log_type: access
+    json.keys_under_root: true
+
+  # Nginx error logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/nginx/error.log
+    fields:
+      service: nginx
+      log_type: error
+
+  # PostgreSQL logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/postgresql/postgresql-*.log
+    fields:
+      service: postgresql
+    multiline.pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+    multiline.negate: true
+    multiline.match: after
+
+  # Redis logs
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/redis/redis-server.log
+    fields:
+      service: redis
+
+  # Docker container logs
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+    processors:
+      - add_docker_metadata:
+          host: "unix:///var/run/docker.sock"
+
+  # System logs
+  - type: syslog
+    enabled: true
+    protocol.tcp:
+      host: "localhost:9000"
+    fields:
+      service: system
+
+# Processors
+processors:
+  # Add host metadata
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+      netinfo.enabled: true
+      geo.enabled: true
+
+  # Add cloud metadata (if running on AWS/GCP/Azure)
+  - add_cloud_metadata: ~
+
+  # Add Docker metadata
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+      match_fields: ["system.process.cgroup.id"]
+      match_pids: ["process.pid", "process.ppid"]
+
+  # Add Kubernetes metadata (if using K8s)
+  - add_kubernetes_metadata:
+      host: ${NODE_NAME}
+      matchers:
+        - logs_path:
+            logs_path: "/var/log/containers/"
+
+  # Drop debug logs in production
+  - drop_event:
+      when:
+        and:
+          - equals:
+              level: "DEBUG"
+          - equals:
+              environment: "production"
+
+  # Truncate long messages
+  - truncate_fields:
+      fields:
+        - message
+      max_characters: 10000
+      fail_on_error: false
+
+  # Remove sensitive fields
+  - drop_fields:
+      fields: ["password", "token", "api_key", "secret"]
+      ignore_missing: true
+
+# Output to Logstash
+output.logstash:
+  enabled: true
+  hosts: ["${LOGSTASH_HOST:logstash:5044}"]
+  worker: 2
+  compression_level: 3
+  loadbalance: true
+  ttl: 30s
+
+# Alternative: Direct output to Elasticsearch (if not using Logstash)
+output.elasticsearch:
+  enabled: false
+  hosts: ["${ELASTICSEARCH_HOSTS:elasticsearch:9200}"]
+  username: "${ELASTICSEARCH_USER:elastic}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  index: "filebeat-%{[agent.version]}-%{+yyyy.MM.dd}"
+  pipeline: "filebeat-%{[agent.version]}"
+
+# Kibana configuration
+setup.kibana:
+  host: "${KIBANA_HOST:kibana:5601}"
+  username: "${KIBANA_USER:elastic}"
+  password: "${KIBANA_PASSWORD}"
+
+# Index lifecycle management
+setup.ilm:
+  enabled: true
+  rollover_alias: "filebeat"
+  pattern: "{now/d}-000001"
+  policy_name: "filebeat-policy"
+
+# Logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# Monitoring
+monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["${ELASTICSEARCH_HOSTS:elasticsearch:9200}"]
+    username: "${ELASTICSEARCH_USER:elastic}"
+    password: "${ELASTICSEARCH_PASSWORD}"

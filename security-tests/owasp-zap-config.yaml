@@ -1,0 +1,185 @@
+# OWASP ZAP Automation Framework Configuration
+# For Templates API Security Testing
+#
+# Installation:
+#   Download from https://www.zaproxy.org/download/
+#
+# Run:
+#   zap.sh -cmd -autorun security-tests/owasp-zap-config.yaml
+
+env:
+  contexts:
+    - name: "Templates API"
+      urls:
+        - "http://localhost:8000/api/templates.*"
+      includePaths:
+        - "http://localhost:8000/api/templates.*"
+      excludePaths:
+        - "http://localhost:8000/api/templates/.*\\.png"
+        - "http://localhost:8000/api/templates/.*\\.jpg"
+        - "http://localhost:8000/api/templates/.*\\.svg"
+      authentication:
+        method: "json"
+        parameters:
+          loginUrl: "http://localhost:8000/api/auth/login"
+          loginRequestData: '{"email":"test@example.com","password":"testpassword"}'
+        verification:
+          method: "response"
+          pollUrl: "http://localhost:8000/api/auth/me"
+          pollFrequency: 60
+          pollUnits: "requests"
+
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: "Templates API"
+      url: "http://localhost:8000/api/templates"
+      maxDuration: 10
+      maxDepth: 5
+      maxChildren: 10
+      acceptCookies: true
+      handleODataParametersVisited: false
+
+  - type: spiderAjax
+    parameters:
+      context: "Templates API"
+      url: "http://localhost:8000"
+      maxDuration: 10
+      maxCrawlDepth: 5
+      numberOfBrowsers: 2
+      inScopeOnly: true
+      browserId: "firefox-headless"
+
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+      maxBodySizeInBytesToScan: 10000
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 10
+
+  - type: activeScan
+    parameters:
+      context: "Templates API"
+      policy: "API-scan"
+      maxRuleDurationInMins: 5
+      maxScanDurationInMins: 20
+      maxAlertsPerRule: 10
+      threadPerHost: 5
+      delayInMs: 0
+      handleAntiCSRFTokens: true
+      inScopeOnly: true
+
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "security-tests/reports"
+      reportFile: "owasp-zap-report"
+      reportTitle: "Templates API Security Scan"
+      reportDescription: "Automated security testing for RoleRabbit Templates API"
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "security-tests/reports"
+      reportFile: "owasp-zap-report"
+
+  - type: report
+    parameters:
+      template: "traditional-xml"
+      reportDir: "security-tests/reports"
+      reportFile: "owasp-zap-report"
+
+# Alert filters to reduce false positives
+ruleConfigurations:
+  - id: 10021  # X-Content-Type-Options Header Missing
+    threshold: "low"
+  - id: 10020  # X-Frame-Options Header Not Set
+    threshold: "low"
+  - id: 10038  # Content Security Policy (CSP) Header Not Set
+    threshold: "low"
+  - id: 10096  # Timestamp Disclosure
+    threshold: "info"
+  - id: 10015  # Re-examine Cache-control Directives
+    threshold: "info"
+  - id: 90022  # Application Error Disclosure
+    threshold: "medium"
+  - id: 40012  # Cross-Domain JavaScript Source File Inclusion
+    threshold: "low"
+  - id: 10054  # Cookie without SameSite Attribute
+    threshold: "low"
+
+# Custom scan policy for API testing
+policies:
+  - name: "API-scan"
+    defaultStrength: "medium"
+    defaultThreshold: "medium"
+    rules:
+      # SQL Injection
+      - id: 40018
+        strength: "high"
+        threshold: "low"
+      # XSS (Cross Site Scripting)
+      - id: 40012
+        strength: "high"
+        threshold: "low"
+      - id: 40014
+        strength: "high"
+        threshold: "low"
+      - id: 40016
+        strength: "high"
+        threshold: "low"
+      - id: 40017
+        strength: "high"
+        threshold: "low"
+      # Path Traversal
+      - id: 6
+        strength: "high"
+        threshold: "medium"
+      # Remote File Inclusion
+      - id: 7
+        strength: "high"
+        threshold: "medium"
+      # Command Injection
+      - id: 90020
+        strength: "high"
+        threshold: "low"
+      # CRLF Injection
+      - id: 40003
+        strength: "medium"
+        threshold: "medium"
+      # Parameter Tampering
+      - id: 40008
+        strength: "medium"
+        threshold: "medium"
+      # Server Side Include
+      - id: 40009
+        strength: "medium"
+        threshold: "medium"
+      # XXE (XML External Entity Injection)
+      - id: 90023
+        strength: "high"
+        threshold: "low"
+      # Insecure Deserialization
+      - id: 90024
+        strength: "high"
+        threshold: "low"
+      # LDAP Injection
+      - id: 40015
+        strength: "medium"
+        threshold: "medium"
+      # Authentication Bypass
+      - id: 10011
+        strength: "high"
+        threshold: "low"
+      # Session Fixation
+      - id: 40013
+        strength: "high"
+        threshold: "low"
