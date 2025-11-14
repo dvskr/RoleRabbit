@@ -13,7 +13,8 @@ const {
   jobGetLimiter,
   jobPostLimiter,
   jobPutLimiter,
-  jobDeleteLimiter
+  jobDeleteLimiter,
+  jobBulkOperationLimiter
 } = require('../utils/rateLimiter');
 const logger = require('../utils/logger');
 
@@ -22,6 +23,7 @@ const jobGetRateLimit = createRateLimitMiddleware(jobGetLimiter);
 const jobPostRateLimit = createRateLimitMiddleware(jobPostLimiter);
 const jobPutRateLimit = createRateLimitMiddleware(jobPutLimiter);
 const jobDeleteRateLimit = createRateLimitMiddleware(jobDeleteLimiter);
+const jobBulkOperationRateLimit = createRateLimitMiddleware(jobBulkOperationLimiter);
 
 /**
  * Register all job routes with Fastify instance
@@ -35,6 +37,7 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → PUT    /api/jobs/:id');
   logger.info('   → DELETE /api/jobs/:id');
   logger.info('   → POST   /api/jobs/:id/restore');
+  logger.info('   → POST   /api/jobs/bulk-delete');
 
   /**
    * GET /api/jobs
@@ -429,6 +432,89 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to restore job. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/jobs/bulk-delete
+   * Soft delete multiple jobs at once
+   * Request body: { jobIds: string[] }
+   */
+  fastify.post(
+    '/api/jobs/bulk-delete',
+    {
+      preHandler: [authenticate, jobBulkOperationRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { jobIds } = request.body || {};
+
+        // Validate input
+        if (!Array.isArray(jobIds) || jobIds.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'jobIds must be a non-empty array'
+          });
+        }
+
+        // Limit bulk operations to reasonable size (max 100 jobs at once)
+        if (jobIds.length > 100) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Cannot delete more than 100 jobs at once'
+          });
+        }
+
+        // Verify all IDs are strings
+        if (!jobIds.every(id => typeof id === 'string')) {
+          return reply.status(400).send({
+            success: false,
+            error: 'All job IDs must be strings'
+          });
+        }
+
+        // Soft delete all jobs that belong to user and are not already deleted
+        const result = await safeQuery(async () => {
+          return await prisma.job.updateMany({
+            where: {
+              id: { in: jobIds },
+              userId,
+              deletedAt: null
+            },
+            data: {
+              deletedAt: new Date()
+            }
+          });
+        });
+
+        logger.info('Bulk delete completed', {
+          userId,
+          requestedCount: jobIds.length,
+          deletedCount: result.count
+        });
+
+        return reply.send({
+          success: true,
+          message: `${result.count} job(s) deleted successfully`,
+          deletedCount: result.count,
+          requestedCount: jobIds.length
+        });
+      } catch (error) {
+        logger.error('Failed to bulk delete jobs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete jobs. Please try again.',
           message: error.message
         });
       }
