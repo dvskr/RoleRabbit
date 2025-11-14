@@ -349,6 +349,7 @@ model StorageFile {
   shareLinks  ShareLink[]
   comments    FileComment[]
   accessLogs  FileAccessLog[]
+  activities  FileActivity[]  @relation("FileActivities")
   credentials Credential[]
   baseResumes BaseResume[]
   versions    FileVersion[]
@@ -533,6 +534,7 @@ model User {
   shareLinks          ShareLink[]
   fileComments        FileComment[]        @relation("FileComments")
   fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")
+  fileActivities      FileActivity[]       @relation("UserFileActivities")
   credentials         Credential[]         @relation("Credentials")
   storageQuota        StorageQuota?
   resumes             Resume[]             @relation("Resumes")
@@ -840,4 +842,26 @@ model AnalyticsEvent {
   @@index([userId, timestamp])
   @@index([event, timestamp])
   @@map("analytics_events")
+}
+
+// Enhanced File Activity Log for detailed timeline
+model FileActivity {
+  id        String  @id @default(cuid())
+  fileId    String
+  userId    String
+  action    String  // uploaded, downloaded, shared, deleted, restored, renamed, moved, commented, previewed, version_created, version_restored
+  metadata  Json?   // Additional context (e.g., {sharedWith: "user@example.com", newName: "file.pdf"})
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  file StorageFile @relation("FileActivities", fields: [fileId], references: [id], onDelete: Cascade)
+  user User        @relation("UserFileActivities", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("file_activities")
 }
