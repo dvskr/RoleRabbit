@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { TemplatesProps, TemplateViewMode } from './templates/types';
@@ -8,6 +8,10 @@ import { useTemplateFilters } from './templates/hooks/useTemplateFilters';
 import { useTemplatePagination } from './templates/hooks/useTemplatePagination';
 import { useTemplateActions } from './templates/hooks/useTemplateActions';
 import { useKeyboardShortcuts } from './templates/hooks/useKeyboardShortcuts';
+// Backend-integrated hooks
+import { useTemplates } from '../hooks/useTemplates';
+import { useTemplateFavorites } from '../hooks/useTemplateFavorites';
+import { useTemplatePreferences } from '../hooks/useTemplatePreferences';
 import TemplateHeader from './templates/components/TemplateHeader';
 import TemplateStats from './templates/components/TemplateStats';
 import TemplateCard from './templates/components/TemplateCard';
@@ -76,20 +80,73 @@ function TemplatesInternal({
 }: TemplatesProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
-  const [viewMode, setViewMode] = useState<TemplateViewMode>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Use extracted hooks
+  // Backend-integrated hooks
+  const templatesHook = useTemplates({ autoFetch: true });
+  const favoritesHook = useTemplateFavorites({ autoFetch: true, autoSync: true });
+  const preferencesHook = useTemplatePreferences({ autoFetch: true, autoSave: true });
+
+  // Use legacy hooks as fallback for local state (localStorage-based)
   const filterState = useTemplateFilters();
-  const paginationState = useTemplatePagination({
-    templates: filterState.filteredTemplates,
-  });
   const actionsState = useTemplateActions({
     onAddToEditor,
     onRemoveTemplate,
   });
+
+  // Sync view mode from preferences
+  const [viewMode, setViewMode] = useState<TemplateViewMode>(() => {
+    return (preferencesHook.preferences?.viewMode as TemplateViewMode) || 'grid';
+  });
+
+  // Update view mode when preferences change
+  useEffect(() => {
+    if (preferencesHook.preferences?.viewMode) {
+      setViewMode(preferencesHook.preferences.viewMode as TemplateViewMode);
+    }
+  }, [preferencesHook.preferences?.viewMode]);
+
+  // Update backend templates hook filters when local filters change
+  useEffect(() => {
+    const filterSettings = {
+      category: filterState.selectedCategory !== 'all' ? filterState.selectedCategory : undefined,
+      difficulty: filterState.selectedDifficulty !== 'all' ? filterState.selectedDifficulty : undefined,
+      layout: filterState.selectedLayout !== 'all' ? filterState.selectedLayout : undefined,
+      colorScheme: filterState.selectedColorScheme !== 'all' ? filterState.selectedColorScheme : undefined,
+      isPremium: filterState.showPremiumOnly ? true : filterState.showFreeOnly ? false : undefined,
+    };
+
+    templatesHook.updateFilters({
+      ...filterSettings,
+      sortBy: filterState.sortBy,
+      search: filterState.searchQuery,
+    });
+  }, [
+    filterState.selectedCategory,
+    filterState.selectedDifficulty,
+    filterState.selectedLayout,
+    filterState.selectedColorScheme,
+    filterState.showPremiumOnly,
+    filterState.showFreeOnly,
+    filterState.sortBy,
+    filterState.searchQuery,
+  ]);
+
+  // Use backend templates if available, otherwise fall back to local filtered templates
+  const templates = templatesHook.templates.length > 0
+    ? templatesHook.templates
+    : filterState.filteredTemplates;
+
+  const paginationState = useTemplatePagination({
+    templates: templates,
+  });
+
+  // Use backend favorites if available, otherwise fall back to local favorites
+  const favorites = favoritesHook.favoriteIds.size > 0
+    ? Array.from(favoritesHook.favoriteIds)
+    : actionsState.favorites;
 
   // Keyboard shortcuts callbacks
   const handleToggleFilters = useCallback(() => {
@@ -103,7 +160,9 @@ function TemplatesInternal({
   const handleViewModeChange = useCallback((mode: TemplateViewMode) => {
     trackViewModeChange(mode);
     setViewMode(mode);
-  }, []);
+    // Update backend preferences
+    preferencesHook.updateViewMode(mode);
+  }, [preferencesHook]);
 
   const handleNextPage = useCallback(() => {
     if (paginationState.currentPage < paginationState.totalPages) {
@@ -131,11 +190,22 @@ function TemplatesInternal({
     isModalOpen: actionsState.showPreviewModal || actionsState.showUploadModal || showKeyboardHelp,
   });
 
+  // Integrated favorites toggle handler
+  const handleToggleFavorite = useCallback(async (templateId: string) => {
+    // Use backend favorites if available
+    if (favoritesHook.favoriteIds.size > 0 || !favoritesHook.error) {
+      await favoritesHook.toggleFavorite(templateId);
+    } else {
+      // Fall back to local favorites
+      actionsState.toggleFavorite(templateId);
+    }
+  }, [favoritesHook, actionsState]);
+
   // Separate added and not-added templates
   const addedTemplatesList = useMemo(
     () =>
-      filterState.filteredTemplates.filter(t => addedTemplates.includes(t.id)),
-    [filterState.filteredTemplates, addedTemplates]
+      templates.filter(t => addedTemplates.includes(t.id)),
+    [templates, addedTemplates]
   );
 
   return (
@@ -184,8 +254,8 @@ function TemplatesInternal({
         {/* Stats */}
         <TemplateStats
           colors={colors}
-          favorites={actionsState.favorites}
-          filteredCount={filterState.filteredTemplates.length}
+          favorites={favorites}
+          filteredCount={templates.length}
         />
 
         {/* Filter Chips */}
@@ -232,13 +302,13 @@ function TemplatesInternal({
             >
               {addedTemplatesList.map(template => (
                 <TemplateCard
-                  key={template.id} 
+                  key={template.id}
                   template={template}
                   isAdded={true}
-                  isFavorite={actionsState.favorites.includes(template.id)}
+                  isFavorite={favorites.includes(template.id)}
                   addedTemplateId={actionsState.addedTemplateId}
                   colors={colors}
-                  onFavorite={actionsState.toggleFavorite}
+                  onFavorite={handleToggleFavorite}
                   onPreview={actionsState.handlePreviewTemplate}
                   onUse={actionsState.handleUseTemplate}
                   onRemove={onRemoveTemplate}
@@ -257,13 +327,13 @@ function TemplatesInternal({
           >
             {paginationState.currentTemplates.map(template => (
               <TemplateCard
-                key={template.id} 
+                key={template.id}
                 template={template}
                 isAdded={addedTemplates.includes(template.id)}
-                isFavorite={actionsState.favorites.includes(template.id)}
+                isFavorite={favorites.includes(template.id)}
                 addedTemplateId={actionsState.addedTemplateId}
                 colors={colors}
-                onFavorite={actionsState.toggleFavorite}
+                onFavorite={handleToggleFavorite}
                 onPreview={actionsState.handlePreviewTemplate}
                 onUse={actionsState.handleUseTemplate}
                 onRemove={onRemoveTemplate}
@@ -292,13 +362,13 @@ function TemplatesInternal({
                 <div className="space-y-4" role="list" aria-label="Added templates list">
                   {addedTemplatesList.map(template => (
                     <TemplateCardList
-                      key={template.id} 
+                      key={template.id}
                       template={template}
                       isAdded={true}
-                      isFavorite={actionsState.favorites.includes(template.id)}
+                      isFavorite={favorites.includes(template.id)}
                       addedTemplateId={actionsState.addedTemplateId}
                       colors={colors}
-                      onFavorite={actionsState.toggleFavorite}
+                      onFavorite={handleToggleFavorite}
                       onPreview={actionsState.handlePreviewTemplate}
                       onUse={actionsState.handleUseTemplate}
                       onRemove={onRemoveTemplate}
@@ -311,13 +381,13 @@ function TemplatesInternal({
             {/* All Templates List View */}
             {paginationState.currentTemplates.map(template => (
               <TemplateCardList
-                key={template.id} 
+                key={template.id}
                 template={template}
                 isAdded={addedTemplates.includes(template.id)}
-                isFavorite={actionsState.favorites.includes(template.id)}
+                isFavorite={favorites.includes(template.id)}
                 addedTemplateId={actionsState.addedTemplateId}
                 colors={colors}
-                onFavorite={actionsState.toggleFavorite}
+                onFavorite={handleToggleFavorite}
                 onPreview={actionsState.handlePreviewTemplate}
                 onUse={actionsState.handleUseTemplate}
                 onRemove={onRemoveTemplate}
@@ -335,8 +405,18 @@ function TemplatesInternal({
         />
 
         {/* Empty State */}
-        {filterState.filteredTemplates.length === 0 && (
+        {templates.length === 0 && !templatesHook.loading && (
           <EmptyState onClearFilters={filterState.clearAllFilters} colors={colors} />
+        )}
+
+        {/* Loading State */}
+        {templatesHook.loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+              <p style={{ color: colors.secondaryText }}>Loading templates...</p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -346,13 +426,13 @@ function TemplatesInternal({
         template={actionsState.currentSelectedTemplate}
         isFavorite={
           actionsState.currentSelectedTemplate
-            ? actionsState.favorites.includes(actionsState.currentSelectedTemplate.id)
+            ? favorites.includes(actionsState.currentSelectedTemplate.id)
             : false
         }
         addedTemplateId={actionsState.addedTemplateId}
         colors={colors}
         onClose={() => actionsState.setShowPreviewModal(false)}
-        onFavorite={actionsState.toggleFavorite}
+        onFavorite={handleToggleFavorite}
         onShare={actionsState.handleShareTemplate}
         onDownload={actionsState.handleDownloadTemplate}
         onUse={actionsState.handleUseTemplate}
