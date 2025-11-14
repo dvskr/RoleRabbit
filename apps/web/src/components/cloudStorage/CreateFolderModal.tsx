@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FolderPlus, X } from 'lucide-react';
+import { FolderPlus, X, Folder } from 'lucide-react';
 import { CreateFolderModalProps } from './types';
 import { MODAL_BACKDROP_STYLE, MODAL_MAX_WIDTH } from './constants';
 
@@ -10,20 +10,25 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   onClose,
   onConfirm,
   colors,
+  folders = [],
+  currentFolderId = null,
 }) => {
   const [folderName, setFolderName] = useState('');
+  const [parentFolderId, setParentFolderId] = useState<string | null>(currentFolderId);
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
     if (folderName.trim()) {
-      onConfirm(folderName.trim());
+      onConfirm(folderName.trim(), parentFolderId);
       setFolderName('');
+      setParentFolderId(null);
     }
   };
 
   const handleClose = () => {
     setFolderName('');
+    setParentFolderId(null);
     onClose();
   };
 
@@ -82,7 +87,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
 
         <div className="space-y-4">
           <div>
-            <label 
+            <label
               className="block text-sm font-medium mb-2"
               style={{ color: colors.primaryText }}
             >
@@ -108,6 +113,53 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
               autoFocus
             />
           </div>
+
+          {folders && folders.length > 0 && (
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: colors.primaryText }}
+              >
+                Parent Folder (Optional)
+              </label>
+              <div className="relative">
+                <Folder
+                  size={16}
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2"
+                  style={{ color: colors.tertiaryText }}
+                />
+                <select
+                  value={parentFolderId || ''}
+                  onChange={(e) => setParentFolderId(e.target.value || null)}
+                  className="w-full pl-10 pr-3 py-2 rounded-lg transition-all appearance-none"
+                  style={{
+                    background: colors.inputBackground,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.primaryText,
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = colors.borderFocused;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = colors.border;
+                  }}
+                >
+                  <option value="">Root (No Parent)</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p
+                className="text-xs mt-1"
+                style={{ color: colors.secondaryText }}
+              >
+                Create this folder inside another folder
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mt-6">

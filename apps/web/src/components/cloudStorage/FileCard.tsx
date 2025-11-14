@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Download, 
-  Share2, 
-  Trash2, 
+  Download,
+  Share2,
+  Trash2,
   Trash,
-  Eye, 
+  Eye,
   Edit,
   MessageCircle,
   X,
@@ -22,7 +22,9 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Video,
+  FileType as FilePdfIcon
 } from 'lucide-react';
 import { ResumeFile } from '../../types/cloudStorage';
 import { logger } from '../../utils/logger';
@@ -246,15 +248,26 @@ const FileCard = React.memo(function FileCard({
   };
 
 
+  // Check if file is an image
+  const isImage = file.contentType?.startsWith('image/') ||
+    ['png', 'jpg', 'jpeg', 'gif', 'webp'].some(ext => file.fileName?.toLowerCase().endsWith(`.${ext}`));
+
+  // Check if file is a PDF
+  const isPdf = file.contentType === 'application/pdf' || file.fileName?.toLowerCase().endsWith('.pdf');
+
+  // Check if file is a video
+  const isVideo = file.contentType?.startsWith('video/') ||
+    ['mp4', 'webm', 'mov', 'avi'].some(ext => file.fileName?.toLowerCase().endsWith(`.${ext}`));
+
   const renderGridView = () => {
     // Dark theme colors matching the design
     const darkBg = '#1A202C';
     const blueAccent = '#4285F4';
     const lightText = '#FFFFFF';
     const secondaryText = '#E2E8F0';
-    
+
     return (
-      <div 
+      <div
         className="group rounded-xl p-5 transition-all duration-300 w-full"
         style={{
           background: darkBg,
@@ -267,15 +280,69 @@ const FileCard = React.memo(function FileCard({
         {/* Top Section - Header */}
         <div className="mb-4">
           <div className="flex items-start gap-4">
-            {/* Blue Square Icon */}
-            <div 
-              className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{
-                background: blueAccent,
-              }}
-            >
-              <FileText size={24} color={lightText} />
-            </div>
+            {/* Image Thumbnail or Blue Square Icon */}
+            {isImage && file.publicUrl ? (
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden cursor-pointer"
+                style={{
+                  background: '#2D3748',
+                  border: `2px solid ${blueAccent}`,
+                }}
+                onClick={() => {
+                  setShowPreviewModal(true);
+                }}
+                title="Click to preview"
+              >
+                <img
+                  src={file.publicUrl}
+                  alt={file.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling && (e.currentTarget.nextElementSibling.style.display = 'flex');
+                  }}
+                />
+                <div className="w-full h-full items-center justify-center" style={{ display: 'none' }}>
+                  <FileText size={24} color={lightText} />
+                </div>
+              </div>
+            ) : isPdf ? (
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+                style={{
+                  background: '#DC2626',
+                }}
+                onClick={() => {
+                  setShowPreviewModal(true);
+                }}
+                title="PDF file - Click to preview"
+              >
+                <FilePdfIcon size={24} color={lightText} />
+              </div>
+            ) : isVideo ? (
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 cursor-pointer"
+                style={{
+                  background: '#9333EA',
+                }}
+                onClick={() => {
+                  setShowPreviewModal(true);
+                }}
+                title="Video file - Click to preview"
+              >
+                <Video size={24} color={lightText} />
+              </div>
+            ) : (
+              <div
+                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: blueAccent,
+                }}
+              >
+                <FileText size={24} color={lightText} />
+              </div>
+            )}
 
             {/* File Name and Resume Button Section */}
             <div className="flex-1 min-w-0">

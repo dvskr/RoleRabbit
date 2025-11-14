@@ -15,6 +15,10 @@ if (process.env.NODE_ENV !== 'production') {
   printEnvStatus();
 }
 
+// Initialize Sentry error tracking BEFORE everything else
+const sentry = require('./utils/sentry');
+sentry.initializeSentry();
+
 const fastify = require('fastify')({
   bodyLimit: 10485760, // 10MB body limit for JSON requests
   requestTimeout: 300000, // 300 second (5 minute) request timeout for AI operations
@@ -102,6 +106,9 @@ const { sanitizeInput } = require('./utils/security');
 
 // Database connection
 const { connectDB, disconnectDB } = require('./utils/db');
+
+// Redis cache
+const redisCache = require('./utils/redisCache');
 
 // Socket.IO Server
 const socketIOServer = require('./utils/socketIOServer');
@@ -312,6 +319,11 @@ fastify.get('/api/status', async () => ({
 const { performanceMonitorPlugin } = require('./utils/performanceMonitor');
 fastify.register(performanceMonitorPlugin);
 
+// Register Swagger/OpenAPI Documentation
+const { swaggerConfig, swaggerUIConfig } = require('./config/swagger');
+fastify.register(require('@fastify/swagger'), swaggerConfig);
+fastify.register(require('@fastify/swagger-ui'), swaggerUIConfig);
+
 // Register route modules
 fastify.register(require('./routes/health.routes')); // Health check routes
 fastify.register(require('./routes/auth.routes'));
@@ -369,6 +381,36 @@ fastify.setErrorHandler(async (error, request, reply) => {
     // Silently return - the response was already sent successfully
     return;
   }
+
+  // Capture error in Sentry (only for server errors, not client errors)
+  if (sentry.isEnabled() && (!error.statusCode || error.statusCode >= 500)) {
+    sentry.captureException(error, {
+      tags: {
+        path: request.url,
+        method: request.method,
+        statusCode: error.statusCode || 500
+      },
+      extra: {
+        query: request.query,
+        params: request.params,
+        body: request.body,
+        headers: {
+          'user-agent': request.headers['user-agent'],
+          'content-type': request.headers['content-type']
+        }
+      }
+    });
+
+    // Set user context if available
+    if (request.user) {
+      sentry.setUser({
+        id: request.user.userId || request.user.id,
+        email: request.user.email,
+        username: request.user.name
+      });
+    }
+  }
+
   // For all real errors, use the global error handler
   return globalErrorHandler(error, request, reply);
 });
@@ -428,7 +470,15 @@ const start = async () => {
     if (!dbConnected) {
       logger.error('❌ Failed to connect to database after multiple attempts. Server will continue but database operations may fail.');
     }
-    
+
+    // Initialize Redis cache (optional - server continues without cache if unavailable)
+    try {
+      redisCache.initializeRedis();
+      logger.info('🔄 Redis cache initialization started (will connect asynchronously)');
+    } catch (cacheError) {
+      logger.warn('⚠️ Redis cache initialization failed (server will continue without cache):', cacheError.message);
+    }
+
     fastify.get('/metrics', async (request, reply) => {
       reply.header('Content-Type', metrics.register.contentType);
       return metrics.register.metrics();
@@ -485,6 +535,14 @@ const start = async () => {
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
   console.error('Unhandled Rejection:', reason);
+
+  // Capture in Sentry
+  if (sentry.isEnabled()) {
+    sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)), {
+      tags: { type: 'unhandledRejection' }
+    });
+  }
+
   // Log but don't crash - allow server to continue running
   // Only in development, we might want to see this more clearly
 });
@@ -493,6 +551,14 @@ process.on('unhandledRejection', (reason, promise) => {
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
   console.error('Uncaught Exception:', error);
+
+  // Capture in Sentry
+  if (sentry.isEnabled()) {
+    sentry.captureException(error, {
+      tags: { type: 'uncaughtException' }
+    });
+  }
+
   // Graceful shutdown on uncaught exception
   shutdown('uncaughtException');
 });
@@ -514,7 +580,25 @@ async function shutdown(signal) {
         logger.warn('⚠️ Error closing queues:', queueError.message);
       }
     }
-    
+
+    // Close Redis cache connection
+    try {
+      await redisCache.close();
+    } catch (cacheError) {
+      logger.warn('⚠️ Error closing Redis cache:', cacheError.message);
+    }
+
+    // Flush Sentry events before shutdown
+    try {
+      if (sentry.isEnabled()) {
+        logger.info('Flushing Sentry events...');
+        await sentry.flush(3000); // Wait max 3 seconds
+        logger.info('✅ Sentry events flushed');
+      }
+    } catch (sentryError) {
+      logger.warn('⚠️ Error flushing Sentry events:', sentryError.message);
+    }
+
     await fastify.close();
     await disconnectDB();
     logger.info('✅ Server shut down gracefully');

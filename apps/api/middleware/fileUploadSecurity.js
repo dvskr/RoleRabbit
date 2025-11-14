@@ -5,7 +5,7 @@
 
 const logger = require('../utils/logger');
 
-// Allowed MIME types for resume uploads
+// Allowed MIME types for file uploads
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
@@ -13,7 +13,11 @@ const ALLOWED_MIME_TYPES = [
   'text/plain', // .txt
   'image/png',
   'image/jpeg',
-  'image/jpg'
+  'image/jpg',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime', // .mov
+  'video/x-msvideo' // .avi
 ];
 
 // Allowed file extensions
@@ -24,11 +28,19 @@ const ALLOWED_EXTENSIONS = [
   '.txt',
   '.png',
   '.jpg',
-  '.jpeg'
+  '.jpeg',
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.avi'
 ];
 
-// Maximum file size (10MB)
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Video file extensions
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mov', '.avi'];
+
+// Maximum file size (50MB for videos, 10MB for others)
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024;
 
 // Minimum file size (100 bytes - prevents empty files)
 const MIN_FILE_SIZE = 100;
@@ -43,18 +55,23 @@ function validateFileUpload(file) {
     return { valid: false, error: 'No file provided' };
   }
 
-  // Check file size
+  // Check file size - different limits for videos vs documents
   const fileSize = file.file?.bytesRead || file.size || 0;
-  
-  if (fileSize > MAX_FILE_SIZE) {
+  const filename = file.filename || '';
+  const extension = filename.toLowerCase().slice(filename.lastIndexOf('.'));
+  const isVideo = VIDEO_EXTENSIONS.includes(extension);
+  const maxSize = isVideo ? MAX_FILE_SIZE : MAX_DOCUMENT_SIZE;
+
+  if (fileSize > maxSize) {
     logger.warn('[FILE_SECURITY] File too large', {
       filename: file.filename,
       size: fileSize,
-      maxSize: MAX_FILE_SIZE
+      maxSize,
+      isVideo
     });
     return {
       valid: false,
-      error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      error: `File too large. Maximum size is ${maxSize / 1024 / 1024}MB`
     };
   }
 
@@ -79,13 +96,11 @@ function validateFileUpload(file) {
     });
     return {
       valid: false,
-      error: `Invalid file type. Allowed types: PDF, DOCX, DOC, TXT, PNG, JPG`
+      error: `Invalid file type. Allowed types: PDF, DOCX, DOC, TXT, PNG, JPG, MP4, WEBM, MOV, AVI`
     };
   }
 
-  // Check file extension
-  const filename = file.filename || '';
-  const extension = filename.toLowerCase().slice(filename.lastIndexOf('.'));
+  // Check file extension (filename and extension already declared above)
   
   if (!ALLOWED_EXTENSIONS.includes(extension)) {
     logger.warn('[FILE_SECURITY] Invalid file extension', {
@@ -262,6 +277,8 @@ module.exports = {
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
   MAX_FILE_SIZE,
-  MIN_FILE_SIZE
+  MAX_DOCUMENT_SIZE,
+  MIN_FILE_SIZE,
+  VIDEO_EXTENSIONS
 };
 
