@@ -13,6 +13,7 @@ interface UseKeyboardShortcutsOptions {
   onChangeViewMode?: (mode: TemplateViewMode) => void;
   onNextPage?: () => void;
   onPrevPage?: () => void;
+  onShowHelp?: () => void;
   currentPage?: number;
   totalPages?: number;
   isModalOpen?: boolean;
@@ -28,6 +29,7 @@ export function useKeyboardShortcuts({
   onChangeViewMode,
   onNextPage,
   onPrevPage,
+  onShowHelp,
   currentPage = 1,
   totalPages = 1,
   isModalOpen = false,
@@ -121,11 +123,10 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // Shortcut: ? - Show keyboard shortcuts help (can be implemented later)
+      // Shortcut: ? - Show keyboard shortcuts help
       if (event.key === '?' && !isTyping) {
         event.preventDefault();
-        // TODO: Show keyboard shortcuts modal/tooltip
-        console.log('Keyboard shortcuts:', getShortcutsList());
+        onShowHelp?.();
         return;
       }
     },
@@ -136,6 +137,7 @@ export function useKeyboardShortcuts({
       onChangeViewMode,
       onNextPage,
       onPrevPage,
+      onShowHelp,
       currentPage,
       totalPages,
       isModalOpen,

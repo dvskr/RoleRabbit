@@ -18,6 +18,7 @@ import PaginationControls from './templates/components/PaginationControls';
 import EmptyState from './templates/components/EmptyState';
 import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundary';
 import FilterChips from './templates/components/FilterChips';
+import KeyboardShortcutsHelp from './templates/components/KeyboardShortcutsHelp';
 
 /**
  * TemplatesInternal Component
@@ -76,6 +77,7 @@ function TemplatesInternal({
   const colors = theme.colors;
   const [viewMode, setViewMode] = useState<TemplateViewMode>('grid');
   const [showFilters, setShowFilters] = useState(false);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Use extracted hooks
@@ -91,6 +93,10 @@ function TemplatesInternal({
   // Keyboard shortcuts callbacks
   const handleToggleFilters = useCallback(() => {
     setShowFilters(prev => !prev);
+  }, []);
+
+  const handleShowHelp = useCallback(() => {
+    setShowKeyboardHelp(true);
   }, []);
 
   const handleNextPage = useCallback(() => {
@@ -111,11 +117,12 @@ function TemplatesInternal({
     onClearFilters: filterState.clearAllFilters,
     onToggleFilters: handleToggleFilters,
     onChangeViewMode: setViewMode,
+    onShowHelp: handleShowHelp,
     onNextPage: handleNextPage,
     onPrevPage: handlePrevPage,
     currentPage: paginationState.currentPage,
     totalPages: paginationState.totalPages,
-    isModalOpen: actionsState.showPreviewModal || actionsState.showUploadModal,
+    isModalOpen: actionsState.showPreviewModal || actionsState.showUploadModal || showKeyboardHelp,
   });
 
   // Separate added and not-added templates
@@ -354,6 +361,12 @@ function TemplatesInternal({
         onClose={() => actionsState.setShowUploadModal(false)}
         onFileSelect={actionsState.setUploadedFile}
         onFileRemove={() => actionsState.setUploadedFile(null)}
+      />
+
+      <KeyboardShortcutsHelp
+        isOpen={showKeyboardHelp}
+        onClose={() => setShowKeyboardHelp(false)}
+        colors={colors}
       />
     </div>
   );
