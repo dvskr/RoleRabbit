@@ -8,6 +8,7 @@ import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout } f
 import type { ResumeTemplate } from '../../../data/templates';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import { generateSampleResumePreview } from '../utils/templateHelpers';
+import { TemplateReviews } from './ratings/TemplateReviews';
 
 interface TemplatePreviewModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function TemplatePreviewModal({
 }: TemplatePreviewModalProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'reviews'>('overview');
 
   useEffect(() => {
     if (isOpen) {
@@ -125,66 +127,105 @@ export default function TemplatePreviewModal({
           </button>
         </div>
 
-        {/* Template Preview Image */}
-        <div className="mb-4 sm:mb-6 bg-gray-100 rounded-lg p-3 sm:p-8">
-          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-3 sm:p-8 min-h-[400px] sm:min-h-[600px] overflow-hidden">
-            <div className="transform scale-50 sm:scale-75 origin-top-left">
-              {generateSampleResumePreview(template)}
-            </div>
-          </div>
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'reviews'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Reviews
+            </button>
+          </nav>
         </div>
 
-        {/* Template Details */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-gray-900">Features</h3>
-            <div className="flex flex-wrap gap-2">
-              {template.features.map(feature => (
-                <span
-                  key={feature}
-                  className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium"
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-semibold text-gray-900">Specifications</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Difficulty:</span>
-                <span
-                  className="px-2 py-1 rounded-full text-xs font-semibold"
-                  style={{
-                    ...difficultyColor,
-                    color: difficultyColor.text,
-                    background: difficultyColor.bg,
-                  }}
-                >
-                  {template.difficulty}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Layout:</span>
-                <span className="font-medium text-gray-900">{template.layout}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Color Scheme:</span>
-                <span className="font-medium text-gray-900 capitalize">
-                  {template.colorScheme}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Rating:</span>
-                <div className="flex items-center gap-1">
-                  <Star size={14} className="text-yellow-400 fill-current" />
-                  <span className="font-medium text-gray-900">{template.rating}</span>
+        {/* Tab Content */}
+        {activeTab === 'overview' ? (
+          <>
+            {/* Template Preview Image */}
+            <div className="mb-4 sm:mb-6 bg-gray-100 rounded-lg p-3 sm:p-8">
+              <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-3 sm:p-8 min-h-[400px] sm:min-h-[600px] overflow-hidden">
+                <div className="transform scale-50 sm:scale-75 origin-top-left">
+                  {generateSampleResumePreview(template)}
                 </div>
               </div>
             </div>
+
+            {/* Template Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Features</h3>
+                <div className="flex flex-wrap gap-2">
+                  {template.features.map(feature => (
+                    <span
+                      key={feature}
+                      className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-medium"
+                    >
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-gray-900">Specifications</h3>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Difficulty:</span>
+                    <span
+                      className="px-2 py-1 rounded-full text-xs font-semibold"
+                      style={{
+                        ...difficultyColor,
+                        color: difficultyColor.text,
+                        background: difficultyColor.bg,
+                      }}
+                    >
+                      {template.difficulty}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Layout:</span>
+                    <span className="font-medium text-gray-900">{template.layout}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Color Scheme:</span>
+                    <span className="font-medium text-gray-900 capitalize">
+                      {template.colorScheme}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Rating:</span>
+                    <div className="flex items-center gap-1">
+                      <Star size={14} className="text-yellow-400 fill-current" />
+                      <span className="font-medium text-gray-900">{template.rating}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Reviews Tab */
+          <div className="mb-6">
+            <TemplateReviews
+              templateId={template.id}
+              currentUserId={undefined} // TODO: Get from auth context
+            />
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-200">
