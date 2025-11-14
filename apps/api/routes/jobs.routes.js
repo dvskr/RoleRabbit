@@ -37,6 +37,8 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → PUT    /api/jobs/:id');
   logger.info('   → DELETE /api/jobs/:id');
   logger.info('   → POST   /api/jobs/:id/restore');
+  logger.info('   → POST   /api/jobs/:id/favorite');
+  logger.info('   → DELETE /api/jobs/:id/favorite');
   logger.info('   → POST   /api/jobs/bulk-delete');
   logger.info('   → POST   /api/jobs/bulk-restore');
   logger.info('   → PUT    /api/jobs/bulk-status');
@@ -694,6 +696,158 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to update jobs. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/jobs/:id/favorite
+   * Mark a job as favorite
+   */
+  fastify.post(
+    '/api/jobs/:id/favorite',
+    {
+      preHandler: [authenticate, jobPutRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id } = request.params;
+
+        // Check if job exists and belongs to user
+        const existingJob = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: {
+              id,
+              userId,
+              deletedAt: null
+            }
+          });
+        });
+
+        if (!existingJob) {
+          logger.warn('Job not found or unauthorized', { userId, jobId: id });
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Mark as favorite
+        const updatedJob = await safeQuery(async () => {
+          return await prisma.job.update({
+            where: { id },
+            data: {
+              isFavorite: true
+            }
+          });
+        });
+
+        logger.info('Job marked as favorite', { userId, jobId: id, title: updatedJob.title });
+
+        return reply.send({
+          success: true,
+          message: 'Job marked as favorite',
+          job: updatedJob
+        });
+      } catch (error) {
+        logger.error('Failed to favorite job:', error);
+
+        if (error.code === 'P2025') {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to favorite job. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/favorite
+   * Remove favorite mark from a job
+   */
+  fastify.delete(
+    '/api/jobs/:id/favorite',
+    {
+      preHandler: [authenticate, jobPutRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id } = request.params;
+
+        // Check if job exists and belongs to user
+        const existingJob = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: {
+              id,
+              userId,
+              deletedAt: null
+            }
+          });
+        });
+
+        if (!existingJob) {
+          logger.warn('Job not found or unauthorized', { userId, jobId: id });
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Remove favorite mark
+        const updatedJob = await safeQuery(async () => {
+          return await prisma.job.update({
+            where: { id },
+            data: {
+              isFavorite: false
+            }
+          });
+        });
+
+        logger.info('Job unfavorited', { userId, jobId: id, title: updatedJob.title });
+
+        return reply.send({
+          success: true,
+          message: 'Job removed from favorites',
+          job: updatedJob
+        });
+      } catch (error) {
+        logger.error('Failed to unfavorite job:', error);
+
+        if (error.code === 'P2025') {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to unfavorite job. Please try again.',
           message: error.message
         });
       }
