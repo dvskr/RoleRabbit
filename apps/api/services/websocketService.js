@@ -437,25 +437,63 @@ class WebSocketService {
   }
 
   /**
-   * Helper: Verify authentication token
+   * Helper: Verify authentication token (JWT)
    */
   async verifyToken(token, userId) {
     try {
-      // Implement your token verification logic
-      // This is a placeholder
-      const session = await prisma.session.findFirst({
-        where: {
-          token,
-          userId,
-          expiresAt: {
-            gt: new Date(),
-          },
-        },
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET;
+
+      if (!JWT_SECRET) {
+        console.error('JWT_SECRET not configured');
+        return false;
+      }
+
+      // Remove 'Bearer ' prefix if present
+      const cleanToken = token.replace(/^Bearer\s+/i, '');
+
+      // Verify JWT token
+      const decoded = jwt.verify(cleanToken, JWT_SECRET);
+
+      // Check if the decoded userId matches (handle both userId and id fields)
+      const tokenUserId = decoded.userId || decoded.id;
+
+      if (!tokenUserId) {
+        console.error('Token does not contain userId');
+        return false;
+      }
+
+      // If userId is provided, verify it matches
+      if (userId && tokenUserId !== userId) {
+        console.error('Token userId mismatch');
+        return false;
+      }
+
+      // Optional: Verify user still exists in database
+      const user = await prisma.user.findUnique({
+        where: { id: tokenUserId },
+        select: { id: true, isActive: true }
       });
 
-      return session !== null;
+      if (!user) {
+        console.error('User not found');
+        return false;
+      }
+
+      if (user.isActive === false) {
+        console.error('User is inactive');
+        return false;
+      }
+
+      return true;
     } catch (error) {
-      console.error('Error verifying token:', error);
+      if (error.name === 'TokenExpiredError') {
+        console.error('Token expired:', error.message);
+      } else if (error.name === 'JsonWebTokenError') {
+        console.error('Invalid token:', error.message);
+      } else {
+        console.error('Error verifying token:', error);
+      }
       return false;
     }
   }

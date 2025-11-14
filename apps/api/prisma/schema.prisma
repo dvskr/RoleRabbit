@@ -868,6 +868,11 @@ model ResumeTemplate {
   favorites      UserTemplateFavorite[]
   usageHistory   TemplateUsageHistory[]
   generatedDocs  GeneratedDocument[]    @relation("TemplateGeneratedDocs")
+  ratings        TemplateRating[]       @relation("TemplateRatings")
+  comments       TemplateComment[]      @relation("TemplateComments")
+  shares         TemplateShare[]        @relation("TemplateShares")
+  versions       TemplateVersion[]      @relation("TemplateVersions")
+  approvalWorkflow TemplateApprovalWorkflow[] @relation("TemplateApproval")
 
   @@index([category])
   @@index([difficulty])
@@ -925,4 +930,188 @@ model TemplateUsageHistory {
   @@index([userId, createdAt])
   @@index([templateId, createdAt])
   @@map("template_usage_history")
+}
+
+// Advanced Template Features Models
+
+model TemplateRating {
+  id         String   @id @default(cuid())
+  templateId String
+  userId     String
+  rating     Int // 1-5
+  review     String?  @db.Text
+  title      String?
+  pros       String?  @db.Text
+  cons       String?  @db.Text
+  wouldRecommend Boolean @default(true)
+  isVerified Boolean @default(false)
+  helpfulCount Int @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ResumeTemplate @relation("TemplateRatings", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, userId])
+  @@index([templateId])
+  @@index([userId])
+  @@index([rating])
+  @@index([createdAt])
+  @@map("template_ratings")
+}
+
+model TemplateComment {
+  id         String   @id @default(cuid())
+  templateId String
+  userId     String
+  content    String   @db.Text
+  parentId   String? // For nested comments
+  mentions   String[] @default([]) // User IDs mentioned
+  likeCount  Int @default(0)
+  replyCount Int @default(0)
+  isEdited   Boolean @default(false)
+  isHidden   Boolean @default(false)
+  editHistory Json? // Array of previous versions
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ResumeTemplate @relation("TemplateComments", fields: [templateId], references: [id], onDelete: Cascade)
+  parent   TemplateComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  TemplateComment[] @relation("CommentReplies")
+
+  @@index([templateId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("template_comments")
+}
+
+model TemplateShare {
+  id         String    @id @default(cuid())
+  templateId String
+  userId     String // Owner/sharer
+  shareToken String    @unique
+  permission String    @default("VIEW") // VIEW, DOWNLOAD, EDIT, FULL
+  expiresAt  DateTime?
+  maxUses    Int?
+  useCount   Int       @default(0)
+  sharedWith String[] @default([]) // Array of user IDs
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  template ResumeTemplate @relation("TemplateShares", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([userId])
+  @@index([shareToken])
+  @@index([expiresAt])
+  @@map("template_shares")
+}
+
+model TemplateVersion {
+  id         String   @id @default(cuid())
+  templateId String
+  versionNumber String // Semantic versioning (e.g., "1.2.3")
+  changes    String   @db.Text
+  changesHash String // Hash of template data for diff
+  snapshot   Json // Complete template data snapshot
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  template ResumeTemplate @relation("TemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([versionNumber])
+  @@index([createdAt])
+  @@map("template_versions")
+}
+
+model TemplateApprovalWorkflow {
+  id         String   @id @default(cuid())
+  templateId String
+  submittedBy String
+  reviewedBy String?
+  status     String   @default("SUBMITTED") // SUBMITTED, IN_REVIEW, APPROVED, REJECTED, CHANGES_REQUESTED
+  submissionNotes String? @db.Text
+  reviewNotes String? @db.Text
+  qualityScore Float? // Automated quality check score
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ResumeTemplate @relation("TemplateApproval", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([submittedBy])
+  @@index([reviewedBy])
+  @@index([status])
+  @@map("template_approval_workflows")
+}
+
+model FilterPreset {
+  id      String @id @default(cuid())
+  userId  String
+  name    String
+  filters Json // Saved filter criteria
+  sort    Json // Saved sort preferences
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("filter_presets")
+}
+
+model ABTest {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  status      String    @default("DRAFT") // DRAFT, RUNNING, PAUSED, COMPLETED
+  startDate   DateTime?
+  endDate     DateTime?
+  metrics     String[]  @default([]) // Metrics to track
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  variants    ABTestVariant[]
+  assignments ABTestAssignment[]
+
+  @@index([status])
+  @@index([createdBy])
+  @@map("ab_tests")
+}
+
+model ABTestVariant {
+  id            String @id @default(cuid())
+  testId        String
+  name          String
+  description   String? @db.Text
+  templateId    String?
+  config        Json // Variant configuration
+  trafficPercent Float @default(50) // Percentage of traffic
+  createdAt     DateTime @default(now())
+
+  test        ABTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  assignments ABTestAssignment[]
+
+  @@index([testId])
+  @@map("ab_test_variants")
+}
+
+model ABTestAssignment {
+  id        String   @id @default(cuid())
+  testId    String
+  variantId String
+  userId    String?
+  sessionId String?
+  events    Json     @default("[]") // Array of tracked events
+  createdAt DateTime @default(now())
+
+  test    ABTest        @relation(fields: [testId], references: [id], onDelete: Cascade)
+  variant ABTestVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+  @@index([variantId])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("ab_test_assignments")
 }

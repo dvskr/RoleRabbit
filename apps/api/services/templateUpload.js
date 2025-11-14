@@ -206,32 +206,109 @@ async function generateThumbnails(imageBuffer) {
 }
 
 /**
- * Upload file to storage
+ * Upload file to storage (AWS S3 or fallback to local)
  */
 async function uploadToStorage(buffer, userId) {
-  // This is a placeholder - integrate with your storage solution
-  // (AWS S3, Google Cloud Storage, Azure Blob Storage, etc.)
-
   const filename = `templates/${userId}/${crypto.randomBytes(16).toString('hex')}.jpg`;
-  const filepath = path.join('/tmp', filename);
 
-  // For now, save locally (replace with cloud storage)
+  // Try S3 upload if AWS is configured
+  if (process.env.AWS_S3_BUCKET && process.env.AWS_REGION) {
+    try {
+      const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+      const s3Client = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+        } : undefined // Use default credentials if not specified
+      });
+
+      const command = new PutObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: filename,
+        Body: buffer,
+        ContentType: 'image/jpeg',
+        ACL: 'public-read'
+      });
+
+      await s3Client.send(command);
+
+      // Return S3 URL
+      const s3Url = process.env.AWS_S3_URL ||
+        `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`;
+      return `${s3Url}/${filename}`;
+    } catch (s3Error) {
+      console.error('S3 upload failed, falling back to local storage:', s3Error.message);
+      // Fall through to local storage
+    }
+  }
+
+  // Fallback to local storage if S3 not configured or failed
+  const uploadsDir = path.join(process.cwd(), 'uploads', 'templates', userId);
+
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const filepath = path.join(uploadsDir, path.basename(filename));
   fs.writeFileSync(filepath, buffer);
 
-  // Return URL (replace with actual cloud URL)
+  // Return relative URL for local storage
   return `/uploads/${filename}`;
 }
 
 /**
- * Upload thumbnails to storage
+ * Upload thumbnails to storage (AWS S3 or fallback to local)
  */
 async function uploadThumbnails(thumbnails, userId) {
   const urls = {};
 
   for (const [size, buffer] of Object.entries(thumbnails)) {
     const filename = `thumbnails/${userId}/${size}/${crypto.randomBytes(16).toString('hex')}.jpg`;
-    const filepath = path.join('/tmp', filename);
 
+    // Try S3 upload if AWS is configured
+    if (process.env.AWS_S3_BUCKET && process.env.AWS_REGION) {
+      try {
+        const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+
+        const s3Client = new S3Client({
+          region: process.env.AWS_REGION,
+          credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+          } : undefined
+        });
+
+        const command = new PutObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET,
+          Key: filename,
+          Body: buffer,
+          ContentType: 'image/jpeg',
+          ACL: 'public-read'
+        });
+
+        await s3Client.send(command);
+
+        const s3Url = process.env.AWS_S3_URL ||
+          `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com`;
+        urls[size] = `${s3Url}/${filename}`;
+        continue;
+      } catch (s3Error) {
+        console.error(`S3 upload failed for ${size} thumbnail, falling back to local storage:`, s3Error.message);
+        // Fall through to local storage
+      }
+    }
+
+    // Fallback to local storage
+    const uploadsDir = path.join(process.cwd(), 'uploads', 'thumbnails', userId, size);
+
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const filepath = path.join(uploadsDir, path.basename(filename));
     fs.writeFileSync(filepath, buffer);
     urls[size] = `/uploads/${filename}`;
   }

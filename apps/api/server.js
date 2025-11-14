@@ -92,6 +92,9 @@ const { connectDB, disconnectDB } = require('./utils/db');
 // Socket.IO Server
 const socketIOServer = require('./utils/socketIOServer');
 
+// WebSocket Service for real-time updates
+const websocketService = require('./services/websocketService');
+
 // Health Check utilities
 const {
   getHealthStatus
@@ -281,7 +284,9 @@ fastify.get('/api/status', async () => ({
     auth: '/api/auth/*',
     users: '/api/users/*',
     templates: '/api/templates/*',
-    health: '/health'
+    templatesAdvanced: '/api/templates/*/rate, /api/templates/*/comments, /api/templates/*/share, etc.',
+    health: '/health',
+    websocket: 'ws://[host]/ws'
   }
 }));
 
@@ -297,6 +302,7 @@ fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));
 fastify.register(require('./routes/templates.routes'));
+fastify.register(require('./routes/templatesAdvanced.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -419,6 +425,19 @@ const start = async () => {
     } catch (socketError) {
       logger.error('⚠️ Failed to initialize Socket.IO (server will continue without real-time features):', socketError.message);
       // Don't fail server startup if Socket.IO fails
+    }
+
+    // Initialize WebSocket service for advanced features
+    try {
+      if (fastify.server) {
+        websocketService.initialize(fastify.server);
+        logger.info('✅ WebSocket service initialized for real-time template updates');
+      } else {
+        logger.warn('⚠️ Fastify server instance not available, skipping WebSocket initialization');
+      }
+    } catch (wsError) {
+      logger.error('⚠️ Failed to initialize WebSocket service (server will continue without real-time template features):', wsError.message);
+      // Don't fail server startup if WebSocket fails
     }
     
     logger.info(`🚀 RoleReady Node.js API running on http://${host}:${port}`);
