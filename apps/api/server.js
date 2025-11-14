@@ -300,22 +300,6 @@ fastify.addHook('onResponse', async (_request, reply) => {
 // Note: Global error handler is set later in the file
 // The premature close errors are handled via stream filtering above
 
-// Health check
-// Health check endpoint with detailed status
-fastify.get('/health', async (request, reply) => {
-  try {
-    const healthStatus = await getHealthStatus();
-    const statusCode = healthStatus.status === 'healthy' ? 200 : 503;
-    reply.status(statusCode).send(healthStatus);
-  } catch (error) {
-    reply.status(503).send({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
 // API status with versioning info
 fastify.get('/api/status', async () => ({
   message: 'RoleReady Node.js API is running',
