@@ -32,6 +32,11 @@ async function storageRoutes(fastify, _options) {
   logger.info('   → POST   /api/storage/files/:id/move');
   logger.info('   → PUT    /api/storage/shares/:id');
   logger.info('   → DELETE /api/storage/shares/:id');
+  logger.info('   → POST   /api/storage/files/batch/delete (batch delete)');
+  logger.info('   → POST   /api/storage/files/batch/move (batch move)');
+  logger.info('   → POST   /api/storage/files/batch/restore (batch restore)');
+  logger.info('   → POST   /api/storage/files/download/zip (ZIP download)');
+  logger.info('   → GET    /api/storage/analytics (storage analytics)');
   
   // Get all files for authenticated user
   fastify.get('/files', {
@@ -2737,6 +2742,357 @@ async function storageRoutes(fastify, _options) {
       logger.error('Error downloading shared file:', error);
       return reply.status(500).send({
         error: 'Failed to download shared file',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // BATCH OPERATIONS
+  // ============================================================================
+
+  // Batch delete files
+  fastify.post('/files/batch/delete', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Verify all files belong to user and soft delete them
+      const deletedFiles = await prisma.storageFile.updateMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: null
+        },
+        data: {
+          deletedAt: new Date()
+        }
+      });
+
+      logger.info(`Batch deleted ${deletedFiles.count} files for user ${userId}`);
+
+      // Emit socket events for each deleted file
+      fileIds.forEach(fileId => {
+        socketIOServer.emitToUser(userId, 'file_deleted', { fileId });
+      });
+
+      return reply.send({
+        success: true,
+        deletedCount: deletedFiles.count,
+        message: `Successfully deleted ${deletedFiles.count} file(s)`
+      });
+
+    } catch (error) {
+      logger.error('Error batch deleting files:', error);
+      return reply.status(500).send({
+        error: 'Failed to batch delete files',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Batch move files
+  fastify.post('/files/batch/move', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds, folderId } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Verify folder belongs to user if folderId is provided
+      if (folderId) {
+        const folder = await prisma.storageFolder.findFirst({
+          where: {
+            id: folderId,
+            userId
+          }
+        });
+
+        if (!folder) {
+          return reply.status(404).send({
+            error: 'Folder not found',
+            message: 'The specified folder does not exist'
+          });
+        }
+      }
+
+      // Move files to new folder
+      const movedFiles = await prisma.storageFile.updateMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: null
+        },
+        data: {
+          folderId: folderId || null
+        }
+      });
+
+      logger.info(`Batch moved ${movedFiles.count} files to folder ${folderId || 'root'} for user ${userId}`);
+
+      // Emit socket events for each moved file
+      fileIds.forEach(fileId => {
+        socketIOServer.emitToUser(userId, 'file_updated', { fileId, folderId });
+      });
+
+      return reply.send({
+        success: true,
+        movedCount: movedFiles.count,
+        message: `Successfully moved ${movedFiles.count} file(s)`
+      });
+
+    } catch (error) {
+      logger.error('Error batch moving files:', error);
+      return reply.status(500).send({
+        error: 'Failed to batch move files',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // Batch restore files
+  fastify.post('/files/batch/restore', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Restore files
+      const restoredFiles = await prisma.storageFile.updateMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: { not: null }
+        },
+        data: {
+          deletedAt: null
+        }
+      });
+
+      logger.info(`Batch restored ${restoredFiles.count} files for user ${userId}`);
+
+      // Emit socket events
+      fileIds.forEach(fileId => {
+        socketIOServer.emitToUser(userId, 'file_restored', { fileId });
+      });
+
+      return reply.send({
+        success: true,
+        restoredCount: restoredFiles.count,
+        message: `Successfully restored ${restoredFiles.count} file(s)`
+      });
+
+    } catch (error) {
+      logger.error('Error batch restoring files:', error);
+      return reply.status(500).send({
+        error: 'Failed to batch restore files',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // ZIP ARCHIVE DOWNLOAD
+  // ============================================================================
+
+  // Download multiple files as ZIP
+  fastify.post('/files/download/zip', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const { fileIds } = request.body;
+
+      if (!Array.isArray(fileIds) || fileIds.length === 0) {
+        return reply.status(400).send({
+          error: 'Bad Request',
+          message: 'fileIds must be a non-empty array'
+        });
+      }
+
+      // Fetch files
+      const files = await prisma.storageFile.findMany({
+        where: {
+          id: { in: fileIds },
+          userId,
+          deletedAt: null
+        },
+        select: {
+          id: true,
+          name: true,
+          fileName: true,
+          storagePath: true,
+          contentType: true
+        }
+      });
+
+      if (files.length === 0) {
+        return reply.status(404).send({
+          error: 'No files found',
+          message: 'No files found matching the provided IDs'
+        });
+      }
+
+      // Create ZIP archive
+      const archiver = require('archiver');
+      const archive = archiver('zip', {
+        zlib: { level: 6 } // Compression level
+      });
+
+      // Set response headers
+      reply.header('Content-Type', 'application/zip');
+      reply.header('Content-Disposition', `attachment; filename="files_${Date.now()}.zip"`);
+
+      // Pipe archive to response
+      reply.raw.on('close', () => {
+        logger.info(`ZIP download completed for ${files.length} files`);
+      });
+
+      archive.pipe(reply.raw);
+
+      // Add files to archive
+      for (const file of files) {
+        try {
+          const fileBuffer = await storageHandler.download(file.storagePath);
+          if (fileBuffer) {
+            archive.append(fileBuffer, { name: file.fileName || file.name });
+          }
+        } catch (error) {
+          logger.error(`Failed to add file ${file.id} to ZIP:`, error);
+        }
+      }
+
+      // Finalize archive
+      await archive.finalize();
+
+      return reply;
+
+    } catch (error) {
+      logger.error('Error creating ZIP archive:', error);
+      return reply.status(500).send({
+        error: 'Failed to create ZIP archive',
+        message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // ============================================================================
+  // STORAGE ANALYTICS
+  // ============================================================================
+
+  // Get storage analytics
+  fastify.get('/analytics', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+
+      // Get file counts by type
+      const filesByType = await prisma.storageFile.groupBy({
+        by: ['type'],
+        where: {
+          userId,
+          deletedAt: null
+        },
+        _count: true,
+        _sum: {
+          size: true
+        }
+      });
+
+      // Get total files and storage
+      const totalStats = await prisma.storageFile.aggregate({
+        where: {
+          userId,
+          deletedAt: null
+        },
+        _count: true,
+        _sum: {
+          size: true
+        }
+      });
+
+      // Get deleted files count
+      const deletedCount = await prisma.storageFile.count({
+        where: {
+          userId,
+          deletedAt: { not: null }
+        }
+      });
+
+      // Get shared files count
+      const sharedCount = await prisma.fileShare.count({
+        where: {
+          file: {
+            userId
+          }
+        }
+      });
+
+      // Get recent activity (last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const recentUploads = await prisma.storageFile.count({
+        where: {
+          userId,
+          createdAt: {
+            gte: sevenDaysAgo
+          }
+        }
+      });
+
+      // Get storage quota
+      const quota = await prisma.storageQuota.findUnique({
+        where: { userId }
+      });
+
+      return reply.send({
+        filesByType: filesByType.map(item => ({
+          type: item.type,
+          count: item._count,
+          totalSize: item._sum.size || 0
+        })),
+        totalFiles: totalStats._count || 0,
+        totalSize: totalStats._sum.size || 0,
+        deletedFiles: deletedCount,
+        sharedFiles: sharedCount,
+        recentUploads,
+        quota: {
+          used: quota?.usedBytes || 0,
+          limit: quota?.limitBytes || 5368709120, // 5GB default
+          percentage: quota ? ((quota.usedBytes / quota.limitBytes) * 100).toFixed(2) : 0
+        }
+      });
+
+    } catch (error) {
+      logger.error('Error fetching storage analytics:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch analytics',
         message: error.message || 'An error occurred'
       });
     }
