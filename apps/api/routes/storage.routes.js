@@ -11,6 +11,7 @@ const { checkFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
 const redisCache = require('../utils/redisCache');
+const imageOptimizer = require('../utils/imageOptimizer');
 const {
   listFilesSchema,
   uploadFileSchema,
@@ -500,23 +501,66 @@ async function storageRoutes(fastify, _options) {
         });
       }
 
+      // Convert file stream to buffer (needed for both upload and optimization)
+      logger.info(`Processing file: ${fileName} for user: ${userId}`);
+      logger.info(`File size: ${fileSize} bytes, Content-Type: ${contentType}`);
+
+      const chunks = [];
+      for await (const chunk of fileData.file) {
+        chunks.push(chunk);
+      }
+      const fileBuffer = Buffer.concat(chunks);
+
       // Upload file to storage
       // Note: storageHandler.upload() will initialize storage automatically
-      logger.info(`Uploading file: ${fileName} for user: ${userId}`);
-      logger.info(`File size: ${fileSize} bytes, Content-Type: ${contentType}`);
-      
       const storageResult = await storageHandler.upload(
-        fileData.file,
+        fileBuffer,
         userId,
         fileName,
         contentType
       );
-      
+
       if (!storageResult || !storageResult.path) {
         throw new Error('Storage upload returned invalid result');
       }
-      
+
       logger.info(`✅ File uploaded successfully: ${storageResult.path}`);
+
+      // Optimize image and generate thumbnails
+      let thumbnailUrl = null;
+      if (imageOptimizer.isEnabled() && imageOptimizer.isImage(contentType)) {
+        try {
+          logger.info('Generating optimized image variants...');
+
+          // Optimize image and generate thumbnails
+          const optimizationResult = await imageOptimizer.optimizeImage(fileBuffer, {
+            generateThumbnail: true,
+            generateSizes: ['thumbnail', 'small'],
+            preserveOriginal: false,
+            quality: 85
+          });
+
+          if (optimizationResult.success && optimizationResult.variants.thumbnail) {
+            // Upload thumbnail to storage
+            const thumbnailFileName = imageOptimizer.getOptimizedFilename(fileName, 'thumbnail');
+            const thumbnailResult = await storageHandler.upload(
+              optimizationResult.variants.thumbnail.buffer,
+              userId,
+              thumbnailFileName,
+              'image/webp'
+            );
+
+            if (thumbnailResult && thumbnailResult.path) {
+              thumbnailUrl = thumbnailResult.publicUrl;
+              logger.info(`✅ Thumbnail uploaded: ${thumbnailResult.path}`);
+              logger.info(`   Size reduction: ${optimizationResult.metadata.reduction}`);
+            }
+          }
+        } catch (optimizationError) {
+          logger.warn('Image optimization failed (continuing without thumbnails):', optimizationError.message);
+          // Continue without thumbnails - not a critical error
+        }
+      }
 
       // Save file metadata to database
       let savedFile = null;
