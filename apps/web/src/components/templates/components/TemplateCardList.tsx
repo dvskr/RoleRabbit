@@ -16,6 +16,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import TemplatePreview from './TemplatePreview';
 import Tooltip from './Tooltip';
@@ -25,7 +26,7 @@ interface TemplateCardListProps {
   isAdded: boolean;
   isFavorite: boolean;
   addedTemplateId: string | null;
-  colors: any;
+  colors: ThemeColors;
   onFavorite: (templateId: string) => void;
   onPreview: (templateId: string) => void;
   onUse: (templateId: string) => void;
@@ -192,6 +193,35 @@ function TemplateCardList({
               {template.colorScheme}
             </span>
           </div>
+
+          {/* Tags - Display first 4 tags */}
+          {template.tags && template.tags.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+              {template.tags.slice(0, 4).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-0.5 rounded text-xs"
+                  style={{
+                    background: `${colors.primaryBlue}15`,
+                    color: colors.primaryBlue,
+                    border: `1px solid ${colors.primaryBlue}30`,
+                  }}
+                  title={tag}
+                >
+                  {tag}
+                </span>
+              ))}
+              {template.tags.length > 4 && (
+                <span
+                  className="text-xs"
+                  style={{ color: colors.tertiaryText }}
+                  title={`${template.tags.slice(4).join(', ')}`}
+                >
+                  +{template.tags.length - 4} more
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 flex-wrap">

@@ -6,6 +6,7 @@ import React, { RefObject } from 'react';
 import SearchAndFilters from './SearchAndFilters';
 import CategoryTabs from './CategoryTabs';
 import AdvancedFilters from './AdvancedFilters';
+import type { ThemeColors } from '../types';
 import { TemplateSortBy, TemplateViewMode } from '../types';
 
 interface TemplateHeaderProps {

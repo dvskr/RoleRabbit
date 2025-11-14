@@ -8,10 +8,17 @@ import { Search, Filter, RefreshCw, FileQuestion, Sparkles } from 'lucide-react'
 
 interface EmptyStateProps {
   onClearFilters: () => void;
-  colors?: any;
+  colors?: ThemeColors;
 }
 
 export default function EmptyState({ onClearFilters, colors }: EmptyStateProps) {
+  const suggestions = [
+    { icon: Filter, text: 'Try removing some filters', tip: 'You may have too many filters applied' },
+    { icon: Tag, text: 'Search by tags', tip: 'Templates have tags like "ATS", "modern", "creative"' },
+    { icon: Layout, text: 'Try different layouts', tip: 'Switch between single-column, two-column, or hybrid' },
+    { icon: Sparkles, text: 'Browse all templates', tip: 'Clear filters to see our full collection' },
+  ];
+
   return (
     <div
       className="flex flex-col items-center justify-center py-16 px-4 animate-fade-in"

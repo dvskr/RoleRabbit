@@ -58,6 +58,11 @@ export const TEMPLATES_PER_PAGE = 12;
 
 /**
  * Duration for success animation after adding template (in milliseconds)
+ *
+ * @deprecated Use getSuccessAnimationDuration() from utils/accessibility instead
+ * This respects user's prefers-reduced-motion setting for better accessibility
+ *
+ * Normal: 2000ms, Reduced motion: 200ms
  */
 export const SUCCESS_ANIMATION_DURATION = 2000;
 

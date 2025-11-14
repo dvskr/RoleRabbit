@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import Tooltip from './Tooltip';
 
@@ -23,7 +24,7 @@ interface TemplateCardProps {
   isAdded: boolean;
   isFavorite: boolean;
   addedTemplateId: string | null;
-  colors: any;
+  colors: ThemeColors;
   onFavorite: (templateId: string) => void;
   onPreview: (templateId: string) => void;
   onUse: (templateId: string) => void;
@@ -42,22 +43,78 @@ function TemplateCard({
   onRemove,
 }: TemplateCardProps) {
   const difficultyColor = getDifficultyColor(template.difficulty, colors);
-  
-  // Get color scheme class dynamically
-  const getColorClass = () => {
+
+  // Get comprehensive color scheme palette for accurate preview
+  const getColorPalette = () => {
     switch (template.colorScheme) {
       case 'blue':
-        return 'bg-blue-600';
+        return {
+          primary: 'bg-blue-600',      // Headers
+          accent: 'bg-blue-500',       // Subheadings
+          light: 'bg-blue-100',        // Backgrounds
+          text: 'text-blue-700',       // Colored text
+          border: 'border-blue-300',   // Borders
+        };
       case 'green':
-        return 'bg-green-600';
+        return {
+          primary: 'bg-green-600',
+          accent: 'bg-green-500',
+          light: 'bg-green-100',
+          text: 'text-green-700',
+          border: 'border-green-300',
+        };
+      case 'purple':
+        return {
+          primary: 'bg-purple-600',
+          accent: 'bg-purple-500',
+          light: 'bg-purple-100',
+          text: 'text-purple-700',
+          border: 'border-purple-300',
+        };
+      case 'red':
+        return {
+          primary: 'bg-red-600',
+          accent: 'bg-red-500',
+          light: 'bg-red-100',
+          text: 'text-red-700',
+          border: 'border-red-300',
+        };
+      case 'orange':
+        return {
+          primary: 'bg-orange-600',
+          accent: 'bg-orange-500',
+          light: 'bg-orange-100',
+          text: 'text-orange-700',
+          border: 'border-orange-300',
+        };
+      case 'custom':
+        return {
+          primary: 'bg-gradient-to-r from-teal-500 to-cyan-500',
+          accent: 'bg-teal-500',
+          light: 'bg-teal-100',
+          text: 'text-teal-700',
+          border: 'border-teal-300',
+        };
       case 'monochrome':
-        return 'bg-gray-700';
+        return {
+          primary: 'bg-gray-800',
+          accent: 'bg-gray-600',
+          light: 'bg-gray-100',
+          text: 'text-gray-700',
+          border: 'border-gray-400',
+        };
       default:
-        return 'bg-gradient-to-r from-purple-500 to-pink-500';
+        return {
+          primary: 'bg-gray-800',
+          accent: 'bg-gray-600',
+          light: 'bg-gray-100',
+          text: 'text-gray-700',
+          border: 'border-gray-400',
+        };
     }
   };
-  
-  const colorSchemeClass = getColorClass();
+
+  const colorPalette = getColorPalette();
 
   return (
     <div
@@ -80,43 +137,49 @@ function TemplateCard({
         className="relative h-32 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden group cursor-pointer"
         onClick={() => onPreview(template.id)}
       >
-        {/* Mini Resume Preview */}
-        <div className="w-20 h-28 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300">
-          <div className="p-1.5 h-full flex flex-col space-y-0.5">
-            {/* Name/Header Bar */}
-            <div className={`h-2 rounded ${colorSchemeClass}`}></div>
-
-            {/* Contact Line */}
-            <div className="h-1 bg-gray-200 rounded w-10/12"></div>
-
-            {/* Summary Section */}
-            <div className="space-y-0.5">
-              <div className={`h-1 rounded w-8 ${colorSchemeClass}`}></div>
-              <div className="h-1 bg-gray-100 rounded w-full"></div>
-              <div className="h-1 bg-gray-100 rounded w-5/6"></div>
+        {/* Mini Resume Preview - Accurate Color Representation */}
+        <div className="w-20 h-28 bg-white rounded-lg shadow-xl border border-gray-300 transform rotate-1 group-hover:rotate-0 transition-transform duration-300 overflow-hidden">
+          <div className="h-full flex flex-col">
+            {/* Name/Header Bar - Primary Color */}
+            <div className={`h-4 ${colorPalette.primary} flex items-center px-1`}>
+              <div className="h-1 bg-white/80 rounded w-3/4"></div>
             </div>
 
-            {/* Experience Section */}
-            <div className="space-y-0.5">
-              <div className={`h-1 rounded w-7 ${colorSchemeClass}`}></div>
-              <div className="h-1 bg-gray-100 rounded w-full"></div>
-              <div className="h-1 bg-gray-100 rounded w-4/5"></div>
-            </div>
+            <div className="p-1.5 flex-1 flex flex-col space-y-0.5">
+              {/* Contact Line with Color Accent */}
+              <div className={`h-0.5 ${colorPalette.light} rounded w-full`}></div>
 
-            {/* Bullet Points */}
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-              <div className="h-1 bg-gray-100 rounded flex-1"></div>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-              <div className="h-1 bg-gray-100 rounded flex-1"></div>
-            </div>
+              {/* Summary Section */}
+              <div className="space-y-0.5">
+                {/* Section Header - Accent Color */}
+                <div className={`h-1 rounded w-8 ${colorPalette.accent}`}></div>
+                <div className="h-1 bg-gray-100 rounded w-full"></div>
+                <div className="h-1 bg-gray-100 rounded w-5/6"></div>
+              </div>
 
-            {/* Skills Tags */}
-            <div className="flex gap-1">
-              <div className="h-1 bg-gray-100 rounded flex-1"></div>
-              <div className="h-1 bg-gray-100 rounded flex-1"></div>
+              {/* Experience Section with Border */}
+              <div className={`space-y-0.5 border-l-2 ${colorPalette.border} pl-1`}>
+                {/* Section Header - Accent Color */}
+                <div className={`h-1 rounded w-7 ${colorPalette.accent}`}></div>
+                <div className="h-1 bg-gray-100 rounded w-full"></div>
+                <div className="h-1 bg-gray-100 rounded w-4/5"></div>
+              </div>
+
+              {/* Bullet Points with Color */}
+              <div className="flex items-center gap-1">
+                <div className={`w-1 h-1 ${colorPalette.primary} rounded-full`}></div>
+                <div className="h-1 bg-gray-100 rounded flex-1"></div>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className={`w-1 h-1 ${colorPalette.primary} rounded-full`}></div>
+                <div className="h-1 bg-gray-100 rounded flex-1"></div>
+              </div>
+
+              {/* Skills Tags with Color Background */}
+              <div className="flex gap-1">
+                <div className={`h-1.5 ${colorPalette.light} rounded flex-1 border ${colorPalette.border}`}></div>
+                <div className={`h-1.5 ${colorPalette.light} rounded flex-1 border ${colorPalette.border}`}></div>
+              </div>
             </div>
           </div>
         </div>
@@ -215,6 +278,35 @@ function TemplateCard({
             {template.layout}
           </span>
         </div>
+
+        {/* Tags - Display first 3 tags */}
+        {template.tags && template.tags.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            {template.tags.slice(0, 3).map((tag, index) => (
+              <span
+                key={index}
+                className="px-2 py-0.5 rounded text-xs"
+                style={{
+                  background: `${colors.primaryBlue}15`,
+                  color: colors.primaryBlue,
+                  border: `1px solid ${colors.primaryBlue}30`,
+                }}
+                title={tag}
+              >
+                {tag}
+              </span>
+            ))}
+            {template.tags.length > 3 && (
+              <span
+                className="text-xs"
+                style={{ color: colors.tertiaryText }}
+                title={`+${template.tags.length - 3} more tags`}
+              >
+                +{template.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between mt-auto">
           <div

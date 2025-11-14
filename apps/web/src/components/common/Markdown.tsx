@@ -1,4 +1,5 @@
 import React from 'react';
+import { escapeHtml } from '../../utils/sanitize';
 
 interface MarkdownProps {
   content: string;
@@ -7,8 +8,11 @@ interface MarkdownProps {
 
 export function Markdown({ content, className }: MarkdownProps) {
   // Simple markdown renderer (for production, use a library like react-markdown)
+  // SECURITY: This escapes HTML first to prevent XSS attacks
   const renderMarkdown = (text: string) => {
-    let html = text;
+    // IMPORTANT: Escape HTML entities first to prevent XSS
+    // This converts <script> to &lt;script&gt; before markdown processing
+    let html = escapeHtml(text);
 
     // Headers
     html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mt-6 mb-2">$1</h3>');
@@ -53,4 +57,30 @@ export function Markdown({ content, className }: MarkdownProps) {
     />
   );
 }
+
+/**
+ * SECURITY NOTE:
+ *
+ * This component provides basic XSS protection by escaping HTML before markdown processing.
+ * However, for production applications with user-generated content, it's strongly
+ * recommended to use a battle-tested library like:
+ *
+ * - react-markdown: https://github.com/remarkjs/react-markdown
+ * - remark-gfm: For GitHub Flavored Markdown support
+ * - rehype-sanitize: For HTML sanitization
+ *
+ * Example:
+ * ```tsx
+ * import ReactMarkdown from 'react-markdown';
+ * import remarkGfm from 'remark-gfm';
+ * import rehypeSanitize from 'rehype-sanitize';
+ *
+ * <ReactMarkdown
+ *   remarkPlugins={[remarkGfm]}
+ *   rehypePlugins={[rehypeSanitize]}
+ * >
+ *   {content}
+ * </ReactMarkdown>
+ * ```
+ */
 

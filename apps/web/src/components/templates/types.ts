@@ -1,5 +1,8 @@
 // Types and interfaces for Templates component
 
+// Re-export ThemeColors for type safety
+export type { ThemeColors } from '../../contexts/ThemeContext';
+
 export interface TemplatesProps {
   onAddToEditor?: (templateId: string) => void;
   addedTemplates?: string[];

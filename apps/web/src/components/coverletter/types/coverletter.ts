@@ -1,7 +1,9 @@
+import { CoverLetterCategory } from '../../../data/categories';
+
 export interface CoverLetterTemplate {
   id: string;
   name: string;
-  category: 'software' | 'design' | 'marketing' | 'sales' | 'finance' | 'general';
+  category: CoverLetterCategory;
   description: string;
   content: string;
   wordCount: number;

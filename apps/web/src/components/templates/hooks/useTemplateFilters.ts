@@ -287,6 +287,11 @@ export const useTemplateFilters = (
 
   useEffect(() => {
     debouncedSetSearch(searchQuery);
+
+    // Cleanup: cancel pending debounced call on unmount
+    return () => {
+      debouncedSetSearch.cancel();
+    };
   }, [searchQuery, debouncedSetSearch]);
 
   // Track search analytics when debounced query changes
@@ -400,14 +405,14 @@ export const useTemplateFilters = (
   const filteredTemplates = useMemo(() => {
     let templates = resumeTemplates;
 
-    // Search filter
+    // Search filter - apply first if search query exists
     if (debouncedSearchQuery) {
       templates = searchTemplates(debouncedSearchQuery);
     }
 
-    // Category filter
+    // Category filter - filter the existing set (don't replace it)
     if (selectedCategory !== 'all') {
-      templates = getTemplatesByCategory(selectedCategory);
+      templates = templates.filter(t => t.category === selectedCategory);
     }
 
     // Difficulty filter
