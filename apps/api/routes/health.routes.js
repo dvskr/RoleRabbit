@@ -5,7 +5,7 @@
 
 const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
-const redis = require('../utils/redis');
+const { checkRedisHealth } = require('../utils/cacheManager');
 
 /**
  * Register health check routes
@@ -56,14 +56,14 @@ async function healthRoutes(fastify, options) {
     // Check Redis connection
     try {
       const redisStart = Date.now();
-      const redisClient = redis.getClient();
-      if (redisClient && redisClient.isOpen) {
-        await redisClient.ping();
-        checks.redis.status = 'ok';
-        checks.redis.responseTime = Date.now() - redisStart;
-      } else {
-        checks.redis.status = 'disconnected';
-        checks.redis.error = 'Redis client not connected';
+      const redisHealth = await checkRedisHealth();
+      checks.redis.status = redisHealth.status === 'healthy' ? 'ok' : redisHealth.status;
+      checks.redis.responseTime = redisHealth.responseTime ? parseInt(redisHealth.responseTime) : Date.now() - redisStart;
+      if (redisHealth.error) {
+        checks.redis.error = redisHealth.error;
+      }
+      if (redisHealth.memoryUsed) {
+        checks.redis.memoryUsed = redisHealth.memoryUsed;
       }
     } catch (error) {
       checks.redis.status = 'error';
