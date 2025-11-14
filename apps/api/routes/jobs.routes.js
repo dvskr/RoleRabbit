@@ -17,7 +17,9 @@ const {
   jobBulkOperationLimiter,
   jobViewsLimiter,
   jobTrackingPostLimiter,
-  jobTrackingModifyLimiter
+  jobTrackingModifyLimiter,
+  jobImportExportLimiter,
+  jobStatsLimiter
 } = require('../utils/rateLimiter');
 const logger = require('../utils/logger');
 
@@ -30,6 +32,8 @@ const jobBulkOperationRateLimit = createRateLimitMiddleware(jobBulkOperationLimi
 const jobViewsRateLimit = createRateLimitMiddleware(jobViewsLimiter);
 const jobTrackingPostRateLimit = createRateLimitMiddleware(jobTrackingPostLimiter);
 const jobTrackingModifyRateLimit = createRateLimitMiddleware(jobTrackingModifyLimiter);
+const jobImportExportRateLimit = createRateLimitMiddleware(jobImportExportLimiter);
+const jobStatsRateLimit = createRateLimitMiddleware(jobStatsLimiter);
 
 /**
  * Register all job routes with Fastify instance
@@ -70,6 +74,11 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → POST   /api/jobs/:id/reminders');
   logger.info('   → PUT    /api/jobs/:id/reminders/:reminderId');
   logger.info('   → DELETE /api/jobs/:id/reminders/:reminderId');
+  logger.info('   → POST   /api/jobs/:id/attachments');
+  logger.info('   → DELETE /api/jobs/:id/attachments/:attachmentId');
+  logger.info('   → GET    /api/jobs/export');
+  logger.info('   → POST   /api/jobs/import');
+  logger.info('   → GET    /api/jobs/stats');
 
   /**
    * GET /api/jobs
@@ -2278,6 +2287,523 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to delete job reminder. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // ATTACHMENTS ENDPOINTS
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/attachments
+   * Link a storage file to a job as an attachment
+   */
+  fastify.post(
+    '/api/jobs/:id/attachments',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { fileId, attachmentType } = request.body || {};
+
+        if (!fileId) {
+          return reply.status(400).send({
+            success: false,
+            error: 'File ID is required'
+          });
+        }
+
+        // Verify job exists and belongs to user
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Verify file exists and belongs to user
+        const file = await safeQuery(async () => {
+          return await prisma.storageFile.findFirst({
+            where: { id: fileId, userId }
+          });
+        });
+
+        if (!file) {
+          return reply.status(404).send({
+            success: false,
+            error: 'File not found'
+          });
+        }
+
+        // Check if attachment already exists
+        const existingAttachment = await safeQuery(async () => {
+          return await prisma.jobAttachment.findFirst({
+            where: { jobId, fileId }
+          });
+        });
+
+        if (existingAttachment) {
+          return reply.status(400).send({
+            success: false,
+            error: 'File is already attached to this job'
+          });
+        }
+
+        // Create attachment
+        const attachment = await safeQuery(async () => {
+          return await prisma.jobAttachment.create({
+            data: {
+              jobId,
+              userId,
+              fileId,
+              attachmentType: attachmentType || 'other'
+            },
+            include: {
+              file: true
+            }
+          });
+        });
+
+        logger.info('Job attachment created', { userId, jobId, attachmentId: attachment.id, fileId });
+
+        return reply.status(201).send({
+          success: true,
+          attachment
+        });
+      } catch (error) {
+        logger.error('Failed to create job attachment:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create job attachment. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/attachments/:attachmentId
+   * Remove an attachment from a job
+   */
+  fastify.delete(
+    '/api/jobs/:id/attachments/:attachmentId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { attachmentId } = request.params;
+
+        // Verify attachment exists and belongs to user
+        const existingAttachment = await safeQuery(async () => {
+          return await prisma.jobAttachment.findFirst({
+            where: { id: attachmentId, userId }
+          });
+        });
+
+        if (!existingAttachment) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Attachment not found'
+          });
+        }
+
+        // Delete attachment (file remains in storage)
+        await safeQuery(async () => {
+          return await prisma.jobAttachment.delete({
+            where: { id: attachmentId }
+          });
+        });
+
+        logger.info('Job attachment deleted', { userId, attachmentId });
+
+        return reply.send({
+          success: true,
+          message: 'Attachment removed successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete job attachment:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete job attachment. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // EXPORT/IMPORT ENDPOINTS
+  // ============================================================
+
+  /**
+   * GET /api/jobs/export
+   * Export jobs to CSV or JSON format
+   */
+  fastify.get(
+    '/api/jobs/export',
+    {
+      preHandler: [authenticate, jobImportExportRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { format = 'json', includeDeleted = 'false' } = request.query || {};
+
+        // Fetch all jobs with related data
+        const whereClause = {
+          userId,
+          ...(includeDeleted === 'false' && { deletedAt: null })
+        };
+
+        const jobs = await safeQuery(async () => {
+          return await prisma.job.findMany({
+            where: whereClause,
+            include: {
+              interviewNotes: true,
+              salaryOffers: true,
+              companyInsights: true,
+              referrals: true,
+              jobNotes: true,
+              reminders: true,
+              attachments: {
+                include: {
+                  file: true
+                }
+              }
+            },
+            orderBy: { createdAt: 'desc' }
+          });
+        });
+
+        logger.info('Jobs exported', { userId, count: jobs.length, format });
+
+        if (format === 'csv') {
+          // Convert to CSV format
+          const csvHeaders = [
+            'ID', 'Title', 'Company', 'Location', 'Status', 'Priority',
+            'Applied Date', 'Salary', 'URL', 'Remote', 'Company Size',
+            'Industry', 'Favorite', 'Created At', 'Last Updated'
+          ];
+
+          const csvRows = jobs.map(job => [
+            job.id,
+            job.title,
+            job.company,
+            job.location,
+            job.status,
+            job.priority || '',
+            job.appliedDate,
+            job.salary || '',
+            job.url || '',
+            job.remote,
+            job.companySize || '',
+            job.industry || '',
+            job.isFavorite,
+            job.createdAt.toISOString(),
+            job.lastUpdated.toISOString()
+          ]);
+
+          const csvContent = [
+            csvHeaders.join(','),
+            ...csvRows.map(row => row.map(cell =>
+              typeof cell === 'string' && cell.includes(',') ? `"${cell}"` : cell
+            ).join(','))
+          ].join('\n');
+
+          reply.header('Content-Type', 'text/csv');
+          reply.header('Content-Disposition', `attachment; filename="jobs-export-${Date.now()}.csv"`);
+          return reply.send(csvContent);
+        } else {
+          // Return as JSON
+          reply.header('Content-Type', 'application/json');
+          reply.header('Content-Disposition', `attachment; filename="jobs-export-${Date.now()}.json"`);
+          return reply.send({
+            success: true,
+            exportDate: new Date().toISOString(),
+            count: jobs.length,
+            jobs
+          });
+        }
+      } catch (error) {
+        logger.error('Failed to export jobs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to export jobs. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/jobs/import
+   * Import jobs from JSON file
+   */
+  fastify.post(
+    '/api/jobs/import',
+    {
+      preHandler: [authenticate, jobImportExportRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { jobs, replaceExisting = false } = request.body || {};
+
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Jobs array is required and must not be empty'
+          });
+        }
+
+        // Limit import size
+        if (jobs.length > 1000) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Cannot import more than 1000 jobs at once'
+          });
+        }
+
+        let imported = 0;
+        let skipped = 0;
+        let errors = [];
+
+        // If replacing existing, delete all current jobs
+        if (replaceExisting) {
+          await safeQuery(async () => {
+            return await prisma.job.updateMany({
+              where: { userId, deletedAt: null },
+              data: { deletedAt: new Date() }
+            });
+          });
+        }
+
+        // Import each job
+        for (const jobData of jobs) {
+          try {
+            // Validate required fields
+            if (!jobData.title || !jobData.company || !jobData.location || !jobData.appliedDate) {
+              errors.push({
+                job: jobData.title || 'Unknown',
+                error: 'Missing required fields'
+              });
+              skipped++;
+              continue;
+            }
+
+            // Create job (omit id to generate new one)
+            await safeQuery(async () => {
+              return await prisma.job.create({
+                data: {
+                  userId,
+                  title: jobData.title,
+                  company: jobData.company,
+                  location: jobData.location,
+                  status: jobData.status || 'APPLIED',
+                  priority: jobData.priority || 'MEDIUM',
+                  appliedDate: jobData.appliedDate,
+                  salary: jobData.salary,
+                  description: jobData.description,
+                  url: jobData.url,
+                  notes: jobData.notes,
+                  nextStep: jobData.nextStep,
+                  nextStepDate: jobData.nextStepDate,
+                  contact: jobData.contact,
+                  requirements: jobData.requirements || [],
+                  benefits: jobData.benefits || [],
+                  remote: jobData.remote || false,
+                  companySize: jobData.companySize,
+                  industry: jobData.industry,
+                  isFavorite: jobData.isFavorite || false
+                }
+              });
+            });
+
+            imported++;
+          } catch (error) {
+            errors.push({
+              job: jobData.title || 'Unknown',
+              error: error.message
+            });
+            skipped++;
+          }
+        }
+
+        logger.info('Jobs imported', { userId, imported, skipped, total: jobs.length });
+
+        return reply.send({
+          success: true,
+          imported,
+          skipped,
+          total: jobs.length,
+          errors: errors.length > 0 ? errors : undefined
+        });
+      } catch (error) {
+        logger.error('Failed to import jobs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to import jobs. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // STATISTICS ENDPOINT
+  // ============================================================
+
+  /**
+   * GET /api/jobs/stats
+   * Get aggregated statistics about jobs
+   */
+  fastify.get(
+    '/api/jobs/stats',
+    {
+      preHandler: [authenticate, jobStatsRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        // Get all active jobs
+        const jobs = await safeQuery(async () => {
+          return await prisma.job.findMany({
+            where: { userId, deletedAt: null }
+          });
+        });
+
+        // Calculate statistics
+        const totalJobs = jobs.length;
+        const statusCounts = {
+          APPLIED: jobs.filter(j => j.status === 'APPLIED').length,
+          INTERVIEW: jobs.filter(j => j.status === 'INTERVIEW').length,
+          OFFER: jobs.filter(j => j.status === 'OFFER').length,
+          REJECTED: jobs.filter(j => j.status === 'REJECTED').length
+        };
+
+        const priorityCounts = {
+          LOW: jobs.filter(j => j.priority === 'LOW').length,
+          MEDIUM: jobs.filter(j => j.priority === 'MEDIUM').length,
+          HIGH: jobs.filter(j => j.priority === 'HIGH').length
+        };
+
+        const favoriteCount = jobs.filter(j => j.isFavorite).length;
+        const remoteCount = jobs.filter(j => j.remote).length;
+
+        // Get interview notes count
+        const interviewNotesCount = await safeQuery(async () => {
+          return await prisma.interviewNote.count({
+            where: { userId }
+          });
+        });
+
+        // Get salary offers count
+        const salaryOffersCount = await safeQuery(async () => {
+          return await prisma.salaryOffer.count({
+            where: { userId }
+          });
+        });
+
+        // Get reminders count (active only)
+        const activeRemindersCount = await safeQuery(async () => {
+          return await prisma.jobReminder.count({
+            where: { userId, completed: false }
+          });
+        });
+
+        // Get top companies (by number of applications)
+        const companyGroups = jobs.reduce((acc, job) => {
+          acc[job.company] = (acc[job.company] || 0) + 1;
+          return acc;
+        }, {});
+
+        const topCompanies = Object.entries(companyGroups)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([company, count]) => ({ company, count }));
+
+        // Calculate response rate (interviews / applications)
+        const responseRate = totalJobs > 0
+          ? ((statusCounts.INTERVIEW + statusCounts.OFFER) / totalJobs * 100).toFixed(1)
+          : 0;
+
+        // Calculate offer rate (offers / interviews)
+        const offerRate = statusCounts.INTERVIEW > 0
+          ? (statusCounts.OFFER / statusCounts.INTERVIEW * 100).toFixed(1)
+          : 0;
+
+        logger.info('Job stats retrieved', { userId, totalJobs });
+
+        return reply.send({
+          success: true,
+          stats: {
+            totalJobs,
+            statusCounts,
+            priorityCounts,
+            favoriteCount,
+            remoteCount,
+            interviewNotesCount,
+            salaryOffersCount,
+            activeRemindersCount,
+            topCompanies,
+            responseRate: parseFloat(responseRate),
+            offerRate: parseFloat(offerRate)
+          }
+        });
+      } catch (error) {
+        logger.error('Failed to get job stats:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to get job statistics. Please try again.',
           message: error.message
         });
       }
