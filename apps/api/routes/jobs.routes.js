@@ -39,6 +39,7 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → POST   /api/jobs/:id/restore');
   logger.info('   → POST   /api/jobs/:id/favorite');
   logger.info('   → DELETE /api/jobs/:id/favorite');
+  logger.info('   → GET    /api/jobs/favorites');
   logger.info('   → POST   /api/jobs/bulk-delete');
   logger.info('   → POST   /api/jobs/bulk-restore');
   logger.info('   → PUT    /api/jobs/bulk-status');
@@ -848,6 +849,57 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to unfavorite job. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/jobs/favorites
+   * Fetch all favorited jobs for authenticated user
+   */
+  fastify.get(
+    '/api/jobs/favorites',
+    {
+      preHandler: [authenticate, jobGetRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        // Fetch favorited jobs from database
+        const jobs = await safeQuery(async () => {
+          return await prisma.job.findMany({
+            where: {
+              userId,
+              deletedAt: null,
+              isFavorite: true
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          });
+        });
+
+        logger.debug('Favorited jobs fetched for user', { userId, count: jobs.length });
+
+        return reply.send({
+          success: true,
+          jobs,
+          count: jobs.length
+        });
+      } catch (error) {
+        logger.error('Failed to fetch favorited jobs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to fetch favorited jobs. Please try again.',
           message: error.message
         });
       }
