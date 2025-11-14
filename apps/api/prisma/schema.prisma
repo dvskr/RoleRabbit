@@ -351,6 +351,7 @@ model StorageFile {
   accessLogs  FileAccessLog[]
   credentials Credential[]
   baseResumes BaseResume[]
+  versions    FileVersion[]
 
   @@index([userId])
   @@index([folderId])
@@ -360,6 +361,29 @@ model StorageFile {
   @@index([isArchived])
   @@index([fileHash])
   @@map("storage_files")
+}
+
+model FileVersion {
+  id     String @id @default(cuid())
+  fileId String
+  userId String
+
+  version     Int // Version number (1, 2, 3, ...)
+  storagePath String // Path to version in storage
+  size        BigInt // File size in bytes
+  fileHash    String? // SHA-256 hash of version content
+  changeNote  String? // Optional note about what changed
+
+  createdAt DateTime @default(now())
+  createdBy String // User ID who created this version
+
+  file    StorageFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  creator User        @relation("FileVersions", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, version])
+  @@index([fileId])
+  @@index([createdAt])
+  @@map("file_versions")
 }
 
 model StorageFolder {
@@ -505,6 +529,7 @@ model User {
   storageFolders      StorageFolder[]
   fileShares          FileShare[]          @relation("FileShares")
   sharedFiles         FileShare[]          @relation("SharedWithMe")
+  fileVersions        FileVersion[]        @relation("FileVersions")
   shareLinks          ShareLink[]
   fileComments        FileComment[]        @relation("FileComments")
   fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")

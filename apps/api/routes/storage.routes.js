@@ -10,6 +10,7 @@ const { validateFileUpload, validateFileType } = require('../utils/storageValida
 const { checkFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
+const versioningService = require('../utils/versioningService');
 
 /**
  * Register all storage routes with Fastify instance
@@ -2727,6 +2728,206 @@ async function storageRoutes(fastify, _options) {
       return reply.status(500).send({
         error: 'Failed to download shared file',
         message: error.message || 'An error occurred'
+      });
+    }
+  });
+
+  // 🆕 FILE VERSIONING ENDPOINTS
+
+  // Get all versions of a file
+  fastify.get('/files/:id/versions', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      // Check permission
+      const permissionCheck = await checkFilePermission(userId, fileId, 'view');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'No access to file versions'
+        });
+      }
+
+      const versions = await versioningService.getFileVersions(fileId, userId);
+
+      return reply.send({
+        success: true,
+        versions,
+        count: versions.length
+      });
+
+    } catch (error) {
+      logger.error('Error fetching file versions:', error);
+      return reply.status(500).send({
+        error: 'Failed to fetch versions',
+        message: error.message
+      });
+    }
+  });
+
+  // Restore a specific version
+  fastify.post('/files/:id/versions/:versionNumber/restore', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+      const versionNumber = parseInt(request.params.versionNumber);
+
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      // Check permission (need edit permission to restore)
+      const permissionCheck = await checkFilePermission(userId, fileId, 'edit');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'Need edit permission to restore versions'
+        });
+      }
+
+      const result = await versioningService.restoreVersion(fileId, versionNumber, userId);
+
+      // Emit real-time update
+      socketIOServer.emitToUser(userId, 'file_updated', {
+        fileId,
+        file: { updatedAt: new Date().toISOString() }
+      });
+
+      return reply.send({
+        success: true,
+        ...result
+      });
+
+    } catch (error) {
+      logger.error('Error restoring file version:', error);
+      return reply.status(500).send({
+        error: 'Failed to restore version',
+        message: error.message
+      });
+    }
+  });
+
+  // Download a specific version
+  fastify.get('/files/:id/versions/:versionNumber/download', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+      const versionNumber = parseInt(request.params.versionNumber);
+
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      // Check permission
+      const permissionCheck = await checkFilePermission(userId, fileId, 'view');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'No access to file versions'
+        });
+      }
+
+      // Get version
+      const version = await prisma.fileVersion.findFirst({
+        where: {
+          fileId,
+          version: versionNumber
+        },
+        include: {
+          file: true
+        }
+      });
+
+      if (!version) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Version not found'
+        });
+      }
+
+      // Download version content
+      const fileBuffer = await storageHandler.downloadAsBuffer(version.storagePath);
+
+      if (!fileBuffer || fileBuffer.length === 0) {
+        return reply.status(404).send({
+          error: 'Not Found',
+          message: 'Version content not found'
+        });
+      }
+
+      // Set headers
+      reply.type(version.file.contentType || 'application/octet-stream');
+      reply.header('Content-Disposition', `attachment; filename="${version.file.fileName}.v${versionNumber}"`);
+
+      return reply.send(fileBuffer);
+
+    } catch (error) {
+      logger.error('Error downloading file version:', error);
+      return reply.status(500).send({
+        error: 'Failed to download version',
+        message: error.message
+      });
+    }
+  });
+
+  // Delete old versions (prune)
+  fastify.delete('/files/:id/versions/prune', {
+    preHandler: [authenticate]
+  }, async (request, reply) => {
+    try {
+      const userId = request.user?.userId || request.user?.id;
+      const fileId = request.params.id;
+      const keepCount = parseInt(request.query.keep) || 10;
+
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User ID not found in token'
+        });
+      }
+
+      // Check permission (need admin to prune)
+      const permissionCheck = await checkFilePermission(userId, fileId, 'admin');
+      if (!permissionCheck.allowed) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: permissionCheck.reason || 'Need admin permission to prune versions'
+        });
+      }
+
+      const result = await versioningService.pruneOldVersions(fileId, keepCount);
+
+      return reply.send({
+        success: true,
+        ...result,
+        message: `Deleted ${result.deleted} old versions, kept ${result.kept} recent versions`
+      });
+
+    } catch (error) {
+      logger.error('Error pruning file versions:', error);
+      return reply.status(500).send({
+        error: 'Failed to prune versions',
+        message: error.message
       });
     }
   });
