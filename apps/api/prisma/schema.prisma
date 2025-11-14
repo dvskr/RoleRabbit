@@ -519,6 +519,9 @@ model User {
   resumeCacheEntries  ResumeCache[]
   tailoringAnalytics  TailoringAnalytics[]
   analyticsEvents     AnalyticsEvent[]     @relation("AnalyticsEvents")
+  webhookConfig       WebhookConfig?       @relation("WebhookConfig")
+  webhookLogs         WebhookLog[]         @relation("WebhookLogs")
+  promptTests         PromptTest[]         @relation("PromptTests")
   activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
 
   @@index([email])
@@ -815,4 +818,95 @@ model AnalyticsEvent {
   @@index([userId, timestamp])
   @@index([event, timestamp])
   @@map("analytics_events")
+}
+
+model WebhookConfig {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  url           String   // Webhook endpoint URL
+  secret        String   // HMAC secret for signature verification
+  enabled       Boolean  @default(true)
+  enabledEvents String   @default("[]") // JSON array of enabled event types
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation("WebhookConfig", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([enabled])
+  @@map("webhook_configs")
+}
+
+model WebhookLog {
+  id          String    @id @default(cuid())
+  userId      String
+  event       String    // Event type
+  url         String    // Webhook URL that was called
+  payload     String    // JSON payload sent
+  success     Boolean   // Whether delivery was successful
+  statusCode  Int?      // HTTP status code received
+  attempts    Int       @default(1) // Number of delivery attempts
+  error       String?   // Error message if failed
+  deliveryId  String    @unique // Unique delivery identifier
+  deliveredAt DateTime? // When successfully delivered
+  createdAt   DateTime  @default(now())
+
+  user User @relation("WebhookLogs", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([event])
+  @@index([success])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([deliveryId])
+  @@map("webhook_logs")
+}
+
+model PromptVariant {
+  id          String   @id @default(cuid())
+  name        String   // Descriptive name (e.g., "Tailoring Prompt v2")
+  operation   String   // Operation type (e.g., "tailoring", "ats_analysis", "content_generation")
+  variant     String   // Variant identifier (e.g., "A", "B", "control")
+  prompt      String   @db.Text // The actual prompt text
+  metadata    String   @default("{}") // JSON metadata (compression settings, etc.)
+  isActive    Boolean  @default(true)
+  isControl   Boolean  @default(false) // Whether this is the control variant
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tests PromptTest[]
+
+  @@unique([operation, variant])
+  @@index([operation])
+  @@index([isActive])
+  @@map("prompt_variants")
+}
+
+model PromptTest {
+  id             String   @id @default(cuid())
+  userId         String
+  variantId      String
+  operation      String   // Operation type
+  variant        String   // Variant identifier
+  inputHash      String   // Hash of input data (for grouping similar tests)
+  success        Boolean  // Whether operation succeeded
+  durationMs     Int      // Operation duration
+  tokensUsed     Int?     // Tokens consumed
+  costUsd        Float?   // Cost in USD
+  qualityScore   Float?   // Quality score (0-100)
+  userRating     Int?     // User rating (1-5 stars)
+  outputMetrics  String   @default("{}") // JSON metrics (ATS score, keyword count, etc.)
+  error          String?  // Error message if failed
+  createdAt      DateTime @default(now())
+
+  user    User          @relation("PromptTests", fields: [userId], references: [id], onDelete: Cascade)
+  variant PromptVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+  @@index([operation])
+  @@index([variant])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([operation, variant, createdAt])
+  @@map("prompt_tests")
 }

@@ -329,6 +329,8 @@ fastify.register(require('./routes/admin/costMonitoring.routes')); // Admin cost
 fastify.register(require('./routes/analytics.routes')); // Analytics tracking
 fastify.register(require('./routes/monitoring.routes')); // Success rate monitoring
 fastify.register(require('./routes/queue.routes')); // Job queue management
+fastify.register(require('./routes/webhooks.routes'), { prefix: '/api/webhooks' }); // Webhook notifications
+fastify.register(require('./routes/abTesting.routes'), { prefix: '/api/ab-testing' }); // A/B testing for prompts
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
