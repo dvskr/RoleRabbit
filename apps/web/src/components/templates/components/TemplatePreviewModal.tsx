@@ -46,6 +46,11 @@ export default function TemplatePreviewModal({
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
 
+  // Get recommended templates based on current template
+  const recommendations = template 
+    ? getRecommendedTemplates(template, allTemplates, 3)
+    : [];
+
   useEffect(() => {
     if (isOpen) {
       setShouldRender(true);

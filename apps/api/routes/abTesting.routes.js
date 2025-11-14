@@ -1,5 +1,6 @@
 const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
+const { authenticate } = require('../middleware/auth');
 const {
   OPERATIONS,
   ALLOCATION_STRATEGIES,
@@ -32,7 +33,7 @@ async function abTestingRoutes(fastify, options) {
    * GET /api/ab-testing/variants
    */
   fastify.get('/variants', {
-    preHandler: [fastify.authenticate, requireAdmin]
+    preHandler: [authenticate, requireAdmin]
   }, async (request, reply) => {
     try {
       const { operation, active } = request.query;
@@ -78,7 +79,7 @@ async function abTestingRoutes(fastify, options) {
    * POST /api/ab-testing/variants
    */
   fastify.post('/variants', {
-    preHandler: [fastify.authenticate, requireAdmin],
+    preHandler: [authenticate, requireAdmin],
     schema: {
       body: {
         type: 'object',
@@ -173,7 +174,7 @@ async function abTestingRoutes(fastify, options) {
    * PUT /api/ab-testing/variants/:id
    */
   fastify.put('/variants/:id', {
-    preHandler: [fastify.authenticate, requireAdmin],
+    preHandler: [authenticate, requireAdmin],
     schema: {
       params: {
         type: 'object',
@@ -261,7 +262,7 @@ async function abTestingRoutes(fastify, options) {
    * DELETE /api/ab-testing/variants/:id
    */
   fastify.delete('/variants/:id', {
-    preHandler: [fastify.authenticate, requireAdmin]
+    preHandler: [authenticate, requireAdmin]
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -321,7 +322,7 @@ async function abTestingRoutes(fastify, options) {
    * GET /api/ab-testing/results/:operation
    */
   fastify.get('/results/:operation', {
-    preHandler: [fastify.authenticate, requireAdmin]
+    preHandler: [authenticate, requireAdmin]
   }, async (request, reply) => {
     try {
       const { operation } = request.params;
@@ -358,7 +359,7 @@ async function abTestingRoutes(fastify, options) {
    * GET /api/ab-testing/winner/:operation
    */
   fastify.get('/winner/:operation', {
-    preHandler: [fastify.authenticate, requireAdmin]
+    preHandler: [authenticate, requireAdmin]
   }, async (request, reply) => {
     try {
       const { operation } = request.params;
@@ -402,7 +403,7 @@ async function abTestingRoutes(fastify, options) {
    * POST /api/ab-testing/promote/:id
    */
   fastify.post('/promote/:id', {
-    preHandler: [fastify.authenticate, requireAdmin]
+    preHandler: [authenticate, requireAdmin]
   }, async (request, reply) => {
     try {
       const { id } = request.params;
@@ -440,7 +441,7 @@ async function abTestingRoutes(fastify, options) {
    * GET /api/ab-testing/stats
    */
   fastify.get('/stats', {
-    preHandler: [fastify.authenticate, requireAdmin]
+    preHandler: [authenticate, requireAdmin]
   }, async (request, reply) => {
     try {
       const operations = Object.values(OPERATIONS);

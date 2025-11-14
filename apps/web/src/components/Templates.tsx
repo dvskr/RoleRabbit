@@ -22,6 +22,7 @@ import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundar
 import FilterChips from './templates/components/FilterChips';
 import KeyboardShortcutsHelp from './templates/components/KeyboardShortcutsHelp';
 import { trackViewModeChange } from './templates/utils/analytics';
+import { resumeTemplates } from '../data/templates';
 
 /**
  * TemplatesInternal Component
@@ -82,9 +83,15 @@ function TemplatesInternal({
   const [showFilters, setShowFilters] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Templates are loaded from static data, so no loading state needed
+  const isLoading = false;
 
   // Use extracted hooks
   const filterState = useTemplateFilters();
+  const paginationState = useTemplatePagination({
+    templates: filterState.filteredTemplates,
+  });
   const actionsState = useTemplateActions({
     onAddToEditor,
     onRemoveTemplate,

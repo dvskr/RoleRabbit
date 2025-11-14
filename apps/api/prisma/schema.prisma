@@ -1067,6 +1067,25 @@ model JobAttachment {
   @@map("job_attachments")
 }
 
+model AnalyticsEvent {
+  id         String   @id @default(cuid())
+  userId     String
+  event      String   // Event name (e.g., 'resume_uploaded', 'ats_check_success')
+  properties String   @default("{}") // JSON string of event properties
+  sessionId  String?  // Optional session identifier
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user User @relation("AnalyticsEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([event])
+  @@index([timestamp])
+  @@index([userId, timestamp])
+  @@index([event, timestamp])
+  @@map("analytics_events")
+}
+
 model WebhookConfig {
   id            String   @id @default(cuid())
   userId        String   @unique
@@ -1146,8 +1165,8 @@ model PromptTest {
   error          String?  // Error message if failed
   createdAt      DateTime @default(now())
 
-  user    User          @relation("PromptTests", fields: [userId], references: [id], onDelete: Cascade)
-  variant PromptVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  user           User          @relation("PromptTests", fields: [userId], references: [id], onDelete: Cascade)
+  promptVariant  PromptVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@index([variantId])
   @@index([operation])
