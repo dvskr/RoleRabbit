@@ -262,8 +262,8 @@ export function useJobsApi() {
 
   const restoreJob = async (id: string) => {
     try {
-      await apiService.updateJob(id, { deletedAt: undefined } as Partial<Job>);
-      setJobs(prev => prev.map(job => 
+      await apiService.restoreJob(id);
+      setJobs(prev => prev.map(job =>
         job.id === id ? { ...job, deletedAt: undefined } : job
       ));
       logger.debug('Job restored via API:', id);
@@ -276,16 +276,14 @@ export function useJobsApi() {
   const bulkDelete = async (permanent: boolean = false) => {
     try {
       if (permanent) {
-        // Permanent delete
+        // Permanent delete not supported via bulk endpoint, use individual deletes
         await Promise.all(selectedJobs.map(id => apiService.deleteJob(id)));
         setJobs(prev => prev.filter(job => !selectedJobs.includes(job.id)));
       } else {
-        // Soft delete - move to recycle bin
+        // Soft delete using bulk endpoint
+        await apiService.bulkDeleteJobs(selectedJobs);
         const deletedAt = new Date().toISOString();
-        await Promise.all(selectedJobs.map(id => 
-          apiService.updateJob(id, { deletedAt } as Partial<Job>)
-        ));
-        setJobs(prev => prev.map(job => 
+        setJobs(prev => prev.map(job =>
           selectedJobs.includes(job.id) ? { ...job, deletedAt } : job
         ));
       }
@@ -299,10 +297,8 @@ export function useJobsApi() {
 
   const bulkRestore = async () => {
     try {
-      await Promise.all(selectedJobs.map(id => 
-        apiService.updateJob(id, { deletedAt: undefined } as Partial<Job>)
-      ));
-      setJobs(prev => prev.map(job => 
+      await apiService.bulkRestoreJobs(selectedJobs);
+      setJobs(prev => prev.map(job =>
         selectedJobs.includes(job.id) ? { ...job, deletedAt: undefined } : job
       ));
       setSelectedJobs([]);
@@ -315,11 +311,8 @@ export function useJobsApi() {
 
   const bulkUpdateStatus = async (status: Job['status']) => {
     try {
-      // Update all selected jobs via API
-      await Promise.all(selectedJobs.map(id => 
-        apiService.updateJob(id, { status })
-      ));
-      setJobs(prev => prev.map(job => 
+      await apiService.bulkUpdateJobStatus(selectedJobs, status);
+      setJobs(prev => prev.map(job =>
         selectedJobs.includes(job.id) ? { ...job, status } : job
       ));
       setSelectedJobs([]);
