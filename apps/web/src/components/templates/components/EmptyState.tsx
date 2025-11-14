@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Search, Filter, RefreshCw, FileQuestion, Sparkles } from 'lucide-react';
+import { Search, Filter, RefreshCw, FileQuestion, Sparkles, Tag, Layout } from 'lucide-react';
 
 interface EmptyStateProps {
   onClearFilters: () => void;
