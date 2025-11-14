@@ -1362,21 +1362,68 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
     let confidence;
 
     if (!textQuality.isClean) {
-      // Text is corrupted/junk - use GPT-4o (more powerful model)
-      logger.warn('⚠️ Text quality is poor, falling back to GPT-4o', {
+      // Text is corrupted/junk - check if it's a scanned PDF
+      logger.warn('⚠️ Text quality is poor, checking if scanned PDF', {
         reason: textQuality.reason,
-        confidence: textQuality.confidence
+        confidence: textQuality.confidence,
+        pdfArtifacts: textQuality.pdfArtifacts
       });
       
-      try {
-        structuredResume = await parseWithGPT4o(normalizedText, fileName);
-        parsingMethod = 'GPT4o';
-        confidence = 0.90;
-      } catch (gpt4oError) {
-        logger.error('❌ GPT-4o fallback failed', {
-          error: gpt4oError.message
+      // If it's a scanned PDF with lots of artifacts, use Vision OCR
+      if (detection.type === 'PDF_SCANNED' && textQuality.pdfArtifacts > 100) {
+        logger.info('🔬 Detected scanned PDF, using GPT-4o Vision OCR');
+        
+        try {
+          const { parseScannedPdfWithVision } = require('./pdfVisionOCR');
+          const visionResult = await parseScannedPdfWithVision(buffer, fileName);
+          
+          logger.info('✅ Vision OCR completed, now parsing extracted text', {
+            extractedLength: visionResult.text.length,
+            pageCount: visionResult.pageCount,
+            tokensUsed: visionResult.totalTokens
+          });
+          
+          // Now parse the extracted text with GPT-4o-mini (it's clean now)
+          structuredResume = await structureResumeWithAI(visionResult.text);
+          parsingMethod = 'GPT4o_VISION_OCR';
+          confidence = 0.85;
+          
+          // Update normalizedText for contact extraction
+          normalizedText = visionResult.text;
+        } catch (visionError) {
+          logger.error('❌ Vision OCR failed, falling back to GPT-4o text parsing', {
+            error: visionError.message
+          });
+          
+          // Fallback to regular GPT-4o text parsing
+          try {
+            structuredResume = await parseWithGPT4o(normalizedText, fileName);
+            parsingMethod = 'GPT4o';
+            confidence = 0.70;
+          } catch (gpt4oError) {
+            logger.error('❌ GPT-4o fallback also failed', {
+              error: gpt4oError.message
+            });
+            throw new Error(`Failed to parse scanned PDF: ${gpt4oError.message}`);
+          }
+        }
+      } else {
+        // Not a scanned PDF, just corrupted text - use GPT-4o
+        logger.warn('⚠️ Text quality is poor, falling back to GPT-4o', {
+          reason: textQuality.reason,
+          confidence: textQuality.confidence
         });
-        throw new Error(`Failed to parse corrupted text with GPT-4o: ${gpt4oError.message}`);
+        
+        try {
+          structuredResume = await parseWithGPT4o(normalizedText, fileName);
+          parsingMethod = 'GPT4o';
+          confidence = 0.90;
+        } catch (gpt4oError) {
+          logger.error('❌ GPT-4o fallback failed', {
+            error: gpt4oError.message
+          });
+          throw new Error(`Failed to parse corrupted text with GPT-4o: ${gpt4oError.message}`);
+        }
       }
     } else {
       // Text is clean - use GPT-4o-mini (cheap and fast!)

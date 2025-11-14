@@ -229,13 +229,24 @@ async function upload(fileStream, userId, fileName, contentType) {
  */
 async function downloadFromSupabase(storagePath) {
   try {
-    const { data, error } = await supabaseClient.storage
+    logger.info(`📥 Downloading from Supabase: ${storagePath}`);
+    
+    // Add timeout to prevent hanging
+    const downloadPromise = supabaseClient.storage
       .from(supabaseStorageBucket)
       .download(storagePath);
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Supabase download timeout after 60 seconds')), 60000)
+    );
+    
+    const { data, error } = await Promise.race([downloadPromise, timeoutPromise]);
     
     if (error) {
       throw new Error(`Supabase download failed: ${error.message}`);
     }
+    
+    logger.info(`✅ Downloaded ${storagePath}, size: ${data.size} bytes`);
     
     // Convert Blob to Buffer/Stream
     const arrayBuffer = await data.arrayBuffer();

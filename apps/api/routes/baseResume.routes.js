@@ -201,6 +201,7 @@ module.exports = async function baseResumeRoutes(fastify) {
 
   // Parse resume by ID
   fastify.post('/api/base-resumes/:id/parse', { preHandler: authenticate }, async (request, reply) => {
+    const startTime = Date.now();
     try {
       const userId = request.user.userId;
       const baseResumeId = request.params.id;
@@ -233,15 +234,23 @@ module.exports = async function baseResumeRoutes(fastify) {
         storageFileId: resume.storageFileId
       });
 
-      // Parse the resume
+      // Parse the resume with timeout
       const { parseResumeByFileHash } = require('../services/resumeParser');
       const { normalizeResumePayload } = require('../services/baseResumeService');
       
-      const parseResult = await parseResumeByFileHash({
+      // Add 2-minute timeout for parsing
+      const parsePromise = parseResumeByFileHash({
         userId,
         fileHash: resume.fileHash,
         storageFileId: resume.storageFileId
       });
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Parsing timeout after 2 minutes')), 120000)
+      );
+      
+      logger.info('⏳ Starting parse operation...');
+      const parseResult = await Promise.race([parsePromise, timeoutPromise]);
 
       // Update resume with parsed data
       const parsedData = normalizeResumePayload(parseResult.structuredResume);
@@ -263,29 +272,35 @@ module.exports = async function baseResumeRoutes(fastify) {
         metadata: resume.metadata || {}
       });
 
+      const duration = Date.now() - startTime;
       logger.info('✅ Resume parsed successfully', {
         userId,
         baseResumeId,
         method: parseResult.method,
         confidence: parseResult.confidence,
         cacheHit: parseResult.cacheHit,
-        draftCreated: true
+        draftCreated: true,
+        durationMs: duration
       });
 
       return reply.send({
         success: true,
         message: 'Resume parsed successfully',
         confidence: parseResult.confidence,
-        method: parseResult.method
+        method: parseResult.method,
+        durationMs: duration
       });
     } catch (error) {
+      const duration = Date.now() - startTime;
       logger.error('❌ Failed to parse resume', {
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
+        durationMs: duration
       });
       return reply.status(500).send({
         success: false,
-        error: error.message || 'Failed to parse resume'
+        error: error.message || 'Failed to parse resume',
+        durationMs: duration
       });
     }
   });
