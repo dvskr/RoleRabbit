@@ -312,6 +312,11 @@ fastify.get('/api/status', async () => ({
 const { performanceMonitorPlugin } = require('./utils/performanceMonitor');
 fastify.register(performanceMonitorPlugin);
 
+// Register Swagger/OpenAPI Documentation
+const { swaggerConfig, swaggerUIConfig } = require('./config/swagger');
+fastify.register(require('@fastify/swagger'), swaggerConfig);
+fastify.register(require('@fastify/swagger-ui'), swaggerUIConfig);
+
 // Register route modules
 fastify.register(require('./routes/health.routes')); // Health check routes
 fastify.register(require('./routes/auth.routes'));

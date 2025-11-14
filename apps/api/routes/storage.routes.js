@@ -10,6 +10,31 @@ const { validateFileUpload, validateFileType } = require('../utils/storageValida
 const { checkFilePermission } = require('../utils/filePermissions');
 const logger = require('../utils/logger');
 const socketIOServer = require('../utils/socketIOServer');
+const {
+  listFilesSchema,
+  uploadFileSchema,
+  getFileSchema,
+  downloadFileSchema,
+  updateFileSchema,
+  deleteFileSchema,
+  restoreFileSchema,
+  listFoldersSchema,
+  createFolderSchema,
+  updateFolderSchema,
+  deleteFolderSchema,
+  batchDeleteSchema,
+  batchMoveSchema,
+  batchRestoreSchema,
+  downloadZipSchema,
+  analyticsSchema,
+  createVersionSchema,
+  listVersionsSchema,
+  restoreVersionSchema,
+  listTagsSchema,
+  createTagSchema,
+  addFileTagSchema,
+  removeFileTagSchema
+} = require('../schemas/storage.schemas');
 
 /**
  * Register all storage routes with Fastify instance
@@ -47,6 +72,7 @@ async function storageRoutes(fastify, _options) {
   
   // Get all files for authenticated user
   fastify.get('/files', {
+    schema: listFilesSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -292,6 +318,7 @@ async function storageRoutes(fastify, _options) {
   
   // File Upload
   fastify.post('/files/upload', {
+    schema: uploadFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -627,6 +654,7 @@ async function storageRoutes(fastify, _options) {
 
   // Update file metadata (name, type, description, visibility, etc.)
   fastify.put('/files/:id', {
+    schema: updateFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -751,6 +779,7 @@ async function storageRoutes(fastify, _options) {
 
   // Soft delete file (move to recycle bin)
   fastify.delete('/files/:id', {
+    schema: deleteFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -809,6 +838,7 @@ async function storageRoutes(fastify, _options) {
 
   // Restore file from recycle bin
   fastify.post('/files/:id/restore', {
+    schema: restoreFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1098,6 +1128,7 @@ async function storageRoutes(fastify, _options) {
 
   // Download file
   fastify.get('/files/:id/download', {
+    schema: downloadFileSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1753,6 +1784,7 @@ async function storageRoutes(fastify, _options) {
 
   // Get all folders for user
   fastify.get('/folders', {
+    schema: listFoldersSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1806,6 +1838,7 @@ async function storageRoutes(fastify, _options) {
 
   // Create folder
   fastify.post('/folders', {
+    schema: createFolderSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1859,6 +1892,7 @@ async function storageRoutes(fastify, _options) {
 
   // Update folder (rename/change color)
   fastify.put('/folders/:id', {
+    schema: updateFolderSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -1922,6 +1956,7 @@ async function storageRoutes(fastify, _options) {
 
   // Delete folder
   fastify.delete('/folders/:id', {
+    schema: deleteFolderSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -2777,6 +2812,7 @@ async function storageRoutes(fastify, _options) {
 
   // Batch delete files
   fastify.post('/files/batch/delete', {
+    schema: batchDeleteSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -2826,6 +2862,7 @@ async function storageRoutes(fastify, _options) {
 
   // Batch move files
   fastify.post('/files/batch/move', {
+    schema: batchMoveSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -2892,6 +2929,7 @@ async function storageRoutes(fastify, _options) {
 
   // Batch restore files
   fastify.post('/files/batch/restore', {
+    schema: batchRestoreSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -2945,6 +2983,7 @@ async function storageRoutes(fastify, _options) {
 
   // Download multiple files as ZIP
   fastify.post('/files/download/zip', {
+    schema: downloadZipSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3030,6 +3069,7 @@ async function storageRoutes(fastify, _options) {
 
   // Get storage analytics
   fastify.get('/analytics', {
+    schema: analyticsSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3128,6 +3168,7 @@ async function storageRoutes(fastify, _options) {
 
   // Get file versions
   fastify.get('/files/:id/versions', {
+    schema: listVersionsSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3189,6 +3230,7 @@ async function storageRoutes(fastify, _options) {
 
   // Create new file version
   fastify.post('/files/:id/versions', {
+    schema: createVersionSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3264,6 +3306,7 @@ async function storageRoutes(fastify, _options) {
 
   // Restore file version
   fastify.post('/files/:id/versions/:versionId/restore', {
+    schema: restoreVersionSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3345,6 +3388,7 @@ async function storageRoutes(fastify, _options) {
 
   // Get user's tags
   fastify.get('/tags', {
+    schema: listTagsSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3383,6 +3427,7 @@ async function storageRoutes(fastify, _options) {
 
   // Create new tag
   fastify.post('/tags', {
+    schema: createTagSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3437,6 +3482,7 @@ async function storageRoutes(fastify, _options) {
 
   // Add tag to file
   fastify.post('/files/:id/tags', {
+    schema: addFileTagSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
@@ -3518,6 +3564,7 @@ async function storageRoutes(fastify, _options) {
 
   // Remove tag from file
   fastify.delete('/files/:id/tags/:tagId', {
+    schema: removeFileTagSchema,
     preHandler: [authenticate]
   }, async (request, reply) => {
     try {
