@@ -48,12 +48,12 @@ RoleReady is an AI-powered resume builder that helps users optimize their resume
 - **State Management:** React Hooks (useState, useEffect, useCallback)
 
 ### Backend
-- **Runtime:** Node.js
-- **Framework:** Fastify
-- **ORM:** Prisma
-- **Database:** PostgreSQL
-- **Cache:** Redis (multi-level caching)
-- **Authentication:** JWT (HTTP-only cookies)
+- **Runtime:** Node.js v18+
+- **Framework:** Fastify (high-performance web framework)
+- **ORM:** Prisma (type-safe database access)
+- **Database:** PostgreSQL (with JSONB support)
+- **Cache:** Redis (multi-level caching strategy)
+- **Authentication:** JWT (HTTP-only cookies, secure)
 
 ### AI Services
 - **Primary Model:** OpenAI GPT-4o-mini (cost-effective)
@@ -66,13 +66,21 @@ RoleReady is an AI-powered resume builder that helps users optimize their resume
 User Browser
     ↓ (HTTPS)
 Next.js Frontend (Port 3000)
-    ↓ (REST API)
-Fastify Backend (Port 3001)
+    ↓ (REST API with JWT)
+Node.js/Fastify Backend (Port 3001)
     ↓ (Prisma ORM)
-PostgreSQL Database
-    ↓ (External API)
-OpenAI Services
+PostgreSQL Database (JSONB for resume data)
+    ↓ (External API calls)
+OpenAI API (GPT-4o, GPT-4o-mini, Embeddings)
+    ↓
+Redis Cache (30-day TTL for ATS results)
 ```
+
+### Deployment
+- **Development:** Local Node.js servers (no Docker)
+- **Production:** Direct deployment to VPS/cloud servers
+- **Database:** Managed PostgreSQL instance
+- **Cache:** Managed Redis instance
 
 ---
 
