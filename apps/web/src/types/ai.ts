@@ -79,6 +79,15 @@ export interface TailorDiffEntry {
 export interface TailorResult {
   tailoredResume: ResumeData | null;
   diff: TailorDiffEntry[];
+  diffChanges?: Array<{
+    type: 'added' | 'removed' | 'modified' | 'unchanged';
+    section: string;
+    field?: string;
+    index?: number;
+    oldValue?: string;
+    newValue?: string;
+    path: string;
+  }>;
   warnings: string[];
   recommendedKeywords: string[];
   ats?: {

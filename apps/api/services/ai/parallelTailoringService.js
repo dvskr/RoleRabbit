@@ -5,7 +5,7 @@
  */
 
 const { executeWithDependencies, ParallelPerformanceTracker } = require('../../utils/parallelExecutor');
-const { scoreResumeWorldClass } = require('../ats/worldClassATS');
+const { scoreResumeWithEmbeddings } = require('../embeddings/embeddingATSService');
 const { extractSkillsWithAI } = require('../ats/aiSkillExtractor');
 const { calculateRealisticCeiling, calculateTargetScore } = require('../../utils/realisticCeiling');
 const { validateTailorRequest, estimateCost } = require('../../utils/tailorValidation');
@@ -63,10 +63,10 @@ async function tailorResumeParallel({
         
         const [atsScore, jobSkills] = await Promise.all([
           perfTracker.track('ats_initial', 
-            scoreResumeWorldClass({
+            scoreResumeWithEmbeddings({
               resumeData: resume.data,
               jobDescription: validation.jobDescription.trimmed,
-              useAI: false
+              includeDetails: true
             })
           ),
           perfTracker.track('job_skills', 
@@ -118,15 +118,42 @@ async function tailorResumeParallel({
       dependencies: ['analysis', 'targets'],
       fn: async ({ analysis, targets }) => {
         return perfTracker.track('build_prompt', 
-          Promise.resolve(buildTailorResumePrompt({
-            resumeSnapshot: resume.data,
-            jobDescription: analysis.validation.jobDescription.trimmed,
-            mode,
-            tone,
-            length,
-            atsAnalysis: analysis.atsScore,
-            targetScore: targets.targetScore
-          }))
+          Promise.resolve((() => {
+            // Compute prioritized gaps and limits
+            const envLimit = parseInt(process.env.ATS_TAILOR_MISSING_MAX, 10);
+            const defaultLimit = String(mode).toUpperCase() === 'FULL' ? 25 : 15;
+            const finalMissingLimit = Number.isFinite(envLimit) && envLimit > 0 ? envLimit : defaultLimit;
+            const required = new Set((analysis.jobSkills?.required_skills || []).map(s => String(s).toLowerCase()));
+            const preferred = new Set((analysis.jobSkills?.preferred_skills || []).map(s => String(s).toLowerCase()));
+            const coreTech = ['react','angular','vue','node','node.js','.net','java','python','typescript','javascript','c#','c++','aws','azure','gcp','kubernetes','k8s','docker','terraform','jenkins','postgres','postgresql','mysql','mongodb','redis','kafka','spark','airflow','graphql','rest','api'];
+            const regulatory = ['hipaa','pci','soc','soc2','iso','iso 27001','cpa','cfa','fhir','hl7','gdpr'];
+            const scoreMap = new Map();
+            for (const kw of analysis.atsScore?.missingKeywords || []) {
+              const k = String(kw).toLowerCase();
+              let score = 0;
+              if (required.has(k)) score += 60;
+              if (preferred.has(k)) score += 25;
+              if (regulatory.some(r => k.includes(r))) score += 40;
+              if (coreTech.some(t => k.includes(t))) score += 30;
+              if (k.length <= 12) score += 5;
+              scoreMap.set(kw, score);
+            }
+            const prioritized = [...(analysis.atsScore?.missingKeywords || [])]
+              .sort((a, b) => (scoreMap.get(b) || 0) - (scoreMap.get(a) || 0))
+              .slice(0, finalMissingLimit);
+
+            return buildTailorResumePrompt({
+              resumeSnapshot: resume.data,
+              jobDescription: analysis.validation.jobDescription.trimmed,
+              mode,
+              tone,
+              length,
+              atsAnalysis: analysis.atsScore,
+              targetScore: targets.targetScore,
+              missingKeywords: prioritized,
+              missingKeywordsLimit: finalMissingLimit
+            });
+          })())
         );
       }
     },
@@ -187,10 +214,10 @@ async function tailorResumeParallel({
         // Run ATS scoring and database update in parallel
         const [atsAfter, dbUpdate] = await Promise.all([
           perfTracker.track('ats_final',
-            scoreResumeWorldClass({
+            scoreResumeWithEmbeddings({
               resumeData: ai_tailoring.tailoredResume,
               jobDescription: analysis.validation.jobDescription.trimmed,
-              useAI: false
+              includeDetails: true
             })
           ),
           perfTracker.track('db_update', (async () => {

@@ -294,6 +294,19 @@ async function download(storagePath) {
 }
 
 /**
+ * Download file as buffer (for resume parsing)
+ */
+async function downloadAsBuffer(storagePath) {
+  await initializeStorage();
+  
+  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
+    return await downloadFromSupabase(storagePath);
+  } else {
+    return await downloadFromLocal(storagePath);
+  }
+}
+
+/**
  * Get download URL (for direct browser access)
  */
 async function getDownloadUrl(storagePath, expiresIn = 3600) {
@@ -517,6 +530,7 @@ async function generateThumbnail(storagePath, contentType) {
 module.exports = {
   upload,
   download,
+  downloadAsBuffer,  // ✅ ADD: For resume parsing
   deleteFile,
   fileExists,
   getMetadata,

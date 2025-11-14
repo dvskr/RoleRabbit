@@ -19,6 +19,12 @@ async function authenticate(request, reply) {
     // The hook in server.js already sets Authorization header from cookie if needed
     // So jwtVerify() should work for both cookie and header tokens
     await request.jwtVerify();
+    
+    // ✅ FIX: Normalize user object - JWT payload has `userId`, but code expects `id`
+    if (request.user && request.user.userId && !request.user.id) {
+      request.user.id = request.user.userId;
+    }
+    
     // Authentication successful - jwtVerify sets request.user automatically
   } catch (err) {
     // Debug logging - always log in development

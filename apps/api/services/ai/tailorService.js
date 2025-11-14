@@ -20,10 +20,10 @@ const {
   buildCoverLetterPrompt,
   buildPortfolioPrompt
 } = require('./promptBuilder');
-const { scoreResumeAgainstJob } = require('../ats/atsScoringService');
-const { scoreResumeWorldClass } = require('../ats/worldClassATS');
+const { scoreResumeWithEmbeddings } = require('../embeddings/embeddingATSService');
 const { extractSkillsWithAI } = require('../ats/aiSkillExtractor');
 const { calculateRealisticCeiling, calculateTargetScore } = require('../../utils/realisticCeiling');
+const { calculateOptimalKeywordLimit } = require('./intelligentKeywordLimits');
 const logger = require('../../utils/logger');
 const { normalizeResumeData } = require('@roleready/resume-normalizer');
 const { jsonrepair } = require('jsonrepair');
@@ -33,6 +33,38 @@ const {
   TailorValidationError
 } = require('../../utils/tailorValidation');
 const { createTailorProgressTracker } = require('../../utils/progressTracker');
+
+// Heuristic prioritization for missing keywords
+function prioritizeMissingKeywords(missingKeywords, jobAnalysis) {
+  if (!Array.isArray(missingKeywords) || missingKeywords.length === 0) {
+    return [];
+  }
+  const required = new Set((jobAnalysis?.required_skills || []).map(s => String(s).toLowerCase()));
+  const preferred = new Set((jobAnalysis?.preferred_skills || []).map(s => String(s).toLowerCase()));
+
+  // Simple category heuristics for core technologies and regulatory terms
+  const coreTech = [
+    'react','angular','vue','node','node.js','.net','java','python','typescript','javascript','c#','c++',
+    'aws','azure','gcp','kubernetes','k8s','docker','terraform','jenkins',
+    'postgres','postgresql','mysql','mongodb','redis','kafka','spark','airflow','graphql','rest','api'
+  ];
+  const regulatory = ['hipaa','pci','soc','soc2','iso','iso 27001','cpa','cfa','fhir','hl7','gdpr'];
+
+  const scores = new Map();
+  for (const kw of missingKeywords) {
+    const k = String(kw).toLowerCase();
+    let score = 0;
+    if (required.has(k)) score += 60;
+    if (preferred.has(k)) score += 25;
+    if (regulatory.some(r => k.includes(r))) score += 40;
+    if (coreTech.some(t => k.includes(t))) score += 30;
+    // Slight boost for shorter, more atomic skills (less likely to be generic phrases)
+    if (k.length <= 12) score += 5;
+    scores.set(kw, score);
+  }
+
+  return [...missingKeywords].sort((a, b) => (scores.get(b) || 0) - (scores.get(a) || 0));
+}
 
 function parseJsonResponse(rawText, description) {
   if (!rawText) {
@@ -75,17 +107,41 @@ function parseJsonResponse(rawText, description) {
 }
 
 async function getActiveResumeOrThrow({ userId, resumeId }) {
-  const resume = await prisma.baseResume.findFirst({
+  // Verify base resume exists and is active
+  const baseResume = await prisma.baseResume.findFirst({
     where: { id: resumeId, userId },
-    select: { id: true, userId: true, isActive: true, data: true, metadata: true }
+    select: { id: true, userId: true, isActive: true }
   });
-  if (!resume) {
+  if (!baseResume) {
     throw new Error('Base resume not found');
   }
-  if (!resume.isActive) {
+  if (!baseResume.isActive) {
     throw new AIUsageError('You can only run AI features on the active resume.', 400);
   }
-  return resume;
+  
+  // 🎯 DRAFT-AWARE: Get current resume data (draft OR base)
+  const { getCurrentResumeData } = require('../workingDraftService');
+  const resumeData = await getCurrentResumeData(resumeId);
+  
+  if (!resumeData || !resumeData.data) {
+    throw new Error('Resume data not found');
+  }
+  
+  logger.debug('Tailoring using resume data', {
+    resumeId,
+    isDraft: resumeData.isDraft,
+    draftUpdatedAt: resumeData.draftUpdatedAt,
+    baseUpdatedAt: resumeData.baseUpdatedAt
+  });
+  
+  return {
+    id: baseResume.id,
+    userId: baseResume.userId,
+    isActive: baseResume.isActive,
+    data: resumeData.data,
+    metadata: resumeData.metadata,
+    isDraft: resumeData.isDraft
+  };
 }
 
 function normalizeTailoredMode(mode) {
@@ -102,7 +158,9 @@ async function tailorResume({
   mode = TailorMode.PARTIAL,
   tone = 'professional',
   length = 'thorough',
-  onProgress = null
+  onProgress = null,
+  // Optional override for how many missing keywords to include in prompt
+  missingKeywordsLimit
 }) {
   const tailorMode = normalizeTailoredMode(mode);
   const action = tailorMode === TailorMode.FULL ? AIAction.TAILOR_FULL : AIAction.TAILOR_PARTIAL;
@@ -174,10 +232,10 @@ async function tailorResume({
   
   logger.info('Running parallel analysis: ATS scoring + Job skill extraction');
   const [atsBefore, jobAnalysis] = await Promise.all([
-    scoreResumeWorldClass({ 
+    scoreResumeWithEmbeddings({ 
       resumeData: resume.data, 
       jobDescription,
-      useAI: false // Fast dictionary mode for initial score
+      includeDetails: true
     }),
     extractSkillsWithAI(jobDescription)
   ]);
@@ -201,7 +259,37 @@ async function tailorResume({
     potentialGain: targetScore - atsBefore.overall
   });
 
-  // Build enhanced prompt with targets
+  // 🎯 DATA-DRIVEN: Calculate optimal keyword limit intelligently
+  // Targets: PARTIAL = 80+, FULL = 85+
+  const intelligentLimit = calculateOptimalKeywordLimit({
+    mode: tailorMode,
+    atsScore: atsBefore.overall,
+    totalMissing: (atsBefore.missingKeywords || []).length,
+    resumeData: resume.data
+  });
+  
+  // 🔄 HYBRID APPROACH: Give AI more keywords (1.5x) but recommend optimal count
+  // This gives AI flexibility while preventing keyword stuffing
+  const recommendedLimit = intelligentLimit.limit;
+  const flexibleLimit = Math.min(
+    Math.round(recommendedLimit * 1.5),  // 1.5x more keywords for AI to choose from
+    (atsBefore.missingKeywords || []).length  // But never more than total available
+  );
+  
+  logger.info('Hybrid keyword limit decision', {
+    userId: user.id,
+    mode: tailorMode,
+    intelligentLimit: intelligentLimit.limit,
+    intelligentReason: intelligentLimit.reason,
+    recommendedLimit,
+    flexibleLimit,
+    totalAvailable: (atsBefore.missingKeywords || []).length,
+    strategy: 'Give AI 1.5x keywords, recommend optimal count'
+  });
+  
+  const prioritizedGaps = prioritizeMissingKeywords(atsBefore.missingKeywords || [], jobAnalysis);
+
+  // Build enhanced prompt with targets and prioritized gaps
   const prompt = buildTailorResumePrompt({
     resumeSnapshot: resume.data,
     jobDescription,
@@ -209,7 +297,9 @@ async function tailorResume({
     tone,
     length,
     atsAnalysis: atsBefore,
-    targetScore
+    targetScore,
+    missingKeywords: prioritizedGaps.slice(0, flexibleLimit),  // Give AI more keywords
+    missingKeywordsLimit: recommendedLimit  // But recommend optimal count
   });
 
   const stopTimer = aiActionLatency.startTimer({
@@ -224,25 +314,40 @@ async function tailorResume({
       potentialImprovement: targetScore - atsBefore.overall
     });
     
-    logger.info('Starting AI tailoring', {
+    logger.info('🤖 [OPENAI_REQUEST] Tailoring resume content', {
       userId: user.id,
       resumeId,
+      model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
       mode: tailorMode,
       tone,
       length,
-      promptLength: prompt.length
+      temperature: 0.3,
+      max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000,
+      timeout: 240000,
+      promptLength: prompt.length,
+      inputData: {
+        currentSummaryLength: resume.data?.summary?.length || 0,
+        currentExperienceCount: resume.data?.experience?.length || 0,
+        currentSkillsCount: resume.data?.skills ? 
+          (resume.data.skills.technical?.length || 0) + 
+          (resume.data.skills.tools?.length || 0) : 0,
+        jobDescriptionLength: jobDescription.length,
+        missingKeywordsCount: prioritizedGaps.slice(0, flexibleLimit).length,
+        targetScore
+      }
     });
 
     const response = await generateText(prompt, {
       model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
       temperature: 0.3,
       max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000, // Increased to prevent truncation
-      timeout: 120000, // 2 minutes timeout
+      timeout: 240000, // 4 minutes timeout (increased for complex resumes)
       userId: user.id
     });
 
-    logger.info('AI tailoring response received', {
+    logger.info('✅ [OPENAI_RESPONSE] Tailored content received', {
       userId: user.id,
+      model: response.model,
       responseLength: response.text?.length || 0,
       tokensUsed: response.usage?.total_tokens
     });
@@ -269,41 +374,117 @@ async function tailorResume({
     // Normalize the tailored resume data to convert objects with numeric keys to arrays
     const normalizedTailoredResume = normalizeResumeData(payload.tailoredResume);
 
+    logger.info('📝 [TAILOR_CONTENT] Tailored resume content preview', {
+      summaryPreview: normalizedTailoredResume.summary?.substring(0, 200) + '...',
+      experienceCount: normalizedTailoredResume.experience?.length || 0,
+      firstExperienceBullets: normalizedTailoredResume.experience?.[0]?.bullets?.length || 0,
+      skillsPreview: normalizedTailoredResume.skills ? {
+        technical: normalizedTailoredResume.skills.technical?.slice(0, 8),
+        tools: normalizedTailoredResume.skills.tools?.slice(0, 8)
+      } : null,
+      diffCount: payload.diff?.length || 0,
+      warnings: payload.warnings
+    });
+
     // 🎯 Stage 7: Score the tailored resume
     progressTracker.update('SCORING');
     
-    // 🚀 PERFORMANCE: Use fast scoring for after-score (consistent with before-score)
-    logger.info('Running World-Class ATS analysis after tailoring');
-    const atsAfter = await scoreResumeWorldClass({ 
+    // 🚀 PERFORMANCE: Use embedding-based ATS for after-score
+    logger.info('Running embedding-based ATS analysis after tailoring');
+    const atsAfter = await scoreResumeWithEmbeddings({ 
       resumeData: normalizedTailoredResume, 
       jobDescription,
-      useAI: false // Fast dictionary mode for consistency
+      includeDetails: true
     });
 
-    // 🎯 Stage 8: Create DB record (can run in parallel with AI request logging)
-    const tailoredVersion = await prisma.tailoredVersion.create({
-      data: {
-        userId: user.id,
-        baseResumeId: resume.id,
-        jobTitle: null,
-        company: null,
-        jobDescriptionHash: atsAfter.jobDescriptionHash,
-        mode: tailorMode,
-        tone,
-        data: normalizedTailoredResume,
-        diff: payload.diff,
-        atsScoreBefore: atsBefore.overall,
-        atsScoreAfter: atsAfter.overall
-      }
+    // 🎯 Stage 8: Save tailored resume to WORKING DRAFT (not base!) AND create TailoredVersion record
+    const { saveWorkingDraft } = require('../workingDraftService');
+    
+    logger.info('💾 [TAILOR] Saving tailored content to working draft...', {
+      baseResumeId: resume.id,
+      userId: user.id,
+      dataKeys: Object.keys(normalizedTailoredResume || {}),
+      hasSummary: !!normalizedTailoredResume?.summary,
+      hasExperience: !!(normalizedTailoredResume?.experience?.length)
+    });
+    
+    const [draftSaved, tailoredVersion] = await Promise.all([
+      // Save the tailored content to the working draft (user can review before committing)
+      (async () => {
+        const result = await saveWorkingDraft({
+          userId: user.id,
+          baseResumeId: resume.id,
+          data: normalizedTailoredResume,
+          formatting: resume.formatting || {},
+          metadata: resume.metadata || {}
+        });
+        logger.info('✅ [TAILOR] Draft saved result:', {
+          success: !!result,
+          draftId: result?.id,
+          hasSummary: !!result?.data?.summary
+        });
+        return result;
+      })(),
+      // Create a TailoredVersion record for history/tracking
+      prisma.tailoredVersion.create({
+        data: {
+          userId: user.id,
+          baseResumeId: resume.id,
+          jobTitle: null,
+          company: null,
+          jobDescriptionHash: atsAfter.jobDescriptionHash,
+          mode: tailorMode,
+          tone,
+          data: normalizedTailoredResume,
+          diff: payload.diff,
+          atsScoreBefore: atsBefore.overall,
+          atsScoreAfter: atsAfter.overall
+        }
+      })
+    ]);
+    
+    // Also update lastAIAccessedAt on the base resume
+    await prisma.baseResume.update({
+      where: { id: resume.id },
+      data: { lastAIAccessedAt: new Date() }
     });
 
     const scoreImprovement = atsAfter.overall - atsBefore.overall;
-    logger.info('Tailoring complete - Score improvement', {
+    logger.info('✅ [TAILOR] Tailored resume saved to WORKING DRAFT', {
+      baseResumeId: resume.id,
+      tailoredVersionId: tailoredVersion.id,
+      draftId: draftSaved?.id,
+      draftUpdatedAt: draftSaved?.updatedAt,
+      hasDraft: !!draftSaved
+    });
+    logger.info('📊 [TAILOR_COMPLETE] Tailoring complete - Score improvement', {
       before: atsBefore.overall,
       after: atsAfter.overall,
       improvement: scoreImprovement,
       targetWas: targetScore,
       metTarget: atsAfter.overall >= targetScore
+    });
+    logger.info('📤 [EDITOR_UPDATE] Data that will be sent to editor', {
+      baseResumeId: resume.id,
+      isDraft: true,
+      draftUpdatedAt: draftSaved?.updatedAt,
+      dataPreview: {
+        contact: normalizedTailoredResume.contact ? {
+          name: normalizedTailoredResume.contact.name,
+          email: normalizedTailoredResume.contact.email
+        } : null,
+        summaryPreview: normalizedTailoredResume.summary?.substring(0, 150) + '...',
+        experienceCount: normalizedTailoredResume.experience?.length || 0,
+        firstExperiencePreview: normalizedTailoredResume.experience?.[0] ? {
+          company: normalizedTailoredResume.experience[0].company,
+          role: normalizedTailoredResume.experience[0].role,
+          bulletsCount: normalizedTailoredResume.experience[0].bullets?.length || 0,
+          firstBullet: normalizedTailoredResume.experience[0].bullets?.[0]?.substring(0, 100) + '...'
+        } : null,
+        skillsCount: normalizedTailoredResume.skills ? 
+          (normalizedTailoredResume.skills.technical?.length || 0) + 
+          (normalizedTailoredResume.skills.tools?.length || 0) : 0
+      }
     });
 
     // 🚀 PERFORMANCE: Make logging/metrics non-blocking (fire-and-forget)

@@ -94,14 +94,19 @@ function getSeniorityYears(level) {
  * @returns {number} - Target score to aim for
  */
 function calculateTargetScore(mode, currentScore, ceiling) {
-  if (mode === 'FULL') {
-    // FULL mode: Aim for 85+ or ceiling, whichever is lower
-    return Math.min(ceiling, 87);
-  } else {
-    // PARTIAL mode: Aim for +30-35 points improvement, but don't exceed ceiling
-    const targetWithImprovement = Math.min(currentScore + 33, 80);
-    return Math.min(targetWithImprovement, ceiling);
+  const upperBound = Math.max(60, Math.min(95, ceiling)); // safety clamp
+
+  if (String(mode).toUpperCase() === 'FULL') {
+    // 🎯 DATA-DRIVEN TARGET: 85+ ATS score
+    // Aim for 85+ or strong improvement (typical FULL gain +25~45)
+    const baseTarget = Math.max(85, currentScore + 25);
+    return Math.min(upperBound, baseTarget);
   }
+
+  // 🎯 DATA-DRIVEN TARGET: 80+ ATS score (upgraded from 75+)
+  // Aim for 80+ or meaningful improvement (typical PARTIAL gain +15~30)
+  const baseTarget = Math.max(80, currentScore + 15);
+  return Math.min(upperBound, baseTarget);
 }
 
 module.exports = {

@@ -79,9 +79,33 @@ async function generateText(prompt, options = {}, requestOverrides = {}) {
       );
     });
     
+    // Build message content - support both text and vision
+    let messageContent;
+    if (requestOverrides.imageData) {
+      // Vision mode: send image with text
+      messageContent = [
+        {
+          type: 'text',
+          text: prompt
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:${requestOverrides.mimeType || 'image/png'};base64,${requestOverrides.imageData}`
+          }
+        }
+      ];
+      // Remove imageData and mimeType from requestOverrides so they don't get passed to OpenAI
+      const { imageData, mimeType, ...cleanOverrides } = requestOverrides;
+      requestOverrides = cleanOverrides;
+    } else {
+      // Text-only mode
+      messageContent = prompt;
+    }
+
     const requestPayload = {
       model,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: messageContent }],
       temperature: openAIOptions.temperature || 0.7,
       max_tokens: openAIOptions.max_tokens || 1000,
       ...requestOverrides

@@ -1,9 +1,10 @@
 /**
  * TemplatePreviewModal - Modal for previewing template with full details
+ * Enhanced with smooth animations for better UX
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
 import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
@@ -42,119 +43,100 @@ export default function TemplatePreviewModal({
   onOpenUpload,
   onPreview,
 }: TemplatePreviewModalProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [previewContent, setPreviewContent] = useState<React.ReactNode>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
-  // Calculate similar template recommendations
-  const recommendations = useMemo(() => {
-    if (!template || !allTemplates || allTemplates.length === 0) {
-      return [];
-    }
-    return getRecommendedTemplates(template, allTemplates, 4, 20);
-  }, [template, allTemplates]);
-
-  // Handle preview loading when modal opens or template changes
   useEffect(() => {
-    if (!isOpen || !template) {
-      setIsLoading(true);
-      setPreviewContent(null);
-      return;
+    if (isOpen) {
+      setShouldRender(true);
+      // Small delay to trigger enter animation
+      setTimeout(() => setIsAnimating(true), 10);
+    } else {
+      setIsAnimating(false);
+      // Wait for exit animation before unmounting
+      const timer = setTimeout(() => setShouldRender(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
     }
 
-    // Reset loading state when template changes
-    setIsLoading(true);
-    setPreviewContent(null);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
 
-    // Simulate async preview generation
-    // In a real scenario, this could be actual async template rendering
-    const timer = setTimeout(() => {
-      const content = generateSampleResumePreview(template);
-      setPreviewContent(content);
-      setIsLoading(false);
-    }, 150); // Small delay to show loading state, prevents janky UX
-
-    return () => clearTimeout(timer);
-  }, [isOpen, template]);
-
-  if (!isOpen || !template) return null;
+  if (!shouldRender || !template) return null;
 
   const difficultyColor = getDifficultyColor(template.difficulty, colors || {});
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-xl p-3 sm:p-6 w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center">
-              <Layout size={24} className="text-gray-400" />
+    <div
+      className={`fixed inset-0 flex items-center justify-center z-50 p-0 sm:p-4 transition-all duration-300 ${
+        isAnimating ? 'bg-black bg-opacity-50 backdrop-blur-sm' : 'bg-black bg-opacity-0'
+      }`}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      <div
+        className={`bg-white rounded-none sm:rounded-xl p-4 sm:p-6 w-full h-full sm:h-auto sm:max-w-4xl sm:max-h-[90vh] overflow-y-auto shadow-2xl transition-all duration-300 ${
+          isAnimating
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 translate-y-4'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: colors?.cardBackground || '#ffffff' }}
+      >
+        <div className="flex items-start justify-between mb-4 sm:mb-6">
+          <div className="flex items-start space-x-2 sm:space-x-4 flex-1">
+            <div className="w-12 h-16 sm:w-16 sm:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Layout size={20} className="text-gray-400 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{template.name}</h2>
-              <p className="text-sm text-gray-600">{template.description}</p>
+            <div className="flex-1 min-w-0">
+              <h2
+                id="modal-title"
+                className="text-lg sm:text-2xl font-bold truncate"
+                style={{ color: colors?.primaryText || '#111827' }}
+              >
+                {template.name}
+              </h2>
+              <p
+                className="text-xs sm:text-sm line-clamp-2"
+                style={{ color: colors?.secondaryText || '#4b5563' }}
+              >
+                {template.description}
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 -mt-1"
             aria-label="Close modal"
           >
-            <X size={24} />
+            <X size={20} className="sm:w-6 sm:h-6" />
           </button>
         </div>
 
-        {/* Template Preview */}
-        <div className="mb-4 sm:mb-6 bg-gray-100 rounded-lg p-2 sm:p-4">
-          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl overflow-auto max-h-[400px] sm:max-h-[600px]">
-            <div className="p-3 sm:p-6 min-w-0 sm:min-w-[650px]">
-              {isLoading ? (
-                /* Loading State - Skeleton */
-                <div className="space-y-6 animate-pulse">
-                  {/* Header Skeleton */}
-                  <div className="text-center border-b pb-4">
-                    <div className="h-8 bg-gray-200 rounded w-1/3 mx-auto mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/4 mx-auto mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
-                  </div>
-
-                  {/* Summary Section Skeleton */}
-                  <div>
-                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-5/6 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-4/5"></div>
-                  </div>
-
-                  {/* Experience Section Skeleton */}
-                  <div>
-                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
-                    <div className="mb-4">
-                      <div className="h-5 bg-gray-200 rounded w-1/3 mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                      <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                    </div>
-                  </div>
-
-                  {/* Skills Section Skeleton */}
-                  <div>
-                    <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
-                    <div className="flex gap-2 flex-wrap">
-                      <div className="h-6 bg-gray-200 rounded w-20"></div>
-                      <div className="h-6 bg-gray-200 rounded w-24"></div>
-                      <div className="h-6 bg-gray-200 rounded w-16"></div>
-                      <div className="h-6 bg-gray-200 rounded w-20"></div>
-                    </div>
-                  </div>
-
-                  {/* Loading Indicator */}
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 size={32} className="text-blue-600 animate-spin" />
-                    <span className="ml-3 text-gray-600">Loading preview...</span>
-                  </div>
-                </div>
-              ) : (
-                /* Actual Preview */
-                previewContent
-              )}
+        {/* Template Preview Image */}
+        <div className="mb-4 sm:mb-6 bg-gray-100 rounded-lg p-3 sm:p-8">
+          <div className="bg-white border-2 border-gray-300 rounded-lg shadow-2xl p-3 sm:p-8 min-h-[400px] sm:min-h-[600px] overflow-hidden">
+            <div className="transform scale-50 sm:scale-75 origin-top-left">
+              {generateSampleResumePreview(template)}
             </div>
           </div>
         </div>
@@ -221,11 +203,11 @@ export default function TemplatePreviewModal({
         )}
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-gray-200">
-          <div className="flex items-center justify-center sm:justify-start gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center gap-2 justify-center sm:justify-start">
             <button
               onClick={() => onFavorite(template.id)}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-3 sm:p-2 rounded-lg transition-colors touch-manipulation ${
                 isFavorite
                   ? 'bg-red-50 text-red-600'
                   : 'text-gray-400 hover:bg-gray-100'
@@ -237,7 +219,7 @@ export default function TemplatePreviewModal({
             </button>
             <button
               onClick={onShare}
-              className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-3 sm:p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
               aria-label="Share template"
               title="Share"
             >
@@ -245,9 +227,9 @@ export default function TemplatePreviewModal({
             </button>
             <button
               onClick={onDownload}
-              className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors relative group"
-              aria-label="Download sample preview (no resume data)"
-              title="Download Sample Preview"
+              className="p-3 sm:p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+              aria-label="Download template"
+              title="Download"
             >
               <Download size={20} />
               {/* Tooltip explaining this is sample only */}
@@ -261,21 +243,21 @@ export default function TemplatePreviewModal({
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+              className="px-4 py-3 sm:py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base touch-manipulation order-last sm:order-none"
             >
               Close
             </button>
             <button
               onClick={onOpenUpload}
-              className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base"
+              className="px-4 py-3 sm:py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-all duration-300 flex items-center justify-center gap-2 text-sm sm:text-base touch-manipulation"
             >
-              <Upload size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <Upload size={18} />
               <span className="hidden sm:inline">Upload & Apply</span>
               <span className="sm:hidden">Upload</span>
             </button>
             <button
               onClick={() => onUse(template.id)}
-              className="px-4 sm:px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 group relative overflow-hidden text-sm sm:text-base"
+              className="px-6 py-3 sm:py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center gap-2 group relative overflow-hidden text-sm sm:text-base touch-manipulation"
             >
               {addedTemplateId === template.id ? (
                 <span className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">

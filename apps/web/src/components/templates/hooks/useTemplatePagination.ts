@@ -1,14 +1,18 @@
 /**
  * Custom hook for template pagination
+ * Includes smooth scroll-to-top on page change
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { TEMPLATES_PER_PAGE } from '../constants';
 import type { ResumeTemplate } from '../../../data/templates';
+import { trackPageChange } from '../utils/analytics';
 
 interface UseTemplatePaginationOptions {
   templates: ResumeTemplate[];
   itemsPerPage?: number;
+  scrollToTopOnPageChange?: boolean;
+  scrollContainerSelector?: string;
 }
 
 interface UseTemplatePaginationReturn {
@@ -25,8 +29,15 @@ interface UseTemplatePaginationReturn {
 export const useTemplatePagination = (
   options: UseTemplatePaginationOptions
 ): UseTemplatePaginationReturn => {
-  const { templates, itemsPerPage = TEMPLATES_PER_PAGE } = options;
+  const {
+    templates,
+    itemsPerPage = TEMPLATES_PER_PAGE,
+    scrollToTopOnPageChange = true,
+    scrollContainerSelector,
+  } = options;
+
   const [currentPage, setCurrentPage] = useState(1);
+  const previousPage = useRef(1);
 
   const totalPages = useMemo(
     () => Math.ceil(templates.length / itemsPerPage),
@@ -39,8 +50,43 @@ export const useTemplatePagination = (
     return templates.slice(startIndex, endIndex);
   }, [templates, currentPage, itemsPerPage]);
 
-  // Smart pagination reset: go to last valid page instead of page 1
-  // This preserves user's position better when filters change
+  // Scroll to top when page changes
+  useEffect(() => {
+    if (scrollToTopOnPageChange && currentPage !== previousPage.current) {
+      const scrollToTop = () => {
+        if (scrollContainerSelector) {
+          // Scroll specific container
+          const container = document.querySelector(scrollContainerSelector);
+          if (container) {
+            container.scrollTo({
+              top: 0,
+              behavior: 'smooth',
+            });
+          }
+        } else {
+          // Scroll window
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth',
+          });
+        }
+      };
+
+      // Small delay to ensure DOM has updated
+      const timer = setTimeout(scrollToTop, 50);
+
+      // Track page change analytics
+      if (previousPage.current !== 1) { // Don't track initial mount
+        trackPageChange(currentPage, totalPages);
+      }
+
+      previousPage.current = currentPage;
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentPage, scrollToTopOnPageChange, scrollContainerSelector, totalPages]);
+
+  // Reset to page 1 when templates change significantly
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       // Go to last valid page instead of page 1

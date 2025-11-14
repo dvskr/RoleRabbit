@@ -1,40 +1,19 @@
 #!/usr/bin/env node
 /**
- * Master startup script for RoleReady Hybrid Backend
- * Starts both Python and Node.js backends
+ * Master startup script for RoleReady
+ * Starts Node.js backend and Next.js frontend
  */
 
 const { spawn } = require('child_process');
 const path = require('path');
 
-let pythonProcess = null;
 let nodeProcess = null;
-
-function startPythonBackend() {
-  console.log('🐍 Starting Python Backend...');
-  
-  pythonProcess = spawn('python', ['start.py'], {
-    cwd: path.join(__dirname, 'apps', 'api-python'),
-    stdio: 'inherit',
-    shell: true,
-    env: { ...process.env, PORT: '8000' }
-  });
-
-  pythonProcess.on('error', (err) => {
-    console.error('❌ Python backend error:', err);
-  });
-
-  pythonProcess.on('close', (code) => {
-    console.log(`🐍 Python backend stopped with code ${code}`);
-  });
-
-  return pythonProcess;
-}
+let frontendProcess = null;
 
 function startNodeBackend() {
   console.log('🟢 Starting Node.js Backend...');
   
-  nodeProcess = spawn('node', ['start.js'], {
+  nodeProcess = spawn('node', ['server.js'], {
     cwd: path.join(__dirname, 'apps', 'api'),
     stdio: 'inherit',
     shell: true,
@@ -55,7 +34,7 @@ function startNodeBackend() {
 function startFrontend() {
   console.log('⚛️ Starting Frontend...');
   
-  const frontendProcess = spawn('npm', ['run', 'dev'], {
+  frontendProcess = spawn('npm', ['run', 'dev'], {
     cwd: path.join(__dirname, 'apps', 'web'),
     stdio: 'inherit',
     shell: true,
@@ -76,12 +55,12 @@ function startFrontend() {
 function gracefulShutdown() {
   console.log('\n🛑 Shutting down all services...');
   
-  if (pythonProcess) {
-    pythonProcess.kill('SIGINT');
-  }
-  
   if (nodeProcess) {
     nodeProcess.kill('SIGINT');
+  }
+  
+  if (frontendProcess) {
+    frontendProcess.kill('SIGINT');
   }
   
   setTimeout(() => {
@@ -91,11 +70,10 @@ function gracefulShutdown() {
 }
 
 async function main() {
-  console.log('🚀 RoleReady Hybrid Backend Startup');
+  console.log('🚀 RoleReady Startup');
   console.log('=====================================');
-  console.log('Starting Python Backend (AI & Auth) on port 8000');
-  console.log('Starting Node.js Backend (Data & Storage) on port 3001');
-  console.log('Starting Frontend on port 3000');
+  console.log('Starting Node.js Backend (Fastify) on port 3001');
+  console.log('Starting Next.js Frontend on port 3000');
   console.log('=====================================\n');
 
   // Handle graceful shutdown
@@ -103,19 +81,15 @@ async function main() {
   process.on('SIGTERM', gracefulShutdown);
 
   try {
-    // Start backends with a small delay between them
-    startPythonBackend();
+    // Start backend first
+    startNodeBackend();
     
-    setTimeout(() => {
-      startNodeBackend();
-    }, 2000);
-    
+    // Start frontend after a small delay
     setTimeout(() => {
       startFrontend();
-    }, 4000);
+    }, 2000);
 
     console.log('\n📊 Service URLs:');
-    console.log('🐍 Python API: http://localhost:8000');
     console.log('🟢 Node.js API: http://localhost:3001');
     console.log('⚛️ Frontend: http://localhost:3000');
     console.log('\n💡 Press Ctrl+C to stop all services');

@@ -862,6 +862,107 @@ class ApiService {
     });
   }
 
+  // ============================================
+  // Working Draft Endpoints
+  // ============================================
+
+  /**
+   * Get draft status for a base resume
+   */
+  async getDraftStatus(baseResumeId: string): Promise<{
+    success: boolean;
+    status: {
+      hasDraft: boolean;
+      draftUpdatedAt: string | null;
+      baseUpdatedAt: string | null;
+    };
+  }> {
+    return this.request(`/api/working-draft/${baseResumeId}/status`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+  }
+
+  /**
+   * Get current resume data (draft OR base)
+   */
+  async getCurrentResumeData(baseResumeId: string): Promise<{
+    success: boolean;
+    data: {
+      data: any;
+      formatting: any;
+      metadata: any;
+      isDraft: boolean;
+      draftUpdatedAt?: string;
+      baseUpdatedAt: string;
+    };
+  }> {
+    return this.request(`/api/working-draft/${baseResumeId}/current`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+  }
+
+  /**
+   * Save or update working draft (auto-save)
+   */
+  async saveWorkingDraft(baseResumeId: string, payload: {
+    data: any;
+    formatting?: any;
+    metadata?: any;
+  }): Promise<{
+    success: boolean;
+    draft: {
+      id: string;
+      updatedAt: string;
+      createdAt: string;
+    };
+  }> {
+    return this.request(`/api/working-draft/${baseResumeId}/save`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      credentials: 'include'
+    });
+  }
+
+  /**
+   * Commit draft to base resume (explicit user save)
+   */
+  async commitDraftToBase(baseResumeId: string): Promise<{
+    success: boolean;
+    baseResume: {
+      id: string;
+      updatedAt: string;
+      data: any;
+      formatting: any;
+      metadata: any;
+    };
+  }> {
+    return this.request(`/api/working-draft/${baseResumeId}/commit`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+  }
+
+  /**
+   * Discard working draft (revert to base)
+   */
+  async discardWorkingDraft(baseResumeId: string): Promise<{
+    success: boolean;
+    baseResume: {
+      id: string;
+      updatedAt: string;
+      data: any;
+      formatting: any;
+      metadata: any;
+    };
+  }> {
+    return this.request(`/api/working-draft/${baseResumeId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+  }
+
   async generateEditorAIContent(payload: GenerateContentRequest): Promise<any> {
     return this.request('/api/proxy/editor/ai/generate-content', {
       method: 'POST',
@@ -916,6 +1017,58 @@ class ApiService {
       body: JSON.stringify(payload),
       credentials: 'include'
     });
+  }
+
+  /**
+   * Upload file to storage
+   */
+  async uploadFile(file: File, metadata?: { name?: string; type?: string; isPublic?: boolean }): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (metadata?.name) {
+      formData.append('name', metadata.name);
+    }
+    if (metadata?.type) {
+      formData.append('type', metadata.type);
+    }
+    if (metadata?.isPublic !== undefined) {
+      formData.append('isPublic', String(metadata.isPublic));
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+    try {
+      const response = await fetch(`${this.baseUrl}/api/storage/files/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        let message = 'Failed to upload file';
+        try {
+          const err = await response.json();
+          message = err?.error || err?.message || message;
+        } catch (_) {
+          // ignore
+        }
+        throw new Error(message);
+      }
+      return await response.json();
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('File upload timed out. Please try again.');
+      }
+      if (error instanceof Error) {
+        throw new Error(error.message || 'Failed to upload file');
+      }
+      throw new Error('Failed to upload file');
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   /**

@@ -76,7 +76,8 @@ export default function ImportModal({
     setSelectedId((prev) => prev || activeId || null);
     // Refresh resumes to ensure latest active state
     refresh({ showSpinner: false });
-  }, [showImportModal, activeId, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showImportModal, activeId]);
 
   // File inputs for per-slot upload/replace
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -210,33 +211,71 @@ export default function ImportModal({
   const uploadToCreate = useCallback(async (file: File) => {
     const nameFromFile = file.name.replace(/\.[^.]+$/, '');
     try {
-      // Create placeholder slot immediately (no parsing yet)
+      showToast('Uploading resume...', 'info', 2000);
+      
+      // 1. Upload file to storage first
+      const uploadResult = await apiService.uploadFile(file, {
+        name: nameFromFile,
+        type: 'resume',
+        isPublic: false
+      });
+      
+      if (!uploadResult?.file) {
+        throw new Error('File upload failed');
+      }
+      
+      // 2. Create BaseResume linked to the uploaded file
       const created = await createResume({
         name: nameFromFile,
-        data: {}
+        data: {}, // Empty data - will be parsed on activation
+        storageFileId: uploadResult.file.id,
+        fileHash: uploadResult.file.fileHash
       });
+      
       if (created?.id) {
-        // Mark this new slot as pending parse
-        setPendingFiles(prev => ({ ...prev, [created.id]: file }));
         setSelectedId(created.id);
         setLastStagedId(created.id);
-        showToast('Uploaded. Will parse on Apply.', 'info', 4000);
-    } else {
-        showToast('Upload succeeded but creation failed', 'error', 6000);
+        showToast('Resume uploaded successfully!', 'success', 3000);
+      } else {
+        showToast('Upload succeeded but slot creation failed', 'error', 6000);
       }
     } catch (createErr: any) {
-      showToast(createErr?.message || 'Failed to create resume slot', 'error', 6000);
+      showToast(createErr?.message || 'Failed to upload resume', 'error', 6000);
     }
   }, [createResume, showToast]);
 
   const markReplacePending = useCallback(async (resumeId: string, file: File) => {
-    // Defer parsing until Apply; keep current data visible
-    setPendingFiles(prev => ({ ...prev, [resumeId]: file }));
-    // Ensure Apply targets the slot we just staged
-    setSelectedId(resumeId);
-    setLastStagedId(resumeId);
-    showToast('File staged. Will parse on Apply.', 'info', 4000);
-  }, [showToast]);
+    try {
+      showToast('Uploading resume...', 'info', 2000);
+      
+      // 1. Upload file to storage
+      const uploadResult = await apiService.uploadFile(file, {
+        name: file.name.replace(/\.[^.]+$/, ''),
+        type: 'resume',
+        isPublic: false
+      });
+      
+      if (!uploadResult?.file) {
+        throw new Error('File upload failed');
+      }
+      
+      // 2. Update BaseResume with new file reference
+      await apiService.updateBaseResume(resumeId, {
+        data: {}, // Clear data - will be re-parsed on activation
+        storageFileId: uploadResult.file.id,
+        fileHash: uploadResult.file.fileHash
+      });
+      
+      setSelectedId(resumeId);
+      setLastStagedId(resumeId);
+      showToast('Resume uploaded successfully!', 'success', 3000);
+      
+      // Refresh to get updated resume
+      await refresh({ showSpinner: false });
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to upload resume', 'error', 6000);
+    }
+  }, [showToast, refresh]);
 
   // Parse and replace data for an existing resume
   const parseAndReplace = useCallback(async (resumeId: string, file: File, preParsed?: any) => {
@@ -286,73 +325,139 @@ export default function ImportModal({
     }
   }, [selectedId, markReplacePending, uploadToCreate]);
 
-  // Direct activation handler - parses any staged file and activates the resume
+  // Direct activation handler - only activates the resume (no parsing)
   const handleActivateResume = useCallback(async (resumeId: string) => {
-    if (activatingId && activatingId !== resumeId) {
-      showToast('Please wait for the current activation to finish.', 'info', 3000);
-      return;
-    }
-    if (activatingId === resumeId) {
-      return;
-    }
+    console.log('🎯 [handleActivateResume] Called with resumeId:', resumeId);
 
     const resume = resumes.find(r => r.id === resumeId);
+    console.log('📋 [handleActivateResume] Found resume:', resume);
+    
     if (!resume) {
+      console.error('❌ [handleActivateResume] Resume not found!');
       showToast('Resume not found. Please refresh and try again.', 'error', 4000);
       return;
     }
 
-    if (resume.isActive) {
-      showToast('This resume is already active', 'info', 3000);
+    const wasActive = resume.isActive;
+    console.log('🔄 [handleActivateResume] wasActive:', wasActive);
+
+    try {
+      if (wasActive) {
+        // Deactivate the resume
+        console.log('🔄 [DEACTIVATE] Starting deactivation for resume:', resumeId);
+        
+        // Optimistically update UI immediately for instant feedback
+        console.log('🔄 [DEACTIVATE] Optimistically updating local state...');
+        upsertResume({
+          ...resume,
+          isActive: false
+        });
+        
+        // Call deactivate API endpoint (don't await - let it happen in background)
+        apiService.request(`/api/base-resumes/${resumeId}/deactivate`, {
+          method: 'POST',
+          credentials: 'include'
+        }).then(response => {
+          console.log('✅ [DEACTIVATE] API response:', response);
+          
+          if (!response?.success) {
+            // Revert optimistic update on error
+            console.error('❌ [DEACTIVATE] API failed, reverting...');
+            upsertResume({
+              ...resume,
+              isActive: true
+            });
+            showToast('Failed to deactivate resume', 'error', 4000);
+          } else {
+            console.log('✅ [DEACTIVATE] Deactivation complete');
+            showToast('✅ Resume deactivated and editor cleared!', 'success', 2000);
+          }
+        }).catch(err => {
+          console.error('❌ [DEACTIVATE] Error:', err);
+          // Revert optimistic update on error
+          upsertResume({
+            ...resume,
+            isActive: true
+          });
+          showToast(err?.message || 'Failed to deactivate resume', 'error', 4000);
+        });
+        
+        // Clear the editor immediately (don't wait for API)
+        if (onResumeApplied) {
+          console.log('🔄 [DEACTIVATE] Clearing editor...');
+          await onResumeApplied('', null);
+        }
+      } else {
+        // Activate the resume
+        setSelectedId(resumeId);
+        await activateResume(resumeId);
+        
+        showToast('✅ Resume activated! Now click "Parse" to populate the editor.', 'success', 2000);
+      }
+    } catch (err: any) {
+      console.error('❌ [ACTIVATE/DEACTIVATE] Error:', err);
+      showToast(err?.message || `Failed to ${wasActive ? 'deactivate' : 'activate'} resume`, 'error', 4000);
+    }
+  }, [resumes, activateResume, showToast, onResumeApplied, upsertResume]);
+
+  // Parse & Apply handler - parses the active resume and populates editor
+  const [parsingId, setParsingId] = useState<string | null>(null);
+  
+  const handleParseAndApply = useCallback(async (resumeId: string) => {
+    const resume = resumes.find(r => r.id === resumeId);
+    if (!resume) {
+      showToast('Resume not found', 'error', 3000);
       return;
     }
 
-    setActivatingId(resumeId);
-    setSelectedId(resumeId);
+    if (!resume.isActive) {
+      showToast('Please activate this resume first before parsing', 'warning', 4000);
+      return;
+    }
+
+    if (parsingId === resumeId) {
+      return;
+    }
+
+    setParsingId(resumeId);
 
     try {
-      let updatedRecord: any = resume;
-      const pendingFile = pendingFiles[resumeId];
-
-      if (pendingFile instanceof File && pendingFile.size > 0) {
-        showToast('File staged. Activate this resume, then use Parse & Apply to process the new upload.', 'info', 5000);
-      } else if (!validateResumeData(resume.data)) {
-        showToast('Activate this slot after uploading a resume or using Parse & Apply.', 'info', 4000);
+      showToast('🔄 Parsing resume...', 'info', 30000);
+      
+      // Parse the resume by calling the backend parse endpoint
+      const response = await apiService.request(`/api/base-resumes/${resumeId}/parse`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (!response?.success) {
+        throw new Error(response?.error || 'Failed to parse resume');
       }
 
-      await activateResume(resumeId);
-
-      // Ensure we have the latest version of the resume record for callback consumers
-      let latestRecord = updatedRecord;
-      if (!latestRecord || !validateResumeData(latestRecord?.data)) {
-        try {
-          const fetched = await apiService.getBaseResume(resumeId);
-          latestRecord = fetched?.resume ?? latestRecord;
-        } catch (fetchErr: any) {
-          // If fetching fails, fall back to whatever data we already have
-          latestRecord = latestRecord ?? resume;
-        }
-      }
-
-      if (onResumeApplied && latestRecord) {
-        try {
-          await onResumeApplied(resumeId, latestRecord);
-        } catch (callbackErr) {
-          // Ignore callback errors – activation already succeeded
-        }
-      }
+      // Fetch the latest data
+      const fetched = await apiService.getBaseResume(resumeId);
+      const latestRecord = fetched?.resume;
 
       if (latestRecord) {
         upsertResume(latestRecord);
       }
 
-      showToast('Resume activated successfully', 'success', 3000);
+      // Call the onResumeApplied callback to populate the editor
+      if (onResumeApplied && latestRecord) {
+        await onResumeApplied(resumeId, latestRecord);
+      }
+
+      // Close modal and show success
+      setShowImportModal(false);
+      dismissToast();
+      showToast('✅ Resume parsed and applied to editor!', 'success', 4000);
     } catch (err: any) {
-      showToast(err?.message || 'Failed to activate resume', 'error', 6000);
+      dismissToast();
+      showToast(err?.message || 'Failed to parse resume', 'error', 6000);
     } finally {
-      setActivatingId(null);
+      setParsingId(null);
     }
-  }, [activatingId, resumes, pendingFiles, validateResumeData, parseAndReplace, activateResume, showToast, onResumeApplied, upsertResume]);
+  }, [resumes, parsingId, showToast, dismissToast, upsertResume, onResumeApplied, setShowImportModal]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -575,13 +680,13 @@ export default function ImportModal({
             {slotNumber}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <div className="font-semibold" style={{ color: colors.primaryText }}>
-                {resume.name || `Resume ${slotNumber}`}
-              </div>
+            <div className="font-semibold" style={{ color: colors.primaryText }}>
+              {resume.name || `Resume ${slotNumber}`}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
               {resume.isActive && (
                 <span
-                  className="text-xs px-2 py-0.5 rounded-full"
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
                   style={{
                     background: colors.badgeInfoBg,
                     color: colors.badgeInfoText,
@@ -603,67 +708,79 @@ export default function ImportModal({
                   Legacy Slot
                 </span>
               )}
+              {resume.createdAt && (
+                <div className="text-xs" style={{ color: colors.tertiaryText }}>
+                  {new Date(resume.createdAt).toLocaleDateString()}
+                </div>
+              )}
             </div>
-            {resume.createdAt && (
-              <div className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
-                {new Date(resume.createdAt).toLocaleDateString()}
-              </div>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="relative inline-flex items-center transition-all focus:outline-none"
-            title={
-              resume.isActive
-                ? 'Currently active'
-                : activatingId === resume.id
-                  ? 'Activating...'
-                  : 'Activate resume'
-            }
-            aria-label={resume.isActive ? 'Currently active' : 'Activate resume'}
+            className="relative inline-flex items-center transition-all focus:outline-none hover:opacity-80"
+            title={resume.isActive ? 'Click to deactivate (will clear editor)' : 'Click to activate resume'}
+            aria-label={resume.isActive ? 'Deactivate resume' : 'Activate resume'}
             onClick={(e) => {
               e.stopPropagation();
-              if (resume.isActive || activatingId === resume.id) {
-                return;
-              }
+              console.log('🔘 [TOGGLE] Clicked!', { 
+                resumeId: resume.id, 
+                isActive: resume.isActive
+              });
+              console.log('✅ [TOGGLE] Calling handleActivateResume...');
               handleActivateResume(resume.id);
             }}
-            disabled={activatingId === resume.id}
-            style={{
-              opacity: activatingId === resume.id || resume.isActive ? 0.6 : 1,
-              cursor: resume.isActive ? 'default' : 'pointer'
-            }}
           >
-            {activatingId === resume.id ? (
-              <div className="w-11 h-6 flex items-center justify-center">
-                <RefreshCw size={16} className="animate-spin" style={{ color: colors.activeBlueText }} />
-              </div>
-            ) : (
-              <div
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out ${
-                  resume.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+            <div
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ease-in-out ${
+                resume.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+              style={{
+                backgroundColor: resume.isActive
+                  ? colors.successGreen
+                  : theme.mode === 'light'
+                    ? '#d1d5db'
+                    : '#4b5563'
+              }}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ease-in-out ${
+                  resume.isActive ? 'translate-x-6' : 'translate-x-1'
                 }`}
                 style={{
-                  backgroundColor: resume.isActive
-                    ? colors.successGreen
-                    : theme.mode === 'light'
-                      ? '#d1d5db'
-                      : '#4b5563'
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                    resume.isActive ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                  style={{
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                  }}
-                />
-              </div>
-            )}
+              />
+            </div>
           </button>
+          {resume.isActive && (
+            <button
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-all"
+              title={parsingId === resume.id ? 'Parsing...' : 'Parse resume and apply to editor'}
+              aria-label="Parse resume"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleParseAndApply(resume.id);
+              }}
+              disabled={parsingId === resume.id}
+              style={{
+                background: parsingId === resume.id ? colors.border : colors.activeBlueText,
+                color: '#ffffff',
+                opacity: parsingId === resume.id ? 0.6 : 1,
+                cursor: parsingId === resume.id ? 'default' : 'pointer'
+              }}
+            >
+              {parsingId === resume.id ? (
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Parsing...</span>
+                </div>
+              ) : (
+                'Parse'
+              )}
+            </button>
+          )}
           <button
             className="p-2 rounded-lg"
             title="Replace from file"
@@ -809,39 +926,16 @@ export default function ImportModal({
         {availableSlots > 0 &&
           Array.from({ length: availableSlots }, (_, idx) => renderEmptySlot(idx))}
 
-        <div className="mt-4 flex items-center justify-between">
-          <div>
-            <div className="text-sm" style={{ color: colors.tertiaryText }}>
-              {totalSlotsUsed} of {maxSlots} slots filled
-            </div>
-            {applyHelperMessage && (
-              <div className="text-xs mt-1" style={{ color: colors.errorRed }}>
-                {applyHelperMessage}
-              </div>
-            )}
+        <div className="mt-4">
+          <div className="text-sm" style={{ color: colors.tertiaryText }}>
+            {totalSlotsUsed} of {maxSlots} slots filled
           </div>
-          <div className="flex gap-3">
-                  <button
-              onClick={() => setShowImportModal(false)}
-              className="px-4 py-2 rounded-xl"
-                    style={{
-                background: theme.mode === 'light' ? '#f3f4f6' : colors.hoverBackground,
-                color: colors.primaryText
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleApply}
-              disabled={isApplying}
-              className={`inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isApplying ? 'bg-blue-400 cursor-not-allowed opacity-70' : 'bg-blue-600 hover:bg-blue-500'}`}
-              title={!activeId ? 'Activate a resume first using the toggle switch' : (isApplying ? 'Parsing...' : 'Parse and apply the active resume')}
-            >
-              {isApplying ? 'Parsing…' : 'Parse & Apply'}
-                  </button>
+          {applyHelperMessage && (
+            <div className="text-xs mt-1" style={{ color: colors.errorRed }}>
+              {applyHelperMessage}
             </div>
-          </div>
+          )}
+        </div>
         </div>
     </div>
   );

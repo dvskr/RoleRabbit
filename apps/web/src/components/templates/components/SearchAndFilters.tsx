@@ -2,12 +2,11 @@
  * SearchAndFilters - Search bar, sort, view mode, and filter toggle
  */
 
-import React from 'react';
-import type { ThemeColors } from '../types';
+import React, { RefObject } from 'react';
 import { Search, Filter, Grid, List, RefreshCw } from 'lucide-react';
 import { TemplateSortBy, TemplateViewMode } from '../types';
 import { SORT_OPTIONS } from '../constants';
-import TemplateGuide from './TemplateGuide';
+import Tooltip from './Tooltip';
 
 interface SearchAndFiltersProps {
   searchQuery: string;
@@ -18,7 +17,10 @@ interface SearchAndFiltersProps {
   setViewMode: (viewMode: TemplateViewMode) => void;
   showFilters: boolean;
   setShowFilters: (show: boolean) => void;
-  colors: ThemeColors;
+  colors: any;
+  hasActiveFilters?: boolean;
+  activeFilterCount?: number;
+  searchInputRef?: RefObject<HTMLInputElement>;
 }
 
 export default function SearchAndFilters({
@@ -31,22 +33,28 @@ export default function SearchAndFilters({
   showFilters,
   setShowFilters,
   colors,
+  hasActiveFilters = false,
+  activeFilterCount = 0,
+  searchInputRef,
 }: SearchAndFiltersProps) {
   return (
-    <div className="flex items-center gap-2 mb-2">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-2">
       {/* Search */}
-      <div className="relative flex-1 max-w-sm">
+      <div className="relative flex-1 sm:max-w-sm order-1" role="search">
         <Search
           size={16}
           className="absolute left-2 top-1/2 transform -translate-y-1/2"
           style={{ color: colors.tertiaryText }}
+          aria-hidden="true"
         />
         <input
-          type="text"
+          ref={searchInputRef}
+          type="search"
           placeholder="Search templates..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-8 pr-3 py-2 rounded-lg text-sm"
+          className="w-full pl-8 pr-3 py-3 sm:py-2 rounded-lg text-sm touch-manipulation"
+          aria-label="Search templates by name or keyword"
           style={{
             background: colors.inputBackground,
             border: `1px solid ${colors.border}`,
@@ -63,126 +71,154 @@ export default function SearchAndFilters({
         />
       </div>
 
-      {/* Sort */}
-      <select
-        value={sortBy}
-        onChange={(e) => setSortBy(e.target.value as TemplateSortBy)}
-        className="px-3 py-2 rounded-lg text-sm"
-        style={{
-          background: colors.inputBackground,
-          border: `1px solid ${colors.border}`,
-          color: colors.primaryText,
-        }}
-        aria-label="Sort templates by"
-        title="Sort templates"
-      >
-        {SORT_OPTIONS.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      {/* Controls Row - Sort, View Mode, Filters, Refresh */}
+      <div className="flex items-center gap-2 order-2">
+        {/* Sort */}
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as TemplateSortBy)}
+          className="px-3 py-3 sm:py-2 rounded-lg text-sm flex-1 sm:flex-none touch-manipulation"
+          style={{
+            background: colors.inputBackground,
+            border: `1px solid ${colors.border}`,
+            color: colors.primaryText,
+          }}
+          aria-label="Sort templates by"
+          title="Sort templates"
+        >
+          {SORT_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
 
-      {/* View Mode */}
-      <div
-        className="flex items-center rounded-lg p-0.5"
-        style={{ border: `1px solid ${colors.border}` }}
-      >
-        <button
-          onClick={() => setViewMode('grid')}
-          className="p-1.5 rounded-md transition-colors"
-          style={{
-            background: viewMode === 'grid' ? colors.badgeInfoBg : 'transparent',
-            color: viewMode === 'grid' ? colors.badgeInfoText : colors.tertiaryText,
-          }}
-          onMouseEnter={(e) => {
-            if (viewMode !== 'grid') {
-              e.currentTarget.style.background = colors.hoverBackground;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (viewMode !== 'grid') {
-              e.currentTarget.style.background = 'transparent';
-            }
-          }}
-          aria-label="Grid view"
-          title="Grid view"
+        {/* View Mode */}
+        <div
+          className="flex items-center rounded-lg p-0.5"
+          style={{ border: `1px solid ${colors.border}` }}
+          role="group"
+          aria-label="View mode toggle"
         >
-          <Grid size={16} />
-        </button>
-        <button
-          onClick={() => setViewMode('list')}
-          className="p-1.5 rounded-md transition-colors"
-          style={{
-            background: viewMode === 'list' ? colors.badgeInfoBg : 'transparent',
-            color: viewMode === 'list' ? colors.badgeInfoText : colors.tertiaryText,
-          }}
-          onMouseEnter={(e) => {
-            if (viewMode !== 'list') {
-              e.currentTarget.style.background = colors.hoverBackground;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (viewMode !== 'list') {
-              e.currentTarget.style.background = 'transparent';
-            }
-          }}
-          aria-label="List view"
-          title="List view"
+          <Tooltip content="Grid view - Templates in cards" position="bottom">
+            <button
+              onClick={() => setViewMode('grid')}
+              className="p-2 sm:p-1.5 rounded-md transition-colors touch-manipulation"
+              style={{
+                background: viewMode === 'grid' ? colors.badgeInfoBg : 'transparent',
+                color: viewMode === 'grid' ? colors.badgeInfoText : colors.tertiaryText,
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'grid') {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'grid') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              <Grid size={18} className="sm:w-4 sm:h-4" />
+            </button>
+          </Tooltip>
+          <Tooltip content="List view - Templates in rows" position="bottom">
+            <button
+              onClick={() => setViewMode('list')}
+              className="p-2 sm:p-1.5 rounded-md transition-colors touch-manipulation"
+              style={{
+                background: viewMode === 'list' ? colors.badgeInfoBg : 'transparent',
+                color: viewMode === 'list' ? colors.badgeInfoText : colors.tertiaryText,
+              }}
+              onMouseEnter={(e) => {
+                if (viewMode !== 'list') {
+                  e.currentTarget.style.background = colors.hoverBackground;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (viewMode !== 'list') {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
+              aria-label="List view"
+              aria-pressed={viewMode === 'list'}
+            >
+              <List size={18} className="sm:w-4 sm:h-4" />
+            </button>
+          </Tooltip>
+        </div>
+
+        {/* Filters Toggle */}
+        <Tooltip
+          content={
+            hasActiveFilters
+              ? `${activeFilterCount} active filter${activeFilterCount !== 1 ? 's' : ''} - Click to manage`
+              : 'Show advanced filters'
+          }
+          position="bottom"
         >
-          <List size={16} />
-        </button>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="px-3 py-3 sm:py-2 rounded-lg border transition-colors text-sm relative whitespace-nowrap touch-manipulation"
+            style={{
+              background: showFilters ? colors.badgeInfoBg : 'transparent',
+              border: `1px solid ${showFilters ? colors.badgeInfoBorder : colors.border}`,
+              color: showFilters ? colors.badgeInfoText : colors.secondaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (!showFilters) {
+                e.currentTarget.style.background = colors.hoverBackground;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!showFilters) {
+                e.currentTarget.style.background = 'transparent';
+              }
+            }}
+            aria-label={`Toggle filters${hasActiveFilters ? ` (${activeFilterCount} active)` : ''}`}
+            aria-expanded={showFilters}
+          >
+            <Filter size={16} className="inline mr-1" />
+            <span className="hidden sm:inline">Filters</span>
+            {hasActiveFilters && activeFilterCount > 0 && (
+              <span
+                className="ml-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold"
+                style={{
+                  background: colors.errorRed,
+                  color: '#fff',
+                }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </Tooltip>
+
+        {/* Refresh Button */}
+        <Tooltip content="Reload page and clear cache" position="bottom">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-3 py-3 sm:py-2 rounded-lg transition-colors text-sm border touch-manipulation"
+            style={{
+              border: `1px solid ${colors.border}`,
+              color: colors.secondaryText,
+              background: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = colors.hoverBackground;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+            aria-label="Refresh page"
+          >
+            <RefreshCw size={14} className="inline sm:mr-1" />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </Tooltip>
       </div>
-
-      {/* Filters Toggle */}
-      <button
-        onClick={() => setShowFilters(!showFilters)}
-        className="px-3 py-2 rounded-lg border transition-colors text-sm"
-        style={{
-          background: showFilters ? colors.badgeInfoBg : 'transparent',
-          border: `1px solid ${showFilters ? colors.badgeInfoBorder : colors.border}`,
-          color: showFilters ? colors.badgeInfoText : colors.secondaryText,
-        }}
-        onMouseEnter={(e) => {
-          if (!showFilters) {
-            e.currentTarget.style.background = colors.hoverBackground;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!showFilters) {
-            e.currentTarget.style.background = 'transparent';
-          }
-        }}
-        aria-label="Toggle filters"
-      >
-        <Filter size={16} className="inline mr-1" />
-        Filters
-      </button>
-
-      {/* Help Guide */}
-      <TemplateGuide colors={colors} />
-
-      {/* Refresh Button */}
-      <button
-        onClick={() => window.location.reload()}
-        className="px-3 py-2 rounded-lg transition-colors text-sm border"
-        style={{
-          border: `1px solid ${colors.border}`,
-          color: colors.secondaryText,
-          background: 'transparent',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = colors.hoverBackground;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
-        aria-label="Refresh"
-        title="Refresh"
-      >
-        <RefreshCw size={14} className="inline mr-1" />
-        Refresh
-      </button>
     </div>
   );
 }

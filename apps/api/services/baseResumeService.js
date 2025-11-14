@@ -49,7 +49,12 @@ async function invalidateBaseResumeArtifacts(userId, baseResumeId) {
 }
 
 async function getBaseResume({ userId, baseResumeId }) {
-  return prisma.baseResume.findFirst({
+  const { getCurrentResumeData } = require('./workingDraftService');
+  
+  logger.info('📤 [GET_RESUME] Fetching resume...', { userId, baseResumeId });
+  
+  // Get the base resume
+  const baseResume = await prisma.baseResume.findFirst({
     where: { id: baseResumeId, userId },
     select: {
       id: true,
@@ -67,6 +72,42 @@ async function getBaseResume({ userId, baseResumeId }) {
       // Exclude embedding & embeddingUpdatedAt to avoid vector type issues
     }
   });
+  
+  if (!baseResume) {
+    logger.warn('📤 [GET_RESUME] Base resume not found', { baseResumeId });
+    return null;
+  }
+  
+  // Check if there's a working draft - if so, use draft data instead of base data
+  const currentData = await getCurrentResumeData(baseResumeId);
+  
+  logger.info('📤 [GET_RESUME] Returning resume data', {
+    baseResumeId,
+    isDraft: currentData.isDraft,
+    dataKeys: Object.keys(currentData.data || {}),
+    hasSummary: !!currentData.data?.summary,
+    summaryLength: currentData.data?.summary?.length || 0,
+    contactPreview: currentData.data?.contact ? {
+      name: currentData.data.contact.name,
+      email: currentData.data.contact.email,
+      hasPhone: !!currentData.data.contact.phone,
+      hasLinks: currentData.data.contact.links?.length > 0
+    } : null,
+    summaryPreview: currentData.data?.summary?.substring(0, 150) + '...',
+    experienceCount: currentData.data?.experience?.length || 0,
+    educationCount: currentData.data?.education?.length || 0,
+    skillsCount: currentData.data?.skills ? 
+      (currentData.data.skills.technical?.length || 0) + 
+      (currentData.data.skills.tools?.length || 0) + 
+      (currentData.data.skills.soft?.length || 0) : 0
+  });
+  
+  return {
+    ...baseResume,
+    data: currentData.data, // Use draft data if it exists, otherwise base data
+    formatting: currentData.formatting || baseResume.formatting,
+    metadata: currentData.metadata || baseResume.metadata
+  };
 }
 
 async function updateBaseResume({
@@ -144,24 +185,10 @@ async function ensureActiveResume(userId) {
     return user.activeBaseResumeId;
   }
 
-  const firstResume = await prisma.baseResume.findFirst({
-    where: { userId },
-    orderBy: { slotNumber: 'asc' },
-    select: {
-      id: true,
-      // Exclude embedding to avoid vector type issues
-    }
-  });
-
-  if (firstResume) {
-    // Use raw SQL for ALL updates to completely avoid vector deserialization issues
-    await prisma.$transaction([
-      prisma.$executeRaw`UPDATE base_resumes SET "isActive" = true WHERE id = ${firstResume.id}`,
-      prisma.$executeRaw`UPDATE users SET "activeBaseResumeId" = ${firstResume.id} WHERE id = ${userId}`
-    ]);
-    return firstResume.id;
-  }
-
+  // DON'T auto-activate first resume - let user manually toggle it
+  // This ensures the frontend shows the parsing animation
+  logger.debug('No active resume found, user needs to manually activate one', { userId });
+  
   return null;
 }
 
@@ -203,7 +230,7 @@ async function countBaseResumes(userId) {
   return prisma.baseResume.count({ where: { userId } });
 }
 
-async function createBaseResume({ userId, name, data, formatting, metadata }) {
+async function createBaseResume({ userId, name, data, formatting, metadata, storageFileId, fileHash }) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { subscriptionTier: true }
@@ -238,7 +265,9 @@ async function createBaseResume({ userId, name, data, formatting, metadata }) {
       name: name || `Resume ${slotNumber}`,
       data: preparedData ?? {},
       formatting: formatting || {},
-      metadata: metadata || {}
+      metadata: metadata || {},
+      storageFileId: storageFileId || null,
+      fileHash: fileHash || null
     },
     select: {
       id: true,
@@ -251,6 +280,8 @@ async function createBaseResume({ userId, name, data, formatting, metadata }) {
       metadata: true,
       lastAIAccessedAt: true,
       parsingConfidence: true,
+      storageFileId: true,
+      fileHash: true,
       createdAt: true,
       updatedAt: true,
       // Exclude embedding to avoid vector type issues
@@ -262,6 +293,61 @@ async function createBaseResume({ userId, name, data, formatting, metadata }) {
   return resume;
 }
 
+function isResumeDataEmpty(data) {
+  if (!data || typeof data !== 'object') {
+    return true;
+  }
+
+  const {
+    summary,
+    contact,
+    skills,
+    experience,
+    education,
+    projects,
+    certifications
+  } = data;
+
+  const hasSummary =
+    typeof summary === 'string' && summary.trim().length > 0;
+
+  const hasContact =
+    contact &&
+    typeof contact === 'object' &&
+    Object.values(contact).some((value) => {
+      if (value === null || value === undefined) {
+        return false;
+      }
+      if (typeof value === 'string') {
+        return value.trim().length > 0;
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return Boolean(value);
+    });
+
+  const hasSkills =
+    skills &&
+    typeof skills === 'object' &&
+    Object.values(skills).some((value) => Array.isArray(value) && value.length > 0);
+
+  const hasExperience = Array.isArray(experience) && experience.length > 0;
+  const hasEducation = Array.isArray(education) && education.length > 0;
+  const hasProjects = Array.isArray(projects) && projects.length > 0;
+  const hasCertifications = Array.isArray(certifications) && certifications.length > 0;
+
+  return !(
+    hasSummary ||
+    hasContact ||
+    hasSkills ||
+    hasExperience ||
+    hasEducation ||
+    hasProjects ||
+    hasCertifications
+  );
+}
+
 async function activateBaseResume({ userId, baseResumeId }) {
   const resume = await prisma.baseResume.findFirst({
     where: { id: baseResumeId, userId },
@@ -270,6 +356,9 @@ async function activateBaseResume({ userId, baseResumeId }) {
       userId: true,
       name: true,
       isActive: true,
+      data: true,
+      fileHash: true,
+      storageFileId: true,
       // Exclude embedding column to avoid Prisma deserialization error with vector type
     }
   });
@@ -278,6 +367,15 @@ async function activateBaseResume({ userId, baseResumeId }) {
     error.code = 'BASE_RESUME_NOT_FOUND';
     throw error;
   }
+
+  // Activation no longer triggers automatic parsing
+  // User must manually click "Parse & Apply" button after activation
+  logger.info('✅ Activating resume (manual parsing required)', {
+    userId,
+    baseResumeId,
+    fileHash: resume.fileHash,
+    storageFileId: resume.storageFileId
+  });
 
   // Use raw SQL for ALL updates to completely avoid vector deserialization issues
   await prisma.$transaction([
@@ -343,5 +441,6 @@ module.exports = {
   countBaseResumes,
   findNextAvailableSlot,
   getBaseResume,
-  updateBaseResume
+  updateBaseResume,
+  normalizeResumePayload
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { TailorResult, CoverLetterDraft, PortfolioDraft, ATSAnalysisResult } from '../types/ai';
 import { useTailoringPreferences } from './useTailoringPreferences';
 
@@ -21,35 +21,85 @@ export const useAI = () => {
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
   const [portfolioDraft, setPortfolioDraft] = useState<PortfolioDraft | null>(null);
   const [isGeneratingPortfolio, setIsGeneratingPortfolio] = useState(false);
+  
+  // Diff highlighting state
+  const [showDiffBanner, setShowDiffBanner] = useState(false);
+  const [showDiffHighlighting, setShowDiffHighlighting] = useState(true);
 
   // Load user preferences
-  const { preferences, updatePreferences, resetPreferences, loading: prefsLoading } = useTailoringPreferences();
+  const { preferences, updatePreferences, resetPreferences: resetPrefsAPI, loading: prefsLoading } = useTailoringPreferences();
+  
+  // Track if preferences have been initialized to prevent auto-save on first load
+  const [prefsInitialized, setPrefsInitialized] = useState(false);
+  const isInitialLoadRef = useRef(true);
 
   // Apply loaded preferences to state (only once when preferences load)
   useEffect(() => {
     if (!prefsLoading && preferences) {
-      setTailorEditMode(preferences.mode);
-      setSelectedTone(preferences.tone);
-      setSelectedLength(preferences.length);
+      setTailorEditMode(preferences.mode || 'partial');
+      setSelectedTone(preferences.tone || 'professional');
+      setSelectedLength(preferences.length || 'thorough');
+      // Mark as initialized after applying loaded preferences
+      // Use setTimeout to ensure state updates complete before marking as initialized
+      setTimeout(() => {
+        setPrefsInitialized(true);
+        isInitialLoadRef.current = false;
+      }, 100);
     }
   }, [prefsLoading, preferences]);
 
   // Auto-save preferences when they change (with debounce)
+  // BUT: Skip auto-save until preferences have been initialized from the server
   useEffect(() => {
-    if (!prefsLoading) {
-      const timer = setTimeout(() => {
-        updatePreferences({
-          mode: tailorEditMode,
-          tone: selectedTone,
-          length: selectedLength,
-        }).catch(() => {
-          // Silent fail - preferences will be restored on next load
-        });
-      }, 500); // 500ms debounce
-
-      return () => clearTimeout(timer);
+    // Skip if still loading, not initialized, or this is the initial load
+    if (prefsLoading || !prefsInitialized || isInitialLoadRef.current) {
+      return;
     }
-  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, updatePreferences]);
+    
+    // Also skip if current values match loaded preferences (no actual change)
+    if (tailorEditMode === preferences.mode && 
+        selectedTone === preferences.tone && 
+        selectedLength === preferences.length) {
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      updatePreferences({
+        mode: tailorEditMode,
+        tone: selectedTone,
+        length: selectedLength,
+      }).catch(() => {
+        // Silent fail - preferences will be restored on next load
+      });
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [tailorEditMode, selectedTone, selectedLength, prefsLoading, prefsInitialized, updatePreferences, preferences]);
+
+  // Wrapper for reset that updates both API and local state
+  const resetPreferences = async () => {
+    try {
+      const defaultPrefs = await resetPrefsAPI();
+      // Immediately update local state to match defaults
+      if (defaultPrefs) {
+        setTailorEditMode(defaultPrefs.mode || 'partial');
+        setSelectedTone(defaultPrefs.tone || 'professional');
+        setSelectedLength(defaultPrefs.length || 'thorough');
+      } else {
+        // Fallback to hardcoded defaults if API returns null
+        setTailorEditMode('partial');
+        setSelectedTone('professional');
+        setSelectedLength('thorough');
+      }
+      return defaultPrefs;
+    } catch (error) {
+      // If API call fails, at least reset to hardcoded defaults
+      setTailorEditMode('partial');
+      setSelectedTone('professional');
+      setSelectedLength('thorough');
+      throw error;
+    }
+  };
 
   return {
     aiMode,
@@ -89,5 +139,10 @@ export const useAI = () => {
     // Preferences management
     resetTailoringPreferences: resetPreferences,
     prefsLoading,
+    // Diff highlighting
+    showDiffBanner,
+    setShowDiffBanner,
+    showDiffHighlighting,
+    setShowDiffHighlighting,
   };
 };

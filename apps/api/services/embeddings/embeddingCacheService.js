@@ -47,7 +47,6 @@ async function getCachedJobEmbedding(jobDescription) {
     // Query cache
     const cached = await prisma.$queryRaw`
       SELECT 
-        id,
         job_hash,
         embedding::text as embedding_text,
         metadata,
@@ -69,10 +68,10 @@ async function getCachedJobEmbedding(jobDescription) {
     // Parse embedding from text format
     const embeddingArray = JSON.parse(entry.embedding_text);
     
-    // Update hit count and last_used_at
+    // Update hit count and updated_at
     await prisma.$executeRawUnsafe(
       `UPDATE job_embeddings 
-       SET hit_count = hit_count + 1, last_used_at = NOW() 
+       SET hit_count = hit_count + 1, updated_at = NOW() 
        WHERE job_hash = $1`,
       jobHash
     );
@@ -141,7 +140,7 @@ async function cacheJobEmbedding(jobDescription, embedding, metadata = {}, ttlHo
         embedding,
         metadata,
         created_at,
-        last_used_at,
+        updated_at,
         expires_at
       ) VALUES (
         $1, $2, $3::vector, $4::jsonb, NOW(), NOW(), NOW() + INTERVAL '${ttlHours} hours'
@@ -149,7 +148,7 @@ async function cacheJobEmbedding(jobDescription, embedding, metadata = {}, ttlHo
       ON CONFLICT (job_hash) DO UPDATE SET
         embedding = EXCLUDED.embedding,
         metadata = EXCLUDED.metadata,
-        last_used_at = NOW(),
+        updated_at = NOW(),
         expires_at = NOW() + INTERVAL '${ttlHours} hours'`,
       jobHash,
       jobDescription.substring(0, 5000), // Limit job description length

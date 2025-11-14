@@ -1,13 +1,149 @@
 /**
- * Custom hook for template filtering and search
+ * useTemplateFilters Hook
+ *
+ * Custom hook for template filtering, search, and sorting with localStorage persistence.
+ *
+ * @module useTemplateFilters
+ *
+ * Features:
+ * - Multi-dimensional filtering (category, difficulty, layout, color, price)
+ * - Real-time search with debouncing (300ms delay)
+ * - Sort by popularity, date, rating, or name
+ * - localStorage persistence with Zod validation for runtime safety
+ * - SSR-safe with window checks
+ * - Computed properties for active filter state
+ * - "Clear all" functionality
+ *
+ * Filter Persistence:
+ * - All filter selections are automatically saved to localStorage
+ * - Filters are restored on component mount
+ * - Validation ensures loaded data matches expected types
+ * - Can be disabled via persistFilters option
+ *
+ * Performance:
+ * - Search is debounced (300ms) to reduce filtering operations
+ * - Memoized filtered results to prevent unnecessary recalculations
+ * - Efficient filter composition with early returns
+ *
+ * @example
+ * ```tsx
+ * function TemplatesPage() {
+ *   const {
+ *     searchQuery,
+ *     setSearchQuery,
+ *     filteredTemplates,
+ *     clearAllFilters,
+ *     hasActiveFilters,
+ *     activeFilterCount
+ *   } = useTemplateFilters({
+ *     initialCategory: 'professional',
+ *     persistFilters: true
+ *   });
+ *
+ *   return (
+ *     <>
+ *       <input
+ *         value={searchQuery}
+ *         onChange={(e) => setSearchQuery(e.target.value)}
+ *       />
+ *       {hasActiveFilters && (
+ *         <button onClick={clearAllFilters}>
+ *           Clear {activeFilterCount} filters
+ *         </button>
+ *       )}
+ *       {filteredTemplates.map(template => (
+ *         <TemplateCard key={template.id} template={template} />
+ *       ))}
+ *     </>
+ *   );
+ * }
+ * ```
+ *
+ * @param {UseTemplateFiltersOptions} options - Configuration options
+ * @param {string} [options.initialCategory='all'] - Initial category filter
+ * @param {TemplateSortBy} [options.initialSortBy='popular'] - Initial sort option
+ * @param {string} [options.initialDifficulty='all'] - Initial difficulty filter
+ * @param {string} [options.initialLayout='all'] - Initial layout filter
+ * @param {string} [options.initialColorScheme='all'] - Initial color scheme filter
+ * @param {boolean} [options.persistFilters=true] - Enable localStorage persistence
+ *
+ * @returns {UseTemplateFiltersReturn} Filter state and controls
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { debounce } from '../../../utils/performance';
 import { resumeTemplates, getTemplatesByCategory, searchTemplates } from '../../../data/templates';
 import { TemplateSortBy, TemplateDifficulty, TemplateLayout, TemplateColorScheme } from '../types';
 import { DEBOUNCE_DELAY } from '../constants';
 import type { ResumeTemplate } from '../../../data/templates';
+import { safeParseWithDefault, templateSortBySchema, templateDifficultySchema, templateLayoutSchema, templateColorSchemeSchema } from '../validation';
+import { z } from 'zod';
+import {
+  trackSearch,
+  trackSearchClear,
+  trackFilterApply,
+  trackClearAllFilters,
+} from '../utils/analytics';
+
+// localStorage keys for filter persistence
+const STORAGE_KEYS = {
+  CATEGORY: 'template_filter_category',
+  SORT_BY: 'template_filter_sortBy',
+  DIFFICULTY: 'template_filter_difficulty',
+  LAYOUT: 'template_filter_layout',
+  COLOR_SCHEME: 'template_filter_colorScheme',
+  PREMIUM_ONLY: 'template_filter_premiumOnly',
+  FREE_ONLY: 'template_filter_freeOnly',
+} as const;
+
+/**
+ * Load filter value from localStorage with fallback and validation
+ */
+function loadFromStorage<T>(key: string, fallback: T, schema?: z.ZodSchema<T>): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored === null) return fallback;
+
+    const parsed = JSON.parse(stored);
+
+    // If schema is provided, validate the parsed value
+    if (schema) {
+      return safeParseWithDefault(schema, parsed, fallback);
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn(`Failed to load ${key} from localStorage:`, error);
+    return fallback;
+  }
+}
+
+/**
+ * Save filter value to localStorage
+ */
+function saveToStorage<T>(key: string, value: T): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn(`Failed to save ${key} to localStorage:`, error);
+  }
+}
+
+/**
+ * Clear all template filters from localStorage
+ */
+function clearFiltersFromStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      localStorage.removeItem(key);
+    });
+  } catch (error) {
+    console.warn('Failed to clear filters from localStorage:', error);
+  }
+}
 
 interface UseTemplateFiltersOptions {
   initialCategory?: string;
@@ -15,6 +151,7 @@ interface UseTemplateFiltersOptions {
   initialDifficulty?: string;
   initialLayout?: string;
   initialColorScheme?: string;
+  persistFilters?: boolean; // Enable/disable filter persistence
 }
 
 interface UseTemplateFiltersReturn {
@@ -28,7 +165,7 @@ interface UseTemplateFiltersReturn {
   selectedColorScheme: string;
   showPremiumOnly: boolean;
   showFreeOnly: boolean;
-  
+
   // Setters
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string) => void;
@@ -38,9 +175,12 @@ interface UseTemplateFiltersReturn {
   setSelectedColorScheme: (colorScheme: string) => void;
   setShowPremiumOnly: (show: boolean) => void;
   setShowFreeOnly: (show: boolean) => void;
-  
+  clearAllFilters: () => void;
+
   // Computed
   filteredTemplates: ResumeTemplate[];
+  hasActiveFilters: boolean;
+  activeFilterCount: number;
 }
 
 export const useTemplateFilters = (
@@ -52,17 +192,90 @@ export const useTemplateFilters = (
     initialDifficulty = 'all',
     initialLayout = 'all',
     initialColorScheme = 'all',
+    persistFilters = true, // Enable persistence by default
   } = options;
 
+  // Initialize state from localStorage or use defaults with validation
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [sortBy, setSortBy] = useState<TemplateSortBy>(initialSortBy);
-  const [selectedDifficulty, setSelectedDifficulty] = useState(initialDifficulty);
-  const [selectedLayout, setSelectedLayout] = useState(initialLayout);
-  const [selectedColorScheme, setSelectedColorScheme] = useState(initialColorScheme);
-  const [showPremiumOnly, setShowPremiumOnly] = useState(false);
-  const [showFreeOnly, setShowFreeOnly] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.CATEGORY, initialCategory, z.string())
+      : initialCategory
+  );
+  const [sortBy, setSortBy] = useState<TemplateSortBy>(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.SORT_BY, initialSortBy, templateSortBySchema)
+      : initialSortBy
+  );
+  const [selectedDifficulty, setSelectedDifficulty] = useState(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.DIFFICULTY, initialDifficulty, z.string())
+      : initialDifficulty
+  );
+  const [selectedLayout, setSelectedLayout] = useState(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.LAYOUT, initialLayout, z.string())
+      : initialLayout
+  );
+  const [selectedColorScheme, setSelectedColorScheme] = useState(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.COLOR_SCHEME, initialColorScheme, z.string())
+      : initialColorScheme
+  );
+  const [showPremiumOnly, setShowPremiumOnly] = useState(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.PREMIUM_ONLY, false, z.boolean())
+      : false
+  );
+  const [showFreeOnly, setShowFreeOnly] = useState(() =>
+    persistFilters
+      ? loadFromStorage(STORAGE_KEYS.FREE_ONLY, false, z.boolean())
+      : false
+  );
+
+  // Save filters to localStorage when they change
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.CATEGORY, selectedCategory);
+    }
+  }, [selectedCategory, persistFilters]);
+
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.SORT_BY, sortBy);
+    }
+  }, [sortBy, persistFilters]);
+
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.DIFFICULTY, selectedDifficulty);
+    }
+  }, [selectedDifficulty, persistFilters]);
+
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.LAYOUT, selectedLayout);
+    }
+  }, [selectedLayout, persistFilters]);
+
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.COLOR_SCHEME, selectedColorScheme);
+    }
+  }, [selectedColorScheme, persistFilters]);
+
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.PREMIUM_ONLY, showPremiumOnly);
+    }
+  }, [showPremiumOnly, persistFilters]);
+
+  useEffect(() => {
+    if (persistFilters) {
+      saveToStorage(STORAGE_KEYS.FREE_ONLY, showFreeOnly);
+    }
+  }, [showFreeOnly, persistFilters]);
 
   // Debounce search input
   const debouncedSetSearch = useCallback(
@@ -81,50 +294,93 @@ export const useTemplateFilters = (
     };
   }, [searchQuery, debouncedSetSearch]);
 
-  /**
-   * Memoized filtered and sorted templates list
-   *
-   * This is the core filtering logic that processes all user-selected filters
-   * and returns the final list of templates to display. Uses useMemo for
-   * performance optimization - only re-computes when filter values change.
-   *
-   * **Filter Application Order:**
-   * 1. Search (if query exists) - Uses searchTemplates() for fuzzy matching
-   * 2. Category - Filters by template category (e.g., 'ats', 'creative')
-   * 3. Difficulty - Filters by difficulty level ('beginner', 'intermediate', 'advanced')
-   * 4. Layout - Filters by layout type ('single-column', 'two-column', 'hybrid')
-   * 5. Color Scheme - Filters by color scheme ('monochrome', 'blue', 'green', etc.)
-   * 6. Premium/Free - Filters by isPremium status (mutually exclusive)
-   * 7. Sort - Final sort by selected criteria ('popular', 'newest', 'rating', 'name')
-   *
-   * **Progressive Filtering:**
-   * Each filter narrows down the results from the previous filter. This approach
-   * is more efficient than re-filtering all templates for each criteria.
-   *
-   * **Sorting Algorithms:**
-   * - 'popular': Sort by downloads (descending) - shows most downloaded first
-   * - 'newest': Sort by createdAt date (descending) - shows latest first
-   * - 'rating': Sort by rating (descending) - shows highest rated first
-   * - 'name': Sort alphabetically (ascending) - uses localeCompare for proper sorting
-   *
-   * **Performance Notes:**
-   * - Wrapped in useMemo to prevent unnecessary re-computation
-   * - Only re-runs when filter dependencies change (tracked in dependency array)
-   * - Search is debounced (DEBOUNCE_DELAY) to reduce filtering during typing
-   * - In-place sort on mutable copy (doesn't create new arrays unnecessarily)
-   *
-   * @returns Filtered and sorted array of ResumeTemplate objects
-   *
-   * @example
-   * ```typescript
-   * // User selects: Category='ats', Difficulty='beginner', Sort='rating'
-   * // 1. Start with all 50 templates
-   * // 2. Filter category='ats' → 12 templates
-   * // 3. Filter difficulty='beginner' → 5 templates
-   * // 4. Sort by rating → [4.9, 4.8, 4.7, 4.5, 4.3]
-   * // Returns: 5 templates sorted by rating
-   * ```
-   */
+  // Track search analytics when debounced query changes
+  const previousSearchQuery = useRef('');
+  useEffect(() => {
+    if (debouncedSearchQuery && debouncedSearchQuery !== previousSearchQuery.current) {
+      // Track search with result count
+      const resultCount = searchTemplates(debouncedSearchQuery).length;
+      trackSearch(debouncedSearchQuery, resultCount);
+    } else if (!debouncedSearchQuery && previousSearchQuery.current) {
+      // Track search clear
+      trackSearchClear();
+    }
+    previousSearchQuery.current = debouncedSearchQuery;
+  }, [debouncedSearchQuery]);
+
+  // Track filter changes
+  const previousCategory = useRef(selectedCategory);
+  useEffect(() => {
+    if (selectedCategory !== previousCategory.current && selectedCategory !== 'all') {
+      trackFilterApply('category', selectedCategory);
+    }
+    previousCategory.current = selectedCategory;
+  }, [selectedCategory]);
+
+  const previousDifficulty = useRef(selectedDifficulty);
+  useEffect(() => {
+    if (selectedDifficulty !== previousDifficulty.current && selectedDifficulty !== 'all') {
+      trackFilterApply('difficulty', selectedDifficulty);
+    }
+    previousDifficulty.current = selectedDifficulty;
+  }, [selectedDifficulty]);
+
+  const previousLayout = useRef(selectedLayout);
+  useEffect(() => {
+    if (selectedLayout !== previousLayout.current && selectedLayout !== 'all') {
+      trackFilterApply('layout', selectedLayout);
+    }
+    previousLayout.current = selectedLayout;
+  }, [selectedLayout]);
+
+  const previousColorScheme = useRef(selectedColorScheme);
+  useEffect(() => {
+    if (selectedColorScheme !== previousColorScheme.current && selectedColorScheme !== 'all') {
+      trackFilterApply('colorScheme', selectedColorScheme);
+    }
+    previousColorScheme.current = selectedColorScheme;
+  }, [selectedColorScheme]);
+
+  const previousPremiumOnly = useRef(showPremiumOnly);
+  useEffect(() => {
+    if (showPremiumOnly !== previousPremiumOnly.current && showPremiumOnly) {
+      trackFilterApply('price', 'premium');
+    }
+    previousPremiumOnly.current = showPremiumOnly;
+  }, [showPremiumOnly]);
+
+  const previousFreeOnly = useRef(showFreeOnly);
+  useEffect(() => {
+    if (showFreeOnly !== previousFreeOnly.current && showFreeOnly) {
+      trackFilterApply('price', 'free');
+    }
+    previousFreeOnly.current = showFreeOnly;
+  }, [showFreeOnly]);
+
+  // Clear all filters and localStorage
+  const clearAllFilters = useCallback(() => {
+    // Track analytics before clearing
+    const currentActiveCount = activeFilterCount;
+
+    setSearchQuery('');
+    setSelectedCategory('all');
+    setSelectedDifficulty('all');
+    setSelectedLayout('all');
+    setSelectedColorScheme('all');
+    setShowPremiumOnly(false);
+    setShowFreeOnly(false);
+    setSortBy('popular');
+
+    if (persistFilters) {
+      clearFiltersFromStorage();
+    }
+
+    // Track clear all filters event
+    if (currentActiveCount > 0) {
+      trackClearAllFilters(currentActiveCount);
+    }
+  }, [persistFilters, activeFilterCount]);
+
   const filteredTemplates = useMemo(() => {
     let templates = resumeTemplates;
 
@@ -189,6 +445,48 @@ export const useTemplateFilters = (
     sortBy,
   ]);
 
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      selectedCategory !== 'all' ||
+      selectedDifficulty !== 'all' ||
+      selectedLayout !== 'all' ||
+      selectedColorScheme !== 'all' ||
+      showPremiumOnly ||
+      showFreeOnly ||
+      debouncedSearchQuery.length > 0
+    );
+  }, [
+    selectedCategory,
+    selectedDifficulty,
+    selectedLayout,
+    selectedColorScheme,
+    showPremiumOnly,
+    showFreeOnly,
+    debouncedSearchQuery,
+  ]);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== 'all') count++;
+    if (selectedDifficulty !== 'all') count++;
+    if (selectedLayout !== 'all') count++;
+    if (selectedColorScheme !== 'all') count++;
+    if (showPremiumOnly) count++;
+    if (showFreeOnly) count++;
+    if (debouncedSearchQuery.length > 0) count++;
+    return count;
+  }, [
+    selectedCategory,
+    selectedDifficulty,
+    selectedLayout,
+    selectedColorScheme,
+    showPremiumOnly,
+    showFreeOnly,
+    debouncedSearchQuery,
+  ]);
+
   return {
     // State
     searchQuery,
@@ -200,7 +498,7 @@ export const useTemplateFilters = (
     selectedColorScheme,
     showPremiumOnly,
     showFreeOnly,
-    
+
     // Setters
     setSearchQuery,
     setSelectedCategory,
@@ -210,9 +508,12 @@ export const useTemplateFilters = (
     setSelectedColorScheme,
     setShowPremiumOnly,
     setShowFreeOnly,
-    
+    clearAllFilters,
+
     // Computed
     filteredTemplates,
+    hasActiveFilters,
+    activeFilterCount,
   };
 };
 

@@ -3,9 +3,9 @@ require('dotenv').config();
 
 const fastify = require('fastify')({
   bodyLimit: 10485760, // 10MB body limit for JSON requests
-  requestTimeout: 120000, // 120 second request timeout
-  keepAliveTimeout: 65000, // 65 seconds for keep-alive  
-  connectionTimeout: 10000, // 10 second connection timeout
+  requestTimeout: 300000, // 300 second (5 minute) request timeout for AI operations
+  keepAliveTimeout: 310000, // 310 seconds for keep-alive (must be > requestTimeout)
+  connectionTimeout: 0, // Disable connection timeout (handled by requestTimeout)
   logger: {
     level: process.env.FASTIFY_LOG_LEVEL || 'warn', // Changed from 'info' to 'warn' to reduce verbosity
     stream: {
@@ -291,6 +291,7 @@ fastify.register(require('./routes/userPreferences.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
 fastify.register(require('./routes/resume.routes'));
 fastify.register(require('./routes/baseResume.routes'));
+fastify.register(require('./routes/workingDraft.routes'));
 fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));

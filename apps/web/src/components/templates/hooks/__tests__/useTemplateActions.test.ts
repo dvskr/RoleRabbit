@@ -1,11 +1,46 @@
 /**
- * useTemplateActions Hook Tests
- * Tests the template actions functionality (preview, use, download, share, favorites)
+ * Tests for useTemplateActions hook
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTemplateActions } from '../useTemplateActions';
-import { resumeTemplates } from '../../../../data/templates';
+import * as analytics from '../../utils/analytics';
+
+// Mock analytics module
+jest.mock('../../utils/analytics', () => ({
+  trackTemplatePreview: jest.fn(),
+  trackTemplateAdd: jest.fn(),
+  trackTemplateRemove: jest.fn(),
+  trackTemplateFavorite: jest.fn(),
+  trackTemplateDownload: jest.fn(),
+  trackError: jest.fn(),
+}));
+
+// Mock useTemplateHistory hook
+jest.mock('../useTemplateHistory', () => ({
+  useTemplateHistory: () => ({
+    addToHistory: jest.fn(),
+    recentlyUsed: [],
+    getTemplateUsageCount: jest.fn(),
+    getLastUsed: jest.fn(),
+    clearHistory: jest.fn(),
+  }),
+}));
+
+// Mock template helpers
+jest.mock('../../utils/templateHelpers', () => ({
+  getTemplateDownloadHTML: jest.fn(() => '<html>Mock HTML</html>'),
+  downloadTemplateAsHTML: jest.fn(),
+  shareTemplate: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock logger
+jest.mock('../../../../utils/logger', () => ({
+  logger: {
+    debug: jest.fn(),
+    error: jest.fn(),
+  },
+}));
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -28,281 +63,414 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
-// Mock logger
-jest.mock('../../../../utils/logger', () => ({
-  logger: {
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
-// Mock template helpers
-jest.mock('../../utils/templateHelpers', () => ({
-  getTemplateDownloadHTML: jest.fn(() => '<html>Mock HTML</html>'),
-  downloadTemplateAsHTML: jest.fn(),
-  shareTemplate: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Mock template validator
-jest.mock('../../../../utils/templateValidator', () => ({
-  isValidResumeTemplate: jest.fn(() => true),
-}));
-
-// Mock accessibility utils
-jest.mock('../../../../utils/accessibility', () => ({
-  getSuccessAnimationDuration: jest.fn(() => 1000),
-}));
-
-describe('useTemplateActions Hook', () => {
+describe('useTemplateActions', () => {
   beforeEach(() => {
-    localStorageMock.clear();
+    localStorage.clear();
     jest.clearAllMocks();
   });
 
-  test('should initialize with default values', () => {
-    const { result } = renderHook(() => useTemplateActions());
+  describe('Initialization', () => {
+    it('should initialize with default state', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-    expect(result.current.selectedTemplate).toBe(null);
-    expect(result.current.showPreviewModal).toBe(false);
-    expect(result.current.showUploadModal).toBe(false);
-    expect(result.current.addedTemplateId).toBe(null);
-    expect(result.current.favorites).toEqual([]);
-    expect(result.current.uploadedFile).toBe(null);
-    expect(result.current.error).toBe(null);
+      expect(result.current.selectedTemplate).toBeNull();
+      expect(result.current.showPreviewModal).toBe(false);
+      expect(result.current.showUploadModal).toBe(false);
+      expect(result.current.addedTemplateId).toBeNull();
+      expect(result.current.favorites).toEqual([]);
+      expect(result.current.uploadedFile).toBeNull();
+      expect(result.current.uploadSource).toBe('cloud');
+      expect(result.current.error).toBeNull();
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    it('should load favorites from localStorage', () => {
+      const favorites = ['template-1', 'template-2'];
+      localStorage.setItem('template_favorites', JSON.stringify(favorites));
+
+      const { result } = renderHook(() => useTemplateActions());
+
+      expect(result.current.favorites).toEqual(favorites);
+    });
+
+    it('should filter out invalid favorites from localStorage', () => {
+      const favorites = ['modern-professional', 'invalid-id', 'creative-designer'];
+      localStorage.setItem('template_favorites', JSON.stringify(favorites));
+
+      const { result } = renderHook(() => useTemplateActions());
+
+      // Should only include valid template IDs
+      expect(result.current.favorites).toContain('modern-professional');
+      expect(result.current.favorites).not.toContain('invalid-id');
+    });
+
+    it('should handle invalid localStorage data gracefully', () => {
+      localStorage.setItem('template_favorites', 'invalid json {');
+
+      const { result } = renderHook(() => useTemplateActions());
+
+      expect(result.current.favorites).toEqual([]);
+    });
   });
 
-  test('should load favorites from localStorage on init', () => {
-    const savedFavorites = ['template-1', 'template-2'];
-    localStorageMock.setItem('template_favorites', JSON.stringify(savedFavorites));
+  describe('Preview template', () => {
+    it('should open preview modal for a template', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-    const { result } = renderHook(() => useTemplateActions());
+      act(() => {
+        result.current.handlePreviewTemplate('modern-professional');
+      });
 
-    expect(result.current.favorites).toEqual(savedFavorites);
+      expect(result.current.selectedTemplate).toBe('modern-professional');
+      expect(result.current.showPreviewModal).toBe(true);
+    });
+
+    it('should track preview analytics', () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.handlePreviewTemplate('modern-professional');
+      });
+
+      expect(analytics.trackTemplatePreview).toHaveBeenCalled();
+    });
+
+    it('should set currentSelectedTemplate correctly', () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.handlePreviewTemplate('modern-professional');
+      });
+
+      expect(result.current.currentSelectedTemplate).not.toBeNull();
+      expect(result.current.currentSelectedTemplate?.id).toBe('modern-professional');
+    });
   });
 
-  test('should handle preview template', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
+  describe('Add template to editor', () => {
+    it('should call onAddToEditor callback', () => {
+      const onAddToEditor = jest.fn();
+      const { result } = renderHook(() => useTemplateActions({ onAddToEditor }));
 
-    act(() => {
-      result.current.handlePreviewTemplate(templateId);
+      act(() => {
+        result.current.handleUseTemplate('modern-professional');
+      });
+
+      expect(onAddToEditor).toHaveBeenCalledWith('modern-professional');
     });
 
-    expect(result.current.selectedTemplate).toBe(templateId);
-    expect(result.current.showPreviewModal).toBe(true);
-    expect(result.current.error).toBe(null);
+    it('should track template add analytics', () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.handleUseTemplate('modern-professional');
+      });
+
+      expect(analytics.trackTemplateAdd).toHaveBeenCalled();
+    });
+
+    it('should set addedTemplateId for animation', async () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.handleUseTemplate('modern-professional');
+      });
+
+      expect(result.current.addedTemplateId).toBe('modern-professional');
+
+      // Should clear after animation duration
+      await waitFor(() => {
+        expect(result.current.addedTemplateId).toBeNull();
+      }, { timeout: 3000 });
+    });
+
+    it('should handle template not found error', () => {
+      const onError = jest.fn();
+      const { result } = renderHook(() => useTemplateActions({ onError }));
+
+      act(() => {
+        result.current.handleUseTemplate('non-existent-template');
+      });
+
+      expect(result.current.error).toContain('not found');
+      expect(onError).toHaveBeenCalled();
+      expect(analytics.trackError).toHaveBeenCalled();
+    });
+
+    it('should clear previous errors on successful add', () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      // Trigger an error first
+      act(() => {
+        result.current.handleUseTemplate('invalid-template');
+      });
+
+      expect(result.current.error).not.toBeNull();
+
+      // Add a valid template
+      act(() => {
+        result.current.handleUseTemplate('modern-professional');
+      });
+
+      expect(result.current.error).toBeNull();
+    });
   });
 
-  test('should handle preview with invalid template ID', () => {
-    const { result } = renderHook(() => useTemplateActions());
+  describe('Download template', () => {
+    it('should download selected template', () => {
+      const { downloadTemplateAsHTML } = require('../../utils/templateHelpers');
+      const { result } = renderHook(() => useTemplateActions());
 
-    act(() => {
-      result.current.handlePreviewTemplate('invalid-id');
+      // Select a template first
+      act(() => {
+        result.current.setSelectedTemplate('modern-professional');
+      });
+
+      // Download it
+      act(() => {
+        result.current.handleDownloadTemplate();
+      });
+
+      expect(downloadTemplateAsHTML).toHaveBeenCalled();
+      expect(analytics.trackTemplateDownload).toHaveBeenCalled();
     });
 
-    expect(result.current.error).toBeTruthy();
-    expect(result.current.showPreviewModal).toBe(false);
+    it('should handle no template selected error', () => {
+      const onError = jest.fn();
+      const { result } = renderHook(() => useTemplateActions({ onError }));
+
+      act(() => {
+        result.current.handleDownloadTemplate();
+      });
+
+      expect(result.current.error).toContain('No template selected');
+      expect(onError).toHaveBeenCalled();
+      expect(analytics.trackError).toHaveBeenCalled();
+    });
+
+    it('should set loading state during download', () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.setSelectedTemplate('modern-professional');
+      });
+
+      act(() => {
+        result.current.handleDownloadTemplate();
+      });
+
+      // Loading should be false after download completes
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 
-  test('should handle use template', () => {
-    const mockOnAddToEditor = jest.fn();
-    const { result } = renderHook(() =>
-      useTemplateActions({ onAddToEditor: mockOnAddToEditor })
-    );
-    const templateId = resumeTemplates[0].id;
+  describe('Share template', () => {
+    it('should share selected template', async () => {
+      const { shareTemplate } = require('../../utils/templateHelpers');
+      const { result } = renderHook(() => useTemplateActions());
 
-    act(() => {
-      result.current.handleUseTemplate(templateId);
+      act(() => {
+        result.current.setSelectedTemplate('modern-professional');
+      });
+
+      await act(async () => {
+        await result.current.handleShareTemplate();
+      });
+
+      expect(shareTemplate).toHaveBeenCalled();
     });
 
-    expect(mockOnAddToEditor).toHaveBeenCalledWith(templateId);
-    expect(result.current.addedTemplateId).toBe(templateId);
+    it('should handle share error', async () => {
+      const { shareTemplate } = require('../../utils/templateHelpers');
+      shareTemplate.mockRejectedValueOnce(new Error('Share failed'));
+
+      const onError = jest.fn();
+      const { result } = renderHook(() => useTemplateActions({ onError }));
+
+      act(() => {
+        result.current.setSelectedTemplate('modern-professional');
+      });
+
+      await act(async () => {
+        await result.current.handleShareTemplate();
+      });
+
+      expect(result.current.error).toContain('Failed to share template');
+      expect(onError).toHaveBeenCalled();
+      expect(analytics.trackError).toHaveBeenCalled();
+    });
+
+    it('should handle no template selected error for share', async () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      await act(async () => {
+        await result.current.handleShareTemplate();
+      });
+
+      expect(result.current.error).toContain('No template selected');
+    });
   });
 
-  test('should clear added template animation after duration', async () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
+  describe('Favorites', () => {
+    it('should add template to favorites', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-    act(() => {
-      result.current.handleUseTemplate(templateId);
+      act(() => {
+        result.current.toggleFavorite('modern-professional');
+      });
+
+      expect(result.current.favorites).toContain('modern-professional');
+      expect(analytics.trackTemplateFavorite).toHaveBeenCalledWith(
+        'modern-professional',
+        expect.any(String),
+        true
+      );
     });
 
-    expect(result.current.addedTemplateId).toBe(templateId);
+    it('should remove template from favorites', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-    await waitFor(
-      () => {
-        expect(result.current.addedTemplateId).toBe(null);
-      },
-      { timeout: 1500 }
-    );
+      // Add to favorites
+      act(() => {
+        result.current.toggleFavorite('modern-professional');
+      });
+
+      expect(result.current.favorites).toContain('modern-professional');
+
+      // Remove from favorites
+      act(() => {
+        result.current.toggleFavorite('modern-professional');
+      });
+
+      expect(result.current.favorites).not.toContain('modern-professional');
+      expect(analytics.trackTemplateFavorite).toHaveBeenCalledWith(
+        'modern-professional',
+        expect.any(String),
+        false
+      );
+    });
+
+    it('should persist favorites to localStorage', async () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.toggleFavorite('modern-professional');
+      });
+
+      await waitFor(() => {
+        const stored = localStorage.getItem('template_favorites');
+        expect(JSON.parse(stored!)).toContain('modern-professional');
+      });
+    });
+
+    it('should handle invalid template ID for favorites', () => {
+      const onError = jest.fn();
+      const { result } = renderHook(() => useTemplateActions({ onError }));
+
+      act(() => {
+        result.current.toggleFavorite('invalid-template-id');
+      });
+
+      expect(result.current.error).toContain('not found');
+      expect(onError).toHaveBeenCalled();
+      expect(analytics.trackError).toHaveBeenCalled();
+    });
   });
 
-  test('should toggle favorite on', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
+  describe('Modal state management', () => {
+    it('should toggle preview modal', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-    act(() => {
-      result.current.toggleFavorite(templateId);
+      act(() => {
+        result.current.setShowPreviewModal(true);
+      });
+
+      expect(result.current.showPreviewModal).toBe(true);
+
+      act(() => {
+        result.current.setShowPreviewModal(false);
+      });
+
+      expect(result.current.showPreviewModal).toBe(false);
     });
 
-    expect(result.current.favorites).toContain(templateId);
+    it('should toggle upload modal', () => {
+      const { result } = renderHook(() => useTemplateActions());
+
+      act(() => {
+        result.current.setShowUploadModal(true);
+      });
+
+      expect(result.current.showUploadModal).toBe(true);
+
+      act(() => {
+        result.current.setShowUploadModal(false);
+      });
+
+      expect(result.current.showUploadModal).toBe(false);
+    });
   });
 
-  test('should toggle favorite off', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
+  describe('Error handling', () => {
+    it('should clear error state', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-    act(() => {
-      result.current.toggleFavorite(templateId);
-    });
-    expect(result.current.favorites).toContain(templateId);
+      // Trigger an error
+      act(() => {
+        result.current.handleUseTemplate('invalid-template');
+      });
 
-    act(() => {
-      result.current.toggleFavorite(templateId);
+      expect(result.current.error).not.toBeNull();
+
+      // Clear error
+      act(() => {
+        result.current.clearError();
+      });
+
+      expect(result.current.error).toBeNull();
     });
-    expect(result.current.favorites).not.toContain(templateId);
+
+    it('should call onError callback when errors occur', () => {
+      const onError = jest.fn();
+      const { result } = renderHook(() => useTemplateActions({ onError }));
+
+      act(() => {
+        result.current.handleUseTemplate('invalid-template');
+      });
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.any(Error),
+        'useTemplate'
+      );
+    });
   });
 
-  test('should persist favorites to localStorage', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
+  describe('Upload state', () => {
+    it('should set uploaded file', () => {
+      const { result } = renderHook(() => useTemplateActions());
+      const mockFile = new File(['content'], 'template.pdf', { type: 'application/pdf' });
 
-    act(() => {
-      result.current.toggleFavorite(templateId);
+      act(() => {
+        result.current.setUploadedFile(mockFile);
+      });
+
+      expect(result.current.uploadedFile).toBe(mockFile);
     });
 
-    const stored = localStorageMock.getItem('template_favorites');
-    expect(stored).toBeTruthy();
-    expect(JSON.parse(stored!)).toContain(templateId);
-  });
+    it('should set upload source', () => {
+      const { result } = renderHook(() => useTemplateActions());
 
-  test('should set selected template', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
+      act(() => {
+        result.current.setUploadSource('system');
+      });
 
-    act(() => {
-      result.current.setSelectedTemplate(templateId);
+      expect(result.current.uploadSource).toBe('system');
+
+      act(() => {
+        result.current.setUploadSource('cloud');
+      });
+
+      expect(result.current.uploadSource).toBe('cloud');
     });
-
-    expect(result.current.selectedTemplate).toBe(templateId);
-  });
-
-  test('should set show preview modal', () => {
-    const { result } = renderHook(() => useTemplateActions());
-
-    act(() => {
-      result.current.setShowPreviewModal(true);
-    });
-
-    expect(result.current.showPreviewModal).toBe(true);
-
-    act(() => {
-      result.current.setShowPreviewModal(false);
-    });
-
-    expect(result.current.showPreviewModal).toBe(false);
-  });
-
-  test('should set show upload modal', () => {
-    const { result } = renderHook(() => useTemplateActions());
-
-    act(() => {
-      result.current.setShowUploadModal(true);
-    });
-
-    expect(result.current.showUploadModal).toBe(true);
-  });
-
-  test('should set uploaded file', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const mockFile = new File(['content'], 'resume.pdf', { type: 'application/pdf' });
-
-    act(() => {
-      result.current.setUploadedFile(mockFile);
-    });
-
-    expect(result.current.uploadedFile).toBe(mockFile);
-  });
-
-  test('should clear error', () => {
-    const { result } = renderHook(() => useTemplateActions());
-
-    // First, trigger an error
-    act(() => {
-      result.current.handlePreviewTemplate('invalid-id');
-    });
-    expect(result.current.error).toBeTruthy();
-
-    // Then clear it
-    act(() => {
-      result.current.clearError();
-    });
-    expect(result.current.error).toBe(null);
-  });
-
-  test('should get current selected template', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
-
-    act(() => {
-      result.current.setSelectedTemplate(templateId);
-    });
-
-    expect(result.current.currentSelectedTemplate).toBeTruthy();
-    expect(result.current.currentSelectedTemplate?.id).toBe(templateId);
-  });
-
-  test('should return null for invalid selected template', () => {
-    const { result } = renderHook(() => useTemplateActions());
-
-    act(() => {
-      result.current.setSelectedTemplate('invalid-id');
-    });
-
-    expect(result.current.currentSelectedTemplate).toBe(null);
-  });
-
-  test('should handle download template', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
-
-    act(() => {
-      result.current.setSelectedTemplate(templateId);
-    });
-
-    act(() => {
-      result.current.handleDownloadTemplate();
-    });
-
-    expect(result.current.error).toBe(null);
-  });
-
-  test('should handle share template', async () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
-
-    act(() => {
-      result.current.setSelectedTemplate(templateId);
-    });
-
-    await act(async () => {
-      await result.current.handleShareTemplate();
-    });
-
-    expect(result.current.error).toBe(null);
-  });
-
-  test('should handle select template callback', () => {
-    const { result } = renderHook(() => useTemplateActions());
-    const templateId = resumeTemplates[0].id;
-
-    act(() => {
-      result.current.handleSelectTemplate(templateId);
-    });
-
-    // Should not throw error
-    expect(result.current.error).toBe(null);
   });
 });

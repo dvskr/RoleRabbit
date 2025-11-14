@@ -54,9 +54,28 @@ export default function ResumeEditor({
   onNavigateToTemplates,
   isSidebarCollapsed = false,
   onToggleSidebar,
+  // Diff highlighting
+  showDiffBanner = false,
+  diffChanges = [],
+  showDiffHighlighting = false,
+  onToggleDiffHighlighting,
+  onCloseDiffBanner,
+  onApplyDiffChanges,
+  atsScoreImprovement,
 }: ResumeEditorProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+
+  // Debug: Log when resumeData changes
+  React.useEffect(() => {
+    console.log('🎨 [EDITOR] Resume data changed:', {
+      name: resumeData.name,
+      summaryLength: resumeData.summary?.length,
+      summaryPreview: resumeData.summary?.substring(0, 100),
+      experienceCount: resumeData.experience?.length,
+      timestamp: new Date().toISOString()
+    });
+  }, [resumeData]);
 
   // Get template classes for styling
   const templateClasses = useMemo(() => {
@@ -234,7 +253,7 @@ export default function ResumeEditor({
 
       {/* Main Resume Editing Area */}
       <div
-        className="flex-1 resume-editor-content"
+        className="flex-1 resume-editor-content flex flex-col"
         style={{
           height: '100%',
           maxHeight: '100%',
@@ -243,13 +262,31 @@ export default function ResumeEditor({
           flex: '1 1 0%',
           minWidth: 0,
           minHeight: 0,
-          overflowY: 'auto',
-          overflowX: 'hidden',
           position: 'relative',
           overscrollBehaviorY: 'contain',
-          fontFamily: getFormattingStyles.fontFamily,
-          fontSize: getFormattingStyles.fontSize,
-          lineHeight: getFormattingStyles.lineHeight,
+        }}
+      >
+        {/* Diff Highlight Banner */}
+        {(() => {
+          console.log('🎨 [EDITOR] Diff banner check:', {
+            showDiffBanner,
+            hasDiffChanges: !!diffChanges,
+            diffChangesLength: diffChanges?.length,
+            diffChanges: diffChanges
+          });
+          return null;
+        })()}
+        {/* Diff Banner - REMOVED */}
+        
+        {/* Resume Content */}
+        <div
+          style={{
+            flex: '1 1 0%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            fontFamily: getFormattingStyles.fontFamily,
+            fontSize: getFormattingStyles.fontSize,
+            lineHeight: getFormattingStyles.lineHeight,
           paddingTop: '1.5rem',
           paddingBottom: getFormattingStyles.padding,
           paddingLeft: '1.5rem',
@@ -324,6 +361,7 @@ export default function ResumeEditor({
 
         <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: getFormattingStyles.sectionSpacing }}>
           {renderedSections}
+        </div>
         </div>
       </div>
     </div>

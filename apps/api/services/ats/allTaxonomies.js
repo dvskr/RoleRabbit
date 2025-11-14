@@ -1,38 +1,12 @@
 // MASTER TAXONOMY COMBINER
-// Merges all taxonomy files into one comprehensive 1600+ technology database
+// Uses comprehensive taxonomy with 1600+ technologies
 
-// Import all taxonomy modules
+// Import comprehensive taxonomy (contains all technologies)
 const { COMPREHENSIVE_TECH_TAXONOMY } = require('./comprehensiveTaxonomy');
-const { BACKEND_TAXONOMY } = require('./taxonomy-backend');
-const { DATABASE_CLOUD_DEVOPS_TAXONOMY } = require('./taxonomy-databases-cloud-devops');
-const { CLOUD_DEVOPS_COMPLETE } = require('./taxonomy-cloud-devops-complete');
-const { DATA_MOBILE_SECURITY_TAXONOMY } = require('./taxonomy-data-mobile-security');
-const { TESTING_DESIGN_BLOCKCHAIN_INDUSTRY_TAXONOMY } = require('./taxonomy-testing-design-blockchain-industry');
-const { MEGA_EXPANSION_TAXONOMY } = require('./taxonomy-mega-expansion');
-const { LANGUAGES_FRAMEWORKS_EXPANSION } = require('./taxonomy-languages-frameworks-expansion');
-const { FINAL_1000_PLUS_TAXONOMY } = require('./taxonomy-final-1000-plus');
-const { COMPLETE_REMAINING_1000 } = require('./taxonomy-complete-remaining-1000');
-const { BATCH_1_LIBRARIES_TOOLS } = require('./taxonomy-batch-1-libraries-tools');
-const { BATCH_2_INDUSTRY_CMS_UTILITIES } = require('./taxonomy-batch-2-industry-cms-utilities');
-const { INDUSTRY_MANUFACTURING_ENGINEERING } = require('./taxonomy-industry-manufacturing-engineering');
-const { INDUSTRY_MARKETING_SALES_HR } = require('./taxonomy-industry-marketing-sales-hr');
 
-// Merge all taxonomies (rapidly approaching 1600+!)
+// Use comprehensive taxonomy directly (all technologies already included)
 const ALL_TECHNOLOGIES = {
-  ...COMPREHENSIVE_TECH_TAXONOMY,                    // ~200 core frontend/languages
-  ...BACKEND_TAXONOMY,                               // ~300 backend frameworks
-  ...DATABASE_CLOUD_DEVOPS_TAXONOMY,                 // ~120 databases
-  ...CLOUD_DEVOPS_COMPLETE,                          // ~230 cloud + devops tools
-  ...DATA_MOBILE_SECURITY_TAXONOMY,                  // ~300 data/ML + mobile + security
-  ...TESTING_DESIGN_BLOCKCHAIN_INDUSTRY_TAXONOMY,    // ~300 testing + design + blockchain + industry
-  ...MEGA_EXPANSION_TAXONOMY,                        // ~400 AWS/Azure/GCP services + more
-  ...LANGUAGES_FRAMEWORKS_EXPANSION,                 // ~200 languages, frameworks, build tools
-  ...FINAL_1000_PLUS_TAXONOMY,                       // ~100+ final additions (expandable)
-  ...COMPLETE_REMAINING_1000,                        // ~100+ embedded, IoT, industry-specific
-  ...BATCH_1_LIBRARIES_TOOLS,                        // ~300 framework libraries + dev tools
-  ...BATCH_2_INDUSTRY_CMS_UTILITIES,                 // ~200 industry + CMS + utilities
-  ...INDUSTRY_MANUFACTURING_ENGINEERING,             // ~70 manufacturing & engineering
-  ...INDUSTRY_MARKETING_SALES_HR,                    // ~140 marketing, sales & HR
+  ...COMPREHENSIVE_TECH_TAXONOMY  // ~1600+ technologies
 };
 
 // Statistics
@@ -148,4 +122,3 @@ module.exports = {
   getTechnologiesByCategory,
   getStatistics
 };
-

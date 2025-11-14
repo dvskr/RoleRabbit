@@ -83,7 +83,14 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const createResume = useCallback(async (payload: { name?: string; data?: any; formatting?: any; metadata?: any }) => {
+  const createResume = useCallback(async (payload: { 
+    name?: string; 
+    data?: any; 
+    formatting?: any; 
+    metadata?: any;
+    storageFileId?: string;  // ✅ ADD: Link to uploaded file
+    fileHash?: string;        // ✅ ADD: For caching/parsing
+  }) => {
     setError(null);
     try {
       const response = await apiService.createBaseResume(payload);

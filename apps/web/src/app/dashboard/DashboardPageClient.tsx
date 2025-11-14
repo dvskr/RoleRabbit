@@ -11,7 +11,7 @@ import DashboardHeader from '../../components/layout/DashboardHeader';
 import PageHeader from '../../components/layout/PageHeader';
 
 // Lazy load all heavy components to prevent blocking startup
-const DashboardFigma = dynamic(() => import('../../components/DashboardFigma.tsx'), { ssr: false });
+const DashboardFigma = dynamic(() => import('../../components/DashboardFigma'), { ssr: false });
 const Profile = dynamic(() => import('../../components/Profile'), { ssr: false });
 const CloudStorage = dynamic(() => import('../../components/CloudStorage'), { ssr: false });
 const ResumeEditor = dynamic(() => import('../../components/features/ResumeEditor').then(mod => ({ default: mod.default })), { 
@@ -25,7 +25,10 @@ const ResumeEditor = dynamic(() => import('../../components/features/ResumeEdito
     </div>
   )
 });
-const AIPanel = dynamic(() => import('../../components/features/AIPanel'), { ssr: false });
+const AIPanel = dynamic(() => import('../../components/features/AIPanel'), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center p-4"><div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full"></div></div>
+});
 const Templates = dynamic(() => import('../../components/Templates'), { ssr: false });
 const JobTracker = dynamic(() => import('../../components/JobTracker'), { ssr: false });
 const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: false });
@@ -51,8 +54,11 @@ import { resumeTemplates } from '../../data/templates';
 import { logger } from '../../utils/logger';
 import { Loading } from '../../components/Loading';
 import { useToasts, ToastContainer } from '../../components/Toast';
+import { apiService } from '../../services/apiService';
 import { useAIProgress } from '../../hooks/useAIProgress';
 import { ConflictIndicator } from '../../components/ConflictIndicator';
+import { DraftStatusIndicator } from '../../components/features/ResumeEditor/DraftStatusIndicator';
+import { DraftDiffViewer } from '../../components/features/ResumeEditor/DraftDiffViewer';
 import { PlusCircle, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 // Lazy load heavy analytics and modal components
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
@@ -287,7 +293,11 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     history, setHistory,
     historyIndex, setHistoryIndex,
     loadResumeById,
-    applyBaseResume
+    applyBaseResume,
+    // 🎯 NEW: Draft management
+    commitDraft,
+    discardDraft,
+    getDraftStatus,
   } = resumeDataHook;
   const enforcedVisibilityRef = useRef<string | null>(null);
 
@@ -308,12 +318,146 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     }
   }, [currentResumeId, sectionVisibility, setSectionVisibility]);
 
-  // Display saveError via toast notifications
+  // ❌ REMOVED: Don't show toast for save errors
+  // Auto-save should be silent - validation errors shouldn't block saving
+  // useEffect(() => {
+  //   if (saveError) {
+  //     showToast(saveError, 'error', 8000);
+  //   }
+  // }, [saveError, showToast]);
+
+  // 🎯 NEW: Draft state management
+  const [hasDraft, setHasDraft] = React.useState(false);
+  const [showDiffViewer, setShowDiffViewer] = React.useState(false);
+  const [baseResumeData, setBaseResumeData] = React.useState<any>(null);
+  const [isOnline, setIsOnline] = React.useState(true);
+
+  // Check online status
   useEffect(() => {
-    if (saveError) {
-      showToast(saveError, 'error', 8000); // Show error toast for 8 seconds
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Set hasDraft immediately when changes are made
+  useEffect(() => {
+    if (hasChanges && currentResumeId) {
+      console.log('📋 [DRAFT] Changes detected, setting hasDraft to true');
+      setHasDraft(true);
     }
-  }, [saveError, showToast]);
+  }, [hasChanges, currentResumeId]);
+
+  // Check draft status on mount and periodically (but not on every change)
+  useEffect(() => {
+    const checkDraft = async () => {
+      if (!currentResumeId || activeTab !== 'editor') {
+        console.log('📋 [DRAFT] No draft - no resume ID or not on editor tab', { currentResumeId, activeTab });
+        setHasDraft(false);
+        return;
+      }
+      
+      try {
+        const status = await getDraftStatus();
+        console.log('📋 [DRAFT] Draft status checked:', { 
+          hasDraft: status?.hasDraft, 
+          currentResumeId,
+          status 
+        });
+        // Only update if we don't already have local changes
+        if (!hasChanges) {
+          setHasDraft(status?.hasDraft || false);
+        }
+      } catch (error) {
+        // Silently fail - resume might have been deleted
+        logger.debug('Draft status check failed (resume may be deleted)', { currentResumeId });
+        console.log('📋 [DRAFT] Draft check failed:', error);
+        // Don't change hasDraft if we have local changes
+        if (!hasChanges) {
+          setHasDraft(false);
+        }
+      }
+    };
+    
+    checkDraft();
+    
+    // Re-check every 10 seconds (increased from 5), but only when on editor tab
+    const interval = setInterval(checkDraft, 10000);
+    return () => clearInterval(interval);
+  }, [currentResumeId, getDraftStatus, activeTab]);
+
+  // Draft handlers
+  const handleCommitDraft = useCallback(async () => {
+    try {
+      const result = await commitDraft();
+      if (result?.success) {
+        showToast('Resume saved successfully!', 'success', 4000);
+        setHasDraft(false);
+      } else {
+        showToast(result?.error || 'Failed to save resume', 'error', 6000);
+      }
+    } catch (error) {
+      logger.error('Failed to commit draft', error);
+      showToast('Failed to save resume', 'error', 6000);
+    }
+  }, [commitDraft, showToast]);
+
+  const handleDiscardDraft = useCallback(async () => {
+    if (!currentResumeId) {
+      logger.warn('🎯 handleDiscardDraft: No current resume ID');
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      '⚠️ Discard Draft?\n\n' +
+      'This will permanently delete your draft and revert to the base resume.\n' +
+      'This action cannot be undone.\n\n' +
+      'Click OK to discard, or Cancel to keep your draft.'
+    );
+    
+    if (!confirmed) {
+      logger.info('🎯 handleDiscardDraft: User cancelled');
+      return;
+    }
+    
+    try {
+      logger.info('🎯 handleDiscardDraft: User confirmed, discarding draft');
+      const result = await discardDraft();
+      if (result?.success) {
+        showToast('Draft discarded, reverted to base resume', 'success', 4000);
+        setHasDraft(false);
+      } else {
+        showToast(result?.error || 'Failed to discard draft', 'error', 6000);
+      }
+    } catch (error) {
+      logger.error('❌ handleDiscardDraft: Failed to discard draft', error);
+      showToast('Failed to discard draft', 'error', 6000);
+    }
+  }, [currentResumeId, discardDraft, showToast]);
+
+  const handleConfirmDiscardDraft = useCallback(async () => {
+    try {
+      logger.info('🎯 handleConfirmDiscardDraft: User confirmed discard');
+      const result = await discardDraft();
+      if (result?.success) {
+        showToast('Draft discarded, reverted to base resume', 'success', 4000);
+        setHasDraft(false);
+        setShowDiffViewer(false); // Close the diff viewer
+      } else {
+        showToast(result?.error || 'Failed to discard draft', 'error', 6000);
+      }
+    } catch (error) {
+      logger.error('❌ handleConfirmDiscardDraft: Failed to discard draft', error);
+      showToast('Failed to discard draft', 'error', 6000);
+    }
+  }, [discardDraft, showToast]);
 
   // Load resume data when active base resume changes
   // Use ref to track ongoing load to prevent race conditions
@@ -574,6 +718,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     isAnalyzing,
     setShowATSScore,
     applyBaseResume,
+    loadResumeById,
     tailorEditMode,
     selectedTone,
     selectedLength,
@@ -596,7 +741,10 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     completeTailorProgress: tailorProgressHook.completeProgress,
     resetTailorProgress: tailorProgressHook.resetProgress,
     // Toast notifications
-    showToast
+    showToast,
+    // UI state
+    setShowRightPanel,
+    setShowDiffBanner: aiHook.setShowDiffBanner
   });
 
   const {
@@ -766,7 +914,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       case 'editor':
         // Show loading state only on initial load, not on subsequent updates
         if (resumeLoading && !currentResumeId && resumes.length === 0) {
-          return <Loading message="Loading Resume Editor..." />;
+          return <Loading text="Loading Resume Editor..." />;
         }
         
         try {
@@ -818,6 +966,22 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             setShowAddFieldModal={setShowAddFieldModal}
             customFields={customFields}
             setCustomFields={setCustomFieldsTracked}
+            // Diff highlighting
+            showDiffBanner={aiHook.showDiffBanner}
+            diffChanges={aiHook.tailorResult?.diffChanges}
+            showDiffHighlighting={aiHook.showDiffHighlighting}
+            onToggleDiffHighlighting={() => aiHook.setShowDiffHighlighting(!aiHook.showDiffHighlighting)}
+            onCloseDiffBanner={() => aiHook.setShowDiffBanner(false)}
+            onApplyDiffChanges={handleCommitDraft}
+            atsScoreImprovement={
+              aiHook.tailorResult?.ats?.before && aiHook.tailorResult?.ats?.after
+                ? {
+                    before: aiHook.tailorResult.ats.before.overall,
+                    after: aiHook.tailorResult.ats.after.overall,
+                    improvement: aiHook.tailorResult.ats.after.overall - aiHook.tailorResult.ats.before.overall,
+                  }
+                : undefined
+            }
             selectedTemplateId={selectedTemplateId || DEFAULT_TEMPLATE_ID}
             onTemplateApply={(templateId) => {
               // Apply template styling
@@ -986,6 +1150,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               canRedo={historyIndex < history.length - 1}
               lastSavedAt={lastSavedAt}
               hasChanges={hasChanges}
+              hasDraft={hasDraft} // 🎯 NEW: Pass draft status
               onExport={() => setShowExportModal(true)}
               onUndo={undo}
               onRedo={redo}
@@ -998,6 +1163,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                     email: '',
                     phone: '',
                     location: '',
+                    linkedin: '', // 🔧 FIX: Added missing field
+                    github: '', // 🔧 FIX: Added missing field
+                    website: '', // 🔧 FIX: Added missing field
                     summary: '',
                     skills: [],
                     experience: [],
@@ -1025,6 +1193,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                     email: '',
                     phone: '',
                     location: '',
+                    linkedin: '', // 🔧 FIX: Added missing field
+                    github: '', // 🔧 FIX: Added missing field
+                    website: '', // 🔧 FIX: Added missing field
                     summary: '',
                     skills: [],
                     experience: [],
@@ -1036,7 +1207,8 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
                 }
               }}
               onImport={handleOpenImportModal}
-              onSave={saveResume}
+              onSave={handleCommitDraft}
+              onDiscardDraft={handleDiscardDraft} // 🎯 NEW: Pass discard handler
               onToggleAIPanel={() => setShowRightPanel(!showRightPanel)}
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
               onShowMobileMenu={() => setShowMobileMenu(true)}
@@ -1288,6 +1460,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             email: '',
             phone: '',
             location: '',
+            linkedin: '', // 🔧 FIX: Added missing field
+            github: '', // 🔧 FIX: Added missing field
+            website: '', // 🔧 FIX: Added missing field
             summary: '',
             skills: [],
             experience: [],
@@ -1326,6 +1501,16 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         }}
         onDismiss={() => setHasConflict(false)}
       />
+      
+          {/* 🎯 Draft Diff Viewer Modal (View Only) */}
+          {showDiffViewer && baseResumeData && (
+            <DraftDiffViewer
+              draftData={resumeData}
+              baseData={baseResumeData}
+              onClose={() => setShowDiffViewer(false)}
+            />
+          )}
+      
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </ErrorBoundary>

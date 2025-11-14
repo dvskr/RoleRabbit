@@ -130,6 +130,7 @@ export interface UseDashboardHandlersParams {
   isAnalyzing: boolean;
   setShowATSScore: (show: boolean) => void;
   applyBaseResume?: (record?: BaseResumeRecord | null) => void;
+  loadResumeById: (id: string) => Promise<any>;
   tailorEditMode: string;
   selectedTone: string;
   selectedLength: string;
@@ -154,7 +155,11 @@ export interface UseDashboardHandlersParams {
   resetTailorProgress?: () => void;
   
   // Toast notifications
-  showToast?: (type: string, title: string, options?: any) => void;
+  showToast?: (message: string, type?: 'info' | 'success' | 'error' | 'warning', duration?: number) => void;
+  
+  // UI state
+  setShowRightPanel?: (show: boolean) => void;
+  setShowDiffBanner?: (show: boolean) => void;
 }
 
 export interface UseDashboardHandlersReturn {
@@ -190,22 +195,37 @@ export interface ConfirmTailorResultOptions {
   tailorResult: TailorResult | null;
   saveResume: () => Promise<boolean>;
   clearTailorResult: () => void;
+  setResumeData: (data: ResumeData) => void;
 }
 
 export const applyTailoredResumeChanges = async ({
   tailorResult,
   saveResume,
   clearTailorResult,
+  setResumeData,
 }: ConfirmTailorResultOptions): Promise<boolean> => {
-  if (!tailorResult) {
+  if (!tailorResult || !tailorResult.tailoredResume) {
     return false;
   }
 
-  const success = await saveResume();
-  if (success) {
+  console.log('✅ [APPLY CHANGES] Applying tailored resume to editor...');
+  
+  // Apply the tailored resume to the editor
+  setResumeData(tailorResult.tailoredResume);
+  
+  // Save the tailored resume to the backend (as a draft)
+  console.log('💾 [APPLY CHANGES] Saving tailored resume to backend...');
+  const saved = await saveResume();
+  
+  if (saved) {
+    console.log('✅ [APPLY CHANGES] Tailored resume saved successfully!');
+    // Clear the tailor result UI
     clearTailorResult();
+    return true;
+  } else {
+    console.error('❌ [APPLY CHANGES] Failed to save tailored resume');
+    return false;
   }
-  return success;
 };
 
 /**
@@ -284,6 +304,7 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     isAnalyzing,
     setShowATSScore,
     applyBaseResume,
+    loadResumeById,
     tailorEditMode,
     selectedTone,
     selectedLength,
@@ -299,7 +320,10 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
     completeATSProgress,
     startTailorProgress,
     completeTailorProgress,
-    showToast
+    showToast,
+    // UI state
+    setShowRightPanel,
+    setShowDiffBanner
   } = params;
 
   const toggleSection = useCallback((section: string) => {
@@ -625,26 +649,41 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       });
 
       if (response?.tailoredResume) {
+        // Convert tailored resume to editor format (for TailorResult only)
         const tailoredEditorData = normalizedDataToResumeData(response.tailoredResume as any);
-        let mergedResume: ResumeData | null = null;
-
-        setResumeData((previous) => {
-          const merged = mergeTailoredResume(previous, tailoredEditorData);
-          const deduped = removeDuplicateResumeEntries(merged).data;
-          mergedResume = deduped;
-          return deduped;
+        const merged = mergeTailoredResume(resumeData, tailoredEditorData);
+        const mergedResume = removeDuplicateResumeEntries(merged).data;
+        
+        // DON'T call setResumeData() - we'll force a full reload from backend instead
+        // This ensures the editor shows the exact data that was saved to the database
+        
+        // Calculate diff for highlighting changes
+        console.log('📊 [TAILOR] About to calculate diff...');
+        console.log('📊 [TAILOR] Original data:', { 
+          hasSummary: !!resumeData.summary,
+          experienceCount: resumeData.experience?.length,
+          summaryPreview: resumeData.summary?.substring(0, 50)
         });
-
-        if (!mergedResume) {
-          const merged = mergeTailoredResume(resumeData, tailoredEditorData);
-          mergedResume = removeDuplicateResumeEntries(merged).data;
-        }
-
-        setHasChanges(true);
+        console.log('📊 [TAILOR] Tailored data:', {
+          hasSummary: !!mergedResume.summary,
+          experienceCount: mergedResume.experience?.length,
+          summaryPreview: mergedResume.summary?.substring(0, 50)
+        });
+        
+        const { calculateResumeDiff } = await import('../../../utils/resumeDiff');
+        const diffResult = calculateResumeDiff(resumeData, mergedResume);
+        console.log('📊 [TAILOR] Diff calculated:', {
+          totalChanges: diffResult.totalChanges,
+          added: diffResult.addedCount,
+          modified: diffResult.modifiedCount,
+          removed: diffResult.removedCount,
+          changesArray: diffResult.changes
+        });
         
         const result: TailorResult = {
           tailoredResume: mergedResume,
           diff: Array.isArray(response.diff) ? response.diff : [],
+          diffChanges: diffResult.changes, // Add calculated diff
           warnings: Array.isArray(response.warnings) ? response.warnings : [],
           recommendedKeywords: Array.isArray(response.recommendedKeywords) ? response.recommendedKeywords : [],
           ats: response.ats ?? null,
@@ -661,9 +700,48 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           setMatchedKeywords(afterAnalysis.matchedKeywords ?? response.recommendedKeywords ?? []);
           setMissingKeywords(afterAnalysis.missingKeywords ?? []);
           setShowATSScore(true);
+          // Open the AI panel to show the ATS score
+          if (setShowRightPanel) {
+            try {
+              setShowRightPanel(true);
+            } catch (err) {
+              console.warn('Failed to open AI panel:', err);
+            }
+          }
+          // Show the diff banner to highlight changes
+          console.log('📊 [TAILOR] Attempting to show diff banner (afterAnalysis path)...', {
+            hasSetShowDiffBanner: !!setShowDiffBanner,
+            diffChangesCount: diffResult.changes.length
+          });
+          if (setShowDiffBanner) {
+            try {
+              setShowDiffBanner(true);
+              console.log('✅ [TAILOR] Diff banner shown!');
+            } catch (err) {
+              console.error('❌ [TAILOR] Failed to show diff banner:', err);
+            }
+          } else {
+            console.warn('⚠️ [TAILOR] setShowDiffBanner is not available!');
+          }
         } else if (typeof response.atsScoreAfter === 'number') {
           setMatchScore((prev) => buildATSFromScore(response.atsScoreAfter as number, prev));
           setShowATSScore(true);
+          // Open the AI panel to show the ATS score
+          if (setShowRightPanel) {
+            try {
+              setShowRightPanel(true);
+            } catch (err) {
+              console.warn('Failed to open AI panel:', err);
+            }
+          }
+          // Show the diff banner to highlight changes
+          if (setShowDiffBanner) {
+            try {
+              setShowDiffBanner(true);
+            } catch (err) {
+              console.warn('Failed to show diff banner:', err);
+            }
+          }
         }
         
         // Complete progress and show success toast
@@ -675,6 +753,12 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
           message: `Score improved from ${beforeScore} to ${afterScore} (+${improvement} points)`,
           duration: 7000
         });
+        
+        // DO NOT reload the resume from backend here!
+        // The tailored content should only be visible in the diff banner/preview
+        // The editor should continue showing the original (base) resume until user clicks "Apply Changes"
+        console.log('✅ [TAILOR] Tailoring complete. Changes stored in tailorResult for preview.');
+        console.log('📋 [TAILOR] Editor will continue showing base resume until "Apply Changes" is clicked.');
       }
 
       return response;
@@ -954,8 +1038,9 @@ export function useDashboardHandlers(params: UseDashboardHandlersParams): UseDas
       tailorResult,
       saveResume,
       clearTailorResult: () => setTailorResult(null),
+      setResumeData,
     });
-  }, [tailorResult, saveResume, setTailorResult]);
+  }, [tailorResult, saveResume, setTailorResult, setResumeData]);
 
   const undo = useCallback(() => {
     resumeHelpers.undo(history, historyIndex, setHistoryIndex, setResumeData);

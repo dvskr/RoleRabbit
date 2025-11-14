@@ -15,7 +15,6 @@ if (typeof global.ImageData === 'undefined' && ImageData) {
 const fs = require('fs');
 const mammoth = require('mammoth');
 const pdfParse = require('pdf-parse');
-const { ImageAnnotatorClient } = require('@google-cloud/vision');
 const { jsonrepair } = require('jsonrepair');
 
 const logger = require('../utils/logger');
@@ -28,75 +27,6 @@ const { resumeParseDuration, resumeParseFailures } = require('../observability/m
 const { normalizeResumeData } = require('@roleready/resume-normalizer');
 
 const CACHE_TTL_MS = cacheConfig.resumeParseTtlMs;
-const VISION_PLACEHOLDER_REGEX = /absolute_path_to_your_google_vision_service_account\.json/i;
-
-let visionClient = null;
-let visionEnabled = null; // null = unknown, true = enabled, false = disabled
-let visionDisabledReason = null;
-
-function markVisionDisabled(reason) {
-  if (visionEnabled === false && visionDisabledReason === reason) {
-    return;
-  }
-  visionEnabled = false;
-  visionDisabledReason = reason;
-  logger.info('Google Vision OCR disabled for this process. Falling back to text extraction only.', {
-    reason
-  });
-}
-
-function isVisionOcrAvailable() {
-  if (visionEnabled === false) {
-    return false;
-  }
-
-  if (visionEnabled === true && visionClient) {
-    return true;
-  }
-
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (credentialsPath && credentialsPath.trim()) {
-    const trimmed = credentialsPath.trim();
-    if (!trimmed || VISION_PLACEHOLDER_REGEX.test(trimmed)) {
-      markVisionDisabled('GOOGLE_APPLICATION_CREDENTIALS is using the placeholder path.');
-      return false;
-    }
-    try {
-      const stats = fs.statSync(trimmed);
-      if (!stats.isFile()) {
-        markVisionDisabled('GOOGLE_APPLICATION_CREDENTIALS path is not a file.');
-        return false;
-      }
-    } catch (error) {
-      markVisionDisabled(`GOOGLE_APPLICATION_CREDENTIALS file not found: ${error.message}`);
-      return false;
-    }
-  }
-
-  visionEnabled = true;
-  return true;
-}
-
-function getVisionClient() {
-  if (!isVisionOcrAvailable()) {
-    return null;
-  }
-
-  if (visionClient) {
-    return visionClient;
-  }
-
-  try {
-    visionClient = new ImageAnnotatorClient();
-    return visionClient;
-  } catch (error) {
-    markVisionDisabled(error.message || 'Failed to initialize Google Vision client.');
-    logger.warn('Google Vision client not available. OCR features disabled until credentials are configured.', {
-      error: error.message
-    });
-    return null;
-  }
-}
 
 function computeFileHash(buffer) {
   return crypto.createHash('sha256').update(buffer).digest('hex');
@@ -110,36 +40,6 @@ async function extractDocxText(buffer) {
 async function extractPdfText(buffer) {
   const result = await pdfParse(buffer);
   return result.text || '';
-}
-
-async function extractOcrText(buffer) {
-  const client = getVisionClient();
-  if (!client) {
-    const suffix = visionDisabledReason ? ` (${visionDisabledReason})` : '';
-    throw new Error(
-      `OCR service not configured${suffix ? `: ${suffix}` : ''}. Please set GOOGLE_APPLICATION_CREDENTIALS to enable scanned resume parsing.`
-    );
-  }
-
-  try {
-    const [result] = await client.documentTextDetection({
-      image: { content: buffer }
-    });
-
-    const annotation = result.fullTextAnnotation;
-    return annotation?.text || '';
-  } catch (error) {
-    const message = error?.message || 'Unknown OCR error';
-    if (
-      /ENOENT/.test(message) ||
-      /credential/i.test(message) ||
-      /permission/i.test(message) ||
-      /Authentication failed/i.test(message)
-    ) {
-      markVisionDisabled(message);
-    }
-    throw error;
-  }
 }
 
 function inferMimeType(fileName, providedMime) {
@@ -593,10 +493,10 @@ async function detectDocumentType(buffer, mimeType) {
         textSample.match(/<<\s*\/[A-Z]/); // PDF dictionary objects
       
       if (isPdfStructureGarbage) {
-        logger.warn('PDF text extraction returned structure data instead of content - forcing OCR fallback');
+        logger.warn('PDF text extraction returned structure data - will use GPT-4o vision');
         return {
-          type: 'PDF_STRUCTURE_ISSUE',
-          method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+          type: 'PDF_SCANNED',
+          method: 'VISION_REQUIRED'
         };
       }
       
@@ -605,13 +505,13 @@ async function detectDocumentType(buffer, mimeType) {
       }
       return {
         type: 'PDF_SCANNED',
-        method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+        method: 'VISION_REQUIRED'
       };
     } catch (error) {
-      logger.warn('PDF detection fallback to OCR due to parse error', { error: error.message });
+      logger.warn('PDF detection error - will use GPT-4o vision', { error: error.message });
       return {
         type: 'PDF_SCANNED',
-        method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+        method: 'VISION_REQUIRED'
       };
     }
   }
@@ -619,7 +519,7 @@ async function detectDocumentType(buffer, mimeType) {
   if (mimeType && mimeType.startsWith('image/')) {
     return {
       type: 'IMAGE',
-      method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+      method: 'VISION_REQUIRED'
     };
   }
 
@@ -635,12 +535,12 @@ async function detectDocumentType(buffer, mimeType) {
           ? { type: 'PDF_NATIVE', method: 'TEXT_ONLY' }
           : {
               type: 'PDF_SCANNED',
-              method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+              method: 'VISION_REQUIRED'
             };
       } catch {
         return {
           type: 'PDF_SCANNED',
-          method: isVisionOcrAvailable() ? 'OCR_VISION' : 'TEXT_ONLY'
+          method: 'VISION_REQUIRED'
         };
       }
     }
@@ -784,12 +684,29 @@ function cleanPdfJunk(text) {
 
   // Remove common PDF artifacts
   let cleaned = text
+    // Remove PDF header/trailer
+    .replace(/%PDF-[\d.]+[\r\n]*/g, '')
+    .replace(/%%EOF[\r\n]*/g, '')
+    // Remove object definitions
+    .replace(/\d+\s+\d+\s+obj[\r\n]*/g, '')
+    .replace(/endobj[\r\n]*/g, '')
+    // Remove stream markers
+    .replace(/stream[\r\n]*/g, '')
+    .replace(/endstream[\r\n]*/g, '')
     // Remove font encoding declarations
     .replace(/\/F\d+\s+\d+\s+Tf/g, '')
-    // Remove PDF operators (BT, ET, Tm, Td, etc.)
-    .replace(/\b(BT|ET|Tm|Td|TD|Tj|TJ|Tc|Tw|Tz|TL|Tf|Tr|Ts)\b/g, '')
+    // Remove PDF operators (BT, ET, Tm, Td, Q, q, cm, m, l, h, f, etc.)
+    .replace(/\b(BT|ET|Tm|Td|TD|Tj|TJ|Tc|Tw|Tz|TL|Tf|Tr|Ts|Q|q|cm|m|l|h|f|S|s|W|n|re)\b/g, '')
     // Remove hex strings
     .replace(/<[0-9A-Fa-f\s]+>/g, '')
+    // Remove coordinate patterns (common in scanned PDFs)
+    .replace(/\d+(\.\d+)?\s+\d+(\.\d+)?\s+(cm|m|l)\s*/g, '')
+    // Remove xref tables
+    .replace(/xref[\r\n]+\d+\s+\d+[\r\n]+/g, '')
+    .replace(/\d{10}\s+\d{5}\s+[nf]\s*[\r\n]*/g, '')
+    // Remove trailer
+    .replace(/trailer[\r\n]+<</g, '')
+    .replace(/startxref[\r\n]+\d+[\r\n]*/g, '')
     // Remove excessive whitespace but preserve paragraph breaks
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{4,}/g, '\n\n\n')
@@ -798,8 +715,9 @@ function cleanPdfJunk(text) {
     .filter(line => {
       const alphanumeric = line.replace(/[^a-zA-Z0-9]/g, '').length;
       const total = line.length;
-      // Keep lines that are at least 30% alphanumeric, or are very short (like dates)
-      return total === 0 || alphanumeric / total > 0.3 || total < 20;
+      // Keep lines that are at least 40% alphanumeric, or are very short (like dates)
+      // More aggressive filtering for scanned PDFs
+      return total === 0 || alphanumeric / total > 0.4 || (total < 20 && alphanumeric > 3);
     })
     .join('\n')
     .trim();
@@ -808,11 +726,199 @@ function cleanPdfJunk(text) {
 }
 
 /**
- * Intelligently truncate resume text to avoid OpenAI token limits
- * OpenAI's gpt-4o-mini has a 200K TPM limit, and we're sending ~4x the text as tokens
- * So we limit to 100K characters to be safe (roughly 25K tokens + prompt overhead)
+ * Analyze text quality to determine if it's clean enough for GPT-4o-mini
+ * or if it requires GPT-4o with vision
  */
-function truncateResumeText(text, maxChars = 100000) {
+function analyzeTextQuality(text) {
+  if (!text || text.length < 100) {
+    return {
+      isClean: false,
+      reason: 'Text too short',
+      textLength: text?.length || 0,
+      alphanumericRatio: 0,
+      pdfArtifacts: 0,
+      resumeKeywords: 0,
+      confidence: 0
+    };
+  }
+
+  // Calculate alphanumeric ratio
+  const alphanumeric = text.replace(/[^a-zA-Z0-9]/g, '').length;
+  const alphanumericRatio = alphanumeric / text.length;
+
+  // Count PDF artifacts
+  const pdfArtifactPatterns = [
+    /obj\s+endobj/gi,
+    /stream\s+endstream/gi,
+    /<</gi,
+    /xref/gi,
+    /[\u0000-\u001F]/g  // Control characters
+  ];
+  
+  let pdfArtifacts = 0;
+  for (const pattern of pdfArtifactPatterns) {
+    const matches = text.match(pattern);
+    pdfArtifacts += matches ? matches.length : 0;
+  }
+
+  // Check for resume keywords
+  const resumeKeywordPatterns = [
+    /experience/i,
+    /education/i,
+    /skills/i,
+    /email/i,
+    /phone/i,
+    /\b\d{4}\b/g  // Years (2020, 2021, etc.)
+  ];
+  
+  let resumeKeywords = 0;
+  for (const pattern of resumeKeywordPatterns) {
+    if (pattern.test(text)) {
+      resumeKeywords++;
+    }
+  }
+
+  // Determine if text is clean
+  const isClean = 
+    text.length >= 100 &&
+    text.length <= 50000 &&
+    alphanumericRatio >= 0.6 &&
+    pdfArtifacts < 10 &&
+    resumeKeywords >= 2;
+
+  // Calculate confidence score
+  let confidence = 0;
+  if (alphanumericRatio >= 0.6) confidence += 0.3;
+  if (pdfArtifacts < 10) confidence += 0.2;
+  if (resumeKeywords >= 2) confidence += 0.3;
+  if (text.length >= 500 && text.length <= 20000) confidence += 0.2;
+
+  return {
+    isClean,
+    reason: isClean ? 'Text is clean and readable' : 'Text contains too much junk or missing resume keywords',
+    textLength: text.length,
+    alphanumericRatio: Math.round(alphanumericRatio * 100) / 100,
+    pdfArtifacts,
+    resumeKeywords,
+    confidence: Math.round(confidence * 100) / 100
+  };
+}
+
+/**
+ * Parse resume using GPT-4o with enhanced prompting
+ * Used for corrupted text that needs more powerful model
+ */
+async function parseWithGPT4o(text, fileName) {
+  logger.info('🔍 [GPT-4o] Parsing with GPT-4o (corrupted text)', {
+    textLength: text.length,
+    fileName
+  });
+  
+  const prompt = `You are an expert resume parsing system. The following text was extracted from a PDF but contains artifacts and junk data. Extract ONLY the meaningful resume information and return as structured JSON.
+
+CRITICAL: Ignore PDF artifacts like: obj, endobj, stream, xref, binary characters, font definitions, coordinates.
+
+If the text is completely unreadable or not a resume, return:
+{
+  "error": "UNREADABLE_DOCUMENT",
+  "reason": "Document is not readable or not a resume"
+}
+
+Otherwise, return this JSON structure:
+{
+  "summary": string,
+  "experience": [
+    {
+      "company": string,
+      "role": string,
+      "startDate": string | null,
+      "endDate": string | null,
+      "isCurrent": boolean,
+      "location": string | null,
+      "bullets": string[]
+    }
+  ],
+  "education": [
+    {
+      "institution": string,
+      "degree": string | null,
+      "field": string | null,
+      "startDate": string | null,
+      "endDate": string | null,
+      "location": string | null,
+      "bullets": string[]
+    }
+  ],
+  "skills": {
+    "technical": string[],
+    "tools": string[],
+    "soft": string[]
+  },
+  "projects": [
+    {
+      "name": string,
+      "summary": string | null,
+      "bullets": string[],
+      "technologies": string[]
+    }
+  ],
+  "certifications": [
+    {
+      "name": string,
+      "issuer": string | null,
+      "issueDate": string | null,
+      "expirationDate": string | null
+    }
+  ],
+  "contact": {
+    "name": string | null,
+    "title": string | null,
+    "email": string | null,
+    "phone": string | null,
+    "location": string | null,
+    "links": string[]
+  }
+}
+
+RULES:
+- Dates MUST be ISO format (YYYY-MM or YYYY-MM-DD)
+- Do NOT invent information - use null for missing fields
+- Ensure ALL arrays exist even if empty
+- Extract email/phone/links even if formatted unusually
+- IGNORE all PDF junk and artifacts
+
+Resume Text:
+${text}`;
+
+  const response = await generateText(
+    prompt,
+    {
+      model: 'gpt-4o',
+      temperature: 0.1,
+      max_tokens: 4000
+    }
+  );
+
+  logger.info('✅ [GPT-4o] Response received', {
+    responseLength: response.text?.length || 0,
+    tokensUsed: response.usage?.total_tokens
+  });
+
+  const parsed = cleanseJsonResponse(response.text);
+  
+  if (parsed?.error === 'UNREADABLE_DOCUMENT') {
+    throw new Error('Document is not readable or not a resume');
+  }
+
+  return parsed;
+}
+
+/**
+ * Intelligently truncate resume text to avoid OpenAI token limits
+ * OpenAI's gpt-4o-mini has a 128K context window
+ * We can safely send up to 200K characters (roughly 50K tokens + prompt overhead)
+ */
+function truncateResumeText(text, maxChars = 200000) {
   if (!text || text.length <= maxChars) {
     return text;
   }
@@ -901,13 +1007,21 @@ async function structureResumeWithAI(rawText) {
   const truncatedText = truncateResumeText(rawText);
   const prompt = buildParsingPrompt(truncatedText);
 
+  logger.info('🤖 [OPENAI_REQUEST] Sending to GPT-4o-mini for parsing', {
+    model: 'gpt-4o-mini',
+    temperature: 0.1,
+    max_tokens: 4000,
+    inputTextLength: truncatedText.length,
+    promptPreview: prompt.substring(0, 200) + '...'
+  });
+
   const runRequest = async (options = {}, extra = {}) => {
     const response = await generateText(
       prompt,
       {
         model: 'gpt-4o-mini',
         temperature: 0.1,
-        max_tokens: 2000,
+        max_tokens: 4000, // Increased for larger resumes
         ...options
       },
       extra
@@ -919,7 +1033,31 @@ async function structureResumeWithAI(rawText) {
     async () => {
       const text = await runRequest();
       const parsed = cleanseJsonResponse(text);
-      if (parsed) return parsed;
+      if (parsed) {
+        logger.info('✅ [OPENAI_RESPONSE] Received structured data', {
+          model: 'gpt-4o-mini',
+          responsePreview: {
+            contact: parsed.contact ? {
+              name: parsed.contact.name,
+              email: parsed.contact.email,
+              phone: parsed.contact.phone,
+              linksCount: parsed.contact.links?.length || 0
+            } : null,
+            summaryLength: parsed.summary?.length || 0,
+            summaryPreview: parsed.summary?.substring(0, 150) + '...',
+            experienceCount: parsed.experience?.length || 0,
+            educationCount: parsed.education?.length || 0,
+            skillsPreview: parsed.skills ? {
+              technical: parsed.skills.technical?.slice(0, 5),
+              tools: parsed.skills.tools?.slice(0, 5),
+              soft: parsed.skills.soft?.slice(0, 3)
+            } : null,
+            projectsCount: parsed.projects?.length || 0,
+            certificationsCount: parsed.certifications?.length || 0
+          }
+        });
+        return parsed;
+      }
       throw new Error('Primary parsing returned empty JSON');
     },
     async () => {
@@ -927,7 +1065,7 @@ async function structureResumeWithAI(rawText) {
       const text = await runRequest(
         {
           temperature: 0.0,
-          max_tokens: 2000
+          max_tokens: 4000
         },
         {
           response_format: { type: 'json_object' }
@@ -1099,56 +1237,27 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
 
     const detection = await detectDocumentType(buffer, inferredMime);
     let rawText = '';
+    let useVision = false;
 
-    // Handle PDFs with structure issues
-    if (detection.type === 'PDF_STRUCTURE_ISSUE') {
-      if (detection.method === 'TEXT_ONLY') {
-        // OCR not available, but PDF text extraction is broken
-        const error = new Error('This PDF has a problematic structure that prevents text extraction. Please try:\n1. Converting the PDF to DOCX format\n2. Saving the PDF with a different tool\n3. Enabling Google Vision OCR for better PDF support');
-        error.code = 'PDF_STRUCTURE_ISSUE';
-        throw error;
-      }
-      // else: Will use OCR below
+    // Check if it's a scanned PDF (very little text extracted)
+    if (detection.method === 'VISION_REQUIRED') {
+      logger.warn('⚠️ Scanned PDF detected - extracting what text we can', {
+        type: detection.type,
+        fileName
+      });
+      
+      // Try to extract whatever text is available
+      // For scanned PDFs, pdf-parse will return very little text
+      // We'll proceed with text extraction and let quality analysis handle it
     }
 
-    if (detection.method === 'TEXT_ONLY') {
-      if (detection.type === 'DOCX') {
-        rawText = await extractDocxText(buffer);
-      } else if (detection.type === 'PDF_NATIVE') {
-        rawText = await extractPdfText(buffer);
-      } else {
-        rawText = buffer.toString('utf8');
-      }
+    // Extract text for TEXT_ONLY method
+    if (detection.type === 'DOCX') {
+      rawText = await extractDocxText(buffer);
+    } else if (detection.type === 'PDF_NATIVE') {
+      rawText = await extractPdfText(buffer);
     } else {
-      try {
-        rawText = await extractOcrText(buffer);
-      } catch (ocrError) {
-        logger.warn('OCR extraction failed, attempting text-only fallback', {
-          userId,
-          fileName,
-          mimeType,
-          error: ocrError.message
-        });
-
-        let fallbackText = '';
-        try {
-          fallbackText = await extractPdfText(buffer);
-        } catch (fallbackError) {
-          logger.warn('Fallback PDF text extraction failed after OCR error', {
-            userId,
-            fileName,
-            mimeType,
-            error: fallbackError.message
-          });
-        }
-
-        if (!fallbackText?.trim()) {
-          // Preserve the original error context for upstream handling
-          throw ocrError;
-        }
-
-        rawText = fallbackText;
-      }
+      rawText = buffer.toString('utf8');
     }
 
     let normalizedText = (rawText || '').trim();
@@ -1194,26 +1303,66 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
       });
     }
 
-    const structuredResume = await structureResumeWithAI(normalizedText);
+    // 🎯 HYBRID APPROACH: Analyze text quality to choose the right model
+    const textQuality = analyzeTextQuality(normalizedText);
+    
+    logger.info('📊 Text quality analysis', {
+      ...textQuality,
+      fileName
+    });
+
+    let structuredResume;
+    let parsingMethod;
+    let confidence;
+
+    if (!textQuality.isClean) {
+      // Text is corrupted/junk - use GPT-4o (more powerful model)
+      logger.warn('⚠️ Text quality is poor, falling back to GPT-4o', {
+        reason: textQuality.reason,
+        confidence: textQuality.confidence
+      });
+      
+      try {
+        structuredResume = await parseWithGPT4o(normalizedText, fileName);
+        parsingMethod = 'GPT4o';
+        confidence = 0.90;
+      } catch (gpt4oError) {
+        logger.error('❌ GPT-4o fallback failed', {
+          error: gpt4oError.message
+        });
+        throw new Error(`Failed to parse corrupted text with GPT-4o: ${gpt4oError.message}`);
+      }
+    } else {
+      // Text is clean - use GPT-4o-mini (cheap and fast!)
+      logger.info('✅ Text is clean, using GPT-4o-mini', {
+        confidence: textQuality.confidence
+      });
+      
+      structuredResume = await structureResumeWithAI(normalizedText);
+      parsingMethod = 'GPT4o_MINI';
+      confidence = computeConfidence(detection.method, normalizedText.length);
+    }
+
     let normalizedResume = normalizeStructuredResume(structuredResume, normalizedText);
     normalizedResume = await ensureContactDetails(normalizedResume, normalizedText);
-    const confidence = computeConfidence(detection.method, normalizedText.length);
 
     await cacheParsedResume({
       fileHash,
       userId,
       baseResumeId: null,
-      method: detection.method,
+      method: parsingMethod,
       data: normalizedResume,
       confidence
     });
 
-    logger.info('Resume parsed successfully', {
+    logger.info('✅ Resume parsed successfully', {
       userId,
       fileHash,
-      method: detection.method,
+      method: parsingMethod,
       textLength: normalizedText.length,
-      confidence
+      textQuality: textQuality.confidence,
+      confidence,
+      cost: parsingMethod === 'GPT4o' ? '$0.015' : '$0.0009'
     });
 
     endTimer({ method: detection.method, source: inferredMime });
@@ -1237,9 +1386,63 @@ async function parseResumeBuffer({ userId, buffer, fileName, mimeType }) {
   }
 }
 
+/**
+ * Parse resume by fileHash (from cache or storage file)
+ * Used for lazy parsing when resume is activated
+ */
+async function parseResumeByFileHash({ userId, fileHash, storageFileId }) {
+  if (!fileHash && !storageFileId) {
+    throw new Error('Either fileHash or storageFileId is required for parsing');
+  }
+
+  // If we have fileHash, check cache first
+  if (fileHash) {
+    const cached = await prisma.resumeCache.findUnique({ where: { fileHash } });
+    if (cached) {
+      logger.info('Resume parse served from cache by fileHash', { userId, fileHash });
+      return {
+        cacheHit: true,
+        fileHash,
+        method: cached.method,
+        confidence: cached.confidence,
+        structuredResume: cached.data
+      };
+    }
+  }
+
+  // Need to fetch file from storage
+  if (!storageFileId) {
+    throw new Error('storageFileId is required to fetch file for parsing');
+  }
+
+  const storageFile = await prisma.storageFile.findFirst({
+    where: { id: storageFileId, userId },
+    select: { storagePath: true, contentType: true, fileName: true, fileHash: true }
+  });
+
+  if (!storageFile) {
+    throw new Error('Storage file not found');
+  }
+
+  // Read file from storage
+  const storageHandler = require('../utils/storageHandler');
+  const buffer = await storageHandler.downloadAsBuffer(storageFile.storagePath);
+
+  // Parse the buffer
+  const result = await parseResumeBuffer({
+    userId,
+    buffer,
+    fileName: storageFile.fileName,
+    mimeType: storageFile.contentType
+  });
+
+  return result;
+}
+
 module.exports = {
   detectDocumentType,
   parseResumeBuffer,
   extractContactDetailsFromText,
-  normalizeStructuredResume
+  normalizeStructuredResume,
+  parseResumeByFileHash
 };

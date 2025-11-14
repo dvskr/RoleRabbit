@@ -212,10 +212,8 @@ export const validateResumeData = (resumeData: any): {
 } => {
   const errors: Record<string, string> = {};
   
-  // Name is required
-  if (!resumeData?.name || resumeData.name.trim() === '') {
-    errors.name = 'Name is required';
-  }
+  // ❌ REMOVED: Name validation - not required for auto-save
+  // Auto-save should work even with empty/partial data
   
   // Validate email if provided
   if (resumeData?.email && resumeData.email.trim() !== '') {

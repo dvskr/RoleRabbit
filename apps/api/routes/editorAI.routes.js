@@ -13,9 +13,13 @@ const {
 } = require('../services/ai/tailorService');
 const { recordAIRequest, AIUsageError, ensureActionAllowed } = require('../services/ai/usageService');
 const cacheConfig = require('../config/cacheConfig');
-const { hashJobDescription } = require('../services/ats/atsScoringService');
-const { scoreResumeWorldClass } = require('../services/ats/worldClassATS');
+const crypto = require('crypto');
 const { AIAction } = require('@prisma/client');
+
+// Hash function for job description caching
+function hashJobDescription(jobDescription = '') {
+  return crypto.createHash('sha256').update(jobDescription.trim().toLowerCase()).digest('hex');
+}
 const { atsScoreCounter, atsScoreGauge } = require('../observability/metrics');
 const {
   generateContentRequestSchema,
@@ -203,10 +207,18 @@ module.exports = async function editorAIRoutes(fastify) {
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, subscriptionTier: true }
+        select: { id: true, subscriptionTier: true, activeBaseResumeId: true }
       });
       if (!user) {
         return reply.status(404).send({ success: false, error: 'User not found' });
+      }
+
+      // ✅ Check if the resume is activated
+      if (user.activeBaseResumeId !== resumeId) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Please activate this resume before running ATS analysis.'
+        });
       }
 
       ensureActionAllowed(user.subscriptionTier, AIAction.ATS_SCORE);
@@ -219,12 +231,12 @@ module.exports = async function editorAIRoutes(fastify) {
         keyParts: cacheKeyParts,
         ttl: cacheConfig.atsScoreTtlMs,
         fetch: async () => {
-          const resume = await prisma.baseResume.findFirst({
-            where: { id: resumeId, userId },
-            select: { id: true, data: true, isActive: true, updatedAt: true }
-          });
-          if (!resume) {
-            logger.warn('ATS requested base resume not found', {
+          // 🎯 DRAFT-AWARE: Get current resume data (draft OR base)
+          const { getCurrentResumeData } = require('../services/workingDraftService');
+          const resumeData = await getCurrentResumeData(resumeId);
+          
+          if (!resumeData || !resumeData.data) {
+            logger.warn('ATS requested resume data not found', {
               userId,
               requestedResumeId: resumeId,
               jobHash
@@ -234,75 +246,56 @@ module.exports = async function editorAIRoutes(fastify) {
               404
             );
           }
-          // NOTE: Removed isActive check for ATS - users should be able to check any resume
-          // ATS checking is read-only and doesn't modify the resume
           
-          // 🌟 USE EMBEDDING-BASED ATS (if enabled) or WORLD-CLASS ATS SYSTEM
+          logger.debug('ATS using resume data', {
+            resumeId,
+            isDraft: resumeData.isDraft,
+            draftUpdatedAt: resumeData.draftUpdatedAt,
+            baseUpdatedAt: resumeData.baseUpdatedAt
+          });
+          
+          // 🌟 EMBEDDING-BASED ATS (Vector Similarity - Best Performance)
           let analysis;
-          const useEmbeddings = process.env.ATS_USE_EMBEDDINGS === 'true';
           
-          if (useEmbeddings) {
-            // NEW: Embedding-based ATS (fast, accurate, cheap)
-            try {
-              const { scoreResumeWithEmbeddings } = require('../services/embeddings/embeddingATSService');
-              const embeddingResult = await scoreResumeWithEmbeddings({
-                resumeData: resume.data,
-                jobDescription,
-                includeDetails: true
-              });
-              
-              // Transform to match existing API format
-              analysis = {
-                overall: embeddingResult.overall,
-                matchedKeywords: embeddingResult.matchedKeywords || [],
-                missingKeywords: embeddingResult.missingKeywords || [],
-                semanticScore: embeddingResult.semanticScore,
-                similarity: embeddingResult.similarity,
-                method: 'embedding',
-                performance: embeddingResult.performance
-              };
-              
-              logger.info('Embedding-based ATS scoring complete', {
-                resumeId,
-                overall: analysis.overall,
-                duration: embeddingResult.performance.duration,
-                fromCache: embeddingResult.performance.fromCache
-              });
-            } catch (embeddingError) {
-              logger.error('Embedding-based ATS failed, falling back to world-class', { 
-                error: embeddingError.message 
-              });
-              // Fallback to world-class ATS
-              analysis = await scoreResumeWorldClass({ 
-                resumeData: resume.data, 
-                jobDescription,
-                useAI: false // Use fast dictionary mode
-              });
-              analysis.method = 'world-class-fallback';
-            }
-          } else {
-            // EXISTING: World-class ATS system
-            try {
-              analysis = await scoreResumeWorldClass({ 
-                resumeData: resume.data, 
-                jobDescription,
-                useAI: true // Enable AI-powered semantic matching
-              });
-              analysis.method = 'world-class';
-            } catch (worldClassError) {
-              logger.error('World-class ATS failed, using fallback', { error: worldClassError.message });
-              // Fallback to basic scoring if world-class fails
-              const { scoreResumeAgainstJob } = require('../services/ats/atsScoringService');
-              analysis = scoreResumeAgainstJob({ 
-                resumeData: resume.data, 
-                jobDescription 
-              });
-              analysis.method = 'basic-fallback';
-            }
+          try {
+            const { scoreResumeWithEmbeddings } = require('../services/embeddings/embeddingATSService');
+            const embeddingResult = await scoreResumeWithEmbeddings({
+              resumeData: resumeData.data,
+              jobDescription,
+              includeDetails: true
+            });
+            
+            // Transform to match existing API format
+            analysis = {
+              overall: embeddingResult.overall,
+              matchedKeywords: embeddingResult.matchedKeywords || [],
+              missingKeywords: embeddingResult.missingKeywords || [],
+              semanticScore: embeddingResult.semanticScore,
+              similarity: embeddingResult.similarity,
+              method: 'embedding',
+              performance: embeddingResult.performance,
+              isDraft: resumeData.isDraft // Include draft status in response
+            };
+            
+            logger.info('Embedding-based ATS scoring complete', {
+              resumeId,
+              overall: analysis.overall,
+              duration: embeddingResult.performance.duration,
+              fromCache: embeddingResult.performance.fromCache,
+              isDraft: resumeData.isDraft
+            });
+          } catch (embeddingError) {
+            logger.error('Embedding-based ATS failed', { 
+              error: embeddingError.message,
+              stack: embeddingError.stack
+            });
+            
+            // Return error response instead of fallback
+            throw new Error(`ATS scoring failed: ${embeddingError.message}`);
           }
           
           analysis.generatedAt = new Date().toISOString();
-          analysis.resumeUpdatedAt = resume.updatedAt;
+          analysis.resumeUpdatedAt = resumeData.isDraft ? resumeData.draftUpdatedAt : resumeData.baseUpdatedAt;
           return analysis;
         }
       });
@@ -388,10 +381,18 @@ module.exports = async function editorAIRoutes(fastify) {
       const userId = request.user.userId;
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, subscriptionTier: true }
+        select: { id: true, subscriptionTier: true, activeBaseResumeId: true }
       });
       if (!user) {
         return reply.status(404).send({ success: false, error: 'User not found' });
+      }
+
+      // ✅ Check if the resume is activated
+      if (user.activeBaseResumeId !== resumeId) {
+        return reply.status(400).send({
+          success: false,
+          error: 'Please activate this resume before tailoring.'
+        });
       }
 
       const result = await tailorResume({
