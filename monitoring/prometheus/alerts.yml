@@ -1,0 +1,440 @@
+##
+## Prometheus Alert Rules for RoleRabbit Templates
+## Comprehensive alerting for application health, performance, and errors
+##
+
+groups:
+  # ===========================
+  # Application Health Alerts
+  # ===========================
+  - name: application_health
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 1%)"
+          runbook: "https://docs.rolerabbit.com/runbooks/high-error-rate"
+
+      - alert: APILatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "API latency is high on {{ $labels.route }}"
+          description: "95th percentile latency is {{ $value }}s (threshold: 0.5s)"
+          runbook: "https://docs.rolerabbit.com/runbooks/high-latency"
+
+      - alert: ServiceDown
+        expr: up{job="rolerabbit-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+          description: "{{ $labels.instance }} has been down for more than 1 minute"
+          runbook: "https://docs.rolerabbit.com/runbooks/service-down"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+          ) / node_memory_MemTotal_bytes > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 85%)"
+
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% (threshold: 80%)"
+
+      - alert: DiskSpaceLow
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"}
+            / node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining"
+
+  # ===========================
+  # Template-Specific Alerts
+  # ===========================
+  - name: template_operations
+    interval: 1m
+    rules:
+      - alert: TemplateUploadFailureRate
+        expr: |
+          (
+            sum(rate(template_upload_failures_total[5m]))
+            /
+            sum(rate(template_upload_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High template upload failure rate"
+          description: "Upload failure rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      - alert: TemplateExportQueueBacklog
+        expr: template_export_queue_size > 100
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Template export queue backlog"
+          description: "Export queue has {{ $value }} pending jobs"
+
+      - alert: ApprovalWorkflowStalled
+        expr: |
+          sum(template_approval_pending{age_hours=">24"}) > 50
+        for: 1h
+        labels:
+          severity: warning
+          team: content
+        annotations:
+          summary: "Approval workflow has stalled"
+          description: "{{ $value }} templates pending approval for >24 hours"
+
+      - alert: TemplateSearchDegraded
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(template_search_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Template search performance degraded"
+          description: "Search latency p95 is {{ $value }}s (threshold: 2s)"
+
+  # ===========================
+  # Database Alerts
+  # ===========================
+  - name: database
+    interval: 30s
+    rules:
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          (
+            pg_stat_database_numbackends
+            / pg_settings_max_connections
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "{{ $value | humanizePercentage }} of connections in use"
+
+      - alert: DatabaseSlowQueries
+        expr: |
+          rate(pg_stat_statements_mean_exec_time_seconds[5m]) > 1
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Database queries are slow"
+          description: "Average query time is {{ $value }}s"
+
+      - alert: DatabaseReplicationLag
+        expr: |
+          pg_replication_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Database replication lag detected"
+          description: "Replication lag is {{ $value }}s (threshold: 300s)"
+
+      - alert: DatabaseDiskUsageHigh
+        expr: |
+          (
+            pg_database_size_bytes
+            / node_filesystem_size_bytes{mountpoint="/var/lib/postgresql"}
+          ) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "Database disk usage is high"
+          description: "Database using {{ $value | humanizePercentage }} of disk"
+
+  # ===========================
+  # Redis Cache Alerts
+  # ===========================
+  - name: redis_cache
+    interval: 30s
+    rules:
+      - alert: RedisCacheHitRateLow
+        expr: |
+          (
+            rate(redis_keyspace_hits_total[5m])
+            /
+            (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))
+          ) < 0.70
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Redis cache hit rate is low"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (threshold: 70%)"
+
+      - alert: RedisMemoryUsageHigh
+        expr: |
+          (
+            redis_memory_used_bytes
+            / redis_memory_max_bytes
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Redis memory usage is high"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 85%)"
+
+      - alert: RedisConnectionsHigh
+        expr: redis_connected_clients > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High number of Redis connections"
+          description: "{{ $value }} active connections (threshold: 1000)"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "Redis instance is down"
+          description: "Redis has been down for more than 1 minute"
+
+  # ===========================
+  # WebSocket Alerts
+  # ===========================
+  - name: websocket
+    interval: 1m
+    rules:
+      - alert: WebSocketConnectionsHigh
+        expr: websocket_active_connections > 10000
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High number of WebSocket connections"
+          description: "{{ $value }} active WebSocket connections"
+
+      - alert: WebSocketMessageBacklog
+        expr: websocket_message_queue_size > 1000
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "WebSocket message queue backlog"
+          description: "{{ $value }} messages queued for delivery"
+
+      - alert: WebSocketDisconnectRateHigh
+        expr: |
+          rate(websocket_disconnections_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High WebSocket disconnect rate"
+          description: "{{ $value }} disconnections per second"
+
+  # ===========================
+  # Business Metrics Alerts
+  # ===========================
+  - name: business_metrics
+    interval: 5m
+    rules:
+      - alert: DownloadRateDrop
+        expr: |
+          (
+            rate(template_downloads_total[1h])
+            / rate(template_downloads_total[1h] offset 24h)
+          ) < 0.50
+        for: 30m
+        labels:
+          severity: warning
+          team: product
+        annotations:
+          summary: "Template download rate has dropped significantly"
+          description: "Download rate is {{ $value | humanizePercentage }} of yesterday"
+
+      - alert: NewUserSignupsLow
+        expr: |
+          rate(user_signups_total[1h]) < 5
+        for: 2h
+        labels:
+          severity: warning
+          team: growth
+        annotations:
+          summary: "New user signups are low"
+          description: "Only {{ $value }} signups per hour"
+
+      - alert: PaymentFailureRateHigh
+        expr: |
+          (
+            rate(payment_failures_total[30m])
+            /
+            rate(payment_attempts_total[30m])
+          ) > 0.10
+        for: 15m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: SubscriptionChurnRateHigh
+        expr: |
+          (
+            rate(subscription_cancellations_total[24h])
+            /
+            subscription_active_total
+          ) > 0.05
+        for: 1h
+        labels:
+          severity: warning
+          team: growth
+        annotations:
+          summary: "Subscription churn rate is high"
+          description: "Daily churn rate is {{ $value | humanizePercentage }}"
+
+  # ===========================
+  # Security Alerts
+  # ===========================
+  - name: security
+    interval: 1m
+    rules:
+      - alert: UnauthorizedAccessAttempts
+        expr: |
+          rate(http_requests_total{status="401"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High rate of unauthorized access attempts"
+          description: "{{ $value }} 401 errors per second from {{ $labels.instance }}"
+
+      - alert: SuspiciousActivityDetected
+        expr: |
+          rate(security_suspicious_activity_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Suspicious activity detected"
+          description: "{{ $value }} suspicious events per second"
+
+      - alert: RateLimitExceeded
+        expr: |
+          rate(rate_limit_exceeded_total[5m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High rate of rate limit violations"
+          description: "{{ $value }} rate limit violations per second"
+
+  # ===========================
+  # Third-Party Service Alerts
+  # ===========================
+  - name: external_services
+    interval: 2m
+    rules:
+      - alert: S3UploadFailureRate
+        expr: |
+          (
+            rate(s3_upload_failures_total[10m])
+            /
+            rate(s3_upload_attempts_total[10m])
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High S3 upload failure rate"
+          description: "S3 upload failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: EmailDeliveryFailureRate
+        expr: |
+          (
+            rate(email_delivery_failures_total[30m])
+            /
+            rate(email_delivery_attempts_total[30m])
+          ) > 0.10
+        for: 15m
+        labels:
+          severity: warning
+          team: communications
+        annotations:
+          summary: "High email delivery failure rate"
+          description: "Email failure rate is {{ $value | humanizePercentage }}"
+
+      - alert: StripeAPIErrors
+        expr: |
+          rate(stripe_api_errors_total[10m]) > 1
+        for: 10m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Stripe API errors detected"
+          description: "{{ $value }} Stripe API errors per second"
