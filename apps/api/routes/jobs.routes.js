@@ -15,7 +15,9 @@ const {
   jobPutLimiter,
   jobDeleteLimiter,
   jobBulkOperationLimiter,
-  jobViewsLimiter
+  jobViewsLimiter,
+  jobTrackingPostLimiter,
+  jobTrackingModifyLimiter
 } = require('../utils/rateLimiter');
 const logger = require('../utils/logger');
 
@@ -26,6 +28,8 @@ const jobPutRateLimit = createRateLimitMiddleware(jobPutLimiter);
 const jobDeleteRateLimit = createRateLimitMiddleware(jobDeleteLimiter);
 const jobBulkOperationRateLimit = createRateLimitMiddleware(jobBulkOperationLimiter);
 const jobViewsRateLimit = createRateLimitMiddleware(jobViewsLimiter);
+const jobTrackingPostRateLimit = createRateLimitMiddleware(jobTrackingPostLimiter);
+const jobTrackingModifyRateLimit = createRateLimitMiddleware(jobTrackingModifyLimiter);
 
 /**
  * Register all job routes with Fastify instance
@@ -48,6 +52,24 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → POST   /api/jobs/views');
   logger.info('   → GET    /api/jobs/views');
   logger.info('   → DELETE /api/jobs/views/:id');
+  logger.info('   → POST   /api/jobs/:id/interview-notes');
+  logger.info('   → PUT    /api/jobs/:id/interview-notes/:noteId');
+  logger.info('   → DELETE /api/jobs/:id/interview-notes/:noteId');
+  logger.info('   → POST   /api/jobs/:id/salary-offers');
+  logger.info('   → PUT    /api/jobs/:id/salary-offers/:offerId');
+  logger.info('   → DELETE /api/jobs/:id/salary-offers/:offerId');
+  logger.info('   → POST   /api/jobs/:id/company-insights');
+  logger.info('   → PUT    /api/jobs/:id/company-insights/:insightId');
+  logger.info('   → DELETE /api/jobs/:id/company-insights/:insightId');
+  logger.info('   → POST   /api/jobs/:id/referrals');
+  logger.info('   → PUT    /api/jobs/:id/referrals/:referralId');
+  logger.info('   → DELETE /api/jobs/:id/referrals/:referralId');
+  logger.info('   → POST   /api/jobs/:id/notes');
+  logger.info('   → PUT    /api/jobs/:id/notes/:noteId');
+  logger.info('   → DELETE /api/jobs/:id/notes/:noteId');
+  logger.info('   → POST   /api/jobs/:id/reminders');
+  logger.info('   → PUT    /api/jobs/:id/reminders/:reminderId');
+  logger.info('   → DELETE /api/jobs/:id/reminders/:reminderId');
 
   /**
    * GET /api/jobs
@@ -1098,6 +1120,1164 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to delete saved view. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // Interview Notes Endpoints
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/interview-notes
+   * Create interview note for a job
+   */
+  fastify.post(
+    '/api/jobs/:id/interview-notes',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { type, date, interviewer, notes, questions, feedback, rating } = request.body || {};
+
+        // Verify job exists and belongs to user
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Create interview note
+        const interviewNote = await safeQuery(async () => {
+          return await prisma.interviewNote.create({
+            data: {
+              jobId,
+              userId,
+              type: type || 'other',
+              date: date || new Date().toISOString().split('T')[0],
+              interviewer,
+              notes: notes || '',
+              questions: questions || [],
+              feedback,
+              rating
+            }
+          });
+        });
+
+        logger.info('Interview note created', { userId, jobId, noteId: interviewNote.id });
+
+        return reply.status(201).send({
+          success: true,
+          interviewNote
+        });
+      } catch (error) {
+        logger.error('Failed to create interview note:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create interview note. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/:id/interview-notes/:noteId
+   * Update interview note
+   */
+  fastify.put(
+    '/api/jobs/:id/interview-notes/:noteId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { noteId } = request.params;
+        const updateData = request.body || {};
+
+        // Verify note exists and belongs to user
+        const existingNote = await safeQuery(async () => {
+          return await prisma.interviewNote.findFirst({
+            where: { id: noteId, userId }
+          });
+        });
+
+        if (!existingNote) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Interview note not found'
+          });
+        }
+
+        // Update note
+        const updatedNote = await safeQuery(async () => {
+          return await prisma.interviewNote.update({
+            where: { id: noteId },
+            data: updateData
+          });
+        });
+
+        logger.info('Interview note updated', { userId, noteId });
+
+        return reply.send({
+          success: true,
+          interviewNote: updatedNote
+        });
+      } catch (error) {
+        logger.error('Failed to update interview note:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update interview note. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/interview-notes/:noteId
+   * Delete interview note
+   */
+  fastify.delete(
+    '/api/jobs/:id/interview-notes/:noteId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { noteId } = request.params;
+
+        // Verify note exists and belongs to user
+        const existingNote = await safeQuery(async () => {
+          return await prisma.interviewNote.findFirst({
+            where: { id: noteId, userId }
+          });
+        });
+
+        if (!existingNote) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Interview note not found'
+          });
+        }
+
+        // Delete note
+        await safeQuery(async () => {
+          return await prisma.interviewNote.delete({
+            where: { id: noteId }
+          });
+        });
+
+        logger.info('Interview note deleted', { userId, noteId });
+
+        return reply.send({
+          success: true,
+          message: 'Interview note deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete interview note:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete interview note. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // Salary Offers Endpoints
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/salary-offers
+   * Create salary offer for a job
+   */
+  fastify.post(
+    '/api/jobs/:id/salary-offers',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { amount, currency, equity, benefits, notes, date, status } = request.body || {};
+
+        // Verify job exists
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Create salary offer
+        const salaryOffer = await safeQuery(async () => {
+          return await prisma.salaryOffer.create({
+            data: {
+              jobId,
+              userId,
+              amount: amount || 0,
+              currency: currency || 'USD',
+              equity,
+              benefits: benefits || [],
+              notes,
+              date: date || new Date().toISOString().split('T')[0],
+              status: status || 'initial'
+            }
+          });
+        });
+
+        logger.info('Salary offer created', { userId, jobId, offerId: salaryOffer.id });
+
+        return reply.status(201).send({
+          success: true,
+          salaryOffer
+        });
+      } catch (error) {
+        logger.error('Failed to create salary offer:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create salary offer. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/:id/salary-offers/:offerId
+   * Update salary offer
+   */
+  fastify.put(
+    '/api/jobs/:id/salary-offers/:offerId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { offerId } = request.params;
+        const updateData = request.body || {};
+
+        // Verify offer exists
+        const existingOffer = await safeQuery(async () => {
+          return await prisma.salaryOffer.findFirst({
+            where: { id: offerId, userId }
+          });
+        });
+
+        if (!existingOffer) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Salary offer not found'
+          });
+        }
+
+        // Update offer
+        const updatedOffer = await safeQuery(async () => {
+          return await prisma.salaryOffer.update({
+            where: { id: offerId },
+            data: updateData
+          });
+        });
+
+        logger.info('Salary offer updated', { userId, offerId });
+
+        return reply.send({
+          success: true,
+          salaryOffer: updatedOffer
+        });
+      } catch (error) {
+        logger.error('Failed to update salary offer:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update salary offer. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/salary-offers/:offerId
+   * Delete salary offer
+   */
+  fastify.delete(
+    '/api/jobs/:id/salary-offers/:offerId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { offerId } = request.params;
+
+        // Verify offer exists
+        const existingOffer = await safeQuery(async () => {
+          return await prisma.salaryOffer.findFirst({
+            where: { id: offerId, userId }
+          });
+        });
+
+        if (!existingOffer) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Salary offer not found'
+          });
+        }
+
+        // Delete offer
+        await safeQuery(async () => {
+          return await prisma.salaryOffer.delete({
+            where: { id: offerId }
+          });
+        });
+
+        logger.info('Salary offer deleted', { userId, offerId });
+
+        return reply.send({
+          success: true,
+          message: 'Salary offer deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete salary offer:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete salary offer. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // Company Insights Endpoints
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/company-insights
+   * Create company insight for a job
+   */
+  fastify.post(
+    '/api/jobs/:id/company-insights',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { type, title, content, source, date } = request.body || {};
+
+        // Verify job exists
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Create insight
+        const insight = await safeQuery(async () => {
+          return await prisma.companyInsight.create({
+            data: {
+              jobId,
+              userId,
+              type: type || 'other',
+              title: title || '',
+              content: content || '',
+              source,
+              date: date || new Date().toISOString().split('T')[0]
+            }
+          });
+        });
+
+        logger.info('Company insight created', { userId, jobId, insightId: insight.id });
+
+        return reply.status(201).send({
+          success: true,
+          companyInsight: insight
+        });
+      } catch (error) {
+        logger.error('Failed to create company insight:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create company insight. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/:id/company-insights/:insightId
+   * Update company insight
+   */
+  fastify.put(
+    '/api/jobs/:id/company-insights/:insightId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { insightId } = request.params;
+        const updateData = request.body || {};
+
+        // Verify insight exists
+        const existingInsight = await safeQuery(async () => {
+          return await prisma.companyInsight.findFirst({
+            where: { id: insightId, userId }
+          });
+        });
+
+        if (!existingInsight) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Company insight not found'
+          });
+        }
+
+        // Update insight
+        const updatedInsight = await safeQuery(async () => {
+          return await prisma.companyInsight.update({
+            where: { id: insightId },
+            data: updateData
+          });
+        });
+
+        logger.info('Company insight updated', { userId, insightId });
+
+        return reply.send({
+          success: true,
+          companyInsight: updatedInsight
+        });
+      } catch (error) {
+        logger.error('Failed to update company insight:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update company insight. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/company-insights/:insightId
+   * Delete company insight
+   */
+  fastify.delete(
+    '/api/jobs/:id/company-insights/:insightId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { insightId } = request.params;
+
+        // Verify insight exists
+        const existingInsight = await safeQuery(async () => {
+          return await prisma.companyInsight.findFirst({
+            where: { id: insightId, userId }
+          });
+        });
+
+        if (!existingInsight) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Company insight not found'
+          });
+        }
+
+        // Delete insight
+        await safeQuery(async () => {
+          return await prisma.companyInsight.delete({
+            where: { id: insightId }
+          });
+        });
+
+        logger.info('Company insight deleted', { userId, insightId });
+
+        return reply.send({
+          success: true,
+          message: 'Company insight deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete company insight:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete company insight. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // Referral Contacts Endpoints
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/referrals
+   * Create referral contact for a job
+   */
+  fastify.post(
+    '/api/jobs/:id/referrals',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { name, position, relationship, contacted, date, notes } = request.body || {};
+
+        // Verify job exists
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Create referral
+        const referral = await safeQuery(async () => {
+          return await prisma.referralContact.create({
+            data: {
+              jobId,
+              userId,
+              name: name || '',
+              position: position || '',
+              relationship: relationship || '',
+              contacted: contacted || false,
+              date: date || new Date().toISOString().split('T')[0],
+              notes
+            }
+          });
+        });
+
+        logger.info('Referral contact created', { userId, jobId, referralId: referral.id });
+
+        return reply.status(201).send({
+          success: true,
+          referralContact: referral
+        });
+      } catch (error) {
+        logger.error('Failed to create referral contact:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create referral contact. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/:id/referrals/:referralId
+   * Update referral contact
+   */
+  fastify.put(
+    '/api/jobs/:id/referrals/:referralId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { referralId } = request.params;
+        const updateData = request.body || {};
+
+        // Verify referral exists
+        const existingReferral = await safeQuery(async () => {
+          return await prisma.referralContact.findFirst({
+            where: { id: referralId, userId }
+          });
+        });
+
+        if (!existingReferral) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Referral contact not found'
+          });
+        }
+
+        // Update referral
+        const updatedReferral = await safeQuery(async () => {
+          return await prisma.referralContact.update({
+            where: { id: referralId },
+            data: updateData
+          });
+        });
+
+        logger.info('Referral contact updated', { userId, referralId });
+
+        return reply.send({
+          success: true,
+          referralContact: updatedReferral
+        });
+      } catch (error) {
+        logger.error('Failed to update referral contact:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update referral contact. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/referrals/:referralId
+   * Delete referral contact
+   */
+  fastify.delete(
+    '/api/jobs/:id/referrals/:referralId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { referralId } = request.params;
+
+        // Verify referral exists
+        const existingReferral = await safeQuery(async () => {
+          return await prisma.referralContact.findFirst({
+            where: { id: referralId, userId }
+          });
+        });
+
+        if (!existingReferral) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Referral contact not found'
+          });
+        }
+
+        // Delete referral
+        await safeQuery(async () => {
+          return await prisma.referralContact.delete({
+            where: { id: referralId }
+          });
+        });
+
+        logger.info('Referral contact deleted', { userId, referralId });
+
+        return reply.send({
+          success: true,
+          message: 'Referral contact deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete referral contact:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete referral contact. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // Job Notes Endpoints
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/notes
+   * Create job note
+   */
+  fastify.post(
+    '/api/jobs/:id/notes',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { title, content, tags, date, category } = request.body || {};
+
+        // Verify job exists
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Create note
+        const note = await safeQuery(async () => {
+          return await prisma.jobNote.create({
+            data: {
+              jobId,
+              userId,
+              title: title || '',
+              content: content || '',
+              tags: tags || [],
+              date: date || new Date().toISOString().split('T')[0],
+              category: category || 'other'
+            }
+          });
+        });
+
+        logger.info('Job note created', { userId, jobId, noteId: note.id });
+
+        return reply.status(201).send({
+          success: true,
+          jobNote: note
+        });
+      } catch (error) {
+        logger.error('Failed to create job note:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create job note. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/:id/notes/:noteId
+   * Update job note
+   */
+  fastify.put(
+    '/api/jobs/:id/notes/:noteId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { noteId } = request.params;
+        const updateData = request.body || {};
+
+        // Verify note exists
+        const existingNote = await safeQuery(async () => {
+          return await prisma.jobNote.findFirst({
+            where: { id: noteId, userId }
+          });
+        });
+
+        if (!existingNote) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job note not found'
+          });
+        }
+
+        // Update note
+        const updatedNote = await safeQuery(async () => {
+          return await prisma.jobNote.update({
+            where: { id: noteId },
+            data: updateData
+          });
+        });
+
+        logger.info('Job note updated', { userId, noteId });
+
+        return reply.send({
+          success: true,
+          jobNote: updatedNote
+        });
+      } catch (error) {
+        logger.error('Failed to update job note:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update job note. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/notes/:noteId
+   * Delete job note
+   */
+  fastify.delete(
+    '/api/jobs/:id/notes/:noteId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { noteId } = request.params;
+
+        // Verify note exists
+        const existingNote = await safeQuery(async () => {
+          return await prisma.jobNote.findFirst({
+            where: { id: noteId, userId }
+          });
+        });
+
+        if (!existingNote) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job note not found'
+          });
+        }
+
+        // Delete note
+        await safeQuery(async () => {
+          return await prisma.jobNote.delete({
+            where: { id: noteId }
+          });
+        });
+
+        logger.info('Job note deleted', { userId, noteId });
+
+        return reply.send({
+          success: true,
+          message: 'Job note deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete job note:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete job note. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  // ============================================================
+  // Job Reminders Endpoints
+  // ============================================================
+
+  /**
+   * POST /api/jobs/:id/reminders
+   * Create job reminder
+   */
+  fastify.post(
+    '/api/jobs/:id/reminders',
+    {
+      preHandler: [authenticate, jobTrackingPostRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id: jobId } = request.params;
+        const { title, description, dueDate, completed, priority, type } = request.body || {};
+
+        // Verify job exists
+        const job = await safeQuery(async () => {
+          return await prisma.job.findFirst({
+            where: { id: jobId, userId, deletedAt: null }
+          });
+        });
+
+        if (!job) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job not found'
+          });
+        }
+
+        // Create reminder
+        const reminder = await safeQuery(async () => {
+          return await prisma.jobReminder.create({
+            data: {
+              jobId,
+              userId,
+              title: title || '',
+              description: description || '',
+              dueDate: dueDate || new Date().toISOString().split('T')[0],
+              completed: completed || false,
+              priority: priority || 'MEDIUM',
+              type: type || 'other'
+            }
+          });
+        });
+
+        logger.info('Job reminder created', { userId, jobId, reminderId: reminder.id });
+
+        return reply.status(201).send({
+          success: true,
+          jobReminder: reminder
+        });
+      } catch (error) {
+        logger.error('Failed to create job reminder:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create job reminder. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/:id/reminders/:reminderId
+   * Update job reminder
+   */
+  fastify.put(
+    '/api/jobs/:id/reminders/:reminderId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { reminderId } = request.params;
+        const updateData = request.body || {};
+
+        // Verify reminder exists
+        const existingReminder = await safeQuery(async () => {
+          return await prisma.jobReminder.findFirst({
+            where: { id: reminderId, userId }
+          });
+        });
+
+        if (!existingReminder) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job reminder not found'
+          });
+        }
+
+        // Update reminder
+        const updatedReminder = await safeQuery(async () => {
+          return await prisma.jobReminder.update({
+            where: { id: reminderId },
+            data: updateData
+          });
+        });
+
+        logger.info('Job reminder updated', { userId, reminderId });
+
+        return reply.send({
+          success: true,
+          jobReminder: updatedReminder
+        });
+      } catch (error) {
+        logger.error('Failed to update job reminder:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update job reminder. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/:id/reminders/:reminderId
+   * Delete job reminder
+   */
+  fastify.delete(
+    '/api/jobs/:id/reminders/:reminderId',
+    {
+      preHandler: [authenticate, jobTrackingModifyRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { reminderId } = request.params;
+
+        // Verify reminder exists
+        const existingReminder = await safeQuery(async () => {
+          return await prisma.jobReminder.findFirst({
+            where: { id: reminderId, userId }
+          });
+        });
+
+        if (!existingReminder) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Job reminder not found'
+          });
+        }
+
+        // Delete reminder
+        await safeQuery(async () => {
+          return await prisma.jobReminder.delete({
+            where: { id: reminderId }
+          });
+        });
+
+        logger.info('Job reminder deleted', { userId, reminderId });
+
+        return reply.send({
+          success: true,
+          message: 'Job reminder deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete job reminder:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete job reminder. Please try again.',
           message: error.message
         });
       }
