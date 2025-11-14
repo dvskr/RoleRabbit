@@ -6,6 +6,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { TEMPLATES_PER_PAGE } from '../constants';
 import type { ResumeTemplate } from '../../../data/templates';
+import { trackPageChange } from '../utils/analytics';
 
 interface UseTemplatePaginationOptions {
   templates: ResumeTemplate[];
@@ -73,11 +74,17 @@ export const useTemplatePagination = (
 
       // Small delay to ensure DOM has updated
       const timer = setTimeout(scrollToTop, 50);
+
+      // Track page change analytics
+      if (previousPage.current !== 1) { // Don't track initial mount
+        trackPageChange(currentPage, totalPages);
+      }
+
       previousPage.current = currentPage;
 
       return () => clearTimeout(timer);
     }
-  }, [currentPage, scrollToTopOnPageChange, scrollContainerSelector]);
+  }, [currentPage, scrollToTopOnPageChange, scrollContainerSelector, totalPages]);
 
   // Reset to page 1 when templates change significantly
   useEffect(() => {

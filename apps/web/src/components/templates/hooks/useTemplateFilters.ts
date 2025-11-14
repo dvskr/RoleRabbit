@@ -70,7 +70,7 @@
  * @returns {UseTemplateFiltersReturn} Filter state and controls
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { debounce } from '../../../utils/performance';
 import { resumeTemplates, getTemplatesByCategory, searchTemplates } from '../../../data/templates';
 import { TemplateSortBy, TemplateDifficulty, TemplateLayout, TemplateColorScheme } from '../types';
@@ -78,6 +78,12 @@ import { DEBOUNCE_DELAY } from '../constants';
 import type { ResumeTemplate } from '../../../data/templates';
 import { safeParseWithDefault, templateSortBySchema, templateDifficultySchema, templateLayoutSchema, templateColorSchemeSchema } from '../validation';
 import { z } from 'zod';
+import {
+  trackSearch,
+  trackSearchClear,
+  trackFilterApply,
+  trackClearAllFilters,
+} from '../utils/analytics';
 
 // localStorage keys for filter persistence
 const STORAGE_KEYS = {
@@ -283,8 +289,74 @@ export const useTemplateFilters = (
     debouncedSetSearch(searchQuery);
   }, [searchQuery, debouncedSetSearch]);
 
+  // Track search analytics when debounced query changes
+  const previousSearchQuery = useRef('');
+  useEffect(() => {
+    if (debouncedSearchQuery && debouncedSearchQuery !== previousSearchQuery.current) {
+      // Track search with result count
+      const resultCount = searchTemplates(debouncedSearchQuery).length;
+      trackSearch(debouncedSearchQuery, resultCount);
+    } else if (!debouncedSearchQuery && previousSearchQuery.current) {
+      // Track search clear
+      trackSearchClear();
+    }
+    previousSearchQuery.current = debouncedSearchQuery;
+  }, [debouncedSearchQuery]);
+
+  // Track filter changes
+  const previousCategory = useRef(selectedCategory);
+  useEffect(() => {
+    if (selectedCategory !== previousCategory.current && selectedCategory !== 'all') {
+      trackFilterApply('category', selectedCategory);
+    }
+    previousCategory.current = selectedCategory;
+  }, [selectedCategory]);
+
+  const previousDifficulty = useRef(selectedDifficulty);
+  useEffect(() => {
+    if (selectedDifficulty !== previousDifficulty.current && selectedDifficulty !== 'all') {
+      trackFilterApply('difficulty', selectedDifficulty);
+    }
+    previousDifficulty.current = selectedDifficulty;
+  }, [selectedDifficulty]);
+
+  const previousLayout = useRef(selectedLayout);
+  useEffect(() => {
+    if (selectedLayout !== previousLayout.current && selectedLayout !== 'all') {
+      trackFilterApply('layout', selectedLayout);
+    }
+    previousLayout.current = selectedLayout;
+  }, [selectedLayout]);
+
+  const previousColorScheme = useRef(selectedColorScheme);
+  useEffect(() => {
+    if (selectedColorScheme !== previousColorScheme.current && selectedColorScheme !== 'all') {
+      trackFilterApply('colorScheme', selectedColorScheme);
+    }
+    previousColorScheme.current = selectedColorScheme;
+  }, [selectedColorScheme]);
+
+  const previousPremiumOnly = useRef(showPremiumOnly);
+  useEffect(() => {
+    if (showPremiumOnly !== previousPremiumOnly.current && showPremiumOnly) {
+      trackFilterApply('price', 'premium');
+    }
+    previousPremiumOnly.current = showPremiumOnly;
+  }, [showPremiumOnly]);
+
+  const previousFreeOnly = useRef(showFreeOnly);
+  useEffect(() => {
+    if (showFreeOnly !== previousFreeOnly.current && showFreeOnly) {
+      trackFilterApply('price', 'free');
+    }
+    previousFreeOnly.current = showFreeOnly;
+  }, [showFreeOnly]);
+
   // Clear all filters and localStorage
   const clearAllFilters = useCallback(() => {
+    // Track analytics before clearing
+    const currentActiveCount = activeFilterCount;
+
     setSearchQuery('');
     setSelectedCategory('all');
     setSelectedDifficulty('all');
@@ -297,7 +369,12 @@ export const useTemplateFilters = (
     if (persistFilters) {
       clearFiltersFromStorage();
     }
-  }, [persistFilters]);
+
+    // Track clear all filters event
+    if (currentActiveCount > 0) {
+      trackClearAllFilters(currentActiveCount);
+    }
+  }, [persistFilters, activeFilterCount]);
 
   const filteredTemplates = useMemo(() => {
     let templates = resumeTemplates;

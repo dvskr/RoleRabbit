@@ -12,6 +12,14 @@ import { getTemplateDownloadHTML, downloadTemplateAsHTML, shareTemplate } from '
 import { SUCCESS_ANIMATION_DURATION } from '../constants';
 import { validateTemplate } from '../validation';
 import { useTemplateHistory } from './useTemplateHistory';
+import {
+  trackTemplatePreview,
+  trackTemplateAdd,
+  trackTemplateRemove,
+  trackTemplateFavorite,
+  trackTemplateDownload,
+  trackError,
+} from '../utils/analytics';
 
 // localStorage key for favorites persistence
 const FAVORITES_STORAGE_KEY = 'template_favorites';
@@ -136,10 +144,15 @@ export const useTemplateActions = (
   }, []);
 
   const handlePreviewTemplate = useCallback((templateId: string) => {
+    const template = resumeTemplates.find(t => t.id === templateId);
     setSelectedTemplate(templateId);
     setShowPreviewModal(true);
     // Track preview in history
     addToHistory(templateId, 'preview');
+    // Track analytics
+    if (template) {
+      trackTemplatePreview(templateId, template.name);
+    }
   }, [addToHistory]);
 
   const handleUseTemplate = useCallback(
@@ -169,6 +182,9 @@ export const useTemplateActions = (
         // Track usage in history
         addToHistory(templateId, 'use');
 
+        // Track analytics
+        trackTemplateAdd(template.id, template.name);
+
         // Clear any previous errors
         setError(null);
 
@@ -183,6 +199,8 @@ export const useTemplateActions = (
         const error = err instanceof Error ? err : new Error('Failed to add template');
         logger.error('Error adding template to editor:', error);
         setError(error.message);
+        // Track error
+        trackError(error.message, error.stack, 'useTemplate');
         if (onError) {
           onError(error, 'useTemplate');
         }
@@ -207,12 +225,17 @@ export const useTemplateActions = (
       // Track download in history
       addToHistory(currentSelectedTemplate.id, 'download');
 
+      // Track analytics
+      trackTemplateDownload(currentSelectedTemplate.id, currentSelectedTemplate.name);
+
       setIsLoading(false);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to download template');
       logger.error('Error downloading template:', error);
       setError(error.message);
       setIsLoading(false);
+      // Track error
+      trackError(error.message, error.stack, 'downloadTemplate');
       if (onError) {
         onError(error, 'downloadTemplate');
       }
@@ -240,6 +263,8 @@ export const useTemplateActions = (
       logger.error('Error sharing template:', error);
       setError(error.message);
       setIsLoading(false);
+      // Track error
+      trackError(error.message, error.stack, 'shareTemplate');
       if (onError) {
         onError(error, 'shareTemplate');
       }
@@ -263,22 +288,29 @@ export const useTemplateActions = (
         );
       }
 
+      const isFavorited = !favorites.includes(templateId);
+
       setFavorites(prev =>
         prev.includes(templateId)
           ? prev.filter(id => id !== templateId)
           : [...prev, templateId]
       );
 
+      // Track analytics
+      trackTemplateFavorite(template.id, template.name, isFavorited);
+
       setError(null);
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to toggle favorite');
       logger.error('Error toggling favorite:', error);
       setError(error.message);
+      // Track error
+      trackError(error.message, error.stack, 'toggleFavorite');
       if (onError) {
         onError(error, 'toggleFavorite');
       }
     }
-  }, [onError]);
+  }, [onError, favorites]);
 
   return {
     // State

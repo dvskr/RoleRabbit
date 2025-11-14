@@ -5,6 +5,7 @@
 
 import { useEffect, useCallback, RefObject } from 'react';
 import { TemplateViewMode } from '../types';
+import { trackKeyboardShortcut, trackHelpModalOpen } from '../utils/analytics';
 
 interface UseKeyboardShortcutsOptions {
   searchInputRef?: RefObject<HTMLInputElement>;
@@ -52,6 +53,8 @@ export function useKeyboardShortcuts({
         (event.key === 'k' && (event.ctrlKey || event.metaKey))
       ) {
         event.preventDefault();
+        const shortcut = event.key === '/' ? '/' : 'Ctrl+K';
+        trackKeyboardShortcut(shortcut, 'Focus search');
         searchInputRef?.current?.focus();
         return;
       }
@@ -59,6 +62,7 @@ export function useKeyboardShortcuts({
       // Shortcut: Escape - Clear search when search is focused
       if (event.key === 'Escape' && isTyping && searchInputRef?.current) {
         event.preventDefault();
+        trackKeyboardShortcut('Esc', 'Clear search');
         searchInputRef.current.value = '';
         searchInputRef.current.blur();
         // Trigger change event to update parent state
@@ -75,6 +79,7 @@ export function useKeyboardShortcuts({
         !isTyping
       ) {
         event.preventDefault();
+        trackKeyboardShortcut('Ctrl+Shift+C', 'Clear all filters');
         onClearFilters?.();
         return;
       }
@@ -87,6 +92,7 @@ export function useKeyboardShortcuts({
         !isTyping
       ) {
         event.preventDefault();
+        trackKeyboardShortcut('Ctrl+Shift+F', 'Toggle filters');
         onToggleFilters?.();
         return;
       }
@@ -94,6 +100,7 @@ export function useKeyboardShortcuts({
       // Shortcut: Ctrl+1 - Switch to grid view
       if (event.key === '1' && (event.ctrlKey || event.metaKey) && !isTyping) {
         event.preventDefault();
+        trackKeyboardShortcut('Ctrl+1', 'Switch to grid view');
         onChangeViewMode?.('grid');
         return;
       }
@@ -101,6 +108,7 @@ export function useKeyboardShortcuts({
       // Shortcut: Ctrl+2 - Switch to list view
       if (event.key === '2' && (event.ctrlKey || event.metaKey) && !isTyping) {
         event.preventDefault();
+        trackKeyboardShortcut('Ctrl+2', 'Switch to list view');
         onChangeViewMode?.('list');
         return;
       }
@@ -108,6 +116,7 @@ export function useKeyboardShortcuts({
       // Shortcut: Arrow Left - Previous page
       if (event.key === 'ArrowLeft' && !isTyping && currentPage > 1) {
         event.preventDefault();
+        trackKeyboardShortcut('←', 'Previous page');
         onPrevPage?.();
         return;
       }
@@ -119,6 +128,7 @@ export function useKeyboardShortcuts({
         currentPage < totalPages
       ) {
         event.preventDefault();
+        trackKeyboardShortcut('→', 'Next page');
         onNextPage?.();
         return;
       }
@@ -126,6 +136,8 @@ export function useKeyboardShortcuts({
       // Shortcut: ? - Show keyboard shortcuts help
       if (event.key === '?' && !isTyping) {
         event.preventDefault();
+        trackKeyboardShortcut('?', 'Show help');
+        trackHelpModalOpen();
         onShowHelp?.();
         return;
       }

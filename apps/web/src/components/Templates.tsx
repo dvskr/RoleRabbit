@@ -19,6 +19,7 @@ import EmptyState from './templates/components/EmptyState';
 import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundary';
 import FilterChips from './templates/components/FilterChips';
 import KeyboardShortcutsHelp from './templates/components/KeyboardShortcutsHelp';
+import { trackViewModeChange } from './templates/utils/analytics';
 
 /**
  * TemplatesInternal Component
@@ -99,6 +100,11 @@ function TemplatesInternal({
     setShowKeyboardHelp(true);
   }, []);
 
+  const handleViewModeChange = useCallback((mode: TemplateViewMode) => {
+    trackViewModeChange(mode);
+    setViewMode(mode);
+  }, []);
+
   const handleNextPage = useCallback(() => {
     if (paginationState.currentPage < paginationState.totalPages) {
       paginationState.setCurrentPage(paginationState.currentPage + 1);
@@ -116,7 +122,7 @@ function TemplatesInternal({
     searchInputRef,
     onClearFilters: filterState.clearAllFilters,
     onToggleFilters: handleToggleFilters,
-    onChangeViewMode: setViewMode,
+    onChangeViewMode: handleViewModeChange,
     onShowHelp: handleShowHelp,
     onNextPage: handleNextPage,
     onPrevPage: handlePrevPage,
@@ -144,7 +150,7 @@ function TemplatesInternal({
         sortBy={filterState.sortBy}
         setSortBy={filterState.setSortBy}
         viewMode={viewMode}
-        setViewMode={setViewMode}
+        setViewMode={handleViewModeChange}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
         hasActiveFilters={filterState.hasActiveFilters}
