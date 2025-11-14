@@ -172,6 +172,10 @@ model FileAccessLog {
   @@index([fileId])
   @@index([userId])
   @@index([createdAt])
+  // Composite indexes for access log queries
+  @@index([fileId, createdAt])
+  @@index([userId, createdAt])
+  @@index([fileId, userId])
   @@map("file_access_logs")
 }
 
@@ -439,6 +443,14 @@ model StorageFile {
   @@index([isStarred])
   @@index([isArchived])
   @@index([fileHash])
+  @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([userId, deletedAt])
+  @@index([userId, type])
+  @@index([userId, folderId])
+  @@index([userId, isStarred])
+  @@index([userId, isArchived])
+  @@index([userId, createdAt])
   @@map("storage_files")
 }
 

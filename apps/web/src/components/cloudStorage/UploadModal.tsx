@@ -165,13 +165,13 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto"
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
       style={{ background: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}
       data-testid="storage-upload-modal"
     >
-      <div 
-        className="rounded-lg p-4 w-full max-w-lg my-auto"
+      <div
+        className="rounded-lg p-3 sm:p-4 w-full max-w-lg my-auto max-h-[95vh] overflow-y-auto"
         style={{
           background: theme.mode === 'light' ? '#ffffff' : colors.cardBackground,
           border: `1px solid ${theme.mode === 'light' ? '#e5e7eb' : colors.border}`,
@@ -208,7 +208,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
               resetForm();
               onClose();
             }}
-            className="p-1.5 transition-colors"
+            className="p-2 sm:p-1.5 transition-colors rounded-lg min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 flex items-center justify-center"
             style={{ color: colors.secondaryText }}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = colors.primaryText;
@@ -221,7 +221,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, activeFolderId 
             aria-label="Close upload modal"
             title="Close"
           >
-            <X size={18} />
+            <X size={20} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
 

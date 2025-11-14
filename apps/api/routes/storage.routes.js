@@ -65,6 +65,11 @@ async function storageRoutes(fastify, _options) {
       const type = request.query.type || null;
       const search = request.query.search || null;
 
+      // Pagination parameters
+      const page = parseInt(request.query.page) || 1;
+      const limit = parseInt(request.query.limit) || 50; // Default 50 files per page
+      const skip = (page - 1) * limit;
+
       // Build where clause
       const where = {
         userId,
@@ -88,9 +93,14 @@ async function storageRoutes(fastify, _options) {
       }
       // If folderId not provided, don't add folder filter - return all files
 
-      // Fetch files from database
+      // Get total count for pagination
+      const totalCount = await prisma.storageFile.count({ where });
+
+      // Fetch files from database with pagination
       const files = await prisma.storageFile.findMany({
         where,
+        skip,
+        take: limit,
         orderBy: {
           createdAt: 'desc'
         },
@@ -239,7 +249,14 @@ async function storageRoutes(fastify, _options) {
         success: true,
         files: formattedFiles,
         storage: storageInfo,
-        count: formattedFiles.length
+        count: formattedFiles.length,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / limit),
+          hasMore: skip + formattedFiles.length < totalCount
+        }
       });
 
     } catch (error) {
