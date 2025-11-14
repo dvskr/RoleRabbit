@@ -9,6 +9,8 @@ import type { ResumeTemplate } from '../../../data/templates';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import { generateSampleResumePreview } from '../utils/templateHelpers';
 import { TemplateReviews } from './ratings/TemplateReviews';
+import { TemplateComments } from './comments/TemplateComments';
+import { ShareModal } from './sharing/ShareModal';
 
 interface TemplatePreviewModalProps {
   isOpen: boolean;
@@ -39,7 +41,8 @@ export default function TemplatePreviewModal({
 }: TemplatePreviewModalProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'reviews'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'comments'>('overview');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -150,11 +153,21 @@ export default function TemplatePreviewModal({
             >
               Reviews
             </button>
+            <button
+              onClick={() => setActiveTab('comments')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'comments'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Comments
+            </button>
           </nav>
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'overview' ? (
+        {activeTab === 'overview' && (
           <>
             {/* Template Preview Image */}
             <div className="mb-4 sm:mb-6 bg-gray-100 rounded-lg p-3 sm:p-8">
@@ -217,12 +230,25 @@ export default function TemplatePreviewModal({
               </div>
             </div>
           </>
-        ) : (
-          /* Reviews Tab */
+        )}
+
+        {/* Reviews Tab */}
+        {activeTab === 'reviews' && (
           <div className="mb-6">
             <TemplateReviews
               templateId={template.id}
               currentUserId={undefined} // TODO: Get from auth context
+            />
+          </div>
+        )}
+
+        {/* Comments Tab */}
+        {activeTab === 'comments' && (
+          <div className="mb-6">
+            <TemplateComments
+              templateId={template.id}
+              currentUserId={undefined} // TODO: Get from auth context
+              isAdmin={false} // TODO: Get from auth context
             />
           </div>
         )}
@@ -243,7 +269,7 @@ export default function TemplatePreviewModal({
               <Heart size={20} fill={isFavorite ? 'currentColor' : 'none'} />
             </button>
             <button
-              onClick={onShare}
+              onClick={() => setIsShareModalOpen(true)}
               className="p-3 sm:p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
               aria-label="Share template"
               title="Share"
@@ -296,6 +322,16 @@ export default function TemplatePreviewModal({
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {template && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          templateId={template.id}
+          templateName={template.name}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
