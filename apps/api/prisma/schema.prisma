@@ -35,17 +35,47 @@ enum GeneratedDocType {
   OTHER
 }
 
-enum JobStatus {
-  APPLIED
-  INTERVIEW
-  OFFER
-  REJECTED
+enum TemplateCategory {
+  ATS
+  CREATIVE
+  MODERN
+  CLASSIC
+  EXECUTIVE
+  MINIMAL
+  ACADEMIC
+  TECHNICAL
+  STARTUP
+  FREELANCE
 }
 
-enum JobPriority {
-  LOW
-  MEDIUM
-  HIGH
+enum TemplateDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum TemplateLayout {
+  SINGLE_COLUMN
+  TWO_COLUMN
+  HYBRID
+}
+
+enum TemplateColorScheme {
+  MONOCHROME
+  BLUE
+  GREEN
+  PURPLE
+  RED
+  ORANGE
+  CUSTOM
+}
+
+enum TemplateUsageAction {
+  PREVIEW
+  DOWNLOAD
+  USE
+  FAVORITE
+  SHARE
 }
 
 model Certification {
@@ -610,22 +640,12 @@ model User {
   generatedDocuments  GeneratedDocument[]
   aiRequests          AIRequestLog[]
   aiDrafts            AIDraft[]
-  resumeCacheEntries  ResumeCache[]
-  tailoringAnalytics  TailoringAnalytics[]
-  analyticsEvents     AnalyticsEvent[]     @relation("AnalyticsEvents")
-  webhookConfig       WebhookConfig?       @relation("WebhookConfig")
-  webhookLogs         WebhookLog[]         @relation("WebhookLogs")
-  promptTests         PromptTest[]         @relation("PromptTests")
-  activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
-  jobs                Job[]                @relation("UserJobs")
-  interviewNotes      InterviewNote[]      @relation("UserInterviewNotes")
-  salaryOffers        SalaryOffer[]        @relation("UserSalaryOffers")
-  companyInsights     CompanyInsight[]     @relation("UserCompanyInsights")
-  referralContacts    ReferralContact[]    @relation("UserReferralContacts")
-  jobNotes            JobNote[]            @relation("UserJobNotes")
-  jobReminders        JobReminder[]        @relation("UserJobReminders")
-  savedViews          SavedView[]          @relation("UserSavedViews")
-  jobAttachments      JobAttachment[]      @relation("UserJobAttachments")
+  resumeCacheEntries    ResumeCache[]
+  tailoringAnalytics    TailoringAnalytics[]
+  activeBaseResume      BaseResume?                @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
+  templateFavorites     UserTemplateFavorite[]     @relation("UserTemplateFavorites")
+  templatePreferences   UserTemplatePreferences?   @relation("UserTemplatePreferences")
+  templateUsageHistory  TemplateUsageHistory[]     @relation("UserTemplateHistory")
 
   @@index([email])
   @@index([provider, providerId])
@@ -809,9 +829,11 @@ model GeneratedDocument {
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   baseResume      BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
   tailoredVersion TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
+  template        ResumeTemplate?  @relation("TemplateGeneratedDocs", fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([type])
+  @@index([templateId])
   @@map("generated_documents")
 }
 
@@ -904,355 +926,279 @@ model TailoringAnalytics {
   @@map("tailoring_analytics")
 }
 
-// ============================================================
-// Job Tracker Models
-// ============================================================
+model ResumeTemplate {
+  id          String              @id @default(cuid())
+  name        String
+  category    TemplateCategory
+  description String              @db.Text
+  preview     String // URL or path to preview image
+  features    String[] // Array of feature strings
+  difficulty  TemplateDifficulty
+  industry    String[] // Industries this template is suitable for
+  layout      TemplateLayout
+  colorScheme TemplateColorScheme
+  isPremium   Boolean             @default(false)
+  rating      Float               @default(0) @db.DoublePrecision
+  downloads   Int                 @default(0)
+  author      String              @default("RoleReady Team")
+  tags        String[] // Searchable tags
 
-model Job {
-  id     String @id @default(cuid())
-  userId String
+  // Template content and configuration
+  templateData Json? // Template structure/configuration
+  isActive     Boolean  @default(true) // Can be disabled by admin
+  isApproved   Boolean  @default(true) // For user-submitted templates
 
-  // Basic Information
-  title    String
-  company  String
-  location String
-  status   JobStatus    @default(APPLIED)
-  priority JobPriority? @default(MEDIUM)
-
-  // Application Details
-  appliedDate   String // Date in YYYY-MM-DD format
-  salary        String? // Salary range or amount
-  description   String? @db.Text
-  url           String? // Job posting URL
-  notes         String? @db.Text
-  nextStep      String?
-  nextStepDate  String? // Date in YYYY-MM-DD format
-
-  // Contact Information (JSON)
-  contact Json? // {name, email, phone}
-
-  // Additional Details
-  requirements String[] @default([])
-  benefits     String[] @default([])
-  remote       Boolean  @default(false)
-  companySize  String?
-  industry     String?
-
-  // Metadata
-  isFavorite Boolean   @default(false)
-  deletedAt  DateTime? // Soft delete
-
-  createdAt   DateTime @default(now())
-  lastUpdated DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user            User              @relation("UserJobs", fields: [userId], references: [id], onDelete: Cascade)
-  interviewNotes  InterviewNote[]
-  salaryOffers    SalaryOffer[]
-  companyInsights CompanyInsight[]
-  referrals       ReferralContact[]
-  jobNotes        JobNote[]
-  reminders       JobReminder[]
-  attachments     JobAttachment[]
+  favorites      UserTemplateFavorite[]
+  usageHistory   TemplateUsageHistory[]
+  generatedDocs  GeneratedDocument[]    @relation("TemplateGeneratedDocs")
+  ratings        TemplateRating[]       @relation("TemplateRatings")
+  comments       TemplateComment[]      @relation("TemplateComments")
+  shares         TemplateShare[]        @relation("TemplateShares")
+  versions       TemplateVersion[]      @relation("TemplateVersions")
+  approvalWorkflow TemplateApprovalWorkflow[] @relation("TemplateApproval")
 
-  @@index([userId])
-  @@index([status])
-  @@index([priority])
-  @@index([company])
-  @@index([appliedDate])
-  @@index([deletedAt])
-  @@index([isFavorite])
-  @@map("jobs")
-}
-
-model InterviewNote {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  type        String // phone, technical, behavioral, final, other
-  date        String // Date in YYYY-MM-DD format
-  interviewer String?
-  notes       String  @db.Text
-  questions   String[] @default([])
-  feedback    String?  @db.Text
-  rating      Int? // 1-5 rating
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserInterviewNotes", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([date])
-  @@map("interview_notes")
-}
-
-model SalaryOffer {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  amount   Float
-  currency String  @default("USD")
-  equity   String? // Stock options, RSUs, etc.
-  benefits String[] @default([])
-  notes    String?  @db.Text
-  date     String // Date in YYYY-MM-DD format
-  status   String  @default("initial") // initial, countered, accepted, rejected
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserSalaryOffers", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([status])
-  @@map("salary_offers")
-}
-
-model CompanyInsight {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  type    String // culture, benefits, growth, reviews, news, other
-  title   String
-  content String @db.Text
-  source  String?
-  date    String // Date in YYYY-MM-DD format
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserCompanyInsights", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([type])
-  @@map("company_insights")
-}
-
-model ReferralContact {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  name         String
-  position     String
-  relationship String
-  contacted    Boolean @default(false)
-  date         String // Date in YYYY-MM-DD format
-  notes        String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserReferralContacts", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([contacted])
-  @@map("referral_contacts")
-}
-
-model JobNote {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  title    String
-  content  String   @db.Text
-  tags     String[] @default([])
-  date     String // Date in YYYY-MM-DD format
-  category String   @default("other") // research, application, interview, offer, other
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserJobNotes", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
   @@index([category])
-  @@map("job_notes")
+  @@index([difficulty])
+  @@index([isPremium])
+  @@index([isActive])
+  @@index([rating])
+  @@index([downloads])
+  @@map("resume_templates")
 }
 
-model JobReminder {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  title       String
-  description String  @db.Text
-  dueDate     String // Date in YYYY-MM-DD format
-  completed   Boolean     @default(false)
-  priority    JobPriority @default(MEDIUM)
-  type        String      @default("other") // follow-up, deadline, interview, application, other
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserJobReminders", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([dueDate])
-  @@index([completed])
-  @@map("job_reminders")
-}
-
-model SavedView {
-  id     String @id @default(cuid())
-  userId String
-
-  name    String
-  filters Json // JobFilters as JSON
-  columns String[] @default([])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation("UserSavedViews", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("saved_views")
-}
-
-model JobAttachment {
-  id        String @id @default(cuid())
-  jobId     String
-  userId    String
-  fileId    String
-  attachmentType String @default("other") // resume, cover_letter, portfolio, other
-
-  createdAt DateTime @default(now())
-
-  job  Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User        @relation("UserJobAttachments", fields: [userId], references: [id], onDelete: Cascade)
-  file StorageFile @relation("JobAttachments", fields: [fileId], references: [id], onDelete: Cascade)
-
-  @@unique([jobId, fileId]) // Prevent duplicate attachments
-  @@index([jobId])
-  @@index([userId])
-  @@index([fileId])
-  @@map("job_attachments")
-}
-
-model AnalyticsEvent {
+model UserTemplateFavorite {
   id         String   @id @default(cuid())
   userId     String
-  event      String   // Event name (e.g., 'resume_uploaded', 'ats_check_success')
-  properties String   @default("{}") // JSON string of event properties
-  sessionId  String?  // Optional session identifier
-  timestamp  DateTime @default(now())
+  templateId String
   createdAt  DateTime @default(now())
 
-  user User @relation("AnalyticsEvents", fields: [userId], references: [id], onDelete: Cascade)
+  user     User           @relation("UserTemplateFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  template ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, templateId])
   @@index([userId])
-  @@index([event])
-  @@index([timestamp])
-  @@index([userId, timestamp])
-  @@index([event, timestamp])
-  @@map("analytics_events")
+  @@index([templateId])
+  @@map("user_template_favorites")
 }
 
-model WebhookConfig {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  url           String   // Webhook endpoint URL
-  secret        String   // HMAC secret for signature verification
-  enabled       Boolean  @default(true)
-  enabledEvents String   @default("[]") // JSON array of enabled event types
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation("WebhookConfig", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([enabled])
-  @@map("webhook_configs")
-}
-
-model WebhookLog {
-  id          String    @id @default(cuid())
-  userId      String
-  event       String    // Event type
-  url         String    // Webhook URL that was called
-  payload     String    // JSON payload sent
-  success     Boolean   // Whether delivery was successful
-  statusCode  Int?      // HTTP status code received
-  attempts    Int       @default(1) // Number of delivery attempts
-  error       String?   // Error message if failed
-  deliveryId  String    @unique // Unique delivery identifier
-  deliveredAt DateTime? // When successfully delivered
-  createdAt   DateTime  @default(now())
-
-  user User @relation("WebhookLogs", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([event])
-  @@index([success])
-  @@index([createdAt])
-  @@index([userId, createdAt])
-  @@index([deliveryId])
-  @@map("webhook_logs")
-}
-
-model PromptVariant {
-  id          String   @id @default(cuid())
-  name        String   // Descriptive name (e.g., "Tailoring Prompt v2")
-  operation   String   // Operation type (e.g., "tailoring", "ats_analysis", "content_generation")
-  variant     String   // Variant identifier (e.g., "A", "B", "control")
-  prompt      String   @db.Text // The actual prompt text
-  metadata    String   @default("{}") // JSON metadata (compression settings, etc.)
-  isActive    Boolean  @default(true)
-  isControl   Boolean  @default(false) // Whether this is the control variant
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tests PromptTest[]
-
-  @@unique([operation, variant])
-  @@index([operation])
-  @@index([isActive])
-  @@map("prompt_variants")
-}
-
-model PromptTest {
+model UserTemplatePreferences {
   id             String   @id @default(cuid())
-  userId         String
-  variantId      String
-  operation      String   // Operation type
-  variant        String   // Variant identifier
-  inputHash      String   // Hash of input data (for grouping similar tests)
-  success        Boolean  // Whether operation succeeded
-  durationMs     Int      // Operation duration
-  tokensUsed     Int?     // Tokens consumed
-  costUsd        Float?   // Cost in USD
-  qualityScore   Float?   // Quality score (0-100)
-  userRating     Int?     // User rating (1-5 stars)
-  outputMetrics  String   @default("{}") // JSON metrics (ATS score, keyword count, etc.)
-  error          String?  // Error message if failed
+  userId         String   @unique
+  filterSettings Json     @default("{}") // Saved filter preferences
+  sortPreference String   @default("popular") // popular, newest, rating, downloads
+  viewMode       String   @default("grid") // grid, list
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  user           User          @relation("PromptTests", fields: [userId], references: [id], onDelete: Cascade)
-  promptVariant  PromptVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  user User @relation("UserTemplatePreferences", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([variantId])
-  @@index([operation])
-  @@index([variant])
   @@index([userId])
+  @@map("user_template_preferences")
+}
+
+model TemplateUsageHistory {
+  id         String                @id @default(cuid())
+  userId     String
+  templateId String
+  action     TemplateUsageAction
+  metadata   Json? // Additional context (e.g., job title, company)
+  createdAt  DateTime              @default(now())
+
+  user     User           @relation("UserTemplateHistory", fields: [userId], references: [id], onDelete: Cascade)
+  template ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([action])
+  @@index([userId, createdAt])
+  @@index([templateId, createdAt])
+  @@map("template_usage_history")
+}
+
+// Advanced Template Features Models
+
+model TemplateRating {
+  id         String   @id @default(cuid())
+  templateId String
+  userId     String
+  rating     Int // 1-5
+  review     String?  @db.Text
+  title      String?
+  pros       String?  @db.Text
+  cons       String?  @db.Text
+  wouldRecommend Boolean @default(true)
+  isVerified Boolean @default(false)
+  helpfulCount Int @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ResumeTemplate @relation("TemplateRatings", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, userId])
+  @@index([templateId])
+  @@index([userId])
+  @@index([rating])
   @@index([createdAt])
-  @@index([operation, variant, createdAt])
-  @@map("prompt_tests")
+  @@map("template_ratings")
+}
+
+model TemplateComment {
+  id         String   @id @default(cuid())
+  templateId String
+  userId     String
+  content    String   @db.Text
+  parentId   String? // For nested comments
+  mentions   String[] @default([]) // User IDs mentioned
+  likeCount  Int @default(0)
+  replyCount Int @default(0)
+  isEdited   Boolean @default(false)
+  isHidden   Boolean @default(false)
+  editHistory Json? // Array of previous versions
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ResumeTemplate @relation("TemplateComments", fields: [templateId], references: [id], onDelete: Cascade)
+  parent   TemplateComment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  TemplateComment[] @relation("CommentReplies")
+
+  @@index([templateId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("template_comments")
+}
+
+model TemplateShare {
+  id         String    @id @default(cuid())
+  templateId String
+  userId     String // Owner/sharer
+  shareToken String    @unique
+  permission String    @default("VIEW") // VIEW, DOWNLOAD, EDIT, FULL
+  expiresAt  DateTime?
+  maxUses    Int?
+  useCount   Int       @default(0)
+  sharedWith String[] @default([]) // Array of user IDs
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  template ResumeTemplate @relation("TemplateShares", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([userId])
+  @@index([shareToken])
+  @@index([expiresAt])
+  @@map("template_shares")
+}
+
+model TemplateVersion {
+  id         String   @id @default(cuid())
+  templateId String
+  versionNumber String // Semantic versioning (e.g., "1.2.3")
+  changes    String   @db.Text
+  changesHash String // Hash of template data for diff
+  snapshot   Json // Complete template data snapshot
+  createdBy  String
+  createdAt  DateTime @default(now())
+
+  template ResumeTemplate @relation("TemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([versionNumber])
+  @@index([createdAt])
+  @@map("template_versions")
+}
+
+model TemplateApprovalWorkflow {
+  id         String   @id @default(cuid())
+  templateId String
+  submittedBy String
+  reviewedBy String?
+  status     String   @default("SUBMITTED") // SUBMITTED, IN_REVIEW, APPROVED, REJECTED, CHANGES_REQUESTED
+  submissionNotes String? @db.Text
+  reviewNotes String? @db.Text
+  qualityScore Float? // Automated quality check score
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  template ResumeTemplate @relation("TemplateApproval", fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([submittedBy])
+  @@index([reviewedBy])
+  @@index([status])
+  @@map("template_approval_workflows")
+}
+
+model FilterPreset {
+  id      String @id @default(cuid())
+  userId  String
+  name    String
+  filters Json // Saved filter criteria
+  sort    Json // Saved sort preferences
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("filter_presets")
+}
+
+model ABTest {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  status      String    @default("DRAFT") // DRAFT, RUNNING, PAUSED, COMPLETED
+  startDate   DateTime?
+  endDate     DateTime?
+  metrics     String[]  @default([]) // Metrics to track
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  variants    ABTestVariant[]
+  assignments ABTestAssignment[]
+
+  @@index([status])
+  @@index([createdBy])
+  @@map("ab_tests")
+}
+
+model ABTestVariant {
+  id            String @id @default(cuid())
+  testId        String
+  name          String
+  description   String? @db.Text
+  templateId    String?
+  config        Json // Variant configuration
+  trafficPercent Float @default(50) // Percentage of traffic
+  createdAt     DateTime @default(now())
+
+  test        ABTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  assignments ABTestAssignment[]
+
+  @@index([testId])
+  @@map("ab_test_variants")
+}
+
+model ABTestAssignment {
+  id        String   @id @default(cuid())
+  testId    String
+  variantId String
+  userId    String?
+  sessionId String?
+  events    Json     @default("[]") // Array of tracked events
+  createdAt DateTime @default(now())
+
+  test    ABTest        @relation(fields: [testId], references: [id], onDelete: Cascade)
+  variant ABTestVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([testId])
+  @@index([variantId])
+  @@index([userId])
+  @@index([sessionId])
+  @@map("ab_test_assignments")
 }

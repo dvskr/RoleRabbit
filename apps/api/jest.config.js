@@ -3,12 +3,14 @@ module.exports = {
   testMatch: ['**/tests/**/*.test.js', '**/__tests__/**/*.test.js'],
   collectCoverageFrom: [
     'utils/**/*.js',
+    'services/**/*.js',
     'routes/**/*.js',
     'middleware/**/*.js',
-    'services/**/*.js',
-    '!**/__tests__/**',
+    'auth.js',
+    'server.js',
+    '!**/node_modules/**',
     '!**/tests/**',
-    '!**/node_modules/**'
+    '!**/coverage/**',
   ],
   coverageThreshold: {
     global: {

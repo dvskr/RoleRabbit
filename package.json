@@ -16,6 +16,13 @@
     "test:web": "cd apps/web && npm test",
     "test:all": "npm run test:api && npm run test:web",
     "test:coverage": "turbo run test -- --coverage",
+    "test:coverage:api": "cd apps/api && npm run test:coverage",
+    "test:coverage:web": "cd apps/web && npm run test:coverage",
+    "test:templates": "npm run test:templates:api && npm run test:templates:web",
+    "test:templates:api": "cd apps/api && npm run test:templates",
+    "test:templates:web": "cd apps/web && npm run test:templates",
+    "test:watch:api": "cd apps/api && npm run test:watch",
+    "test:watch:web": "cd apps/web && npm run test:watch",
     "test:packages": "npm test --workspaces --if-present",
     "install:all": "npm install && cd apps/web && npm install && cd ../api && npm install && cd ../api-python && pip install -r requirements.txt",
     "start": "node start-backends.js"

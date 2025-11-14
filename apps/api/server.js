@@ -113,6 +113,9 @@ const redisCache = require('./utils/redisCache');
 // Socket.IO Server
 const socketIOServer = require('./utils/socketIOServer');
 
+// WebSocket Service for real-time updates
+const websocketService = require('./services/websocketService');
+
 // Health Check utilities
 const {
   getHealthStatus
@@ -311,7 +314,10 @@ fastify.get('/api/status', async () => ({
   endpoints: {
     auth: '/api/auth/*',
     users: '/api/users/*',
-    health: '/health'
+    templates: '/api/templates/*',
+    templatesAdvanced: '/api/templates/*/rate, /api/templates/*/comments, /api/templates/*/share, etc.',
+    health: '/health',
+    websocket: 'ws://[host]/ws'
   }
 }));
 
@@ -336,13 +342,8 @@ fastify.register(require('./routes/workingDraft.routes'));
 fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));
-fastify.register(require('./routes/spending.routes')); // Spending/cost tracking routes
-fastify.register(require('./routes/admin/costMonitoring.routes')); // Admin cost monitoring
-fastify.register(require('./routes/analytics.routes')); // Analytics tracking
-fastify.register(require('./routes/monitoring.routes')); // Success rate monitoring
-fastify.register(require('./routes/queue.routes')); // Job queue management
-fastify.register(require('./routes/webhooks.routes'), { prefix: '/api/webhooks' }); // Webhook notifications
-fastify.register(require('./routes/abTesting.routes'), { prefix: '/api/ab-testing' }); // A/B testing for prompts
+fastify.register(require('./routes/templates.routes'));
+fastify.register(require('./routes/templatesAdvanced.routes'));
 
 // Register 2FA routes (using handlers from twoFactorAuth.routes.js)
 const {
@@ -442,6 +443,7 @@ fastify.setNotFoundHandler(async (request, reply) => {
         status: 'GET /api/status',
         auth: '/api/auth/*',
         users: '/api/users/*',
+        templates: '/api/templates/*',
         storage: '/api/storage/*',
         resumes: '/api/resumes/*'
       }
@@ -502,6 +504,19 @@ const start = async () => {
     } catch (socketError) {
       logger.error('⚠️ Failed to initialize Socket.IO (server will continue without real-time features):', socketError.message);
       // Don't fail server startup if Socket.IO fails
+    }
+
+    // Initialize WebSocket service for advanced features
+    try {
+      if (fastify.server) {
+        websocketService.initialize(fastify.server);
+        logger.info('✅ WebSocket service initialized for real-time template updates');
+      } else {
+        logger.warn('⚠️ Fastify server instance not available, skipping WebSocket initialization');
+      }
+    } catch (wsError) {
+      logger.error('⚠️ Failed to initialize WebSocket service (server will continue without real-time template features):', wsError.message);
+      // Don't fail server startup if WebSocket fails
     }
     
     // Initialize job queues and workers (optional - only if Redis is available)
