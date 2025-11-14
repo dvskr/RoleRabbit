@@ -39,6 +39,7 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → POST   /api/jobs/:id/restore');
   logger.info('   → POST   /api/jobs/bulk-delete');
   logger.info('   → POST   /api/jobs/bulk-restore');
+  logger.info('   → PUT    /api/jobs/bulk-status');
 
   /**
    * GET /api/jobs
@@ -599,6 +600,100 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to restore jobs. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * PUT /api/jobs/bulk-status
+   * Update status for multiple jobs at once
+   * Request body: { jobIds: string[], status: JobStatus }
+   */
+  fastify.put(
+    '/api/jobs/bulk-status',
+    {
+      preHandler: [authenticate, jobBulkOperationRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { jobIds, status } = request.body || {};
+
+        // Validate input
+        if (!Array.isArray(jobIds) || jobIds.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'jobIds must be a non-empty array'
+          });
+        }
+
+        // Limit bulk operations to reasonable size (max 100 jobs at once)
+        if (jobIds.length > 100) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Cannot update more than 100 jobs at once'
+          });
+        }
+
+        // Verify all IDs are strings
+        if (!jobIds.every(id => typeof id === 'string')) {
+          return reply.status(400).send({
+            success: false,
+            error: 'All job IDs must be strings'
+          });
+        }
+
+        // Validate status field
+        const validStatuses = ['APPLIED', 'INTERVIEW', 'OFFER', 'REJECTED'];
+        if (!status || !validStatuses.includes(status)) {
+          return reply.status(400).send({
+            success: false,
+            error: 'status must be one of: APPLIED, INTERVIEW, OFFER, REJECTED'
+          });
+        }
+
+        // Update status for all jobs that belong to user and are not deleted
+        const result = await safeQuery(async () => {
+          return await prisma.job.updateMany({
+            where: {
+              id: { in: jobIds },
+              userId,
+              deletedAt: null
+            },
+            data: {
+              status
+            }
+          });
+        });
+
+        logger.info('Bulk status update completed', {
+          userId,
+          status,
+          requestedCount: jobIds.length,
+          updatedCount: result.count
+        });
+
+        return reply.send({
+          success: true,
+          message: `${result.count} job(s) updated to ${status}`,
+          updatedCount: result.count,
+          requestedCount: jobIds.length,
+          newStatus: status
+        });
+      } catch (error) {
+        logger.error('Failed to bulk update job status:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to update jobs. Please try again.',
           message: error.message
         });
       }
