@@ -35,6 +35,49 @@ enum GeneratedDocType {
   OTHER
 }
 
+enum TemplateCategory {
+  ATS
+  CREATIVE
+  MODERN
+  CLASSIC
+  EXECUTIVE
+  MINIMAL
+  ACADEMIC
+  TECHNICAL
+  STARTUP
+  FREELANCE
+}
+
+enum TemplateDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum TemplateLayout {
+  SINGLE_COLUMN
+  TWO_COLUMN
+  HYBRID
+}
+
+enum TemplateColorScheme {
+  MONOCHROME
+  BLUE
+  GREEN
+  PURPLE
+  RED
+  ORANGE
+  CUSTOM
+}
+
+enum TemplateUsageAction {
+  PREVIEW
+  DOWNLOAD
+  USE
+  FAVORITE
+  SHARE
+}
+
 model Certification {
   id        String @id @default(cuid())
   profileId String
@@ -516,9 +559,12 @@ model User {
   generatedDocuments  GeneratedDocument[]
   aiRequests          AIRequestLog[]
   aiDrafts            AIDraft[]
-  resumeCacheEntries  ResumeCache[]
-  tailoringAnalytics  TailoringAnalytics[]
-  activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
+  resumeCacheEntries    ResumeCache[]
+  tailoringAnalytics    TailoringAnalytics[]
+  activeBaseResume      BaseResume?                @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
+  templateFavorites     UserTemplateFavorite[]     @relation("UserTemplateFavorites")
+  templatePreferences   UserTemplatePreferences?   @relation("UserTemplatePreferences")
+  templateUsageHistory  TemplateUsageHistory[]     @relation("UserTemplateHistory")
 
   @@index([email])
   @@index([provider, providerId])
@@ -696,9 +742,11 @@ model GeneratedDocument {
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   baseResume      BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
   tailoredVersion TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
+  template        ResumeTemplate?  @relation("TemplateGeneratedDocs", fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([type])
+  @@index([templateId])
   @@map("generated_documents")
 }
 
@@ -789,4 +837,92 @@ model TailoringAnalytics {
   @@index([mode])
   @@index([userId, timestamp])
   @@map("tailoring_analytics")
+}
+
+model ResumeTemplate {
+  id          String              @id @default(cuid())
+  name        String
+  category    TemplateCategory
+  description String              @db.Text
+  preview     String // URL or path to preview image
+  features    String[] // Array of feature strings
+  difficulty  TemplateDifficulty
+  industry    String[] // Industries this template is suitable for
+  layout      TemplateLayout
+  colorScheme TemplateColorScheme
+  isPremium   Boolean             @default(false)
+  rating      Float               @default(0) @db.DoublePrecision
+  downloads   Int                 @default(0)
+  author      String              @default("RoleReady Team")
+  tags        String[] // Searchable tags
+
+  // Template content and configuration
+  templateData Json? // Template structure/configuration
+  isActive     Boolean  @default(true) // Can be disabled by admin
+  isApproved   Boolean  @default(true) // For user-submitted templates
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  favorites      UserTemplateFavorite[]
+  usageHistory   TemplateUsageHistory[]
+  generatedDocs  GeneratedDocument[]    @relation("TemplateGeneratedDocs")
+
+  @@index([category])
+  @@index([difficulty])
+  @@index([isPremium])
+  @@index([isActive])
+  @@index([rating])
+  @@index([downloads])
+  @@map("resume_templates")
+}
+
+model UserTemplateFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  templateId String
+  createdAt  DateTime @default(now())
+
+  user     User           @relation("UserTemplateFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  template ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, templateId])
+  @@index([userId])
+  @@index([templateId])
+  @@map("user_template_favorites")
+}
+
+model UserTemplatePreferences {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  filterSettings Json     @default("{}") // Saved filter preferences
+  sortPreference String   @default("popular") // popular, newest, rating, downloads
+  viewMode       String   @default("grid") // grid, list
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation("UserTemplatePreferences", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_template_preferences")
+}
+
+model TemplateUsageHistory {
+  id         String                @id @default(cuid())
+  userId     String
+  templateId String
+  action     TemplateUsageAction
+  metadata   Json? // Additional context (e.g., job title, company)
+  createdAt  DateTime              @default(now())
+
+  user     User           @relation("UserTemplateHistory", fields: [userId], references: [id], onDelete: Cascade)
+  template ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([action])
+  @@index([userId, createdAt])
+  @@index([templateId, createdAt])
+  @@map("template_usage_history")
 }
