@@ -38,6 +38,7 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → DELETE /api/jobs/:id');
   logger.info('   → POST   /api/jobs/:id/restore');
   logger.info('   → POST   /api/jobs/bulk-delete');
+  logger.info('   → POST   /api/jobs/bulk-restore');
 
   /**
    * GET /api/jobs
@@ -515,6 +516,89 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to delete jobs. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/jobs/bulk-restore
+   * Restore multiple soft-deleted jobs at once
+   * Request body: { jobIds: string[] }
+   */
+  fastify.post(
+    '/api/jobs/bulk-restore',
+    {
+      preHandler: [authenticate, jobBulkOperationRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { jobIds } = request.body || {};
+
+        // Validate input
+        if (!Array.isArray(jobIds) || jobIds.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'jobIds must be a non-empty array'
+          });
+        }
+
+        // Limit bulk operations to reasonable size (max 100 jobs at once)
+        if (jobIds.length > 100) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Cannot restore more than 100 jobs at once'
+          });
+        }
+
+        // Verify all IDs are strings
+        if (!jobIds.every(id => typeof id === 'string')) {
+          return reply.status(400).send({
+            success: false,
+            error: 'All job IDs must be strings'
+          });
+        }
+
+        // Restore all jobs that belong to user and are deleted
+        const result = await safeQuery(async () => {
+          return await prisma.job.updateMany({
+            where: {
+              id: { in: jobIds },
+              userId,
+              deletedAt: { not: null }
+            },
+            data: {
+              deletedAt: null
+            }
+          });
+        });
+
+        logger.info('Bulk restore completed', {
+          userId,
+          requestedCount: jobIds.length,
+          restoredCount: result.count
+        });
+
+        return reply.send({
+          success: true,
+          message: `${result.count} job(s) restored successfully`,
+          restoredCount: result.count,
+          requestedCount: jobIds.length
+        });
+      } catch (error) {
+        logger.error('Failed to bulk restore jobs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to restore jobs. Please try again.',
           message: error.message
         });
       }
