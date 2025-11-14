@@ -497,15 +497,26 @@ class ApiService {
 
   /**
    * Get cloud storage files
+   * @param folderId - Optional folder ID to filter by
+   * @param includeDeleted - Include deleted files (recycle bin)
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 50, max: 100)
    */
-  async getCloudFiles(folderId?: string, includeDeleted?: boolean): Promise<any> {
+  async getCloudFiles(
+    folderId?: string,
+    includeDeleted?: boolean,
+    page?: number,
+    limit?: number
+  ): Promise<any> {
     const params = new URLSearchParams();
     if (folderId) params.append('folderId', folderId);
     if (includeDeleted) params.append('includeDeleted', 'true');
-    
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
+
     const queryString = params.toString();
     const endpoint = queryString ? `/api/storage/files?${queryString}` : '/api/storage/files';
-    
+
     return this.request(endpoint, {
       method: 'GET',
       credentials: 'include',

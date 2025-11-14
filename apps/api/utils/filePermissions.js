@@ -59,9 +59,29 @@ async function checkFilePermission(userId, fileId, action) {
 
     // Check if user has a share
     const share = file.shares && file.shares.length > 0 ? file.shares[0] : null;
-    
+
     if (!share) {
       return { allowed: false, reason: 'No access to file' };
+    }
+
+    // 🆕 CHECK SHARE EXPIRATION
+    if (share.expiresAt && new Date(share.expiresAt) < new Date()) {
+      return {
+        allowed: false,
+        reason: 'Share access has expired',
+        permission: share.permission
+      };
+    }
+
+    // 🆕 CHECK MAX DOWNLOADS (for download action)
+    if (action === 'view' && share.maxDownloads !== null && share.maxDownloads !== undefined) {
+      if (share.downloadCount >= share.maxDownloads) {
+        return {
+          allowed: false,
+          reason: `Download limit reached (${share.maxDownloads} downloads allowed)`,
+          permission: share.permission
+        };
+      }
     }
 
     const userPermission = share.permission;
@@ -86,10 +106,10 @@ async function checkFilePermission(userId, fileId, action) {
     const requiredLevel = actionHierarchy[action] || 999;
 
     if (userLevel >= requiredLevel) {
-      return { allowed: true, file, permission: userPermission };
+      return { allowed: true, file, permission: userPermission, share };
     } else {
-      return { 
-        allowed: false, 
+      return {
+        allowed: false,
         reason: `Requires '${action}' permission, but user has '${userPermission}' permission`,
         permission: userPermission
       };

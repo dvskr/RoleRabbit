@@ -38,16 +38,31 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const [isLoading, setIsLoading] = useState(true);
   const [storageInfo, setStorageInfo] = useState({ usedGB: 0, limitGB: 0, percentage: 0 });
 
-  const loadFilesFromAPI = useCallback(async (includeDeleted: boolean = false) => {
+  // 🆕 PAGINATION STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+
+  const loadFilesFromAPI = useCallback(async (
+    includeDeleted: boolean = false,
+    page: number = 1
+  ) => {
     setIsLoading(true);
     try {
-      logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, ')');
-      const response = await apiService.getCloudFiles(undefined, includeDeleted);
-      logger.info('📥 API response:', { 
+      logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, 'page:', page, ')');
+      const response = await apiService.getCloudFiles(undefined, includeDeleted, page, 50);
+      logger.info('📥 API response:', {
         filesCount: response?.files?.length || 0,
-        success: response?.success
+        success: response?.success,
+        pagination: response?.pagination
       });
-      
+
       if (response && response.files) {
         const formattedFiles = (response.files as ResumeFile[]).map(file => ({
           ...file,
@@ -67,11 +82,17 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
         }));
         setFiles(formattedFiles);
         logger.info(`✅ Loaded ${formattedFiles.length} files from API`);
+
+        // 🆕 UPDATE PAGINATION STATE
+        if (response.pagination) {
+          setPagination(response.pagination);
+          setCurrentPage(response.pagination.page);
+        }
       } else {
         logger.warn('⚠️ No files in API response');
         setFiles([]);
       }
-      
+
       if (response?.storage) {
         setStorageInfo(response.storage);
         onStorageUpdate?.(response.storage);
@@ -459,6 +480,25 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
+  // 🆕 PAGINATION HANDLERS
+  const handleNextPage = useCallback(async (includeDeleted: boolean = false) => {
+    if (pagination.hasNextPage) {
+      await loadFilesFromAPI(includeDeleted, currentPage + 1);
+    }
+  }, [pagination.hasNextPage, currentPage, loadFilesFromAPI]);
+
+  const handlePrevPage = useCallback(async (includeDeleted: boolean = false) => {
+    if (pagination.hasPrevPage) {
+      await loadFilesFromAPI(includeDeleted, currentPage - 1);
+    }
+  }, [pagination.hasPrevPage, currentPage, loadFilesFromAPI]);
+
+  const handleGoToPage = useCallback(async (page: number, includeDeleted: boolean = false) => {
+    if (page >= 1 && page <= pagination.totalPages) {
+      await loadFilesFromAPI(includeDeleted, page);
+    }
+  }, [pagination.totalPages, loadFilesFromAPI]);
+
   return {
     files,
     setFiles,
@@ -475,6 +515,12 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     handlePermanentlyDeleteFile,
     handleDownloadFile,
     handleShareFile,
+    // 🆕 PAGINATION
+    pagination,
+    currentPage,
+    handleNextPage,
+    handlePrevPage,
+    handleGoToPage,
     handleUploadFile,
     handleEditFile,
     handleRefresh,

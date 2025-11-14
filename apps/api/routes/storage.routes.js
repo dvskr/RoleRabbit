@@ -53,6 +53,11 @@ async function storageRoutes(fastify, _options) {
       const type = request.query.type || null;
       const search = request.query.search || null;
 
+      // 🆕 PAGINATION PARAMETERS
+      const page = Math.max(1, parseInt(request.query.page) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit) || 50)); // Default 50, max 100
+      const skip = (page - 1) * limit;
+
       // Build where clause
       const where = {
         userId,
@@ -76,9 +81,14 @@ async function storageRoutes(fastify, _options) {
       }
       // If folderId not provided, don't add folder filter - return all files
 
-      // Fetch files from database
+      // 🆕 GET TOTAL COUNT (for pagination)
+      const totalCount = await prisma.storageFile.count({ where });
+
+      // Fetch files from database with pagination
       const files = await prisma.storageFile.findMany({
         where,
+        skip,
+        take: limit,
         orderBy: {
           createdAt: 'desc'
         },
@@ -105,38 +115,11 @@ async function storageRoutes(fastify, _options) {
               }
             }
           },
-          comments: {
-            where: {
-              parentId: null // Only top-level comments for listing
-            },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true
-                }
-              },
-              replies: {
-                include: {
-                  user: {
-                    select: {
-                      id: true,
-                      name: true,
-                      email: true
-                    }
-                  }
-                },
-                orderBy: {
-                  createdAt: 'asc'
-                },
-                take: 5 // Limit replies in listing
-              }
-            },
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 10 // Limit comments in listing
+          // 🆕 OPTIMIZED: Use _count instead of loading all comments
+          _count: {
+            select: {
+              comments: true
+            }
           }
         }
       });
@@ -174,25 +157,9 @@ async function storageRoutes(fastify, _options) {
           grantedAt: share.createdAt.toISOString(),
           expiresAt: share.expiresAt?.toISOString() || null
         })) : [],
-        comments: file.comments ? file.comments.map((comment) => ({
-          id: comment.id,
-          userId: comment.userId,
-          userName: comment.user.name,
-          userAvatar: null,
-          content: comment.content,
-          timestamp: comment.createdAt.toISOString(),
-          isResolved: comment.isResolved,
-          replies: comment.replies.map((reply) => ({
-            id: reply.id,
-            userId: reply.userId,
-            userName: reply.user.name,
-            userAvatar: null,
-            content: reply.content,
-            timestamp: reply.createdAt.toISOString(),
-            isResolved: reply.isResolved,
-            replies: []
-          }))
-        })) : [],
+        // 🆕 OPTIMIZED: Return comment count only, load full comments on demand
+        comments: [],
+        commentCount: file._count?.comments || 0,
         version: 1,
         deletedAt: file.deletedAt ? file.deletedAt.toISOString() : null // Include deletedAt for filtering
       }));
@@ -223,11 +190,25 @@ async function storageRoutes(fastify, _options) {
         logger.warn('Failed to fetch storage quota:', error.message);
       }
 
+      // 🆕 PAGINATION METADATA
+      const totalPages = Math.ceil(totalCount / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+
       return reply.send({
         success: true,
         files: formattedFiles,
         storage: storageInfo,
-        count: formattedFiles.length
+        count: formattedFiles.length,
+        // 🆕 PAGINATION INFO
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+          hasNextPage,
+          hasPrevPage
+        }
       });
 
     } catch (error) {
@@ -1119,7 +1100,7 @@ async function storageRoutes(fastify, _options) {
         });
       }
 
-      // Increment download count
+      // Increment download count for file
       await prisma.storageFile.update({
         where: { id: fileId },
         data: {
@@ -1127,10 +1108,18 @@ async function storageRoutes(fastify, _options) {
         }
       });
 
+      // 🆕 INCREMENT SHARE DOWNLOAD COUNT (if accessing via share)
+      if (permissionCheck.share && permissionCheck.share.id) {
+        // NOTE: FileShare model doesn't have downloadCount field yet
+        // This is tracked on the file level only
+        // TODO: Add downloadCount to FileShare model for per-share tracking
+        logger.debug(`File downloaded via share: ${permissionCheck.share.id}`);
+      }
+
       // Set appropriate headers
       reply.type(file.contentType || 'application/octet-stream');
       reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName || file.name)}"`);
-      
+
       return reply.send(fileBuffer);
 
     } catch (error) {

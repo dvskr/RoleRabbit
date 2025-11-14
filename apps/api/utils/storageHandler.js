@@ -10,10 +10,8 @@ const crypto = require('crypto');
 const { pipeline } = require('stream/promises');
 const logger = require('./logger');
 
-// Determine storage type from environment
-// Default to Supabase Storage (works for both dev and production)
-const STORAGE_TYPE = process.env.STORAGE_TYPE || 'supabase'; // 'supabase' (recommended) or 'local'
-const STORAGE_PATH = process.env.STORAGE_PATH || './uploads';
+// 🔒 PRODUCTION: Supabase Storage ONLY (no local storage fallback)
+const STORAGE_TYPE = 'supabase'; // Enforced to Supabase only
 
 // Supabase Storage Configuration
 let supabaseClient = null;
@@ -21,49 +19,33 @@ let supabaseStorageBucket = null;
 
 /**
  * Initialize Supabase Storage client
+ * 🆕 PRODUCTION: Throws error if Supabase credentials missing
  */
 function initializeSupabase() {
   try {
-    // Only load @supabase/supabase-js if using Supabase
-    if (STORAGE_TYPE === 'supabase') {
-      const { createClient } = require('@supabase/supabase-js');
-      
-      const supabaseUrl = process.env.SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-      const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'roleready-file';
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        logger.warn('Supabase Storage credentials not found. Falling back to local storage.');
-        return false;
-      }
-      
-      supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-      supabaseStorageBucket = bucketName;
-      
-      logger.info(`✅ Supabase Storage initialized with bucket: ${bucketName}`);
-      return true;
-    }
-  } catch (error) {
-    logger.error('Failed to initialize Supabase Storage:', error);
-    logger.warn('Falling back to local storage.');
-    return false;
-  }
-  
-  return false;
-}
+    const { createClient } = require('@supabase/supabase-js');
 
-/**
- * Initialize local storage directory
- */
-async function initializeLocalStorage() {
-  try {
-    const storagePath = path.resolve(STORAGE_PATH);
-    await fs.mkdir(storagePath, { recursive: true });
-    logger.info(`✅ Local storage initialized at: ${storagePath}`);
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+    const bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'roleready-file';
+
+    // 🆕 PRODUCTION: Fail fast if credentials missing
+    if (!supabaseUrl || !supabaseServiceKey) {
+      const errorMessage = 'CRITICAL: Supabase Storage credentials not configured. ' +
+        'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables. ' +
+        'Local storage fallback has been removed for production.';
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+    supabaseStorageBucket = bucketName;
+
+    logger.info(`✅ Supabase Storage initialized with bucket: ${bucketName}`);
     return true;
   } catch (error) {
-    logger.error('Failed to initialize local storage:', error);
-    return false;
+    logger.error('Failed to initialize Supabase Storage:', error);
+    throw error; // 🆕 Don't fallback, throw error
   }
 }
 
@@ -72,22 +54,19 @@ let storageInitialized = false;
 
 async function initializeStorage() {
   if (storageInitialized) return;
-  
-  if (STORAGE_TYPE === 'supabase') {
-    storageInitialized = initializeSupabase();
-    if (!storageInitialized) {
-      // Fallback to local if Supabase init fails
-      await initializeLocalStorage();
-    }
-  } else {
-    await initializeLocalStorage();
-    storageInitialized = true;
-  }
+
+  // 🆕 PRODUCTION: Only Supabase, no fallback
+  storageInitialized = initializeSupabase();
 }
 
-// Initialize immediately
+// Initialize immediately and fail fast if misconfigured
 initializeStorage().catch(err => {
-  logger.error('Storage initialization error:', err);
+  logger.error('FATAL: Storage initialization failed:', err);
+  // 🆕 Exit process if storage can't be initialized (fail fast)
+  if (process.env.NODE_ENV === 'production') {
+    logger.error('Exiting process due to storage initialization failure in production');
+    process.exit(1);
+  }
 });
 
 /**
@@ -166,62 +145,18 @@ async function uploadToSupabase(fileStream, userId, fileName, contentType) {
 }
 
 /**
- * Upload file to local filesystem
- */
-async function uploadToLocal(fileStream, userId, fileName, _contentType) {
-  try {
-    const fileExtension = path.extname(fileName);
-    const { storagePath, displayName } = generateFilePath(userId, fileName, fileExtension);
-    
-    // Create user directory structure
-    const fullPath = path.join(STORAGE_PATH, userId);
-    await fs.mkdir(fullPath, { recursive: true });
-    
-    // Create year/month directories
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const datePath = path.join(fullPath, String(year), month);
-    await fs.mkdir(datePath, { recursive: true });
-    
-    // Extract filename from storagePath
-    const finalFileName = storagePath.split('/').pop();
-    const filePath = path.join(datePath, finalFileName);
-    
-    // Write file to disk
-    const writeStream = require('fs').createWriteStream(filePath);
-    await pipeline(fileStream, writeStream);
-    
-    // Get file size
-    const stats = await fs.stat(filePath);
-    
-    // Generate public URL (relative path for local dev)
-    const publicUrl = `/api/storage/files/${userId}/${year}/${month}/${finalFileName}`;
-    
-    return {
-      path: storagePath,
-      fullPath: filePath,
-      publicUrl,
-      displayName,
-      size: stats.size
-    };
-  } catch (error) {
-    logger.error('Local upload error:', error);
-    throw error;
-  }
-}
-
-/**
  * Upload file (main method)
+ * 🆕 PRODUCTION: Supabase only
  */
 async function upload(fileStream, userId, fileName, contentType) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await uploadToSupabase(fileStream, userId, fileName, contentType);
-  } else {
-    return await uploadToLocal(fileStream, userId, fileName, contentType);
+
+  // 🆕 PRODUCTION: Only Supabase
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
   }
+
+  return await uploadToSupabase(fileStream, userId, fileName, contentType);
 }
 
 /**
@@ -247,94 +182,66 @@ async function downloadFromSupabase(storagePath) {
 }
 
 /**
- * Download file from local filesystem
- */
-async function downloadFromLocal(storagePath) {
-  try {
-    const fullPath = path.join(STORAGE_PATH, storagePath);
-    
-    // Security: Prevent directory traversal
-    const resolvedPath = path.resolve(fullPath);
-    const resolvedStorage = path.resolve(STORAGE_PATH);
-    if (!resolvedPath.startsWith(resolvedStorage)) {
-      throw new Error('Invalid file path');
-    }
-    
-    // Check if file exists
-    await fs.access(fullPath);
-    
-    // Read file
-    return await fs.readFile(fullPath);
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      throw new Error('File not found');
-    }
-    logger.error('Local download error:', error);
-    throw error;
-  }
-}
-
-/**
  * Download file (main method)
- * Returns a readable stream or buffer
+ * 🆕 PRODUCTION: Supabase only
+ * Returns a readable stream
  */
 async function download(storagePath) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    const buffer = await downloadFromSupabase(storagePath);
-    // Convert buffer to stream for consistency
-    const { Readable } = require('stream');
-    return Readable.from(buffer);
-  } else {
-    const buffer = await downloadFromLocal(storagePath);
-    const { Readable } = require('stream');
-    return Readable.from(buffer);
+
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
   }
+
+  const buffer = await downloadFromSupabase(storagePath);
+  // Convert buffer to stream for consistency
+  const { Readable } = require('stream');
+  return Readable.from(buffer);
 }
 
 /**
  * Download file as buffer (for resume parsing)
+ * 🆕 PRODUCTION: Supabase only
  */
 async function downloadAsBuffer(storagePath) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await downloadFromSupabase(storagePath);
-  } else {
-    return await downloadFromLocal(storagePath);
+
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
   }
+
+  return await downloadFromSupabase(storagePath);
 }
 
 /**
  * Get download URL (for direct browser access)
+ * 🆕 PRODUCTION: Supabase only
  */
 async function getDownloadUrl(storagePath, expiresIn = 3600) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    try {
-      // Get signed URL for private files
-      const { data, error } = await supabaseClient.storage
+
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
+  }
+
+  try {
+    // Get signed URL for private files
+    const { data, error } = await supabaseClient.storage
+      .from(supabaseStorageBucket)
+      .createSignedUrl(storagePath, expiresIn);
+
+    if (error) {
+      // Try public URL as fallback
+      const { data: publicData } = supabaseClient.storage
         .from(supabaseStorageBucket)
-        .createSignedUrl(storagePath, expiresIn);
-      
-      if (error) {
-        // Try public URL as fallback
-        const { data: publicData } = supabaseClient.storage
-          .from(supabaseStorageBucket)
-          .getPublicUrl(storagePath);
-        return publicData?.publicUrl || null;
-      }
-      
-      return data?.signedUrl || null;
-    } catch (error) {
-      logger.error('Failed to generate download URL:', error);
-      return null;
+        .getPublicUrl(storagePath);
+      return publicData?.publicUrl || null;
     }
-  } else {
-    // Local storage - return relative URL
-    return `/api/storage/files/${storagePath}`;
+
+    return data?.signedUrl || null;
+  } catch (error) {
+    logger.error('Failed to generate download URL:', error);
+    return null;
   }
 }
 
@@ -359,42 +266,17 @@ async function deleteFromSupabase(storagePath) {
 }
 
 /**
- * Delete file from local filesystem
- */
-async function deleteFromLocal(storagePath) {
-  try {
-    const fullPath = path.join(STORAGE_PATH, storagePath);
-    
-    // Security: Prevent directory traversal
-    const resolvedPath = path.resolve(fullPath);
-    const resolvedStorage = path.resolve(STORAGE_PATH);
-    if (!resolvedPath.startsWith(resolvedStorage)) {
-      throw new Error('Invalid file path');
-    }
-    
-    await fs.unlink(fullPath);
-    return true;
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      // File already deleted, consider it success
-      return true;
-    }
-    logger.error('Local delete error:', error);
-    throw error;
-  }
-}
-
-/**
  * Delete file (main method)
+ * 🆕 PRODUCTION: Supabase only
  */
 async function deleteFile(storagePath) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await deleteFromSupabase(storagePath);
-  } else {
-    return await deleteFromLocal(storagePath);
+
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
   }
+
+  return await deleteFromSupabase(storagePath);
 }
 
 /**
@@ -418,29 +300,17 @@ async function existsInSupabase(storagePath) {
 }
 
 /**
- * Check if file exists in local filesystem
- */
-async function existsInLocal(storagePath) {
-  try {
-    const fullPath = path.join(STORAGE_PATH, storagePath);
-    await fs.access(fullPath);
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-/**
  * Check if file exists
+ * 🆕 PRODUCTION: Supabase only
  */
 async function fileExists(storagePath) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await existsInSupabase(storagePath);
-  } else {
-    return await existsInLocal(storagePath);
+
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
   }
+
+  return await existsInSupabase(storagePath);
 }
 
 /**
@@ -476,35 +346,17 @@ async function getMetadataFromSupabase(storagePath) {
 }
 
 /**
- * Get file metadata from local filesystem
- */
-async function getMetadataFromLocal(storagePath) {
-  try {
-    const fullPath = path.join(STORAGE_PATH, storagePath);
-    const stats = await fs.stat(fullPath);
-    
-    return {
-      size: stats.size,
-      contentType: null, // Would need to determine from extension
-      lastModified: stats.mtime,
-      etag: null
-    };
-  } catch (error) {
-    return null;
-  }
-}
-
-/**
  * Get file metadata
+ * 🆕 PRODUCTION: Supabase only
  */
 async function getMetadata(storagePath) {
   await initializeStorage();
-  
-  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await getMetadataFromSupabase(storagePath);
-  } else {
-    return await getMetadataFromLocal(storagePath);
+
+  if (!supabaseClient) {
+    throw new Error('Storage not initialized. Supabase client is required.');
   }
+
+  return await getMetadataFromSupabase(storagePath);
 }
 
 /**
