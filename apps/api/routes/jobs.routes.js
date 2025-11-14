@@ -14,7 +14,8 @@ const {
   jobPostLimiter,
   jobPutLimiter,
   jobDeleteLimiter,
-  jobBulkOperationLimiter
+  jobBulkOperationLimiter,
+  jobViewsLimiter
 } = require('../utils/rateLimiter');
 const logger = require('../utils/logger');
 
@@ -24,6 +25,7 @@ const jobPostRateLimit = createRateLimitMiddleware(jobPostLimiter);
 const jobPutRateLimit = createRateLimitMiddleware(jobPutLimiter);
 const jobDeleteRateLimit = createRateLimitMiddleware(jobDeleteLimiter);
 const jobBulkOperationRateLimit = createRateLimitMiddleware(jobBulkOperationLimiter);
+const jobViewsRateLimit = createRateLimitMiddleware(jobViewsLimiter);
 
 /**
  * Register all job routes with Fastify instance
@@ -43,6 +45,9 @@ module.exports = async function jobsRoutes(fastify) {
   logger.info('   → POST   /api/jobs/bulk-delete');
   logger.info('   → POST   /api/jobs/bulk-restore');
   logger.info('   → PUT    /api/jobs/bulk-status');
+  logger.info('   → POST   /api/jobs/views');
+  logger.info('   → GET    /api/jobs/views');
+  logger.info('   → DELETE /api/jobs/views/:id');
 
   /**
    * GET /api/jobs
@@ -900,6 +905,199 @@ module.exports = async function jobsRoutes(fastify) {
         return reply.status(500).send({
           success: false,
           error: 'Failed to fetch favorited jobs. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /api/jobs/views
+   * Save a custom filter view
+   * Request body: { name: string, filters: object, columns?: string[] }
+   */
+  fastify.post(
+    '/api/jobs/views',
+    {
+      preHandler: [authenticate, jobViewsRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { name, filters, columns } = request.body || {};
+
+        // Validate input
+        if (!name || typeof name !== 'string' || name.trim().length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'name is required and must be a non-empty string'
+          });
+        }
+
+        if (!filters || typeof filters !== 'object') {
+          return reply.status(400).send({
+            success: false,
+            error: 'filters is required and must be an object'
+          });
+        }
+
+        if (columns && !Array.isArray(columns)) {
+          return reply.status(400).send({
+            success: false,
+            error: 'columns must be an array if provided'
+          });
+        }
+
+        // Create saved view
+        const savedView = await safeQuery(async () => {
+          return await prisma.savedView.create({
+            data: {
+              userId,
+              name: name.trim(),
+              filters,
+              columns: columns || []
+            }
+          });
+        });
+
+        logger.info('Saved view created', { userId, viewId: savedView.id, name: savedView.name });
+
+        return reply.status(201).send({
+          success: true,
+          view: savedView
+        });
+      } catch (error) {
+        logger.error('Failed to create saved view:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create saved view. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /api/jobs/views
+   * Fetch all saved views for authenticated user
+   */
+  fastify.get(
+    '/api/jobs/views',
+    {
+      preHandler: [authenticate, jobViewsRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        // Fetch all saved views
+        const views = await safeQuery(async () => {
+          return await prisma.savedView.findMany({
+            where: {
+              userId
+            },
+            orderBy: {
+              createdAt: 'desc'
+            }
+          });
+        });
+
+        logger.debug('Saved views fetched for user', { userId, count: views.length });
+
+        return reply.send({
+          success: true,
+          views,
+          count: views.length
+        });
+      } catch (error) {
+        logger.error('Failed to fetch saved views:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to fetch saved views. Please try again.',
+          message: error.message
+        });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/jobs/views/:id
+   * Delete a saved view
+   */
+  fastify.delete(
+    '/api/jobs/views/:id',
+    {
+      preHandler: [authenticate, jobViewsRateLimit]
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.user?.userId || request.user?.id;
+        if (!userId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'User not authenticated'
+          });
+        }
+
+        const { id } = request.params;
+
+        // Check if view exists and belongs to user
+        const existingView = await safeQuery(async () => {
+          return await prisma.savedView.findFirst({
+            where: {
+              id,
+              userId
+            }
+          });
+        });
+
+        if (!existingView) {
+          logger.warn('Saved view not found or unauthorized', { userId, viewId: id });
+          return reply.status(404).send({
+            success: false,
+            error: 'Saved view not found'
+          });
+        }
+
+        // Delete saved view
+        await safeQuery(async () => {
+          return await prisma.savedView.delete({
+            where: { id }
+          });
+        });
+
+        logger.info('Saved view deleted', { userId, viewId: id, name: existingView.name });
+
+        return reply.send({
+          success: true,
+          message: 'Saved view deleted successfully'
+        });
+      } catch (error) {
+        logger.error('Failed to delete saved view:', error);
+
+        if (error.code === 'P2025') {
+          return reply.status(404).send({
+            success: false,
+            error: 'Saved view not found'
+          });
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete saved view. Please try again.',
           message: error.message
         });
       }
