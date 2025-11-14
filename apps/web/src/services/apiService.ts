@@ -1306,6 +1306,291 @@ class ApiService {
     return response.preferences;
   }
 
+  // ===== TEMPLATE ENDPOINTS =====
+
+  /**
+   * Get all templates with filtering, search, pagination, and sorting
+   */
+  async getTemplates(options?: {
+    search?: string;
+    category?: string;
+    difficulty?: string;
+    layout?: string;
+    colorScheme?: string;
+    isPremium?: boolean;
+    industry?: string | string[];
+    minRating?: number;
+    maxRating?: number;
+    sortBy?: 'popular' | 'newest' | 'rating' | 'downloads' | 'name';
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    limit?: number;
+    activeOnly?: boolean;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (options?.search) params.append('search', options.search);
+    if (options?.category) params.append('category', options.category);
+    if (options?.difficulty) params.append('difficulty', options.difficulty);
+    if (options?.layout) params.append('layout', options.layout);
+    if (options?.colorScheme) params.append('colorScheme', options.colorScheme);
+    if (options?.isPremium !== undefined) params.append('isPremium', String(options.isPremium));
+    if (options?.industry) {
+      const industries = Array.isArray(options.industry) ? options.industry : [options.industry];
+      industries.forEach(ind => params.append('industry', ind));
+    }
+    if (options?.minRating) params.append('minRating', String(options.minRating));
+    if (options?.maxRating) params.append('maxRating', String(options.maxRating));
+    if (options?.sortBy) params.append('sortBy', options.sortBy);
+    if (options?.sortOrder) params.append('sortOrder', options.sortOrder);
+    if (options?.page) params.append('page', String(options.page));
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.activeOnly !== undefined) params.append('activeOnly', String(options.activeOnly));
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/api/templates?${queryString}` : '/api/templates';
+
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get a single template by ID
+   */
+  async getTemplate(id: string): Promise<any> {
+    return this.request(`/api/templates/${id}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Search templates
+   */
+  async searchTemplates(query: string, limit?: number): Promise<any> {
+    const params = new URLSearchParams({ q: query });
+    if (limit) params.append('limit', String(limit));
+
+    return this.request(`/api/templates/search?${params.toString()}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get template statistics
+   */
+  async getTemplateStats(): Promise<any> {
+    return this.request('/api/templates/stats', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add template to favorites
+   */
+  async addTemplateFavorite(templateId: string): Promise<any> {
+    return this.request(`/api/templates/${templateId}/favorite`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Remove template from favorites
+   */
+  async removeTemplateFavorite(templateId: string): Promise<any> {
+    return this.request(`/api/templates/${templateId}/favorite`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get user's favorite templates
+   */
+  async getTemplateFavorites(options?: {
+    sortBy?: 'newest' | 'oldest' | 'name';
+    limit?: number;
+    includeInactive?: boolean;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (options?.sortBy) params.append('sortBy', options.sortBy);
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.includeInactive) params.append('includeInactive', 'true');
+
+    const queryString = params.toString();
+    const endpoint = queryString
+      ? `/api/templates/favorites/list?${queryString}`
+      : '/api/templates/favorites/list';
+
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Check if template is favorited
+   */
+  async isTemplateFavorited(templateId: string): Promise<boolean> {
+    const response = await this.request<{ success: boolean; data: { isFavorited: boolean } }>(
+      `/api/templates/favorites/check/${templateId}`,
+      {
+        method: 'GET',
+        credentials: 'include',
+      }
+    );
+    return response.data.isFavorited;
+  }
+
+  /**
+   * Sync favorites from localStorage to database
+   */
+  async syncTemplateFavorites(favoriteIds: string[]): Promise<any> {
+    return this.request('/api/templates/favorites/sync', {
+      method: 'POST',
+      body: JSON.stringify({ favoriteIds }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Track template usage
+   */
+  async trackTemplateUsage(
+    templateId: string,
+    action: 'PREVIEW' | 'DOWNLOAD' | 'USE' | 'FAVORITE' | 'SHARE',
+    metadata?: any
+  ): Promise<any> {
+    return this.request(`/api/templates/${templateId}/track`, {
+      method: 'POST',
+      body: JSON.stringify({ action, metadata }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get popular templates
+   */
+  async getPopularTemplates(options?: {
+    limit?: number;
+    period?: 'all' | 'day' | 'week' | 'month' | 'year';
+    category?: string;
+    action?: string;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.period) params.append('period', options.period);
+    if (options?.category) params.append('category', options.category);
+    if (options?.action) params.append('action', options.action);
+
+    const queryString = params.toString();
+    const endpoint = queryString
+      ? `/api/templates/analytics/popular?${queryString}`
+      : '/api/templates/analytics/popular';
+
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get trending templates
+   */
+  async getTrendingTemplates(options?: {
+    limit?: number;
+    days?: number;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.days) params.append('days', String(options.days));
+
+    const queryString = params.toString();
+    const endpoint = queryString
+      ? `/api/templates/analytics/trending?${queryString}`
+      : '/api/templates/analytics/trending';
+
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get user's template usage history
+   */
+  async getTemplateHistory(options?: {
+    limit?: number;
+    action?: string;
+    templateId?: string;
+  }): Promise<any> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.action) params.append('action', options.action);
+    if (options?.templateId) params.append('templateId', options.templateId);
+
+    const queryString = params.toString();
+    const endpoint = queryString
+      ? `/api/templates/analytics/history?${queryString}`
+      : '/api/templates/analytics/history';
+
+    return this.request(endpoint, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get recently used templates
+   */
+  async getRecentlyUsedTemplates(limit?: number): Promise<any> {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.request(`/api/templates/analytics/recent${params}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get user's template preferences
+   */
+  async getTemplatePreferences(): Promise<any> {
+    return this.request('/api/templates/preferences', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Save or update template preferences
+   */
+  async saveTemplatePreferences(preferences: {
+    filterSettings?: any;
+    sortPreference?: string;
+    viewMode?: string;
+  }): Promise<any> {
+    return this.request('/api/templates/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Sync template preferences from localStorage to database
+   */
+  async syncTemplatePreferences(localPreferences: any): Promise<any> {
+    return this.request('/api/templates/preferences/sync', {
+      method: 'POST',
+      body: JSON.stringify(localPreferences),
+      credentials: 'include',
+    });
+  }
+
 }
 
 // Export singleton instance
