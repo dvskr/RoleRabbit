@@ -309,6 +309,70 @@ model ShareLink {
   @@map("share_links")
 }
 
+model FileVersion {
+  id       String @id @default(cuid())
+  fileId   String
+  userId   String
+  versionNumber Int // Version number (1, 2, 3, etc.)
+
+  // File Information (snapshot at time of version)
+  fileName    String
+  contentType String
+  size        BigInt
+  storagePath String // Path to versioned file
+  fileHash    String // SHA-256 hash for integrity
+
+  // Version metadata
+  changeDescription String? // What changed in this version
+  isActive          Boolean @default(false) // Only one active version per file
+
+  createdAt DateTime @default(now())
+
+  file StorageFile @relation("FileVersions", fields: [fileId], references: [id], onDelete: Cascade)
+  user User        @relation("FileVersions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("file_versions")
+}
+
+model FileTag {
+  id     String  @id @default(cuid())
+  userId String? // If null, it's a system tag
+
+  name  String
+  color String? // Hex color code for UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?         @relation("UserFileTags", fields: [userId], references: [id], onDelete: Cascade)
+  files FileTagging[]
+
+  @@unique([userId, name]) // User can't have duplicate tag names
+  @@index([userId])
+  @@index([name])
+  @@map("file_tags")
+}
+
+model FileTagging {
+  id     String @id @default(cuid())
+  fileId String
+  tagId  String
+
+  createdAt DateTime @default(now())
+
+  file StorageFile @relation("FileTagging", fields: [fileId], references: [id], onDelete: Cascade)
+  tag  FileTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, tagId]) // Can't tag same file with same tag twice
+  @@index([fileId])
+  @@index([tagId])
+  @@map("file_tagging")
+}
+
 model Skill {
   id       String  @id @default(cuid())
   name     String  @unique // Normalized skill name
@@ -365,6 +429,8 @@ model StorageFile {
   credentials              Credential[]
   baseResumes              BaseResume[]
   jobAttachments           JobAttachment[]  @relation("JobAttachments")
+  versions                 FileVersion[]    @relation("FileVersions")
+  tags                     FileTagging[]    @relation("FileTagging")
 
   @@index([userId])
   @@index([folderId])
@@ -523,6 +589,8 @@ model User {
   fileComments        FileComment[]        @relation("FileComments")
   fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")
   credentials         Credential[]         @relation("Credentials")
+  fileVersions        FileVersion[]        @relation("FileVersions")
+  fileTags            FileTag[]            @relation("UserFileTags")
   storageQuota        StorageQuota?
   resumes             Resume[]             @relation("Resumes")
   baseResumes         BaseResume[]         @relation("UserBaseResumes")
