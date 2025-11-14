@@ -35,6 +35,19 @@ enum GeneratedDocType {
   OTHER
 }
 
+enum JobStatus {
+  APPLIED
+  INTERVIEW
+  OFFER
+  REJECTED
+}
+
+enum JobPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 model Certification {
   id        String @id @default(cuid())
   profileId String
@@ -351,6 +364,7 @@ model StorageFile {
   accessLogs               FileAccessLog[]
   credentials              Credential[]
   baseResumes              BaseResume[]
+  jobAttachments           JobAttachment[]  @relation("JobAttachments")
 
   @@index([userId])
   @@index([folderId])
@@ -519,6 +533,15 @@ model User {
   resumeCacheEntries  ResumeCache[]
   tailoringAnalytics  TailoringAnalytics[]
   activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
+  jobs                Job[]                @relation("UserJobs")
+  interviewNotes      InterviewNote[]      @relation("UserInterviewNotes")
+  salaryOffers        SalaryOffer[]        @relation("UserSalaryOffers")
+  companyInsights     CompanyInsight[]     @relation("UserCompanyInsights")
+  referralContacts    ReferralContact[]    @relation("UserReferralContacts")
+  jobNotes            JobNote[]            @relation("UserJobNotes")
+  jobReminders        JobReminder[]        @relation("UserJobReminders")
+  savedViews          SavedView[]          @relation("UserSavedViews")
+  jobAttachments      JobAttachment[]      @relation("UserJobAttachments")
 
   @@index([email])
   @@index([provider, providerId])
@@ -789,4 +812,247 @@ model TailoringAnalytics {
   @@index([mode])
   @@index([userId, timestamp])
   @@map("tailoring_analytics")
+}
+
+// ============================================================
+// Job Tracker Models
+// ============================================================
+
+model Job {
+  id     String @id @default(cuid())
+  userId String
+
+  // Basic Information
+  title    String
+  company  String
+  location String
+  status   JobStatus    @default(APPLIED)
+  priority JobPriority? @default(MEDIUM)
+
+  // Application Details
+  appliedDate   String // Date in YYYY-MM-DD format
+  salary        String? // Salary range or amount
+  description   String? @db.Text
+  url           String? // Job posting URL
+  notes         String? @db.Text
+  nextStep      String?
+  nextStepDate  String? // Date in YYYY-MM-DD format
+
+  // Contact Information (JSON)
+  contact Json? // {name, email, phone}
+
+  // Additional Details
+  requirements String[] @default([])
+  benefits     String[] @default([])
+  remote       Boolean  @default(false)
+  companySize  String?
+  industry     String?
+
+  // Metadata
+  isFavorite Boolean   @default(false)
+  deletedAt  DateTime? // Soft delete
+
+  createdAt   DateTime @default(now())
+  lastUpdated DateTime @updatedAt
+
+  // Relations
+  user            User              @relation("UserJobs", fields: [userId], references: [id], onDelete: Cascade)
+  interviewNotes  InterviewNote[]
+  salaryOffers    SalaryOffer[]
+  companyInsights CompanyInsight[]
+  referrals       ReferralContact[]
+  jobNotes        JobNote[]
+  reminders       JobReminder[]
+  attachments     JobAttachment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([company])
+  @@index([appliedDate])
+  @@index([deletedAt])
+  @@index([isFavorite])
+  @@map("jobs")
+}
+
+model InterviewNote {
+  id    String @id @default(cuid())
+  jobId String
+  userId String
+
+  type        String // phone, technical, behavioral, final, other
+  date        String // Date in YYYY-MM-DD format
+  interviewer String?
+  notes       String  @db.Text
+  questions   String[] @default([])
+  feedback    String?  @db.Text
+  rating      Int? // 1-5 rating
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation("UserInterviewNotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([date])
+  @@map("interview_notes")
+}
+
+model SalaryOffer {
+  id    String @id @default(cuid())
+  jobId String
+  userId String
+
+  amount   Float
+  currency String  @default("USD")
+  equity   String? // Stock options, RSUs, etc.
+  benefits String[] @default([])
+  notes    String?  @db.Text
+  date     String // Date in YYYY-MM-DD format
+  status   String  @default("initial") // initial, countered, accepted, rejected
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation("UserSalaryOffers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([status])
+  @@map("salary_offers")
+}
+
+model CompanyInsight {
+  id    String @id @default(cuid())
+  jobId String
+  userId String
+
+  type    String // culture, benefits, growth, reviews, news, other
+  title   String
+  content String @db.Text
+  source  String?
+  date    String // Date in YYYY-MM-DD format
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation("UserCompanyInsights", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([type])
+  @@map("company_insights")
+}
+
+model ReferralContact {
+  id    String @id @default(cuid())
+  jobId String
+  userId String
+
+  name         String
+  position     String
+  relationship String
+  contacted    Boolean @default(false)
+  date         String // Date in YYYY-MM-DD format
+  notes        String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation("UserReferralContacts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([contacted])
+  @@map("referral_contacts")
+}
+
+model JobNote {
+  id    String @id @default(cuid())
+  jobId String
+  userId String
+
+  title    String
+  content  String   @db.Text
+  tags     String[] @default([])
+  date     String // Date in YYYY-MM-DD format
+  category String   @default("other") // research, application, interview, offer, other
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation("UserJobNotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([category])
+  @@map("job_notes")
+}
+
+model JobReminder {
+  id    String @id @default(cuid())
+  jobId String
+  userId String
+
+  title       String
+  description String  @db.Text
+  dueDate     String // Date in YYYY-MM-DD format
+  completed   Boolean     @default(false)
+  priority    JobPriority @default(MEDIUM)
+  type        String      @default("other") // follow-up, deadline, interview, application, other
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation("UserJobReminders", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([userId])
+  @@index([dueDate])
+  @@index([completed])
+  @@map("job_reminders")
+}
+
+model SavedView {
+  id     String @id @default(cuid())
+  userId String
+
+  name    String
+  filters Json // JobFilters as JSON
+  columns String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation("UserSavedViews", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_views")
+}
+
+model JobAttachment {
+  id        String @id @default(cuid())
+  jobId     String
+  userId    String
+  fileId    String
+  attachmentType String @default("other") // resume, cover_letter, portfolio, other
+
+  createdAt DateTime @default(now())
+
+  job  Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User        @relation("UserJobAttachments", fields: [userId], references: [id], onDelete: Cascade)
+  file StorageFile @relation("JobAttachments", fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, fileId]) // Prevent duplicate attachments
+  @@index([jobId])
+  @@index([userId])
+  @@index([fileId])
+  @@map("job_attachments")
 }
