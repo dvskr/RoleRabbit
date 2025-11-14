@@ -117,7 +117,7 @@ const {
 } = require('./utils/versioning');
 
 // Sanitization utilities
-const { sanitizationMiddleware } = require('./utils/sanitizer');
+const { sanitizeRequestBody } = require('./utils/sanitizer');
 
 
 // Register compression with disabled global compression to prevent premature close warnings
@@ -264,9 +264,6 @@ fastify.addHook('preValidation', async (request, _reply) => {
   if (request.query && typeof request.query === 'object') {
     request.query = sanitizeInput(request.query);
   }
-  
-  // Apply additional sanitization
-  sanitizationMiddleware()(request, _reply);
 });
 
 // Hook to handle response completion and ensure proper serialization
