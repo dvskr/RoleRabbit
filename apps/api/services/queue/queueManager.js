@@ -4,7 +4,7 @@
  * Manages job queues for long-running AI operations using BullMQ
  */
 
-const { Queue, Worker, QueueScheduler } = require('bullmq');
+const { Queue, Worker } = require('bullmq');
 const Redis = require('ioredis');
 const logger = require('../../utils/logger');
 
@@ -73,7 +73,6 @@ const QUEUE_CONFIGS = {
 // Initialize queues
 const queues = {};
 const workers = {};
-const schedulers = {};
 
 /**
  * Initialize all queues
@@ -81,15 +80,10 @@ const schedulers = {};
 function initializeQueues() {
   try {
     for (const [key, config] of Object.entries(QUEUE_CONFIGS)) {
-      // Create queue
+      // Create queue (BullMQ v3+ handles scheduling internally, no need for QueueScheduler)
       queues[key] = new Queue(config.name, {
         connection: redisConnection,
         defaultJobOptions: config.defaultJobOptions
-      });
-
-      // Create scheduler (handles delayed jobs and retries)
-      schedulers[key] = new QueueScheduler(config.name, {
-        connection: redisConnection
       });
 
       logger.info(`Queue initialized: ${config.name}`);
@@ -448,11 +442,6 @@ async function closeAll() {
     // Close workers
     for (const worker of Object.values(workers)) {
       await worker.close();
-    }
-
-    // Close schedulers
-    for (const scheduler of Object.values(schedulers)) {
-      await scheduler.close();
     }
 
     // Close queues
