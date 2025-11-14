@@ -20,6 +20,7 @@ const { jsonrepair } = require('jsonrepair');
 const logger = require('../utils/logger');
 const { prisma } = require('../utils/db');
 const { generateText } = require('../utils/openAI');
+const { retryOpenAIOperation } = require('../utils/retryWithBackoff');
 const cacheManager = require('../utils/cacheManager');
 const { CACHE_NAMESPACES } = require('../utils/cacheKeys');
 const cacheConfig = require('../config/cacheConfig');
@@ -890,12 +891,35 @@ RULES:
 Resume Text:
 ${text}`;
 
-  const response = await generateText(
-    prompt,
+  // Wrap OpenAI call with retry logic
+  const response = await retryOpenAIOperation(
+    async (attempt) => {
+      logger.info(`🤖 [GPT-4o] API call attempt ${attempt}`, {
+        model: 'gpt-4o',
+        textLength: text.length
+      });
+      
+      return await generateText(
+        prompt,
+        {
+          model: 'gpt-4o',
+          temperature: 0.1,
+          max_tokens: 4000,
+          timeout: 30000 // 30 seconds timeout per attempt
+        }
+      );
+    },
     {
-      model: 'gpt-4o',
-      temperature: 0.1,
-      max_tokens: 4000
+      operationName: 'GPT-4o Resume Parsing',
+      maxAttempts: 3,
+      initialDelay: 1000,
+      onRetry: (error, attempt, delay) => {
+        logger.warn(`[GPT-4o] Retrying after error: ${error.message}`, {
+          attempt,
+          nextDelay: delay,
+          fileName
+        });
+      }
     }
   );
 
@@ -1016,15 +1040,37 @@ async function structureResumeWithAI(rawText) {
   });
 
   const runRequest = async (options = {}, extra = {}) => {
-    const response = await generateText(
-      prompt,
-      {
-        model: 'gpt-4o-mini',
-        temperature: 0.1,
-        max_tokens: 4000, // Increased for larger resumes
-        ...options
+    // Wrap OpenAI call with retry logic
+    const response = await retryOpenAIOperation(
+      async (attempt) => {
+        logger.info(`🤖 [GPT-4o-mini] API call attempt ${attempt}`, {
+          model: 'gpt-4o-mini',
+          textLength: truncatedText.length
+        });
+        
+        return await generateText(
+          prompt,
+          {
+            model: 'gpt-4o-mini',
+            temperature: 0.1,
+            max_tokens: 4000, // Increased for larger resumes
+            timeout: 30000, // 30 seconds timeout per attempt
+            ...options
+          },
+          extra
+        );
       },
-      extra
+      {
+        operationName: 'GPT-4o-mini Resume Parsing',
+        maxAttempts: 3,
+        initialDelay: 1000,
+        onRetry: (error, attempt, delay) => {
+          logger.warn(`[GPT-4o-mini] Retrying after error: ${error.message}`, {
+            attempt,
+            nextDelay: delay
+          });
+        }
+      }
     );
     return response?.text ?? '';
   };

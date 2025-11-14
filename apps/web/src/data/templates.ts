@@ -1,12 +1,213 @@
+import { ResumeCategory, RESUME_CATEGORY_INFO, ResumeCategoryInfo, Industry } from './categories';
+
+/**
+ * Resume Template Interface
+ *
+ * Defines the complete schema for a resume template in the RoleRabbit system.
+ * This interface ensures consistent template data structure across the application.
+ *
+ * @interface ResumeTemplate
+ *
+ * @property {string} id - Unique identifier for the template
+ *   - **Required**: Yes
+ *   - **Format**: Lowercase, kebab-case (e.g., 'ats-classic', 'creative-modern')
+ *   - **Constraints**: Must be unique across all templates, no spaces or special chars
+ *   - **Example**: 'ats-classic', 'executive-blue', 'creative-portfolio'
+ *
+ * @property {string} name - Display name of the template
+ *   - **Required**: Yes
+ *   - **Format**: Title case, human-readable
+ *   - **Constraints**: 3-50 characters, should be descriptive
+ *   - **Example**: 'ATS Classic', 'Modern Executive', 'Creative Portfolio'
+ *
+ * @property {ResumeCategory} category - Template category classification
+ *   - **Required**: Yes
+ *   - **Valid Values**: 'ats' | 'creative' | 'modern' | 'classic' | 'executive' | 'minimal' | 'academic' | 'technical' | 'startup' | 'freelance'
+ *   - **Purpose**: Used for filtering and organization
+ *   - **Example**: 'ats', 'creative', 'executive'
+ *
+ * @property {string} description - Brief description of the template
+ *   - **Required**: Yes
+ *   - **Format**: Sentence case, concise explanation
+ *   - **Constraints**: 20-200 characters, should explain unique value
+ *   - **Example**: 'Clean, ATS-optimized template perfect for corporate environments'
+ *
+ * @property {string} preview - URL path to preview image (DEPRECATED - not currently used)
+ *   - **Required**: No (field exists but unused)
+ *   - **Format**: Path string (e.g., '/templates/ats-classic-preview.png')
+ *   - **Note**: System currently uses CSS-generated previews instead
+ *   - **Example**: '/templates/ats-classic-preview.png'
+ *
+ * @property {string[]} features - List of key template features/selling points
+ *   - **Required**: Yes
+ *   - **Format**: Array of short feature descriptions
+ *   - **Constraints**: 3-6 features, each 2-30 characters
+ *   - **Example**: ['ATS Optimized', 'Clean Layout', 'Professional', 'Easy to Read']
+ *
+ * @property {'beginner' | 'intermediate' | 'advanced'} difficulty - Template complexity level
+ *   - **Required**: Yes
+ *   - **Valid Values**:
+ *     * 'beginner': Simple, straightforward templates (green badge)
+ *     * 'intermediate': Moderate complexity (yellow badge)
+ *     * 'advanced': Complex layouts with advanced features (red badge)
+ *   - **Purpose**: Helps users choose templates matching their skill level
+ *   - **Example**: 'beginner'
+ *
+ * @property {Industry[]} industry - Target industries for this template
+ *   - **Required**: Yes
+ *   - **Format**: Array of validated Industry strings
+ *   - **Constraints**: 1-8 industries, must match Industry type from categories
+ *   - **Valid Industries**: 'Technology', 'Finance', 'Healthcare', 'Education', 'Marketing', etc.
+ *   - **Example**: ['Professional Services', 'Finance', 'Healthcare', 'Education']
+ *
+ * @property {'single-column' | 'two-column' | 'hybrid'} layout - Template layout structure
+ *   - **Required**: Yes
+ *   - **Valid Values**:
+ *     * 'single-column': Full-width, vertical flow (best for ATS)
+ *     * 'two-column': Sidebar + main content (modern, visual)
+ *     * 'hybrid': Combination of both layouts (flexible)
+ *   - **Purpose**: Affects HTML generation in getTemplateDownloadHTML()
+ *   - **Example**: 'single-column'
+ *
+ * @property {'monochrome' | 'blue' | 'green' | 'purple' | 'red' | 'orange' | 'custom'} colorScheme - Template color palette
+ *   - **Required**: Yes
+ *   - **Valid Values**: 'monochrome', 'blue', 'green', 'purple', 'red', 'orange', 'custom'
+ *   - **Purpose**: Determines colors in mini preview and downloaded HTML
+ *   - **Color Mappings** (see TemplateCard.tsx getColorPalette()):
+ *     * blue: Primary #2563eb, Accent #3b82f6, Light #dbeafe
+ *     * green: Primary #059669, Accent #10b981, Light #d1fae5
+ *     * purple: Primary #7c3aed, Accent #8b5cf6, Light #ede9fe
+ *     * red: Primary #dc2626, Accent #ef4444, Light #fee2e2
+ *     * orange: Primary #ea580c, Accent #f97316, Light #fed7aa
+ *     * monochrome: Primary #1f2937, Accent #374151, Light #f3f4f6
+ *     * custom: Gradient purple to pink
+ *   - **Example**: 'blue'
+ *
+ * @property {boolean} isPremium - Whether template requires premium subscription
+ *   - **Required**: Yes
+ *   - **Format**: Boolean true/false
+ *   - **Purpose**: Used for filtering and access control (not currently enforced)
+ *   - **Note**: Premium gating not implemented yet (Issue #4)
+ *   - **Example**: false (free) or true (premium)
+ *
+ * @property {number} rating - User rating of the template
+ *   - **Required**: Yes
+ *   - **Format**: Decimal number
+ *   - **Constraints**: 0.0 to 5.0, typically 1 decimal place
+ *   - **Purpose**: Used for sorting and display
+ *   - **Example**: 4.8, 4.5, 5.0
+ *
+ * @property {number} downloads - Number of times template has been downloaded
+ *   - **Required**: Yes
+ *   - **Format**: Integer
+ *   - **Constraints**: >= 0
+ *   - **Purpose**: Used for 'popular' sorting and social proof
+ *   - **Example**: 15420, 12340, 8950
+ *
+ * @property {string} createdAt - Template creation date
+ *   - **Required**: Yes
+ *   - **Format**: ISO date string 'YYYY-MM-DD'
+ *   - **Constraints**: Valid date, not in future
+ *   - **Purpose**: Used for 'newest' sorting
+ *   - **Example**: '2024-01-15', '2024-02-20'
+ *
+ * @property {string} updatedAt - Last template update date
+ *   - **Required**: Yes
+ *   - **Format**: ISO date string 'YYYY-MM-DD'
+ *   - **Constraints**: Valid date, >= createdAt
+ *   - **Purpose**: Track template modifications
+ *   - **Example**: '2024-01-20', '2024-03-15'
+ *
+ * @property {string} author - Template creator/author name
+ *   - **Required**: Yes
+ *   - **Format**: String, typically 'RoleReady Team' for official templates
+ *   - **Constraints**: 2-50 characters
+ *   - **Example**: 'RoleReady Team', 'Community Contributor'
+ *
+ * @property {string[]} tags - Searchable tags for the template
+ *   - **Required**: Yes
+ *   - **Format**: Array of lowercase strings
+ *   - **Constraints**: 3-10 tags, each 2-20 characters, lowercase, no spaces
+ *   - **Purpose**: Enhanced search functionality
+ *   - **Example**: ['ats', 'corporate', 'professional', 'clean']
+ *
+ * @example
+ * ```typescript
+ * const template: ResumeTemplate = {
+ *   id: 'ats-classic',
+ *   name: 'ATS Classic',
+ *   category: 'ats',
+ *   description: 'Clean, ATS-optimized template perfect for corporate environments',
+ *   preview: '/templates/ats-classic-preview.png',
+ *   features: ['ATS Optimized', 'Clean Layout', 'Professional', 'Easy to Read'],
+ *   difficulty: 'beginner',
+ *   industry: ['Professional Services', 'Finance', 'Healthcare', 'Education'],
+ *   layout: 'single-column',
+ *   colorScheme: 'monochrome',
+ *   isPremium: false,
+ *   rating: 4.8,
+ *   downloads: 15420,
+ *   createdAt: '2024-01-15',
+ *   updatedAt: '2024-01-20',
+ *   author: 'RoleReady Team',
+ *   tags: ['ats', 'corporate', 'professional', 'clean']
+ * };
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Creative template example
+ * const creativeTemplate: ResumeTemplate = {
+ *   id: 'creative-portfolio',
+ *   name: 'Creative Portfolio',
+ *   category: 'creative',
+ *   description: 'Bold, visual design for creative professionals',
+ *   preview: '/templates/creative-portfolio-preview.png',
+ *   features: ['Visual Impact', 'Portfolio Showcase', 'Modern Design', 'Unique Layout'],
+ *   difficulty: 'advanced',
+ *   industry: ['Design', 'Marketing', 'Media', 'Arts'],
+ *   layout: 'two-column',
+ *   colorScheme: 'purple',
+ *   isPremium: true,
+ *   rating: 4.9,
+ *   downloads: 8950,
+ *   createdAt: '2024-02-10',
+ *   updatedAt: '2024-02-15',
+ *   author: 'RoleReady Team',
+ *   tags: ['creative', 'portfolio', 'design', 'visual', 'modern']
+ * };
+ * ```
+ *
+ * @remarks
+ * **Validation Guidelines:**
+ * - All required fields must be present
+ * - IDs must be unique across the entire resumeTemplates array
+ * - Categories must match ResumeCategory type
+ * - Industries must match Industry type from categories.ts
+ * - Difficulty must be one of three valid values
+ * - Layout must be one of three valid values
+ * - Color scheme must be one of seven valid values
+ * - Rating must be 0-5 (typically 1 decimal place)
+ * - Downloads must be non-negative integer
+ * - Dates must be valid ISO date strings
+ * - Tags should be lowercase for consistency
+ *
+ * **Usage Notes:**
+ * - The preview field exists but is not currently used (CSS previews used instead)
+ * - Premium gating (isPremium) is not enforced yet (see Issue #4)
+ * - Templates are stored in resumeTemplates array (hardcoded, no database yet)
+ * - Template data is used for filtering, sorting, search, and display
+ * - Color scheme affects both mini preview cards and downloaded HTML
+ */
 export interface ResumeTemplate {
   id: string;
   name: string;
-  category: 'ats' | 'creative' | 'modern' | 'classic' | 'executive' | 'minimal' | 'academic' | 'technical' | 'startup' | 'freelance';
+  category: ResumeCategory;
   description: string;
   preview: string; // Base64 or URL to preview image
   features: string[];
   difficulty: 'beginner' | 'intermediate' | 'advanced';
-  industry: string[];
+  industry: Industry[]; // Validated industry list (was string[])
   layout: 'single-column' | 'two-column' | 'hybrid';
   colorScheme: 'monochrome' | 'blue' | 'green' | 'purple' | 'red' | 'orange' | 'custom';
   isPremium: boolean;
@@ -28,7 +229,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/ats-classic-preview.png',
     features: ['ATS Optimized', 'Clean Layout', 'Professional', 'Easy to Read'],
     difficulty: 'beginner',
-    industry: ['Corporate', 'Finance', 'Healthcare', 'Education'],
+    industry: ['Professional Services', 'Finance', 'Healthcare', 'Education'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: false,
@@ -245,7 +446,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/executive-premium-preview.png',
     features: ['Premium Design', 'Luxury Elements', 'Executive Level', 'High Impact'],
     difficulty: 'advanced',
-    industry: ['Executive', 'C-Suite', 'Board Level', 'Senior Management'],
+    industry: ['Executive', 'C-Suite', 'Senior Management'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -365,7 +566,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/technical-engineer-preview.png',
     features: ['Technical Focus', 'Skills-heavy', 'Project-oriented', 'Professional'],
     difficulty: 'intermediate',
-    industry: ['Engineering', 'Software', 'Technology', 'Development'],
+    industry: ['Engineering', 'Software', 'Technology', 'Software'],
     layout: 'two-column',
     colorScheme: 'blue',
     isPremium: false,
@@ -464,7 +665,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/freelance-professional-preview.png',
     features: ['Professional Freelance', 'Consultant-focused', 'Expertise Showcase', 'Clean'],
     difficulty: 'intermediate',
-    industry: ['Freelance', 'Consulting', 'Professional Services', 'Expert'],
+    industry: ['Freelance', 'Consulting', 'Professional Services', 'Consulting'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -485,7 +686,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/premium-luxury-preview.png',
     features: ['Ultra-premium', 'Luxury Design', 'Executive Level', 'Exclusive'],
     difficulty: 'advanced',
-    industry: ['Executive', 'C-Suite', 'Board Level', 'Senior Leadership'],
+    industry: ['Executive', 'C-Suite', 'Senior Management'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -563,7 +764,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/education-teacher-preview.png',
     features: ['Education-focused', 'Teaching Sections', 'ATS Optimized', 'Professional'],
     difficulty: 'beginner',
-    industry: ['Education', 'Teaching', 'Academic', 'Training'],
+    industry: ['Education', 'Teaching', 'Academia', 'Training'],
     layout: 'single-column',
     colorScheme: 'green',
     isPremium: false,
@@ -582,7 +783,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/marketing-manager-preview.png',
     features: ['Marketing-focused', 'Campaign Sections', 'Metrics Display', 'Modern'],
     difficulty: 'intermediate',
-    industry: ['Marketing', 'Advertising', 'Digital', 'Brand Management'],
+    industry: ['Marketing', 'Advertising', 'Digital Marketing', 'Brand Management'],
     layout: 'two-column',
     colorScheme: 'purple',
     isPremium: false,
@@ -721,7 +922,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/modern-ux-preview.png',
     features: ['UX/UI Focused', 'Portfolio Integration', 'Process Sections', 'Modern'],
     difficulty: 'intermediate',
-    industry: ['UX/UI Design', 'Product Design', 'User Experience', 'Design'],
+    industry: ['UX Design', 'Product Design', 'User Experience', 'Design'],
     layout: 'hybrid',
     colorScheme: 'purple',
     isPremium: true,
@@ -801,7 +1002,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/minimal-consultant-preview.png',
     features: ['Minimal Consultant', 'Clean Design', 'Professional', 'Simple'],
     difficulty: 'intermediate',
-    industry: ['Consulting', 'Professional Services', 'Advisory', 'Expert'],
+    industry: ['Consulting', 'Professional Services', 'Advisory', 'Consulting'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -820,9 +1021,9 @@ export const resumeTemplates: ResumeTemplate[] = [
     category: 'academic',
     description: 'PhD-level academic template with extensive research sections',
     preview: '/templates/academic-phd-preview.png',
-    features: ['PhD-level', 'Research-heavy', 'Publications', 'Academic'],
+    features: ['PhD-level', 'Research-heavy', 'Publications', 'Academia'],
     difficulty: 'advanced',
-    industry: ['Academia', 'Research', 'PhD', 'Higher Education'],
+    industry: ['Academia', 'Research', 'Research', 'Higher Education'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -839,9 +1040,9 @@ export const resumeTemplates: ResumeTemplate[] = [
     category: 'academic',
     description: 'Student-focused academic template with education emphasis',
     preview: '/templates/academic-student-preview.png',
-    features: ['Student-focused', 'Education Emphasis', 'Academic', 'Professional'],
+    features: ['Student-focused', 'Education Emphasis', 'Academia', 'Professional'],
     difficulty: 'beginner',
-    industry: ['Student', 'Education', 'Academic', 'Graduate'],
+    industry: ['Student', 'Education', 'Academia', 'Graduate'],
     layout: 'single-column',
     colorScheme: 'blue',
     isPremium: false,
@@ -862,7 +1063,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/freelance-tech-preview.png',
     features: ['Tech Freelance', 'Project Showcase', 'Skills Display', 'Professional'],
     difficulty: 'intermediate',
-    industry: ['Freelance', 'Technology', 'Software', 'Development'],
+    industry: ['Freelance', 'Technology', 'Software', 'Software'],
     layout: 'two-column',
     colorScheme: 'blue',
     isPremium: false,
@@ -881,7 +1082,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/freelance-marketing-preview.png',
     features: ['Marketing Freelance', 'Campaign Sections', 'Results Display', 'Professional'],
     difficulty: 'intermediate',
-    industry: ['Freelance', 'Marketing', 'Digital', 'Advertising'],
+    industry: ['Freelance', 'Marketing', 'Digital Marketing', 'Advertising'],
     layout: 'two-column',
     colorScheme: 'purple',
     isPremium: true,
@@ -900,9 +1101,9 @@ export const resumeTemplates: ResumeTemplate[] = [
     category: 'startup',
     description: 'Nonprofit startup template with mission and impact focus',
     preview: '/templates/startup-nonprofit-preview.png',
-    features: ['Nonprofit-focused', 'Mission-driven', 'Impact Sections', 'Startup'],
+    features: ['Nonprofit-focused', 'Social Impact', 'Impact Sections', 'Startup'],
     difficulty: 'intermediate',
-    industry: ['Nonprofit', 'Social Impact', 'Startup', 'Mission-driven'],
+    industry: ['Nonprofit', 'Social Impact', 'Startup', 'Social Impact'],
     layout: 'hybrid',
     colorScheme: 'green',
     isPremium: false,
@@ -942,7 +1143,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/premium-executive-preview.png',
     features: ['Ultimate Premium', 'Luxury Design', 'Executive Level', 'Exclusive'],
     difficulty: 'advanced',
-    industry: ['Executive', 'C-Suite', 'Board Level', 'Senior Leadership'],
+    industry: ['Executive', 'C-Suite', 'Senior Management'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -999,7 +1200,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/premium-startup-ceo-preview.png',
     features: ['Startup CEO', 'Entrepreneurial', 'Premium Design', 'Exclusive'],
     difficulty: 'advanced',
-    industry: ['Startup', 'CEO', 'Entrepreneurship', 'Leadership'],
+    industry: ['Startup', 'Executive', 'Entrepreneurship', 'Leadership'],
     layout: 'hybrid',
     colorScheme: 'orange',
     isPremium: true,
@@ -1018,7 +1219,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/premium-academic-prof-preview.png',
     features: ['Academic Professor', 'Research Excellence', 'Premium Design', 'Exclusive'],
     difficulty: 'advanced',
-    industry: ['Academia', 'Professor', 'Research', 'Higher Education'],
+    industry: ['Academia', 'Higher Education', 'Research', 'Higher Education'],
     layout: 'single-column',
     colorScheme: 'monochrome',
     isPremium: true,
@@ -1037,7 +1238,7 @@ export const resumeTemplates: ResumeTemplate[] = [
     preview: '/templates/premium-freelance-expert-preview.png',
     features: ['Freelance Expert', 'Expertise Showcase', 'Premium Design', 'Exclusive'],
     difficulty: 'advanced',
-    industry: ['Freelance', 'Expert', 'Consulting', 'Professional Services'],
+    industry: ['Freelance', 'Consulting', 'Consulting', 'Professional Services'],
     layout: 'hybrid',
     colorScheme: 'custom',
     isPremium: true,
@@ -1050,18 +1251,14 @@ export const resumeTemplates: ResumeTemplate[] = [
   }
 ];
 
-export const templateCategories = [
-  { id: 'ats', name: 'ATS-Friendly', description: 'Optimized for Applicant Tracking Systems', count: 8 },
-  { id: 'creative', name: 'Creative', description: 'Bold, artistic designs for creative professionals', count: 8 },
-  { id: 'modern', name: 'Modern', description: 'Contemporary, sleek designs', count: 6 },
-  { id: 'classic', name: 'Classic', description: 'Traditional, timeless designs', count: 4 },
-  { id: 'executive', name: 'Executive', description: 'Sophisticated designs for leadership roles', count: 6 },
-  { id: 'minimal', name: 'Minimal', description: 'Clean, simple designs focusing on content', count: 4 },
-  { id: 'academic', name: 'Academic', description: 'Designed for researchers and educators', count: 4 },
-  { id: 'technical', name: 'Technical', description: 'Tech-focused designs for engineers and developers', count: 6 },
-  { id: 'startup', name: 'Startup', description: 'Dynamic designs for entrepreneurs', count: 4 },
-  { id: 'freelance', name: 'Freelance', description: 'Portfolio-focused designs for freelancers', count: 4 }
-];
+/**
+ * Get template categories with dynamic counts
+ * Uses centralized category definitions from categories.ts
+ */
+export const templateCategories: ResumeCategoryInfo[] = RESUME_CATEGORY_INFO.map(categoryInfo => ({
+  ...categoryInfo,
+  count: resumeTemplates.filter(t => t.category === categoryInfo.id).length,
+}));
 
 export const getTemplatesByCategory = (category: string) => {
   return resumeTemplates.filter(template => template.category === category);
@@ -1087,10 +1284,24 @@ export const getTemplatesByDifficulty = (difficulty: string) => {
 
 export const searchTemplates = (query: string) => {
   const lowercaseQuery = query.toLowerCase();
-  return resumeTemplates.filter(template => 
+  return resumeTemplates.filter(template =>
     template.name.toLowerCase().includes(lowercaseQuery) ||
     template.description.toLowerCase().includes(lowercaseQuery) ||
     template.tags.some(tag => tag.toLowerCase().includes(lowercaseQuery)) ||
     template.industry.some(ind => ind.toLowerCase().includes(lowercaseQuery))
   );
 };
+
+// Validate all templates on module load (development only)
+if (process.env.NODE_ENV === 'development') {
+  import('../utils/templateValidator').then(({ validateAndFilterTemplates }) => {
+    const validCount = validateAndFilterTemplates(resumeTemplates).length;
+    if (validCount !== resumeTemplates.length) {
+      console.warn(`⚠️ Template validation: ${resumeTemplates.length - validCount} templates failed validation`);
+    } else {
+      console.log(`✅ All ${resumeTemplates.length} templates validated successfully`);
+    }
+  }).catch(err => {
+    console.error('Failed to load template validator:', err);
+  });
+}

@@ -89,7 +89,9 @@ export const useTemplatePagination = (
   // Reset to page 1 when templates change significantly
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
+      // Go to last valid page instead of page 1
+      // This keeps users closer to their previous position
+      setCurrentPage(totalPages);
     }
   }, [templates.length, totalPages, currentPage]);
 

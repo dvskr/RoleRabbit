@@ -23,6 +23,9 @@ const isPreviewablePdf = (contentType?: string) =>
 const isPreviewableText = (contentType?: string) =>
   Boolean(contentType && (contentType.startsWith('text/') || contentType === 'application/json'));
 
+const isPreviewableVideo = (contentType?: string) =>
+  Boolean(contentType && contentType.startsWith('video/'));
+
 export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   isOpen,
   file,
@@ -78,7 +81,12 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
   // Use blobUrl if available, otherwise fall back to publicUrl
   const previewUrl = blobUrl || file.publicUrl;
   const canInlinePreview = Boolean(
-    previewUrl && (isPreviewableImage(file.contentType) || isPreviewablePdf(file.contentType) || isPreviewableText(file.contentType))
+    previewUrl && (
+      isPreviewableImage(file.contentType) ||
+      isPreviewablePdf(file.contentType) ||
+      isPreviewableText(file.contentType) ||
+      isPreviewableVideo(file.contentType)
+    )
   );
 
   return (
@@ -222,6 +230,19 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({
                   title={`Preview ${file.name}`}
                   className="w-full h-full bg-white"
                 />
+              )}
+              {isPreviewableVideo(file.contentType) && previewUrl && (
+                <div className="w-full h-full flex items-center justify-center bg-black p-4">
+                  <video
+                    controls
+                    className="max-w-full max-h-full"
+                    style={{ maxHeight: '100%', maxWidth: '100%' }}
+                    preload="metadata"
+                  >
+                    <source src={previewUrl} type={file.contentType || 'video/mp4'} />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
               )}
             </div>
           ) : (

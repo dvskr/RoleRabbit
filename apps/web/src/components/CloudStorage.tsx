@@ -23,7 +23,7 @@ import { logger } from '../utils/logger';
 export default function CloudStorage({ onClose }: CloudStorageProps) {
   const { theme } = useTheme();
   const colors = theme?.colors;
-  const { toasts, removeToast, success, error } = useToast();
+  const { toasts, dismissToast, success, error } = useToast();
 
   if (!colors) {
     return <LoadingState colors={{}} message="Loading theme" />;
@@ -322,7 +322,7 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
       </div>
 
       {/* Toast Notifications */}
-      <ToastContainer toasts={toasts} onClose={removeToast} position="top-right" />
+      <ToastContainer toasts={toasts} onClose={dismissToast} position="top-right" />
 
       <CreateFolderModal
         isOpen={showCreateFolderModal}

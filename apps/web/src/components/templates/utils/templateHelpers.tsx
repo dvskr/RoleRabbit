@@ -16,15 +16,39 @@ import {
   Heart,
   Sparkles
 } from 'lucide-react';
-import { DifficultyColorScheme } from '../types';
+import type { ThemeColors, DifficultyColorScheme } from '../types';
 import { SAMPLE_RESUME_DATA } from '../constants';
+import { escapeHtml, sanitizeTemplateField } from '../../../utils/sanitize';
 
 /**
- * Get color scheme for difficulty level
+ * Get color scheme for difficulty level badge
+ *
+ * Maps template difficulty levels to appropriate color schemes using the theme colors.
+ * Returns text, background, and border colors for consistent visual hierarchy.
+ *
+ * @param difficulty - The difficulty level string
+ * @param colors - Theme colors object containing all color definitions
+ *
+ * @returns Color scheme object with:
+ *  - text: Text color for the difficulty badge
+ *  - bg: Background color for the difficulty badge
+ *  - border: Border color for the difficulty badge
+ *
+ * @example
+ * ```typescript
+ * const colors = getDifficultyColor('beginner', themeColors);
+ * // Returns: { text: '#10b981', bg: '#d1fae5', border: '#a7f3d0' }
+ * ```
+ *
+ * @remarks
+ * - 'beginner': Green color scheme (success colors)
+ * - 'intermediate': Yellow/orange color scheme (warning colors)
+ * - 'advanced': Red color scheme (error colors)
+ * - default/unknown: Gray color scheme (neutral colors)
  */
 export const getDifficultyColor = (
   difficulty: string,
-  colors: any
+  colors: ThemeColors
 ): DifficultyColorScheme => {
   switch (difficulty) {
     case 'beginner':
@@ -55,7 +79,35 @@ export const getDifficultyColor = (
 };
 
 /**
- * Get icon component for category
+ * Get icon component for template category
+ *
+ * Returns the appropriate Lucide icon component for visual category representation.
+ * Icons are sized at 16x16 pixels for consistent display.
+ *
+ * @param category - The template category string (e.g., 'ats', 'creative', 'modern')
+ *
+ * @returns React component (Lucide icon) corresponding to the category
+ *
+ * @example
+ * ```typescript
+ * const icon = getCategoryIcon('ats');        // Returns: <Target size={16} />
+ * const icon = getCategoryIcon('creative');   // Returns: <Palette size={16} />
+ * const icon = getCategoryIcon('unknown');    // Returns: <Sparkles size={16} /> (default)
+ * ```
+ *
+ * @remarks
+ * Category icon mappings:
+ * - 'ats': Target (precision/targeting)
+ * - 'creative': Palette (artistic/design)
+ * - 'modern': Zap (fast/contemporary)
+ * - 'classic': Award (traditional/established)
+ * - 'executive': Crown (leadership/senior)
+ * - 'minimal': Layout (simple/clean)
+ * - 'academic': Users (education/research)
+ * - 'technical': Globe (technology/global)
+ * - 'startup': TrendingUp (growth/innovation)
+ * - 'freelance': Heart (passion/independent)
+ * - default: Sparkles (special/unique)
  */
 export const getCategoryIcon = (category: string): React.ReactNode => {
   switch (category) {
@@ -316,13 +368,63 @@ export const generateSampleResumePreview = (
 };
 
 /**
- * Generate HTML content for template download
+ * Generate HTML content for template download with sample data
+ *
+ * Creates a complete standalone HTML document with embedded styles and sample resume data.
+ * This function generates a preview-only version (not personalized with user data).
+ *
+ * @param template - The resume template object containing layout and styling information
+ * @param template.name - Template name (sanitized, max 100 chars)
+ * @param template.description - Template description (sanitized, max 200 chars)
+ * @param template.category - Template category (e.g., 'ats', 'creative')
+ * @param template.difficulty - Template difficulty level ('beginner', 'intermediate', 'advanced')
+ * @param template.layout - Template layout type ('single-column', 'two-column', 'hybrid')
+ *
+ * @returns Complete HTML document string with:
+ *  - DOCTYPE and meta tags for proper rendering and SEO
+ *  - Embedded CSS styles for consistent appearance
+ *  - Sample resume data (name, title, experience, skills, education)
+ *  - Yellow warning banner indicating this is a sample preview
+ *  - Responsive design that works across devices
+ *  - XSS protection through field sanitization
+ *
+ * @example
+ * ```typescript
+ * const template = {
+ *   name: 'ATS Classic',
+ *   description: 'Clean ATS-friendly template',
+ *   category: 'ats',
+ *   difficulty: 'beginner',
+ *   layout: 'single-column'
+ * };
+ * const html = getTemplateDownloadHTML(template);
+ * // Returns: "<!DOCTYPE html><html>...</html>"
+ * ```
+ *
+ * @remarks
+ * - Uses SAMPLE_RESUME_DATA constant for placeholder content
+ * - Sanitizes all template fields to prevent XSS attacks
+ * - Generates different layouts based on template.layout property
+ * - Single-column: Center-aligned, full-width content (max 800px)
+ * - Two-column: Sidebar (30%) + main content (70%)
+ * - Hybrid: Falls back to single-column layout
+ * - Includes print-friendly styles (@media print)
+ * - No external dependencies (all styles inline)
  */
 export const getTemplateDownloadHTML = (template: any): string => {
   if (!template) return '';
-  
+
   const sampleData = SAMPLE_RESUME_DATA;
-  
+
+  // Sanitize template fields to prevent XSS
+  const safeName = sanitizeTemplateField(template.name || 'Resume Template', 100);
+  const safeDescription = sanitizeTemplateField(
+    template.description || 'Professional resume template created with RoleRabbit',
+    200
+  );
+  const safeCategory = sanitizeTemplateField(template.category || 'professional', 50);
+  const safeDifficulty = sanitizeTemplateField(template.difficulty || 'intermediate', 50);
+
   // Generate HTML based on template layout
   let bodyContent = '';
   
@@ -490,15 +592,88 @@ export const getTemplateDownloadHTML = (template: any): string => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${template.name} - Resume Template</title>
+  <meta name="description" content="${safeDescription}">
+  <meta name="author" content="${escapeHtml(sampleData.name)}">
+  <meta name="generator" content="RoleRabbit Resume Builder">
+  <meta name="keywords" content="resume, cv, ${safeCategory}, ${safeDifficulty}, professional">
+  <title>${safeName} - Resume Template | ${escapeHtml(sampleData.name)}</title>
   <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.5;
+      color: #1f2937;
+    }
+
+    /* Print Styles */
     @media print {
-      body { margin: 0; }
-      @page { margin: 0.5in; }
+      body {
+        margin: 0;
+        background: white;
+      }
+
+      @page {
+        margin: 0.5in;
+        size: letter portrait;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* Prevent page breaks in certain elements */
+      h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+
+      ul, ol {
+        page-break-inside: avoid;
+      }
+
+      /* Remove background colors for better printing */
+      .no-print-bg {
+        background: transparent !important;
+      }
+    }
+
+    /* Screen Styles for Better Viewing */
+    @media screen {
+      body {
+        background: #f3f4f6;
+        padding: 20px;
+      }
+    }
+
+    /* Responsive adjustments */
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background: white;">
+<body>
+  <!-- Sample Preview Notice -->
+  <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #78350f; padding: 16px; text-align: center; border-bottom: 3px solid #b45309; margin-bottom: 20px; font-family: Arial, sans-serif;">
+    <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">📋 SAMPLE PREVIEW ONLY</div>
+    <div style="font-size: 14px;">This is a template preview with placeholder data. Upload your resume to RoleRabbit for a personalized version.</div>
+  </div>
   ${bodyContent}
 </body>
 </html>`;
@@ -506,6 +681,7 @@ export const getTemplateDownloadHTML = (template: any): string => {
 
 /**
  * Download template as HTML file
+ * Note: This downloads a SAMPLE preview with placeholder data, not user resume data
  */
 export const downloadTemplateAsHTML = (
   template: any,
@@ -515,7 +691,8 @@ export const downloadTemplateAsHTML = (
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${template.name.replace(/\s+/g, '-')}.html`;
+  // Add "sample" to filename to make it clear this is not personalized
+  link.download = `${template.name.replace(/\s+/g, '-')}-sample-preview.html`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -523,11 +700,17 @@ export const downloadTemplateAsHTML = (
 };
 
 /**
- * Share template (uses Web Share API if available, otherwise copies to clipboard)
+ * Share template with progressive fallback strategy:
+ * 1. Try Web Share API (mobile-friendly)
+ * 2. Try Clipboard API (modern browsers)
+ * 3. Fall back to textarea copy (legacy browsers)
  */
 export const shareTemplate = async (
   template: { name: string; description: string }
 ): Promise<void> => {
+  const shareText = `${template.name}\n${template.description}\n${window.location.href}`;
+
+  // Try Web Share API first (best for mobile)
   if (navigator.share) {
     try {
       await navigator.share({
@@ -535,16 +718,50 @@ export const shareTemplate = async (
         text: template.description,
         url: window.location.href,
       });
-    } catch (err) {
-      // User cancelled or error occurred
-      console.debug('Share failed:', err);
+      return; // Success!
+    } catch (err: any) {
+      // Check if user cancelled (not a real error)
+      if (err.name === 'AbortError') {
+        console.debug('User cancelled share');
+        return; // User cancelled, don't try fallback
+      }
+      // Other error - try fallback
+      console.debug('Web Share API failed, trying clipboard:', err);
     }
-  } else {
-    // Fallback: Copy to clipboard
-    await navigator.clipboard.writeText(
-      `${template.name} - ${template.description}`
-    );
-    alert('Template link copied to clipboard!');
+  }
+
+  // Try Clipboard API (modern browsers)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      // Show success message (non-blocking)
+      console.info('Template details copied to clipboard');
+      return; // Success!
+    } catch (err) {
+      console.debug('Clipboard API failed, trying legacy method:', err);
+    }
+  }
+
+  // Legacy fallback: Create textarea and copy
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = shareText;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const successful = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    if (!successful) {
+      throw new Error('Legacy copy failed');
+    }
+
+    console.info('Template details copied to clipboard (legacy method)');
+  } catch (err) {
+    // All methods failed
+    console.error('All share methods failed:', err);
+    throw new Error('Unable to share. Please try copying the URL manually.');
   }
 };
 

@@ -14,8 +14,14 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
+const { createAIRateLimitMiddleware } = require('../middleware/simpleRateLimit');
 const { validateEmail, validatePhone, validateURL } = require('../utils/validation');
 const { parseResumeBuffer } = require('../services/resumeParser');
+const {
+  validateFileUpload,
+  sanitizeFilename,
+  validateBufferContent
+} = require('../middleware/fileUploadSecurity');
 
 /**
  * Ensure value is a proper array (convert object with numeric keys to array)
@@ -89,7 +95,7 @@ const validateResumeContactInfo = (resumeData = {}) => {
 async function resumeRoutes(fastify, _options) {
   // Hybrid resume parsing endpoint
   fastify.post('/api/resumes/parse', {
-    preHandler: authenticate
+    preHandler: [authenticate, createAIRateLimitMiddleware('PARSE_RESUME')]
   }, async (request, reply) => {
     try {
       const filePart = await request.file();
@@ -100,11 +106,53 @@ async function resumeRoutes(fastify, _options) {
         });
       }
 
+      // SECURITY: Validate file upload
+      const fileValidation = validateFileUpload(filePart);
+      if (!fileValidation.valid) {
+        logger.warn('[SECURITY] File upload rejected', {
+          userId: request.user.userId,
+          filename: filePart.filename,
+          error: fileValidation.error
+        });
+        return reply.status(400).send({
+          success: false,
+          error: fileValidation.error
+        });
+      }
+
+      // SECURITY: Sanitize filename
+      const sanitizedFilename = sanitizeFilename(filePart.filename);
+
+      // Read file buffer
       const buffer = await filePart.toBuffer();
+
+      // SECURITY: Validate buffer content
+      const bufferValidation = validateBufferContent(buffer, filePart.mimetype);
+      if (!bufferValidation.valid) {
+        logger.warn('[SECURITY] Buffer validation failed', {
+          userId: request.user.userId,
+          filename: sanitizedFilename,
+          error: bufferValidation.error
+        });
+        return reply.status(400).send({
+          success: false,
+          error: bufferValidation.error
+        });
+      }
+
+      logger.info('[SECURITY] File upload validated successfully', {
+        userId: request.user.userId,
+        originalFilename: filePart.filename,
+        sanitizedFilename,
+        size: buffer.length,
+        mimeType: filePart.mimetype
+      });
+
+      // Parse resume
       const result = await parseResumeBuffer({
         userId: request.user.userId,
         buffer,
-        fileName: filePart.filename,
+        fileName: sanitizedFilename,
         mimeType: filePart.mimetype
       });
 

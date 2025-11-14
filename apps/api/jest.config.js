@@ -1,7 +1,6 @@
 module.exports = {
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  testMatch: ['**/tests/**/*.test.js'],
+  testMatch: ['**/tests/**/*.test.js', '**/__tests__/**/*.test.js'],
   collectCoverageFrom: [
     'utils/**/*.js',
     'services/**/*.js',
@@ -18,8 +17,13 @@ module.exports = {
       branches: 50,
       functions: 50,
       lines: 50,
-      statements: 50,
-    },
+      statements: 50
+    }
   },
+  testTimeout: 30000, // 30 seconds for E2E tests
+  verbose: true,
+  forceExit: true,
+  clearMocks: true,
+  resetMocks: true,
+  restoreMocks: true
 };
-

@@ -4,6 +4,7 @@
  */
 
 const logger = require('./logger');
+const { getUserFriendlyError, formatErrorResponse } = require('./errorMessages');
 
 /**
  * Error categories for classification
@@ -488,6 +489,30 @@ function parseError(error) {
   });
 }
 
+/**
+ * Global error handler for Fastify
+ * This is the main error handler used by server.js
+ */
+function globalErrorHandler(error, request, reply) {
+  // Parse the error into an AppError
+  const appError = parseError(error);
+  
+  // Log the error with context
+  logError(appError, {
+    path: request.url,
+    method: request.method,
+    userId: request.user?.userId,
+    ip: request.ip
+  });
+  
+  // Create error response
+  const errorResponse = createErrorResponse(appError, process.env.NODE_ENV === 'development');
+  
+  // Send response
+  const statusCode = appError.statusCode || 500;
+  return reply.status(statusCode).send(errorResponse);
+}
+
 module.exports = {
   // Error classes
   AppError,
@@ -511,5 +536,6 @@ module.exports = {
   asyncErrorHandler,
   parseError,
   parseOpenAIError,
-  parsePrismaError
+  parsePrismaError,
+  globalErrorHandler
 };

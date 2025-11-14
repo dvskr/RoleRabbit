@@ -1200,11 +1200,410 @@ class ApiService {
   }
 
   /**
-   * Permanently delete a job entry
+   * Delete a job (soft delete)
    */
   async deleteJob(id: string): Promise<any> {
     return this.request(`/api/jobs/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Restore a soft-deleted job
+   */
+  async restoreJob(id: string): Promise<any> {
+    return this.request(`/api/jobs/${id}/restore`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add job to favorites
+   */
+  async addJobToFavorites(id: string): Promise<any> {
+    return this.request(`/api/jobs/${id}/favorite`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Remove job from favorites
+   */
+  async removeJobFromFavorites(id: string): Promise<any> {
+    return this.request(`/api/jobs/${id}/favorite`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get all favorited jobs
+   */
+  async getFavoriteJobs(): Promise<any> {
+    return this.request('/api/jobs/favorites', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Bulk delete jobs (soft delete)
+   */
+  async bulkDeleteJobs(jobIds: string[]): Promise<any> {
+    return this.request('/api/jobs/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ jobIds }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Bulk restore jobs
+   */
+  async bulkRestoreJobs(jobIds: string[]): Promise<any> {
+    return this.request('/api/jobs/bulk-restore', {
+      method: 'POST',
+      body: JSON.stringify({ jobIds }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Bulk update job status
+   */
+  async bulkUpdateJobStatus(jobIds: string[], status: string): Promise<any> {
+    return this.request('/api/jobs/bulk-status', {
+      method: 'PUT',
+      body: JSON.stringify({ jobIds, status }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Create a saved view
+   */
+  async createSavedView(data: { name: string; filters: any; columns?: string[] }): Promise<any> {
+    return this.request('/api/jobs/views', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get all saved views
+   */
+  async getSavedViews(): Promise<any> {
+    return this.request('/api/jobs/views', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete a saved view
+   */
+  async deleteSavedView(id: string): Promise<any> {
+    return this.request(`/api/jobs/views/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add interview note to job
+   */
+  async addInterviewNote(jobId: string, data: {
+    type: string;
+    date: string;
+    interviewer?: string;
+    notes: string;
+    questions?: string[];
+    feedback?: string;
+    rating?: number;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/interview-notes`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update interview note
+   */
+  async updateInterviewNote(jobId: string, noteId: string, updates: any): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/interview-notes/${noteId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete interview note
+   */
+  async deleteInterviewNote(jobId: string, noteId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/interview-notes/${noteId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add salary offer to job
+   */
+  async addSalaryOffer(jobId: string, data: {
+    amount: number;
+    currency?: string;
+    equity?: string;
+    benefits?: string[];
+    notes?: string;
+    date: string;
+    status?: string;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/salary-offers`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update salary offer
+   */
+  async updateSalaryOffer(jobId: string, offerId: string, updates: any): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/salary-offers/${offerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete salary offer
+   */
+  async deleteSalaryOffer(jobId: string, offerId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/salary-offers/${offerId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add company insight to job
+   */
+  async addCompanyInsight(jobId: string, data: {
+    type: string;
+    title: string;
+    content: string;
+    source?: string;
+    date: string;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/company-insights`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update company insight
+   */
+  async updateCompanyInsight(jobId: string, insightId: string, updates: any): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/company-insights/${insightId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete company insight
+   */
+  async deleteCompanyInsight(jobId: string, insightId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/company-insights/${insightId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add referral contact to job
+   */
+  async addReferral(jobId: string, data: {
+    name: string;
+    position: string;
+    relationship: string;
+    contacted?: boolean;
+    date: string;
+    notes?: string;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/referrals`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update referral contact
+   */
+  async updateReferral(jobId: string, referralId: string, updates: any): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/referrals/${referralId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete referral contact
+   */
+  async deleteReferral(jobId: string, referralId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/referrals/${referralId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add job note
+   */
+  async addJobNote(jobId: string, data: {
+    title: string;
+    content: string;
+    tags?: string[];
+    date: string;
+    category?: string;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update job note
+   */
+  async updateJobNote(jobId: string, noteId: string, updates: any): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/notes/${noteId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete job note
+   */
+  async deleteJobNote(jobId: string, noteId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/notes/${noteId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Add job reminder
+   */
+  async addJobReminder(jobId: string, data: {
+    title: string;
+    description: string;
+    dueDate: string;
+    priority?: string;
+    type?: string;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/reminders`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Update job reminder
+   */
+  async updateJobReminder(jobId: string, reminderId: string, updates: any): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/reminders/${reminderId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Delete job reminder
+   */
+  async deleteJobReminder(jobId: string, reminderId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/reminders/${reminderId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Link attachment (storage file) to job
+   */
+  async addJobAttachment(jobId: string, data: {
+    fileId: string;
+    attachmentType?: string;
+  }): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/attachments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Remove attachment from job
+   */
+  async deleteJobAttachment(jobId: string, attachmentId: string): Promise<any> {
+    return this.request(`/api/jobs/${jobId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Export jobs (CSV or JSON)
+   */
+  async exportJobs(format: 'csv' | 'json' = 'json', includeDeleted: boolean = false): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('format', format);
+    params.append('includeDeleted', String(includeDeleted));
+
+    return this.request(`/api/jobs/export?${params.toString()}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Import jobs from JSON
+   */
+  async importJobs(data: {
+    jobs: any[];
+    replaceExisting?: boolean;
+  }): Promise<any> {
+    return this.request('/api/jobs/import', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get job statistics
+   */
+  async getJobStats(): Promise<any> {
+    return this.request('/api/jobs/stats', {
+      method: 'GET',
       credentials: 'include',
     });
   }

@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Heart, Share2, Download, Upload, Plus, CheckCircle, Star, Layout } from 'lucide-react';
 import type { ResumeTemplate } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import { generateSampleResumePreview } from '../utils/templateHelpers';
 import { TemplateReviews } from './ratings/TemplateReviews';
@@ -15,20 +16,23 @@ import { ShareModal } from './sharing/ShareModal';
 interface TemplatePreviewModalProps {
   isOpen: boolean;
   template: ResumeTemplate | null;
+  allTemplates: ResumeTemplate[];
   isFavorite: boolean;
   addedTemplateId: string | null;
-  colors?: any;
+  colors?: ThemeColors;
   onClose: () => void;
   onFavorite: (templateId: string) => void;
   onShare: () => void;
   onDownload: () => void;
   onUse: (templateId: string) => void;
   onOpenUpload: () => void;
+  onPreview: (templateId: string) => void;
 }
 
 export default function TemplatePreviewModal({
   isOpen,
   template,
+  allTemplates,
   isFavorite,
   addedTemplateId,
   colors,
@@ -38,11 +42,17 @@ export default function TemplatePreviewModal({
   onDownload,
   onUse,
   onOpenUpload,
+  onPreview,
 }: TemplatePreviewModalProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'reviews' | 'comments'>('overview');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Get recommended templates based on current template
+  const recommendations = template 
+    ? getRecommendedTemplates(template, allTemplates, 3)
+    : [];
 
   useEffect(() => {
     if (isOpen) {
@@ -253,6 +263,15 @@ export default function TemplatePreviewModal({
           </div>
         )}
 
+        {/* Recommended Templates */}
+        {recommendations.length > 0 && (
+          <RecommendedTemplates
+            recommendations={recommendations}
+            colors={colors || {}}
+            onSelectTemplate={onPreview}
+          />
+        )}
+
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-200">
           <div className="flex items-center gap-2 justify-center sm:justify-start">
@@ -283,6 +302,12 @@ export default function TemplatePreviewModal({
               title="Download"
             >
               <Download size={20} />
+              {/* Tooltip explaining this is sample only */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-xl">
+                <div className="font-semibold mb-1">Sample Preview Only</div>
+                <div className="text-gray-300 text-[10px]">Upload your resume for personalized download</div>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+              </div>
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -306,13 +331,14 @@ export default function TemplatePreviewModal({
             >
               {addedTemplateId === template.id ? (
                 <span className="flex items-center gap-2 animate-in fade-in zoom-in duration-300">
-                  <CheckCircle size={18} className="text-green-200" />
+                  <CheckCircle size={16} className="text-green-200 sm:w-[18px] sm:h-[18px]" />
                   Added!
                 </span>
               ) : (
                 <>
-                  <Plus size={18} />
-                  Add to Editor
+                  <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Add to Editor</span>
+                  <span className="sm:hidden">Add</span>
                 </>
               )}
               {addedTemplateId === template.id && (

@@ -6,6 +6,7 @@
 import React from 'react';
 import { FileText, Unlock, Crown, Download, TrendingUp, Heart, Sparkles } from 'lucide-react';
 import { resumeTemplates } from '../../../data/templates';
+import type { ThemeColors } from '../types';
 
 interface TemplateStatsProps {
   colors: any;

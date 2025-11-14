@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { DIFFICULTY_LEVELS, LAYOUT_TYPES, COLOR_SCHEMES } from '../constants';
+import type { ThemeColors } from '../types';
 
 interface AdvancedFiltersProps {
   selectedDifficulty: string;
@@ -16,7 +17,7 @@ interface AdvancedFiltersProps {
   setShowFreeOnly: (show: boolean) => void;
   showPremiumOnly: boolean;
   setShowPremiumOnly: (show: boolean) => void;
-  colors: any;
+  colors: ThemeColors;
 }
 
 export default function AdvancedFilters({
@@ -34,7 +35,7 @@ export default function AdvancedFilters({
 }: AdvancedFiltersProps) {
   return (
     <div className="mt-2 p-2 rounded-lg" style={{ background: colors.cardBackground }}>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
         <div>
           <label
             className="block text-xs font-medium mb-1"

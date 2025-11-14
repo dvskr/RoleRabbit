@@ -287,6 +287,11 @@ export const useTemplateFilters = (
 
   useEffect(() => {
     debouncedSetSearch(searchQuery);
+
+    // Cleanup: cancel pending debounced call on unmount
+    return () => {
+      debouncedSetSearch.cancel();
+    };
   }, [searchQuery, debouncedSetSearch]);
 
   // Track search analytics when debounced query changes
@@ -352,6 +357,27 @@ export const useTemplateFilters = (
     previousFreeOnly.current = showFreeOnly;
   }, [showFreeOnly]);
 
+  // Count active filters - defined early because it's used in clearAllFilters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== 'all') count++;
+    if (selectedDifficulty !== 'all') count++;
+    if (selectedLayout !== 'all') count++;
+    if (selectedColorScheme !== 'all') count++;
+    if (showPremiumOnly) count++;
+    if (showFreeOnly) count++;
+    if (debouncedSearchQuery.length > 0) count++;
+    return count;
+  }, [
+    selectedCategory,
+    selectedDifficulty,
+    selectedLayout,
+    selectedColorScheme,
+    showPremiumOnly,
+    showFreeOnly,
+    debouncedSearchQuery,
+  ]);
+
   // Clear all filters and localStorage
   const clearAllFilters = useCallback(() => {
     // Track analytics before clearing
@@ -379,14 +405,14 @@ export const useTemplateFilters = (
   const filteredTemplates = useMemo(() => {
     let templates = resumeTemplates;
 
-    // Search filter
+    // Search filter - apply first if search query exists
     if (debouncedSearchQuery) {
       templates = searchTemplates(debouncedSearchQuery);
     }
 
-    // Category filter
+    // Category filter - filter the existing set (don't replace it)
     if (selectedCategory !== 'all') {
-      templates = getTemplatesByCategory(selectedCategory);
+      templates = templates.filter(t => t.category === selectedCategory);
     }
 
     // Difficulty filter
@@ -451,27 +477,6 @@ export const useTemplateFilters = (
       showFreeOnly ||
       debouncedSearchQuery.length > 0
     );
-  }, [
-    selectedCategory,
-    selectedDifficulty,
-    selectedLayout,
-    selectedColorScheme,
-    showPremiumOnly,
-    showFreeOnly,
-    debouncedSearchQuery,
-  ]);
-
-  // Count active filters
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (selectedCategory !== 'all') count++;
-    if (selectedDifficulty !== 'all') count++;
-    if (selectedLayout !== 'all') count++;
-    if (selectedColorScheme !== 'all') count++;
-    if (showPremiumOnly) count++;
-    if (showFreeOnly) count++;
-    if (debouncedSearchQuery.length > 0) count++;
-    return count;
   }, [
     selectedCategory,
     selectedDifficulty,

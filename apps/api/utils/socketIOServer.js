@@ -436,6 +436,74 @@ class SocketIOServer {
   }
 
   /**
+   * ===========================================
+   * PROGRESS TRACKING EVENTS (Resume Operations)
+   * ===========================================
+   */
+
+  /**
+   * Emit resume parsing progress
+   */
+  notifyParsingProgress(userId, operationId, progressData) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('resume:parsing_progress', {
+      operationId,
+      ...progressData,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit ATS analysis progress
+   */
+  notifyATSProgress(userId, operationId, progressData) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('resume:ats_progress', {
+      operationId,
+      ...progressData,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit resume tailoring progress
+   */
+  notifyTailoringProgress(userId, operationId, progressData) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('resume:tailoring_progress', {
+      operationId,
+      ...progressData,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit operation completed event
+   */
+  notifyOperationComplete(userId, operationId, operationType, result) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('resume:operation_complete', {
+      operationId,
+      operationType,
+      result,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Emit operation failed event
+   */
+  notifyOperationFailed(userId, operationId, operationType, error) {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit('resume:operation_failed', {
+      operationId,
+      operationType,
+      error,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
    * Get instance
    */
   getIO() {

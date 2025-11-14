@@ -2,6 +2,8 @@
  * Portfolio Types
  */
 
+import { PortfolioCategory } from '../data/categories';
+
 export interface Portfolio {
   id: string;
   name: string;
@@ -74,7 +76,7 @@ export interface PortfolioTemplate {
   preview: string;
 }
 
-export type TemplateCategory = 'creative' | 'tech' | 'professional';
+export type TemplateCategory = PortfolioCategory;
 
 export interface PortfolioTemplateDefinition extends PortfolioTemplate {
   category: TemplateCategory;

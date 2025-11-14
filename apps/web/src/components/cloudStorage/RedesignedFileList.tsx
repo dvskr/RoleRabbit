@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useRef, useEffect } from 'react';
-import { Filter, Upload, Trash2, Search } from 'lucide-react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { Filter, Upload, Trash2, Search, Folder, Share2, X } from 'lucide-react';
 import { ResumeFile, FileType, SortBy } from '../../types/cloudStorage';
 import FileCard from './FileCard';
 import { EmptyFilesState } from './EmptyFilesState';
@@ -168,6 +168,12 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   const allSelected = files.length > 0 && selectedFiles.length === files.length;
   const someSelected = selectedFiles.length > 0 && selectedFiles.length < files.length;
   const checkboxRef = useRef<HTMLInputElement>(null);
+
+  // Bulk operations state
+  const [showBulkMoveModal, setShowBulkMoveModal] = useState(false);
+  const [showBulkShareModal, setShowBulkShareModal] = useState(false);
+  const [bulkTargetFolder, setBulkTargetFolder] = useState<string | null>(null);
+  const [bulkShareEmail, setBulkShareEmail] = useState('');
   
   // Set indeterminate state when some files are selected
   useEffect(() => {
@@ -180,6 +186,28 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSearchChange(event.target.value);
+  };
+
+  const handleBulkMove = async () => {
+    if (!onMove) return;
+
+    for (const fileId of selectedFiles) {
+      await onMove(fileId, bulkTargetFolder);
+    }
+
+    setShowBulkMoveModal(false);
+    setBulkTargetFolder(null);
+  };
+
+  const handleBulkShare = async () => {
+    if (!onShareWithUser || !bulkShareEmail.trim()) return;
+
+    for (const fileId of selectedFiles) {
+      await onShareWithUser(fileId, bulkShareEmail.trim(), 'view');
+    }
+
+    setShowBulkShareModal(false);
+    setBulkShareEmail('');
   };
 
   const content = useMemo(() => {
@@ -342,21 +370,80 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
 
         </div>
 
-        {hasSelection && (
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-            style={{
-              background: `${palette.badgeErrorBg}`,
-              color: palette.errorRed,
-            }}
-          >
+        {hasSelection && !showDeleted && (
+          <div className="flex items-center gap-2 ml-auto">
+            <div
+              className="px-2 py-1 rounded-lg text-sm font-medium"
+              style={{
+                background: `${palette.primaryBlue}20`,
+                color: palette.primaryBlue,
+              }}
+            >
+              {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'} selected
+            </div>
+
+            {/* Bulk Move */}
+            {onMove && folders.length > 0 && (
+              <button
+                onClick={() => setShowBulkMoveModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  background: palette.inputBackground,
+                  color: palette.primaryBlue,
+                  border: `1px solid ${palette.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `${palette.primaryBlue}15`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = palette.inputBackground;
+                }}
+              >
+                <Folder size={16} />
+                Move
+              </button>
+            )}
+
+            {/* Bulk Share */}
+            {onShareWithUser && (
+              <button
+                onClick={() => setShowBulkShareModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  background: palette.inputBackground,
+                  color: palette.successGreen,
+                  border: `1px solid ${palette.border}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `${palette.successGreen}15`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = palette.inputBackground;
+                }}
+              >
+                <Share2 size={16} />
+                Share
+              </button>
+            )}
+
+            {/* Bulk Delete */}
             <button
               onClick={onDeleteSelected}
-              className="flex items-center gap-2 text-sm font-medium"
-              style={{ color: palette.errorRed }}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                background: palette.inputBackground,
+                color: palette.errorRed,
+                border: `1px solid ${palette.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `${palette.errorRed}15`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = palette.inputBackground;
+              }}
             >
               <Trash2 size={16} />
-              Delete {selectedFiles.length > 1 ? `${selectedFiles.length} files` : 'file'}
+              Delete
             </button>
           </div>
         )}
@@ -365,6 +452,198 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
       <div className="flex-1 overflow-y-auto px-6 py-6" style={{ background: palette.cardBackground }}>
         {content}
       </div>
+
+      {/* Bulk Move Modal */}
+      {showBulkMoveModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)' }}
+        >
+          <div
+            className="rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            style={{
+              background: palette.cardBackground,
+              border: `1px solid ${palette.border}`,
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ background: palette.badgeInfoBg }}
+                >
+                  <Folder size={24} style={{ color: palette.primaryBlue }} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold" style={{ color: palette.primaryText }}>
+                    Move Files
+                  </h3>
+                  <p className="text-sm" style={{ color: palette.secondaryText }}>
+                    Move {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'} to folder
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBulkMoveModal(false)}
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: palette.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = palette.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2" style={{ color: palette.primaryText }}>
+                Select Destination Folder
+              </label>
+              <select
+                value={bulkTargetFolder || ''}
+                onChange={(e) => setBulkTargetFolder(e.target.value || null)}
+                className="w-full px-3 py-2 rounded-lg"
+                style={{
+                  background: palette.inputBackground,
+                  border: `1px solid ${palette.border}`,
+                  color: palette.primaryText,
+                }}
+              >
+                <option value="">Root (No Folder)</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkMoveModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: palette.inputBackground,
+                  color: palette.secondaryText,
+                  border: `1px solid ${palette.border}`,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkMove}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: palette.primaryBlue,
+                  color: 'white',
+                }}
+              >
+                Move Files
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Share Modal */}
+      {showBulkShareModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(4px)' }}
+        >
+          <div
+            className="rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            style={{
+              background: palette.cardBackground,
+              border: `1px solid ${palette.border}`,
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ background: `${palette.successGreen}20` }}
+                >
+                  <Share2 size={24} style={{ color: palette.successGreen }} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold" style={{ color: palette.primaryText }}>
+                    Share Files
+                  </h3>
+                  <p className="text-sm" style={{ color: palette.secondaryText }}>
+                    Share {selectedFiles.length} {selectedFiles.length === 1 ? 'file' : 'files'} with someone
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBulkShareModal(false)}
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: palette.secondaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = palette.hoverBackground;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium mb-2" style={{ color: palette.primaryText }}>
+                Email Address <span style={{ color: palette.errorRed }}>*</span>
+              </label>
+              <input
+                type="email"
+                value={bulkShareEmail}
+                onChange={(e) => setBulkShareEmail(e.target.value)}
+                placeholder="user@example.com"
+                className="w-full px-3 py-2 rounded-lg"
+                style={{
+                  background: palette.inputBackground,
+                  border: `1px solid ${palette.border}`,
+                  color: palette.primaryText,
+                }}
+                autoFocus
+              />
+              <p className="text-xs mt-2" style={{ color: palette.secondaryText }}>
+                All files will be shared with view permission
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowBulkShareModal(false)}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: palette.inputBackground,
+                  color: palette.secondaryText,
+                  border: `1px solid ${palette.border}`,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkShare}
+                disabled={!bulkShareEmail.trim()}
+                className="flex-1 px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: !bulkShareEmail.trim() ? palette.inputBackground : palette.successGreen,
+                  color: !bulkShareEmail.trim() ? palette.tertiaryText : 'white',
+                  opacity: !bulkShareEmail.trim() ? 0.5 : 1,
+                  cursor: !bulkShareEmail.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Share Files
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

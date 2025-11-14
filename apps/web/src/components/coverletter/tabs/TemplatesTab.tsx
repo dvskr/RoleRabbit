@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, Code, Briefcase, Lightbulb, TrendingUp, GraduationCap, FileText, Grid, List, Eye } from 'lucide-react';
+import { Search, Grid, List, Eye, FileText } from 'lucide-react';
 import { CoverLetterTemplate } from '../types/coverletter';
 import TemplateCard from '../components/TemplateCard';
 import { logger } from '../../../utils/logger';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { coverLetterTemplates, coverLetterCategories } from '../../../data/coverLetterTemplates';
 
 interface TemplatesTabProps {
   onLoadTemplate?: (template: CoverLetterTemplate) => void;
@@ -19,92 +20,7 @@ export default function TemplatesTab({ onLoadTemplate }: TemplatesTabProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [previewTemplate, setPreviewTemplate] = useState<CoverLetterTemplate | null>(null);
 
-  // Updated template data to match image design
-  const templates: CoverLetterTemplate[] = [
-    {
-      id: '1',
-      name: 'Professional Modern',
-      category: 'tech',
-      description: 'Clean and modern design perfect for tech roles. ATS-optimized with clear sections.',
-      content: 'Dear Hiring Manager,\n\nI am writing to express my strong interest...',
-      wordCount: 280,
-      aiGenerated: true,
-      successRate: 98,
-      usageCount: 45,
-      tags: ['Tech', 'Modern', 'ATS-Friendly']
-    },
-    {
-      id: '2',
-      name: 'Executive Classic',
-      category: 'executive',
-      description: 'Traditional format ideal for senior positions. Emphasizes leadership and achievements.',
-      content: 'Dear Hiring Manager,\n\nI am writing to express my strong interest...',
-      wordCount: 320,
-      aiGenerated: true,
-      successRate: 96,
-      usageCount: 32,
-      tags: ['Executive', 'Classic', 'Leadership']
-    },
-    {
-      id: '3',
-      name: 'Creative Bold',
-      category: 'creative',
-      description: 'Eye-catching design for creative industries. Balances style with professionalism.',
-      content: 'Dear Hiring Manager,\n\nI am excited to apply...',
-      wordCount: 290,
-      aiGenerated: false,
-      successRate: 92,
-      usageCount: 28,
-      tags: ['Creative', 'Design', 'Unique']
-    },
-    {
-      id: '4',
-      name: 'Business Professional',
-      category: 'business',
-      description: 'Straightforward and professional for business roles. Clean typography and layout.',
-      content: 'Dear Hiring Manager,\n\nI am writing to apply...',
-      wordCount: 300,
-      aiGenerated: true,
-      successRate: 95,
-      usageCount: 38,
-      tags: ['Business', 'Corporate', 'Professional']
-    },
-    {
-      id: '5',
-      name: 'Academic Formal',
-      category: 'academic',
-      description: 'Formal template for academic and research positions. Emphasizes publications.',
-      content: 'Dear Hiring Manager,\n\nI am writing to express my interest...',
-      wordCount: 350,
-      aiGenerated: true,
-      successRate: 94,
-      usageCount: 22,
-      tags: ['Academic', 'Research', 'Formal']
-    },
-    {
-      id: '6',
-      name: 'Startup Ready',
-      category: 'tech',
-      description: 'Dynamic format for startup environments. Highlights innovation and adaptability.',
-      content: 'Dear Hiring Manager,\n\nI am excited to apply...',
-      wordCount: 275,
-      aiGenerated: true,
-      successRate: 93,
-      usageCount: 55,
-      tags: ['Startup', 'Tech', 'Dynamic']
-    }
-  ];
-
-  const categories = [
-    { id: 'all', label: 'All Templates', icon: FileText },
-    { id: 'tech', label: 'Tech', icon: Code },
-    { id: 'business', label: 'Business', icon: Briefcase },
-    { id: 'creative', label: 'Creative', icon: Lightbulb },
-    { id: 'executive', label: 'Executive', icon: TrendingUp },
-    { id: 'academic', label: 'Academic', icon: GraduationCap }
-  ];
-
-  const filteredTemplates = templates.filter(template => {
+  const filteredTemplates = coverLetterTemplates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          template.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -158,7 +74,7 @@ export default function TemplatesTab({ onLoadTemplate }: TemplatesTabProps) {
       {/* Filter Bar */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          {categories.map(category => {
+          {coverLetterCategories.map(category => {
             const Icon = category.icon;
             const isActive = selectedCategory === category.id;
             return (

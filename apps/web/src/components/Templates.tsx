@@ -16,6 +16,8 @@ import TemplateHeader from './templates/components/TemplateHeader';
 import TemplateStats from './templates/components/TemplateStats';
 import TemplateCard from './templates/components/TemplateCard';
 import TemplateCardList from './templates/components/TemplateCardList';
+import TemplateCardSkeleton from './templates/components/TemplateCardSkeleton';
+import TemplateCardListSkeleton from './templates/components/TemplateCardListSkeleton';
 import TemplatePreviewModal from './templates/components/TemplatePreviewModal';
 import UploadTemplateModal from './templates/components/UploadTemplateModal';
 import PaginationControls from './templates/components/PaginationControls';
@@ -24,6 +26,7 @@ import TemplatesErrorBoundary from './templates/components/TemplatesErrorBoundar
 import FilterChips from './templates/components/FilterChips';
 import KeyboardShortcutsHelp from './templates/components/KeyboardShortcutsHelp';
 import { trackViewModeChange } from './templates/utils/analytics';
+import { resumeTemplates } from '../data/templates';
 
 /**
  * TemplatesInternal Component
@@ -83,6 +86,9 @@ function TemplatesInternal({
   const [showFilters, setShowFilters] = useState(false);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // Templates are loaded from static data, so no loading state needed
+  const isLoading = false;
 
   // Backend-integrated hooks
   const templatesHook = useTemplates({ autoFetch: true });
@@ -202,7 +208,24 @@ function TemplatesInternal({
   }, [favoritesHook, actionsState]);
 
   // Separate added and not-added templates
+  // Sort added templates by their order in addedTemplates array (most recent first)
   const addedTemplatesList = useMemo(
+    () => {
+      const added = filterState.filteredTemplates.filter(t => addedTemplates.includes(t.id));
+
+      // Sort by order in addedTemplates array (most recently added first)
+      return added.sort((a, b) => {
+        const indexA = addedTemplates.indexOf(a.id);
+        const indexB = addedTemplates.indexOf(b.id);
+        // Reverse order - most recent (higher index) first
+        return indexB - indexA;
+      });
+    },
+    [filterState.filteredTemplates, addedTemplates]
+  );
+
+  // Filter out added templates from the main list to avoid duplication
+  const notAddedTemplatesList = useMemo(
     () =>
       templates.filter(t => addedTemplates.includes(t.id)),
     [templates, addedTemplates]
@@ -240,6 +263,32 @@ function TemplatesInternal({
         searchInputRef={searchInputRef}
         colors={colors}
       />
+
+      {/* Error Banner */}
+      {actionsState.error && (
+        <div
+          className="mx-4 mt-3 p-3 rounded-lg flex items-start gap-3"
+          style={{
+            background: `${colors.errorRed}15`,
+            border: `1px solid ${colors.errorRed}40`
+          }}
+        >
+          <AlertCircle size={20} style={{ color: colors.errorRed, flexShrink: 0 }} />
+          <div className="flex-1">
+            <p style={{ color: colors.errorRed }} className="text-sm font-medium">
+              {actionsState.error}
+            </p>
+          </div>
+          <button
+            onClick={actionsState.clearError}
+            className="p-1 rounded hover:bg-black/5 transition-colors"
+            style={{ color: colors.errorRed }}
+            aria-label="Dismiss error"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <div
@@ -397,12 +446,14 @@ function TemplatesInternal({
         )}
 
         {/* Pagination */}
-        <PaginationControls
-          currentPage={paginationState.currentPage}
-          totalPages={paginationState.totalPages}
-          onPageChange={paginationState.setCurrentPage}
-          colors={colors}
-        />
+        {!isLoading && (
+          <PaginationControls
+            currentPage={paginationState.currentPage}
+            totalPages={paginationState.totalPages}
+            onPageChange={paginationState.setCurrentPage}
+            colors={colors}
+          />
+        )}
 
         {/* Empty State */}
         {templates.length === 0 && !templatesHook.loading && (
@@ -424,6 +475,7 @@ function TemplatesInternal({
       <TemplatePreviewModal
         isOpen={actionsState.showPreviewModal}
         template={actionsState.currentSelectedTemplate}
+        allTemplates={resumeTemplates}
         isFavorite={
           actionsState.currentSelectedTemplate
             ? favorites.includes(actionsState.currentSelectedTemplate.id)
@@ -437,6 +489,7 @@ function TemplatesInternal({
         onDownload={actionsState.handleDownloadTemplate}
         onUse={actionsState.handleUseTemplate}
         onOpenUpload={() => actionsState.setShowUploadModal(true)}
+        onPreview={actionsState.handlePreviewTemplate}
       />
 
       <UploadTemplateModal

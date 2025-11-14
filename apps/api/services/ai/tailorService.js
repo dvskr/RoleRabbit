@@ -1,6 +1,7 @@
 const { AIAction, TailorMode, GeneratedDocType } = require('@prisma/client');
 const { prisma } = require('../../utils/db');
 const { generateText } = require('../../utils/openAI');
+const { retryOpenAIOperation } = require('../../utils/retryWithBackoff');
 const cacheManager = require('../../utils/cacheManager');
 const { CACHE_NAMESPACES } = require('../../utils/cacheKeys');
 const {
@@ -11,6 +12,7 @@ const {
 const {
   ensureActionAllowed,
   ensureWithinRateLimit,
+  ensureWithinSpendingCap,
   recordAIRequest,
   AIUsageError
 } = require('./usageService');
@@ -190,6 +192,14 @@ async function tailorResume({
       length
     });
 
+    // 💰 Check spending cap BEFORE expensive AI operations
+    const estimatedCost = validation.estimatedCost || 0;
+    await ensureWithinSpendingCap({
+      userId: user.id,
+      tier: user.subscriptionTier,
+      estimatedCost
+    });
+
     // Log validation results
     logger.info('Tailoring input validated', {
       userId: user.id,
@@ -197,7 +207,8 @@ async function tailorResume({
       qualityScore: validation.resume.qualityScore,
       jdLength: validation.jobDescription.length,
       warnings: validation.warnings.length,
-      suggestions: validation.suggestions.length
+      suggestions: validation.suggestions.length,
+      estimatedCost: `$${estimatedCost.toFixed(4)}`
     });
 
     // Log cost estimate
@@ -337,13 +348,35 @@ async function tailorResume({
       }
     });
 
-    const response = await generateText(prompt, {
-      model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
-      temperature: 0.3,
-      max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000, // Increased to prevent truncation
-      timeout: 240000, // 4 minutes timeout (increased for complex resumes)
-      userId: user.id
-    });
+    // Wrap OpenAI call with retry logic
+    const response = await retryOpenAIOperation(
+      async (attempt) => {
+        logger.info(`[TAILOR] Generating tailored resume (attempt ${attempt})`, {
+          mode: tailorMode,
+          model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini'
+        });
+        
+        return await generateText(prompt, {
+          model: tailorMode === TailorMode.FULL ? 'gpt-4o' : 'gpt-4o-mini',
+          temperature: 0.3,
+          max_tokens: tailorMode === TailorMode.FULL ? 2500 : 2000, // Increased to prevent truncation
+          timeout: 240000, // 4 minutes timeout (increased for complex resumes)
+          userId: user.id
+        });
+      },
+      {
+        operationName: `Tailor Resume (${tailorMode})`,
+        maxAttempts: 3,
+        initialDelay: 1000,
+        onRetry: (error, attempt, delay) => {
+          logger.warn(`[TAILOR] Retrying after error: ${error.message}`, {
+            attempt,
+            nextDelay: delay,
+            mode: tailorMode
+          });
+        }
+      }
+    );
 
     logger.info('✅ [OPENAI_RESPONSE] Tailored content received', {
       userId: user.id,

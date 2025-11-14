@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, FileText, X } from 'lucide-react';
+import { Plus, Search, FileText, X, AlertTriangle } from 'lucide-react';
 import TemplateCard from './TemplateCard';
 import { EmailTemplate, TemplateCategory } from '../types';
 import { logger } from '../../../utils/logger';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { emailStorage, formatBytes } from '../../../utils/storageManager';
 
 // Default templates
 const defaultTemplates: EmailTemplate[] = [
@@ -59,6 +60,7 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
   const [categoryFilter, setCategoryFilter] = useState<TemplateCategory | 'All'>('All');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [newTemplate, setNewTemplate] = useState({
     name: '',
     category: 'Custom' as TemplateCategory,
@@ -67,25 +69,81 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
     variables: [] as string[]
   });
 
-  // Load templates from localStorage
+  // Validate email template structure
+  const isValidEmailTemplate = (template: any): template is EmailTemplate => {
+    return (
+      typeof template === 'object' &&
+      template !== null &&
+      typeof template.id === 'string' &&
+      typeof template.name === 'string' &&
+      typeof template.category === 'string' &&
+      typeof template.subject === 'string' &&
+      typeof template.body === 'string' &&
+      Array.isArray(template.variables) &&
+      typeof template.isCustom === 'boolean'
+    );
+  };
+
+  // Load templates from managed storage with validation
   useEffect(() => {
-    const saved = localStorage.getItem('emailTemplates');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setTemplates(parsed);
+    try {
+      const saved = emailStorage.getItem<EmailTemplate[]>('templates');
+      if (saved && Array.isArray(saved)) {
+        const validTemplates = saved.filter(isValidEmailTemplate);
+
+        if (validTemplates.length > 0) {
+          setTemplates(validTemplates);
+          logger.debug(`Loaded ${validTemplates.length} valid email templates from storage`);
+
+          // If some templates were invalid, save only the valid ones
+          if (validTemplates.length < saved.length) {
+            logger.warn(`Filtered out ${saved.length - validTemplates.length} invalid email templates`);
+            emailStorage.setItem('templates', validTemplates);
+          }
+        } else {
+          logger.warn('No valid email templates found in storage, using defaults');
         }
-      } catch (e) {
-        logger.debug('Error loading email templates:', e);
       }
+
+      // Check storage usage
+      const usage = emailStorage.getUsageStats();
+      if (usage.usagePercent > 80) {
+        setStorageWarning(
+          `Storage is ${usage.usagePercent.toFixed(0)}% full (${formatBytes(usage.usedBytes)} of ${formatBytes(usage.maxBytes)}). Consider deleting old templates.`
+        );
+      }
+    } catch (error) {
+      logger.error('Error loading email templates from storage:', error);
+      // Don't crash the app, just use default templates
     }
   }, []);
 
-  // Save templates to localStorage
+  // Save templates to managed storage with quota handling
   const saveTemplates = (templatesToSave: EmailTemplate[]) => {
     setTemplates(templatesToSave);
-    localStorage.setItem('emailTemplates', JSON.stringify(templatesToSave));
+
+    const success = emailStorage.setItem('templates', templatesToSave);
+
+    if (success) {
+      logger.debug(`Saved ${templatesToSave.length} email templates to storage`);
+
+      // Check storage usage after save
+      const usage = emailStorage.getUsageStats();
+      if (usage.usagePercent > 80) {
+        setStorageWarning(
+          `Storage is ${usage.usagePercent.toFixed(0)}% full (${formatBytes(usage.usedBytes)} of ${formatBytes(usage.maxBytes)}). Consider deleting old templates.`
+        );
+      } else {
+        setStorageWarning(null); // Clear warning if usage is ok
+      }
+    } else {
+      // Storage quota exceeded
+      const usage = emailStorage.getUsageStats();
+      setStorageWarning(
+        `Cannot save template: Storage limit reached (${formatBytes(usage.maxBytes)}). Please delete some templates.`
+      );
+      logger.error('Storage quota exceeded, could not save templates');
+    }
   };
 
   const handleCreateTemplate = () => {
@@ -164,6 +222,24 @@ export default function TemplateLibrary({ onSelectTemplate }: TemplateLibraryPro
 
   return (
     <div className="h-full flex flex-col">
+      {/* Storage Warning Banner */}
+      {storageWarning && (
+        <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-200 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-yellow-800">Storage Warning</p>
+            <p className="text-sm text-yellow-700">{storageWarning}</p>
+          </div>
+          <button
+            onClick={() => setStorageWarning(null)}
+            className="text-yellow-600 hover:text-yellow-800"
+            aria-label="Dismiss warning"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="px-6 py-3 flex items-center justify-between gap-4 flex-shrink-0" style={{ background: colors.headerBackground, borderBottom: `1px solid ${colors.border}` }}>
         <div className="flex items-center gap-3 flex-1">

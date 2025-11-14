@@ -202,6 +202,10 @@ model FileAccessLog {
   @@index([fileId])
   @@index([userId])
   @@index([createdAt])
+  // Composite indexes for access log queries
+  @@index([fileId, createdAt])
+  @@index([userId, createdAt])
+  @@index([fileId, userId])
   @@map("file_access_logs")
 }
 
@@ -339,6 +343,70 @@ model ShareLink {
   @@map("share_links")
 }
 
+model FileVersion {
+  id       String @id @default(cuid())
+  fileId   String
+  userId   String
+  versionNumber Int // Version number (1, 2, 3, etc.)
+
+  // File Information (snapshot at time of version)
+  fileName    String
+  contentType String
+  size        BigInt
+  storagePath String // Path to versioned file
+  fileHash    String // SHA-256 hash for integrity
+
+  // Version metadata
+  changeDescription String? // What changed in this version
+  isActive          Boolean @default(false) // Only one active version per file
+
+  createdAt DateTime @default(now())
+
+  file StorageFile @relation("FileVersions", fields: [fileId], references: [id], onDelete: Cascade)
+  user User        @relation("FileVersions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+  @@index([userId])
+  @@index([isActive])
+  @@map("file_versions")
+}
+
+model FileTag {
+  id     String  @id @default(cuid())
+  userId String? // If null, it's a system tag
+
+  name  String
+  color String? // Hex color code for UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User?         @relation("UserFileTags", fields: [userId], references: [id], onDelete: Cascade)
+  files FileTagging[]
+
+  @@unique([userId, name]) // User can't have duplicate tag names
+  @@index([userId])
+  @@index([name])
+  @@map("file_tags")
+}
+
+model FileTagging {
+  id     String @id @default(cuid())
+  fileId String
+  tagId  String
+
+  createdAt DateTime @default(now())
+
+  file StorageFile @relation("FileTagging", fields: [fileId], references: [id], onDelete: Cascade)
+  tag  FileTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, tagId]) // Can't tag same file with same tag twice
+  @@index([fileId])
+  @@index([tagId])
+  @@map("file_tagging")
+}
+
 model Skill {
   id       String  @id @default(cuid())
   name     String  @unique // Normalized skill name
@@ -394,6 +462,9 @@ model StorageFile {
   accessLogs               FileAccessLog[]
   credentials              Credential[]
   baseResumes              BaseResume[]
+  jobAttachments           JobAttachment[]  @relation("JobAttachments")
+  versions                 FileVersion[]    @relation("FileVersions")
+  tags                     FileTagging[]    @relation("FileTagging")
 
   @@index([userId])
   @@index([folderId])
@@ -402,6 +473,14 @@ model StorageFile {
   @@index([isStarred])
   @@index([isArchived])
   @@index([fileHash])
+  @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([userId, deletedAt])
+  @@index([userId, type])
+  @@index([userId, folderId])
+  @@index([userId, isStarred])
+  @@index([userId, isArchived])
+  @@index([userId, createdAt])
   @@map("storage_files")
 }
 
@@ -519,7 +598,7 @@ model User {
 
   // Preferences (frequently accessed)
   emailNotifications Boolean @default(true)
-  
+
   // Tailoring Preferences
   tailorPreferredMode   TailorMode? @default(PARTIAL)
   tailorPreferredTone   String?     @default("professional")
@@ -552,6 +631,8 @@ model User {
   fileComments        FileComment[]        @relation("FileComments")
   fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")
   credentials         Credential[]         @relation("Credentials")
+  fileVersions        FileVersion[]        @relation("FileVersions")
+  fileTags            FileTag[]            @relation("UserFileTags")
   storageQuota        StorageQuota?
   resumes             Resume[]             @relation("Resumes")
   baseResumes         BaseResume[]         @relation("UserBaseResumes")
@@ -596,20 +677,20 @@ model WorkExperience {
 }
 
 model BaseResume {
-  id                   String    @id @default(cuid())
-  userId               String
-  slotNumber           Int
-  name                 String
-  isActive             Boolean   @default(false)
-  data                 Json
-  formatting           Json?     @default("{}")
-  metadata             Json?     @default("{}")
-  lastAIAccessedAt     DateTime?
-  parsingConfidence    Float?
-  embedding            String?   @db.Text // pgvector embedding stored as text
-  embeddingUpdatedAt   DateTime? @map("embedding_updated_at")
-  storageFileId        String?   // Link to uploaded file for parsing
-  fileHash             String?   // SHA-256 hash for cache lookup
+  id                 String    @id @default(cuid())
+  userId             String
+  slotNumber         Int
+  name               String
+  isActive           Boolean   @default(false)
+  data               Json
+  formatting         Json?     @default("{}")
+  metadata           Json?     @default("{}")
+  lastAIAccessedAt   DateTime?
+  parsingConfidence  Float?
+  embedding          String?   @db.Text // pgvector embedding stored as text
+  embeddingUpdatedAt DateTime? @map("embedding_updated_at")
+  storageFileId      String? // Link to uploaded file for parsing
+  fileHash           String? // SHA-256 hash for cache lookup
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -617,7 +698,7 @@ model BaseResume {
   user               User                 @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
   activeUser         User?                @relation("ActiveBaseResume")
   storageFile        StorageFile?         @relation(fields: [storageFileId], references: [id], onDelete: SetNull)
-  workingDraft       WorkingDraft?        // One-to-one relation with working draft
+  workingDraft       WorkingDraft? // One-to-one relation with working draft
   tailoredVersions   TailoredVersion[]
   generatedDocuments GeneratedDocument[]
   resumeCaches       ResumeCache[]
@@ -626,19 +707,20 @@ model BaseResume {
   tailoringAnalytics TailoringAnalytics[]
 
   @@unique([userId, slotNumber])
-  @@index([userId, isActive])
+  @@index([userId, isActive]) // For finding active resume per user
+  @@index([userId, updatedAt]) // For sorting user's resumes by last modified
   @@index([storageFileId])
-  @@index([fileHash])
+  @@index([fileHash]) // For cache lookup during parsing
   @@map("base_resumes")
 }
 
 model WorkingDraft {
-  id           String   @id @default(cuid())
-  baseResumeId String   @unique
-  data         Json     // Current edits (not yet committed to base)
-  formatting   Json?    @default("{}")
-  metadata     Json?    @default("{}")
-  
+  id           String @id @default(cuid())
+  baseResumeId String @unique
+  data         Json // Current edits (not yet committed to base)
+  formatting   Json?  @default("{}")
+  metadata     Json?  @default("{}")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -674,6 +756,8 @@ model TailoredVersion {
   @@index([baseResumeId])
   @@index([userId])
   @@index([jobDescriptionHash])
+  @@index([userId, createdAt]) // For fetching user's recent tailored versions
+  @@index([baseResumeId, createdAt]) // For fetching recent versions of a resume
   @@map("tailored_versions")
 }
 
@@ -720,6 +804,9 @@ model AIRequestLog {
   @@index([baseResumeId])
   @@index([tailoredVersionId])
   @@index([action])
+  @@index([userId, createdAt]) // For fetching user's recent AI requests
+  @@index([action, createdAt]) // For analytics by action type over time
+  @@index([userId, action, createdAt]) // For user's requests by action type
   @@map("ai_request_logs")
 }
 
