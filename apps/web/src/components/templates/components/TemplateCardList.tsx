@@ -1,5 +1,6 @@
 /**
  * TemplateCardList - List view template card component
+ * Optimized with React.memo to prevent unnecessary re-renders
  */
 
 import React from 'react';
@@ -17,6 +18,7 @@ import {
 import type { ResumeTemplate } from '../../../data/templates';
 import { getDifficultyColor } from '../utils/templateHelpers';
 import TemplatePreview from './TemplatePreview';
+import Tooltip from './Tooltip';
 
 interface TemplateCardListProps {
   template: ResumeTemplate;
@@ -30,7 +32,7 @@ interface TemplateCardListProps {
   onRemove?: (templateId: string) => void;
 }
 
-export default function TemplateCardList({
+function TemplateCardList({
   template,
   isAdded,
   isFavorite,
@@ -89,43 +91,48 @@ export default function TemplateCardList({
               </p>
             </div>
             <div className="flex items-center gap-2 ml-4">
-              <button
-                onClick={() => onFavorite(template.id)}
-                className="p-2 rounded-lg transition-colors"
-                style={{
-                  color: isFavorite ? colors.errorRed : colors.tertiaryText,
-                  background: isFavorite ? colors.badgeErrorBg : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isFavorite) {
+              <Tooltip
+                content={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                position="left"
+              >
+                <button
+                  onClick={() => onFavorite(template.id)}
+                  className="p-2 rounded-lg transition-colors"
+                  style={{
+                    color: isFavorite ? colors.errorRed : colors.tertiaryText,
+                    background: isFavorite ? colors.badgeErrorBg : 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isFavorite) {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isFavorite) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                  aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
+                </button>
+              </Tooltip>
+              <Tooltip content="Preview template in fullscreen" position="left">
+                <button
+                  onClick={() => onPreview(template.id)}
+                  className="p-2 rounded-lg transition-colors"
+                  style={{ color: colors.tertiaryText }}
+                  onMouseEnter={(e) => {
                     e.currentTarget.style.background = colors.hoverBackground;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isFavorite) {
+                  }}
+                  onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
-                  }
-                }}
-                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Heart size={14} fill={isFavorite ? 'currentColor' : 'none'} />
-              </button>
-              <button
-                onClick={() => onPreview(template.id)}
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: colors.tertiaryText }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = colors.hoverBackground;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-                aria-label="Preview template"
-                title="Preview"
-              >
-                <Eye size={14} />
-              </button>
+                  }}
+                  aria-label="Preview template"
+                >
+                  <Eye size={14} />
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -203,29 +210,31 @@ export default function TemplateCardList({
             </div>
             <div className="flex items-center gap-2">
               {!isAdded && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onUse(template.id);
-                  }}
-                  className={`px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 relative overflow-hidden ${
-                    addedTemplateId === template.id
-                      ? 'bg-green-500 shadow-lg scale-105'
-                      : 'bg-purple-600 hover:bg-purple-700'
-                  }`}
-                >
-                  {addedTemplateId === template.id ? (
-                    <>
-                      <CheckCircle size={14} className="animate-bounce" />
-                      <span>Added!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={14} />
-                      Add
-                    </>
-                  )}
-                </button>
+                <Tooltip content="Add this template to your resume editor" position="top">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUse(template.id);
+                    }}
+                    className={`px-3 py-2 text-white text-sm font-semibold rounded-lg transition-all flex items-center gap-1.5 relative overflow-hidden ${
+                      addedTemplateId === template.id
+                        ? 'bg-green-500 shadow-lg scale-105'
+                        : 'bg-purple-600 hover:bg-purple-700'
+                    }`}
+                  >
+                    {addedTemplateId === template.id ? (
+                      <>
+                        <CheckCircle size={14} className="animate-bounce" />
+                        <span>Added!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={14} />
+                        Add
+                      </>
+                    )}
+                  </button>
+                </Tooltip>
               )}
               {isAdded && (
                 <div className="px-3 py-2 bg-green-100 text-green-700 text-sm font-semibold rounded-lg flex items-center gap-1.5">
@@ -233,36 +242,39 @@ export default function TemplateCardList({
                   <span>Already Added</span>
                 </div>
               )}
-              <button
-                onClick={() => onPreview(template.id)}
-                className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-                aria-label="Preview template"
-                title="Preview Template"
-              >
-                <Eye size={16} />
-              </button>
-              {onRemove && isAdded && (
+              <Tooltip content="Preview template in fullscreen" position="top">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(template.id);
-                  }}
-                  className="px-3 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-1"
-                  style={{
-                    background: colors.badgeErrorBg,
-                    color: colors.errorRed,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  aria-label="Remove template"
+                  onClick={() => onPreview(template.id)}
+                  className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                  aria-label="Preview template"
                 >
-                  <X size={14} />
-                  Remove
+                  <Eye size={16} />
                 </button>
+              </Tooltip>
+              {onRemove && isAdded && (
+                <Tooltip content="Remove this template from your editor" position="top">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(template.id);
+                    }}
+                    className="px-3 py-2 text-sm font-semibold rounded-lg transition-all flex items-center gap-1"
+                    style={{
+                      background: colors.badgeErrorBg,
+                      color: colors.errorRed,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                    aria-label="Remove template"
+                  >
+                    <X size={14} />
+                    Remove
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -271,4 +283,18 @@ export default function TemplateCardList({
     </div>
   );
 }
+
+/**
+ * Memoized export to prevent unnecessary re-renders
+ * Only re-renders when props actually change
+ */
+export default React.memo(TemplateCardList, (prevProps, nextProps) => {
+  return (
+    prevProps.template.id === nextProps.template.id &&
+    prevProps.isAdded === nextProps.isAdded &&
+    prevProps.isFavorite === nextProps.isFavorite &&
+    prevProps.addedTemplateId === nextProps.addedTemplateId
+    // colors and callbacks are assumed stable
+  );
+});
 

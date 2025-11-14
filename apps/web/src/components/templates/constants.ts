@@ -124,3 +124,6 @@ export const SAMPLE_RESUME_DATA = {
     'Leadership',
   ],
 };
+
+// Re-export spacing constants for convenience
+export { SPACING, SPACING_VALUES, LAYOUT_PATTERNS } from './constants/spacing';
