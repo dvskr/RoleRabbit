@@ -1,8 +1,18 @@
+/**
+ * Template Preview Modal
+ * Section 1.8 requirements #9, #10, #11:
+ * - Focus trap keeps keyboard navigation within modal
+ * - Initial focus on close button when modal opens
+ * - Returns focus to trigger element when modal closes
+ * - Escape key closes modal
+ */
+
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Monitor, Smartphone, Tablet } from 'lucide-react';
 import type { WebsiteConfig, Section, SectionItem, PortfolioTemplateDefinition } from '../../types/portfolio';
+import { useFocusTrap, useInitialFocus, useReturnFocus } from '../../hooks/useA11y';
 
 interface TemplatePreviewModalProps {
   template: PortfolioTemplateDefinition;
@@ -18,6 +28,23 @@ const getString = (value: unknown, fallback: string): string =>
 
 export default function TemplatePreviewModal({ template, config, onClose }: TemplatePreviewModalProps) {
   const [device, setDevice] = React.useState<DeviceType>('desktop');
+
+  // Accessibility hooks (Section 1.8 requirements #9, #10, #11)
+  const containerRef = useFocusTrap(true);
+  const initialFocusRef = useInitialFocus(true, 'button');
+  useReturnFocus(true);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const deviceWidths: Record<DeviceType, string> = {
     desktop: 'w-full max-w-7xl',
@@ -142,45 +169,68 @@ export default function TemplatePreviewModal({ template, config, onClose }: Temp
   const enabledSections = (config.sections || []).filter(s => s.enabled);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={(node) => {
+          if (node) {
+            (containerRef as React.MutableRefObject<HTMLElement | null>).current = node;
+            (initialFocusRef as React.MutableRefObject<HTMLElement | null>).current = node;
+          }
+        }}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col"
+      >
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-500 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">Template Preview: {template.name}</h2>
+            <h2 id="modal-title" className="text-xl font-bold text-white">Template Preview: {template.name}</h2>
             <p className="text-blue-100 text-sm">See how your portfolio will look</p>
           </div>
           <div className="flex items-center gap-2">
             {/* Device Selector */}
-            <div className="flex items-center gap-1 bg-white/20 rounded-lg p-1">
+            <div className="flex items-center gap-1 bg-white/20 rounded-lg p-1" role="group" aria-label="Device preview options">
               <button
                 type="button"
                 onClick={() => setDevice('desktop')}
-                className={`p-2 rounded ${device === 'desktop' ? 'bg-white text-blue-600' : 'text-white'}`}
+                aria-label="Desktop view"
+                aria-pressed={device === 'desktop'}
+                className={`p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500 ${device === 'desktop' ? 'bg-white text-blue-600' : 'text-white'}`}
               >
-                <Monitor size={18} />
+                <Monitor size={18} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => setDevice('tablet')}
-                className={`p-2 rounded ${device === 'tablet' ? 'bg-white text-blue-600' : 'text-white'}`}
+                aria-label="Tablet view"
+                aria-pressed={device === 'tablet'}
+                className={`p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500 ${device === 'tablet' ? 'bg-white text-blue-600' : 'text-white'}`}
               >
-                <Tablet size={18} />
+                <Tablet size={18} aria-hidden="true" />
               </button>
               <button
                 type="button"
                 onClick={() => setDevice('mobile')}
-                className={`p-2 rounded ${device === 'mobile' ? 'bg-white text-blue-600' : 'text-white'}`}
+                aria-label="Mobile view"
+                aria-pressed={device === 'mobile'}
+                className={`p-2 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500 ${device === 'mobile' ? 'bg-white text-blue-600' : 'text-white'}`}
               >
-                <Smartphone size={18} />
+                <Smartphone size={18} aria-hidden="true" />
               </button>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
+              aria-label="Close template preview"
+              className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-500"
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
         </div>
