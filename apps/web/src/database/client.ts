@@ -13,6 +13,18 @@ import type {
   CreatePortfolioInput,
   UpdatePortfolioInput,
   PortfolioData,
+  CustomDomain,
+  PortfolioAnalytics,
+  PortfolioShare,
+  PortfolioDeployment,
+  CreateCustomDomainInput,
+  UpsertAnalyticsInput,
+  CreateShareInput,
+  StartDeploymentInput,
+  AnalyticsSummary,
+  ShareAccessValidation,
+  DeploymentStats,
+  DomainSSLRenewal,
 } from './types';
 
 /**
@@ -35,6 +47,26 @@ export interface Database {
         Row: PortfolioVersion;
         Insert: Omit<PortfolioVersion, 'id' | 'createdAt'>;
         Update: never; // Versions are immutable
+      };
+      custom_domains: {
+        Row: CustomDomain;
+        Insert: Omit<CustomDomain, 'id' | 'createdAt' | 'updatedAt' | 'isVerified' | 'lastCheckedAt' | 'verifiedAt'>;
+        Update: Partial<Omit<CustomDomain, 'id' | 'createdAt'>>;
+      };
+      portfolio_analytics: {
+        Row: PortfolioAnalytics;
+        Insert: Omit<PortfolioAnalytics, 'id' | 'createdAt' | 'updatedAt'>;
+        Update: Partial<Omit<PortfolioAnalytics, 'id' | 'createdAt'>>;
+      };
+      portfolio_shares: {
+        Row: PortfolioShare;
+        Insert: Omit<PortfolioShare, 'id' | 'createdAt' | 'viewCount' | 'lastAccessedAt'>;
+        Update: Partial<Omit<PortfolioShare, 'id' | 'createdAt'>>;
+      };
+      portfolio_deployments: {
+        Row: PortfolioDeployment;
+        Insert: Omit<PortfolioDeployment, 'id' | 'createdAt' | 'deployedAt'>;
+        Update: Partial<Omit<PortfolioDeployment, 'id' | 'createdAt'>>;
       };
     };
     Functions: {
@@ -68,6 +100,58 @@ export interface Database {
       increment_template_usage: {
         Args: { template_uuid: string };
         Returns: void;
+      };
+      verify_custom_domain: {
+        Args: { p_domain_id: string; p_verified: boolean };
+        Returns: void;
+      };
+      update_domain_ssl_status: {
+        Args: { p_domain_id: string; p_status: string; p_cert_path?: string; p_expires_at?: string };
+        Returns: void;
+      };
+      get_domains_needing_ssl_renewal: {
+        Args: { p_days_before_expiry?: number };
+        Returns: DomainSSLRenewal[];
+      };
+      upsert_portfolio_analytics: {
+        Args: UpsertAnalyticsInput;
+        Returns: void;
+      };
+      get_portfolio_analytics_summary: {
+        Args: { p_portfolio_id: string; p_start_date: string; p_end_date: string };
+        Returns: AnalyticsSummary;
+      };
+      create_portfolio_share: {
+        Args: { p_portfolio_id: string; p_expires_in_days?: number; p_password?: string; p_max_views?: number };
+        Returns: { id: string; token: string };
+      };
+      validate_share_access: {
+        Args: { p_share_token: string; p_password?: string };
+        Returns: ShareAccessValidation;
+      };
+      increment_share_view_count: {
+        Args: { p_share_token: string };
+        Returns: void;
+      };
+      start_deployment: {
+        Args: { p_portfolio_id: string; p_deployed_by?: string };
+        Returns: string; // deployment_id
+      };
+      update_deployment_status: {
+        Args: { p_deployment_id: string; p_status: string; p_error?: string; p_url?: string; p_duration?: number };
+        Returns: void;
+      };
+      complete_deployment: {
+        Args: { p_deployment_id: string; p_success: boolean; p_url?: string; p_error?: string; p_duration?: number };
+        Returns: void;
+      };
+      get_deployment_history: {
+        Args: { p_portfolio_id: string; p_limit?: number };
+        Returns: PortfolioDeployment[];
+      };
+      get_deployment_stats: {
+        Args: { p_portfolio_id: string };
+        Returns: DeploymentStats;
       };
     };
   };
@@ -344,6 +428,365 @@ export class DatabaseHelpers {
     const { data, error } = await query;
 
     if (error) throw error;
+    return data;
+  }
+
+  // ============================================================================
+  // Custom Domains (Section 3.4)
+  // ============================================================================
+
+  /**
+   * Create a custom domain for a portfolio
+   */
+  async createCustomDomain(input: CreateCustomDomainInput): Promise<CustomDomain> {
+    const verificationToken = input.verificationToken || this.generateVerificationToken();
+
+    const { data, error } = await this.client
+      .from('custom_domains')
+      .insert({
+        portfolio_id: input.portfolioId,
+        domain: input.domain,
+        verification_token: verificationToken,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Generate a unique verification token
+   */
+  private generateVerificationToken(): string {
+    // Generate a random 32-character token
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 32; i++) {
+      token += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return token;
+  }
+
+  /**
+   * Get custom domains for a portfolio
+   */
+  async getPortfolioCustomDomains(portfolioId: string): Promise<CustomDomain[]> {
+    const { data, error } = await this.client
+      .from('custom_domains')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Verify a custom domain
+   */
+  async verifyCustomDomain(domainId: string, verified: boolean): Promise<void> {
+    const { error } = await this.client.rpc('verify_custom_domain', {
+      p_domain_id: domainId,
+      p_verified: verified,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Update SSL status for a domain
+   */
+  async updateDomainSSLStatus(
+    domainId: string,
+    status: string,
+    certPath?: string,
+    expiresAt?: Date
+  ): Promise<void> {
+    const { error } = await this.client.rpc('update_domain_ssl_status', {
+      p_domain_id: domainId,
+      p_status: status,
+      p_cert_path: certPath,
+      p_expires_at: expiresAt?.toISOString(),
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Get domains needing SSL renewal
+   */
+  async getDomainsNeedingSSLRenewal(daysBeforeExpiry: number = 30): Promise<DomainSSLRenewal[]> {
+    const { data, error } = await this.client.rpc('get_domains_needing_ssl_renewal', {
+      p_days_before_expiry: daysBeforeExpiry,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // ============================================================================
+  // Analytics (Section 3.5)
+  // ============================================================================
+
+  /**
+   * Upsert portfolio analytics data
+   */
+  async upsertAnalytics(input: UpsertAnalyticsInput): Promise<void> {
+    const { error } = await this.client.rpc('upsert_portfolio_analytics', {
+      p_portfolio_id: input.portfolioId,
+      p_date: input.date.toISOString().split('T')[0], // DATE format
+      p_views: input.views,
+      p_unique_visitors: input.uniqueVisitors,
+      p_avg_time_on_page: input.avgTimeOnPage,
+      p_bounce_rate: input.bounceRate,
+      p_referrer: input.referrer,
+      p_country: input.country,
+      p_device: input.device,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Get analytics summary for a portfolio
+   */
+  async getAnalyticsSummary(
+    portfolioId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<AnalyticsSummary> {
+    const { data, error } = await this.client.rpc('get_portfolio_analytics_summary', {
+      p_portfolio_id: portfolioId,
+      p_start_date: startDate.toISOString().split('T')[0],
+      p_end_date: endDate.toISOString().split('T')[0],
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get analytics for a specific date range
+   */
+  async getAnalyticsByDateRange(
+    portfolioId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<PortfolioAnalytics[]> {
+    const { data, error } = await this.client
+      .from('portfolio_analytics')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0])
+      .order('date', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // ============================================================================
+  // Shares (Section 3.6)
+  // ============================================================================
+
+  /**
+   * Create a share link for a portfolio
+   */
+  async createShareLink(input: CreateShareInput): Promise<{ id: string; token: string }> {
+    const { data, error } = await this.client.rpc('create_portfolio_share', {
+      p_portfolio_id: input.portfolioId,
+      p_expires_in_days: input.expiresInDays,
+      p_password: input.password,
+      p_max_views: input.maxViews,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Validate share access
+   */
+  async validateShareAccess(
+    shareToken: string,
+    password?: string
+  ): Promise<ShareAccessValidation> {
+    const { data, error } = await this.client.rpc('validate_share_access', {
+      p_share_token: shareToken,
+      p_password: password,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Increment share view count
+   */
+  async incrementShareViewCount(shareToken: string): Promise<void> {
+    const { error } = await this.client.rpc('increment_share_view_count', {
+      p_share_token: shareToken,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Get share links for a portfolio
+   */
+  async getPortfolioShares(portfolioId: string): Promise<PortfolioShare[]> {
+    const { data, error } = await this.client
+      .from('portfolio_shares')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Delete a share link
+   */
+  async deleteShareLink(shareId: string): Promise<void> {
+    const { error } = await this.client
+      .from('portfolio_shares')
+      .delete()
+      .eq('id', shareId);
+
+    if (error) throw error;
+  }
+
+  // ============================================================================
+  // Deployments (Section 3.7)
+  // ============================================================================
+
+  /**
+   * Start a new deployment
+   */
+  async startDeployment(input: StartDeploymentInput): Promise<string> {
+    const { data, error } = await this.client.rpc('start_deployment', {
+      p_portfolio_id: input.portfolioId,
+      p_deployed_by: input.deployedBy,
+    });
+
+    if (error) throw error;
+    return data; // Returns deployment_id
+  }
+
+  /**
+   * Update deployment status
+   */
+  async updateDeploymentStatus(
+    deploymentId: string,
+    status: string,
+    errorMessage?: string,
+    deployedUrl?: string,
+    buildDuration?: number
+  ): Promise<void> {
+    const { error } = await this.client.rpc('update_deployment_status', {
+      p_deployment_id: deploymentId,
+      p_status: status,
+      p_error: errorMessage,
+      p_url: deployedUrl,
+      p_duration: buildDuration,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Complete a deployment
+   */
+  async completeDeployment(
+    deploymentId: string,
+    success: boolean,
+    deployedUrl?: string,
+    errorMessage?: string,
+    buildDuration?: number
+  ): Promise<void> {
+    const { error } = await this.client.rpc('complete_deployment', {
+      p_deployment_id: deploymentId,
+      p_success: success,
+      p_url: deployedUrl,
+      p_error: errorMessage,
+      p_duration: buildDuration,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Append log entry to deployment
+   */
+  async appendDeploymentLog(deploymentId: string, logEntry: string): Promise<void> {
+    const { error } = await this.client.rpc('append_deployment_log', {
+      p_deployment_id: deploymentId,
+      p_log_entry: logEntry,
+    });
+
+    if (error) throw error;
+  }
+
+  /**
+   * Get deployment history for a portfolio
+   */
+  async getDeploymentHistory(portfolioId: string, limit: number = 20): Promise<PortfolioDeployment[]> {
+    const { data, error } = await this.client.rpc('get_deployment_history', {
+      p_portfolio_id: portfolioId,
+      p_limit: limit,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get deployment statistics for a portfolio
+   */
+  async getDeploymentStats(portfolioId: string): Promise<DeploymentStats> {
+    const { data, error } = await this.client.rpc('get_deployment_stats', {
+      p_portfolio_id: portfolioId,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get a single deployment by ID
+   */
+  async getDeployment(deploymentId: string): Promise<PortfolioDeployment> {
+    const { data, error } = await this.client
+      .from('portfolio_deployments')
+      .select('*')
+      .eq('id', deploymentId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get latest deployment for a portfolio
+   */
+  async getLatestDeployment(portfolioId: string): Promise<PortfolioDeployment | null> {
+    const { data, error } = await this.client
+      .from('portfolio_deployments')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned
+        return null;
+      }
+      throw error;
+    }
     return data;
   }
 }

@@ -17,6 +17,7 @@ export enum PortfolioVisibility {
   PRIVATE = 'PRIVATE',
   PUBLIC = 'PUBLIC',
   UNLISTED = 'UNLISTED',
+  PASSWORD_PROTECTED = 'PASSWORD_PROTECTED',
 }
 
 /**
@@ -428,6 +429,243 @@ export interface PortfolioWithVersionCount extends Portfolio {
  */
 export type PartialPortfolio = Partial<Omit<Portfolio, 'id' | 'createdAt' | 'updatedAt'>>;
 
+// ============================================================================
+// Additional Enums (Sections 3.4-3.8)
+// ============================================================================
+
+/**
+ * SSL certificate status for custom domains
+ */
+export enum SSLStatus {
+  PENDING = 'PENDING',
+  PROVISIONING = 'PROVISIONING',
+  ACTIVE = 'ACTIVE',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+}
+
+/**
+ * Deployment status through the deployment pipeline
+ */
+export enum DeploymentStatus {
+  QUEUED = 'QUEUED',
+  BUILDING = 'BUILDING',
+  DEPLOYING = 'DEPLOYING',
+  DEPLOYED = 'DEPLOYED',
+  FAILED = 'FAILED',
+  ROLLED_BACK = 'ROLLED_BACK',
+}
+
+/**
+ * Portfolio category for classification
+ */
+export enum PortfolioCategory {
+  DEVELOPER = 'DEVELOPER',
+  DESIGNER = 'DESIGNER',
+  MARKETING = 'MARKETING',
+  BUSINESS = 'BUSINESS',
+  CREATIVE = 'CREATIVE',
+  ACADEMIC = 'ACADEMIC',
+  GENERAL = 'GENERAL',
+}
+
+// ============================================================================
+// Additional Table Types (Sections 3.4-3.7)
+// ============================================================================
+
+/**
+ * Custom Domain table (Section 3.4)
+ * Custom domains configured for portfolios with DNS and SSL management
+ */
+export interface CustomDomain {
+  id: string; // UUID
+  portfolioId: string; // UUID, foreign key to portfolios
+  domain: string; // VARCHAR(255), unique
+  isVerified: boolean; // Default: false
+  verificationToken: string; // VARCHAR(255)
+  sslStatus: SSLStatus; // Default: PENDING
+  sslCertPath: string | null; // TEXT
+  sslExpiresAt: Date | null; // TIMESTAMPTZ
+  dnsRecords: DNSRecord[]; // JSONB
+  lastCheckedAt: Date | null; // TIMESTAMPTZ
+  verifiedAt: Date | null; // TIMESTAMPTZ
+  createdAt: Date; // TIMESTAMPTZ
+  updatedAt: Date; // TIMESTAMPTZ
+}
+
+/**
+ * DNS record structure (stored in JSONB)
+ */
+export interface DNSRecord {
+  type: 'A' | 'AAAA' | 'CNAME' | 'TXT' | 'MX';
+  name: string;
+  value: string;
+  ttl?: number;
+  priority?: number;
+}
+
+/**
+ * Portfolio Analytics table (Section 3.5)
+ * Daily analytics data for portfolios with monthly partitioning
+ */
+export interface PortfolioAnalytics {
+  id: string; // UUID
+  portfolioId: string; // UUID, foreign key to portfolios
+  date: Date; // DATE, indexed
+  views: number; // INTEGER, default 0
+  uniqueVisitors: number; // INTEGER, default 0
+  avgTimeOnPage: number | null; // INTEGER (seconds)
+  bounceRate: number | null; // NUMERIC(5,2) percentage (0-100)
+  referrers: Record<string, number>; // JSONB
+  countries: Record<string, number>; // JSONB
+  devices: Record<string, number>; // JSONB
+  createdAt: Date; // TIMESTAMPTZ
+  updatedAt: Date; // TIMESTAMPTZ
+}
+
+/**
+ * Portfolio Share table (Section 3.6)
+ * Secure sharing links for portfolios with password protection and expiry
+ */
+export interface PortfolioShare {
+  id: string; // UUID
+  portfolioId: string; // UUID, foreign key to portfolios
+  token: string; // VARCHAR(255), unique
+  expiresAt: Date | null; // TIMESTAMPTZ
+  password: string | null; // TEXT (hashed)
+  viewCount: number; // INTEGER, default 0
+  maxViews: number | null; // INTEGER
+  createdAt: Date; // TIMESTAMPTZ
+  lastAccessedAt: Date | null; // TIMESTAMPTZ
+}
+
+/**
+ * Portfolio Deployment table (Section 3.7)
+ * Deployment history and tracking for portfolios
+ */
+export interface PortfolioDeployment {
+  id: string; // UUID
+  portfolioId: string; // UUID, foreign key to portfolios
+  status: DeploymentStatus; // Default: QUEUED
+  buildLog: string | null; // TEXT
+  errorMessage: string | null; // TEXT
+  deployedUrl: string | null; // TEXT
+  buildDuration: number | null; // INTEGER (seconds)
+  deployedBy: string | null; // UUID
+  deployedAt: Date | null; // TIMESTAMPTZ
+  createdAt: Date; // TIMESTAMPTZ
+}
+
+// ============================================================================
+// Input Types for New Tables
+// ============================================================================
+
+/**
+ * Input for creating a custom domain
+ */
+export interface CreateCustomDomainInput {
+  portfolioId: string;
+  domain: string;
+  verificationToken?: string; // Auto-generated if not provided
+}
+
+/**
+ * Input for upserting analytics
+ */
+export interface UpsertAnalyticsInput {
+  portfolioId: string;
+  date: Date;
+  views?: number;
+  uniqueVisitors?: number;
+  avgTimeOnPage?: number;
+  bounceRate?: number;
+  referrer?: string;
+  country?: string;
+  device?: string;
+}
+
+/**
+ * Input for creating a share link
+ */
+export interface CreateShareInput {
+  portfolioId: string;
+  expiresInDays?: number;
+  password?: string;
+  maxViews?: number;
+}
+
+/**
+ * Input for starting a deployment
+ */
+export interface StartDeploymentInput {
+  portfolioId: string;
+  deployedBy?: string;
+}
+
+// ============================================================================
+// Database Function Return Types
+// ============================================================================
+
+/**
+ * Result from get_portfolio_analytics_summary function
+ */
+export interface AnalyticsSummary {
+  totalViews: number;
+  totalUniqueVisitors: number;
+  avgTimeOnPage: number;
+  avgBounceRate: number;
+  topReferrers: Record<string, number>;
+  topCountries: Record<string, number>;
+  topDevices: Record<string, number>;
+  dailyData: Array<{
+    date: Date;
+    views: number;
+    uniqueVisitors: number;
+    avgTimeOnPage: number | null;
+    bounceRate: number | null;
+  }>;
+}
+
+/**
+ * Result from validate_share_access function
+ */
+export interface ShareAccessValidation {
+  isValid: boolean;
+  portfolioId: string | null;
+  requiresPassword: boolean;
+  passwordCorrect: boolean;
+  isExpired: boolean;
+  viewsRemaining: number | null;
+  errorMessage: string | null;
+}
+
+/**
+ * Result from get_deployment_stats function
+ */
+export interface DeploymentStats {
+  totalDeployments: number;
+  successfulDeployments: number;
+  failedDeployments: number;
+  avgBuildDuration: number;
+  lastDeploymentAt: Date | null;
+  lastSuccessfulDeploymentAt: Date | null;
+}
+
+/**
+ * Result from get_domains_needing_ssl_renewal function
+ */
+export interface DomainSSLRenewal {
+  id: string;
+  portfolioId: string;
+  domain: string;
+  sslExpiresAt: Date;
+  daysUntilExpiry: number;
+}
+
+// ============================================================================
+// Updated Table Names
+// ============================================================================
+
 /**
  * Database table names
  */
@@ -435,6 +673,10 @@ export const TableName = {
   PORTFOLIOS: 'portfolios',
   PORTFOLIO_TEMPLATES: 'portfolio_templates',
   PORTFOLIO_VERSIONS: 'portfolio_versions',
+  CUSTOM_DOMAINS: 'custom_domains',
+  PORTFOLIO_ANALYTICS: 'portfolio_analytics',
+  PORTFOLIO_SHARES: 'portfolio_shares',
+  PORTFOLIO_DEPLOYMENTS: 'portfolio_deployments',
 } as const;
 
 /**
