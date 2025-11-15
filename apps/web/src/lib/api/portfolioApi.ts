@@ -1,232 +1,63 @@
 /**
  * Portfolio API Client
- * Comprehensive API integration with error handling, retry logic, and request cancellation
+ * Comprehensive API integration with error handling, retry logic, request cancellation, and validation
  */
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 import { logger } from '../../utils/logger';
 
-// ========================================
-// TYPE DEFINITIONS
-// ========================================
+// Import centralized types
+import type {
+  Portfolio,
+  PortfolioData,
+  PortfolioTemplate,
+  PortfolioVersion,
+  CustomDomain,
+  PortfolioAnalytics,
+  PortfolioShare,
+  PortfolioDeployment,
+  ApiError,
+} from '../../types/portfolio';
 
-export interface Portfolio {
-  id: string;
-  userId: string;
-  name: string;
-  slug?: string;
-  description?: string;
-  data: PortfolioData;
-  templateId: string;
-  isPublished: boolean;
-  isDraft: boolean;
-  visibility: 'PUBLIC' | 'UNLISTED' | 'PRIVATE' | 'PASSWORD_PROTECTED';
-  subdomain?: string;
-  customDomains?: string[];
-  metaTitle?: string;
-  metaDescription?: string;
-  ogImage?: string;
-  viewCount: number;
-  lastViewedAt?: string;
-  buildStatus: 'PENDING' | 'BUILDING' | 'SUCCESS' | 'FAILED';
-  buildArtifactPath?: string;
-  lastBuildAt?: string;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt?: string;
-  deletedAt?: string;
-}
+// Import validation schemas and type guards
+import {
+  validateCreatePortfolioRequest,
+  validateUpdatePortfolioRequest,
+  validateSubdomain,
+  validateCustomDomain,
+  validatePortfolioResponse,
+  validatePortfolioListResponse,
+  validateTemplateResponse,
+  validateTemplateListResponse,
+  isPortfolio,
+  isPortfolioData,
+  type CreatePortfolioRequest,
+  type UpdatePortfolioRequest,
+  type PublishPortfolioRequest,
+  type CreateShareLinkRequest,
+  type PortfolioListResponse as PortfolioListResponseType,
+  type PortfolioResponse as PortfolioResponseType,
+} from '../validation/portfolio.validation';
 
-export interface PortfolioData {
-  hero: {
-    title: string;
-    subtitle: string;
-    image?: string;
-  };
-  about: {
-    bio: string;
-    image?: string;
-  };
-  experience: Experience[];
-  projects: Project[];
-  skills: Skill[];
-  education?: Education[];
-  contact: {
-    email: string;
-    phone?: string;
-    location?: string;
-    socialLinks?: SocialLink[];
-  };
-}
+// Re-export types for convenience
+export type {
+  Portfolio,
+  PortfolioData,
+  PortfolioTemplate,
+  PortfolioVersion,
+  CustomDomain,
+  PortfolioAnalytics,
+  PortfolioShare,
+  PortfolioDeployment,
+  CreatePortfolioRequest,
+  UpdatePortfolioRequest,
+  PublishPortfolioRequest,
+  CreateShareLinkRequest,
+  ApiError,
+};
 
-export interface Experience {
-  company: string;
-  role: string;
-  location?: string;
-  startDate: string;
-  endDate?: string;
-  description: string;
-  technologies?: string[];
-  achievements?: string[];
-}
-
-export interface Project {
-  name: string;
-  description: string;
-  technologies: string[];
-  link?: string;
-  github?: string;
-  image?: string;
-}
-
-export interface Skill {
-  name: string;
-  proficiency: number; // 1-5
-  category: string;
-}
-
-export interface Education {
-  institution: string;
-  degree: string;
-  field: string;
-  startDate: string;
-  endDate?: string;
-  description?: string;
-}
-
-export interface SocialLink {
-  platform: 'linkedin' | 'github' | 'twitter' | 'website' | 'other';
-  url: string;
-}
-
-export interface PortfolioTemplate {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  category: 'DEVELOPER' | 'DESIGNER' | 'MARKETING' | 'BUSINESS' | 'CREATIVE' | 'ACADEMIC' | 'GENERAL';
-  thumbnail?: string;
-  previewUrl?: string;
-  htmlTemplate?: string;
-  cssTemplate?: string;
-  jsTemplate?: string;
-  config?: any;
-  defaultData?: any;
-  isPremium: boolean;
-  isActive: boolean;
-  usageCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PortfolioVersion {
-  id: string;
-  portfolioId: string;
-  version: number;
-  name?: string;
-  data: PortfolioData;
-  metadata?: any;
-  createdBy?: string;
-  createdAt: string;
-}
-
-export interface CustomDomain {
-  id: string;
-  portfolioId: string;
-  domain: string;
-  isVerified: boolean;
-  verificationToken: string;
-  sslStatus: 'PENDING' | 'PROVISIONING' | 'ACTIVE' | 'FAILED' | 'EXPIRED';
-  sslCertPath?: string;
-  dnsRecords?: any;
-  lastCheckedAt?: string;
-  verifiedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PortfolioAnalytics {
-  id: string;
-  portfolioId: string;
-  date: string;
-  views: number;
-  uniqueVisitors: number;
-  avgTimeOnPage?: number;
-  bounceRate?: number;
-  referrers?: Record<string, number>;
-  countries?: Record<string, number>;
-  devices?: Record<string, number>;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PortfolioShare {
-  id: string;
-  portfolioId: string;
-  token: string;
-  expiresAt?: string;
-  password?: string;
-  viewCount: number;
-  maxViews?: number;
-  createdAt: string;
-  lastAccessedAt?: string;
-}
-
-export interface PortfolioDeployment {
-  id: string;
-  portfolioId: string;
-  status: 'QUEUED' | 'BUILDING' | 'DEPLOYING' | 'DEPLOYED' | 'FAILED' | 'ROLLED_BACK';
-  buildLog?: string;
-  errorMessage?: string;
-  deployedUrl?: string;
-  buildDuration?: number;
-  deployedBy?: string;
-  deployedAt?: string;
-  createdAt: string;
-}
-
-// Request DTOs
-export interface CreatePortfolioRequest {
-  name: string;
-  description?: string;
-  templateId: string;
-  data?: Partial<PortfolioData>;
-}
-
-export interface UpdatePortfolioRequest {
-  name?: string;
-  description?: string;
-  data?: Partial<PortfolioData>;
-  templateId?: string;
-  visibility?: Portfolio['visibility'];
-  metaTitle?: string;
-  metaDescription?: string;
-  ogImage?: string;
-}
-
-export interface PublishPortfolioRequest {
-  subdomain?: string;
-  customDomain?: string;
-  visibility?: Portfolio['visibility'];
-}
-
-export interface ImportProfileRequest {
-  portfolioId: string;
-}
-
-export interface ImportResumeRequest {
-  portfolioId: string;
-  resumeId: string;
-}
-
-export interface CreateShareLinkRequest {
-  expiresAt?: string;
-  password?: string;
-  maxViews?: number;
-}
-
-// Response DTOs
+// Response DTOs (local to this file)
 export interface PortfolioListResponse {
   portfolios: Portfolio[];
   total: number;
@@ -260,13 +91,6 @@ export interface ShareLinkResponse {
 export interface SubdomainCheckResponse {
   available: boolean;
   subdomain: string;
-}
-
-// Error type
-export interface ApiError extends Error {
-  statusCode?: number;
-  code?: string;
-  details?: any;
 }
 
 // ========================================
@@ -529,6 +353,7 @@ class PortfolioApiClient {
 
   /**
    * Get all portfolios for the current user
+   * ✅ Validates response structure
    */
   async getAll(params?: {
     page?: number;
@@ -549,48 +374,124 @@ class PortfolioApiClient {
     const query = queryParams.toString();
     const endpoint = query ? `/api/portfolios?${query}` : '/api/portfolios';
 
-    return this.request<PortfolioListResponse>(endpoint, {
+    const response = await this.request<PortfolioListResponse>(endpoint, {
       method: 'GET',
     }, { abortKey: 'getPortfolios' });
+
+    // Validate response structure
+    const validation = validatePortfolioListResponse(response);
+    if (!validation.success) {
+      logger.warn('Portfolio list response validation failed', validation.errors);
+      // Return response anyway but log the issue
+    }
+
+    return response;
   }
 
   /**
    * Get a single portfolio by ID
+   * ✅ Validates response structure
    */
   async getById(id: string): Promise<PortfolioResponse> {
-    return this.request<PortfolioResponse>(`/api/portfolios/${id}`, {
+    const response = await this.request<PortfolioResponse>(`/api/portfolios/${id}`, {
       method: 'GET',
     }, { abortKey: `getPortfolio-${id}` });
+
+    // Validate response structure
+    const validation = validatePortfolioResponse(response);
+    if (!validation.success) {
+      logger.warn('Portfolio response validation failed', validation.errors);
+      // Return response anyway but log the issue
+    }
+
+    return response;
   }
 
   /**
    * Create a new portfolio
+   * ✅ Validates input before sending to backend
+   * ✅ Validates response structure
    */
   async create(data: CreatePortfolioRequest): Promise<PortfolioResponse> {
-    return this.request<PortfolioResponse>('/api/portfolios', {
+    // Validate input data
+    const validation = validateCreatePortfolioRequest(data);
+    if (!validation.success) {
+      const error: ApiError = new Error(validation.errors.join(', ')) as ApiError;
+      error.code = 'VALIDATION_ERROR';
+      error.details = validation.errors;
+      throw error;
+    }
+
+    const response = await this.request<PortfolioResponse>('/api/portfolios', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(validation.data),
     }, { timeout: 30000, retry: true, abortKey: 'createPortfolio' });
+
+    // Validate response structure
+    const responseValidation = validatePortfolioResponse(response);
+    if (!responseValidation.success) {
+      logger.warn('Create portfolio response validation failed', responseValidation.errors);
+    }
+
+    return response;
   }
 
   /**
    * Update an existing portfolio
+   * ✅ Validates input before sending to backend
+   * ✅ Validates response structure
    */
   async update(id: string, data: UpdatePortfolioRequest): Promise<PortfolioResponse> {
-    return this.request<PortfolioResponse>(`/api/portfolios/${id}`, {
+    // Validate input data
+    const validation = validateUpdatePortfolioRequest(data);
+    if (!validation.success) {
+      const error: ApiError = new Error(validation.errors.join(', ')) as ApiError;
+      error.code = 'VALIDATION_ERROR';
+      error.details = validation.errors;
+      throw error;
+    }
+
+    const response = await this.request<PortfolioResponse>(`/api/portfolios/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(validation.data),
     }, { timeout: 30000, retry: true, abortKey: `updatePortfolio-${id}` });
+
+    // Validate response structure
+    const responseValidation = validatePortfolioResponse(response);
+    if (!responseValidation.success) {
+      logger.warn('Update portfolio response validation failed', responseValidation.errors);
+    }
+
+    return response;
   }
 
   /**
    * Partially update a portfolio (PATCH)
+   * ✅ Validates input before sending to backend
+   * ✅ Validates response structure
    */
   async patch(id: string, data: Partial<UpdatePortfolioRequest>): Promise<PortfolioResponse> {
-    return this.request<PortfolioResponse>(`/api/portfolios/${id}`, {
+    // Validate input data
+    const validation = validateUpdatePortfolioRequest(data);
+    if (!validation.success) {
+      const error: ApiError = new Error(validation.errors.join(', ')) as ApiError;
+      error.code = 'VALIDATION_ERROR';
+      error.details = validation.errors;
+      throw error;
+    }
+
+    const response = await this.request<PortfolioResponse>(`/api/portfolios/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(validation.data),
     }, { timeout: 30000, retry: true, abortKey: `patchPortfolio-${id}` });
+
+    // Validate response structure
+    const responseValidation = validatePortfolioResponse(response);
+    if (!responseValidation.success) {
+      logger.warn('Patch portfolio response validation failed', responseValidation.errors);
+    }
+
+    return response;
   }
 
   /**
@@ -678,8 +579,18 @@ class PortfolioApiClient {
 
   /**
    * Check subdomain availability
+   * ✅ Validates subdomain format before checking
    */
   async checkSubdomain(subdomain: string): Promise<SubdomainCheckResponse> {
+    // Validate subdomain format
+    const validation = validateSubdomain(subdomain);
+    if (!validation.success) {
+      const error: ApiError = new Error(validation.error || 'Invalid subdomain format') as ApiError;
+      error.code = 'VALIDATION_ERROR';
+      error.details = { subdomain: validation.error };
+      throw error;
+    }
+
     return this.request<SubdomainCheckResponse>(`/api/portfolios/subdomain/check?subdomain=${encodeURIComponent(subdomain)}`, {
       method: 'GET',
     }, { retry: false, abortKey: 'checkSubdomain' });
@@ -687,8 +598,18 @@ class PortfolioApiClient {
 
   /**
    * Add custom domain
+   * ✅ Validates domain format before adding
    */
   async addCustomDomain(id: string, domain: string): Promise<CustomDomain> {
+    // Validate custom domain format
+    const validation = validateCustomDomain(domain);
+    if (!validation.success) {
+      const error: ApiError = new Error(validation.error || 'Invalid custom domain format') as ApiError;
+      error.code = 'VALIDATION_ERROR';
+      error.details = { domain: validation.error };
+      throw error;
+    }
+
     return this.request<CustomDomain>(`/api/portfolios/${id}/domains`, {
       method: 'POST',
       body: JSON.stringify({ domain }),
@@ -728,24 +649,42 @@ class PortfolioApiClient {
 
   /**
    * Get all portfolio templates
+   * ✅ Validates response structure
    */
   async getTemplates(category?: string): Promise<TemplateListResponse> {
     const endpoint = category
       ? `/api/portfolio-templates?category=${encodeURIComponent(category)}`
       : '/api/portfolio-templates';
 
-    return this.request<TemplateListResponse>(endpoint, {
+    const response = await this.request<TemplateListResponse>(endpoint, {
       method: 'GET',
     }, { abortKey: 'getTemplates' });
+
+    // Validate response structure
+    const validation = validateTemplateListResponse(response);
+    if (!validation.success) {
+      logger.warn('Template list response validation failed', validation.errors);
+    }
+
+    return response;
   }
 
   /**
    * Get single template by ID
+   * ✅ Validates response structure
    */
   async getTemplate(id: string): Promise<{ template: PortfolioTemplate }> {
-    return this.request<{ template: PortfolioTemplate }>(`/api/portfolio-templates/${id}`, {
+    const response = await this.request<{ template: PortfolioTemplate }>(`/api/portfolio-templates/${id}`, {
       method: 'GET',
     });
+
+    // Validate response structure
+    const validation = validateTemplateResponse(response);
+    if (!validation.success) {
+      logger.warn('Template response validation failed', validation.errors);
+    }
+
+    return response;
   }
 
   /**
