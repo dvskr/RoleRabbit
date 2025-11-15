@@ -3,6 +3,7 @@
  * Section 2.11: Service Layer Implementation
  *
  * Requirements #12-17: DeploymentService class
+ * Updated to use Supabase Storage instead of S3/CloudFront
  */
 
 import { promises as dns } from 'dns';
@@ -14,6 +15,14 @@ import {
 } from '@/lib/errors';
 import { PortfolioService } from './portfolio.service';
 import { BuildService } from './build.service';
+
+// Supabase client for storage operations
+// TODO: In production, import from your Supabase client instance
+// import { createClient } from '@supabase/supabase-js';
+// const supabase = createClient(
+//   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+//   process.env.SUPABASE_SERVICE_ROLE_KEY!
+// );
 
 /**
  * Custom domain
@@ -48,10 +57,10 @@ export interface DNSInstructions {
 export interface DeploymentResult {
   success: boolean;
   url: string;
-  cdnUrl?: string;
+  storageUrl: string; // Supabase Storage URL with CDN
   deploymentId: string;
   filesUploaded: number;
-  cacheInvalidated: boolean;
+  bucketName: string;
 }
 
 /**
@@ -346,12 +355,12 @@ export class DeploymentService {
   }
 
   /**
-   * Requirement #17: Deploy to S3/CloudFront
+   * Requirement #17: Deploy to Supabase Storage
    * - Build static site
-   * - Upload to S3 with public-read ACL
-   * - Invalidate CloudFront cache
+   * - Upload to Supabase Storage bucket (public access)
+   * - Return CDN URLs (Supabase provides automatic CDN)
    */
-  async deployToS3(portfolioId: string): Promise<DeploymentResult> {
+  async deploy(portfolioId: string): Promise<DeploymentResult> {
     const portfolio = await this.portfolioService.findById(portfolioId);
     if (!portfolio) {
       throw new PortfolioNotFoundError(portfolioId);
@@ -364,11 +373,8 @@ export class DeploymentService {
 
     const deploymentId = `deploy-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-    // Requirement #17: Upload to S3 with public-read ACL
-    const s3Result = await this.uploadToS3(portfolioId, files);
-
-    // Requirement #17: Invalidate CloudFront cache
-    const cacheInvalidated = await this.invalidateCloudFrontCache(portfolioId);
+    // Requirement #17: Upload to Supabase Storage
+    const storageResult = await this.uploadToSupabaseStorage(portfolioId, files);
 
     // Determine deployment URL
     const url = portfolio.subdomain
@@ -378,11 +384,19 @@ export class DeploymentService {
     return {
       success: true,
       url,
-      cdnUrl: s3Result.cdnUrl,
+      storageUrl: storageResult.storageUrl,
       deploymentId,
       filesUploaded: files.size,
-      cacheInvalidated,
+      bucketName: storageResult.bucketName,
     };
+  }
+
+  /**
+   * Legacy method name for backward compatibility
+   * @deprecated Use deploy() instead
+   */
+  async deployToS3(portfolioId: string): Promise<DeploymentResult> {
+    return this.deploy(portfolioId);
   }
 
   // ========================================================================
@@ -445,24 +459,34 @@ export class DeploymentService {
     subdomain: string,
     portfolioId: string
   ): Promise<void> {
-    // TODO: In production, use DNS provider API (Route53, Cloudflare, etc.)
-    // import AWS from 'aws-sdk';
-    // const route53 = new AWS.Route53();
+    // TODO: In production, use DNS provider API (Cloudflare, Vercel DNS, etc.)
     //
-    // await route53.changeResourceRecordSets({
-    //   HostedZoneId: process.env.ROUTE53_ZONE_ID,
-    //   ChangeBatch: {
-    //     Changes: [{
-    //       Action: 'UPSERT',
-    //       ResourceRecordSet: {
-    //         Name: `${subdomain}.rolerabbit.com`,
-    //         Type: 'CNAME',
-    //         TTL: 300,
-    //         ResourceRecords: [{ Value: 'cdn.rolerabbit.com' }],
-    //       },
-    //     }],
+    // Option 1: Cloudflare (Recommended with Supabase)
+    // const cloudflare = require('cloudflare')({
+    //   token: process.env.CLOUDFLARE_API_TOKEN,
+    // });
+    //
+    // await cloudflare.dnsRecords.add(process.env.CLOUDFLARE_ZONE_ID, {
+    //   type: 'CNAME',
+    //   name: subdomain,
+    //   content: `${process.env.NEXT_PUBLIC_SUPABASE_URL}`,
+    //   ttl: 1, // Auto
+    //   proxied: true, // Enable Cloudflare CDN
+    // });
+    //
+    // Option 2: Vercel DNS
+    // const response = await fetch('https://api.vercel.com/v4/domains/rolerabbit.com/records', {
+    //   method: 'POST',
+    //   headers: {
+    //     Authorization: `Bearer ${process.env.VERCEL_TOKEN}`,
+    //     'Content-Type': 'application/json',
     //   },
-    // }).promise();
+    //   body: JSON.stringify({
+    //     name: subdomain,
+    //     type: 'CNAME',
+    //     value: 'cname.vercel-dns.com',
+    //   }),
+    // });
 
     console.log(`DNS configured for ${subdomain}.rolerabbit.com`);
   }
@@ -483,6 +507,10 @@ export class DeploymentService {
     domain: string,
     verificationToken: string
   ): DNSInstructions[] {
+    // Extract Supabase project reference from URL
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project.supabase.co';
+    const supabaseHost = supabaseUrl.replace('https://', '').replace('http://', '');
+
     return [
       {
         recordType: 'TXT',
@@ -494,69 +522,77 @@ export class DeploymentService {
       {
         recordType: 'CNAME',
         name: domain,
-        value: 'cdn.rolerabbit.com',
+        value: supabaseHost,
         ttl: 3600,
-        instructions: `Add a CNAME record pointing ${domain} to cdn.rolerabbit.com (add this after verification)`,
+        instructions: `Add a CNAME record pointing ${domain} to ${supabaseHost} (add this after verification)`,
       },
     ];
   }
 
   /**
-   * Upload files to S3
-   * Requirement #17: Upload to S3 with public-read ACL
+   * Upload files to Supabase Storage
+   * Requirement #17: Upload to Supabase Storage with public access
    */
-  private async uploadToS3(
+  private async uploadToSupabaseStorage(
     portfolioId: string,
     files: Map<string, string | Buffer>
-  ): Promise<{ success: boolean; cdnUrl: string }> {
-    // TODO: In production, use AWS SDK
-    // import AWS from 'aws-sdk';
-    // const s3 = new AWS.S3();
+  ): Promise<{ success: boolean; storageUrl: string; bucketName: string }> {
+    // TODO: In production, use Supabase client
+    // import { createClient } from '@supabase/supabase-js';
     //
-    // const bucket = process.env.S3_BUCKET_NAME;
-    // const keyPrefix = `portfolios/${portfolioId}/`;
+    // const supabase = createClient(
+    //   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    //   process.env.SUPABASE_SERVICE_ROLE_KEY! // Service role key for admin operations
+    // );
     //
+    // const bucketName = 'portfolios'; // Create this bucket in Supabase Dashboard
+    // const folderPrefix = `${portfolioId}/`;
+    //
+    // // Ensure bucket exists (create if needed)
+    // const { data: buckets } = await supabase.storage.listBuckets();
+    // const bucketExists = buckets?.some(b => b.name === bucketName);
+    //
+    // if (!bucketExists) {
+    //   await supabase.storage.createBucket(bucketName, {
+    //     public: true, // Make bucket public
+    //     fileSizeLimit: 52428800, // 50MB limit per file
+    //   });
+    // }
+    //
+    // // Upload each file
     // for (const [path, content] of files.entries()) {
-    //   await s3.putObject({
-    //     Bucket: bucket,
-    //     Key: `${keyPrefix}${path}`,
-    //     Body: content,
-    //     ACL: 'public-read',
-    //     ContentType: this.getContentType(path),
-    //     CacheControl: 'public, max-age=31536000',
-    //   }).promise();
+    //   const filePath = `${folderPrefix}${path}`;
+    //   const contentType = this.getContentType(path);
+    //
+    //   // Convert string content to Buffer if needed
+    //   const buffer = typeof content === 'string'
+    //     ? Buffer.from(content, 'utf-8')
+    //     : content;
+    //
+    //   const { error } = await supabase.storage
+    //     .from(bucketName)
+    //     .upload(filePath, buffer, {
+    //       contentType,
+    //       cacheControl: '3600', // 1 hour cache
+    //       upsert: true, // Overwrite if exists
+    //     });
+    //
+    //   if (error) {
+    //     throw new ExternalServiceError(
+    //       'Supabase Storage',
+    //       `Failed to upload ${path}`,
+    //       { error: error.message }
+    //     );
+    //   }
     // }
 
-    console.log(`Uploaded ${files.size} files to S3 for portfolio ${portfolioId}`);
+    console.log(`Uploaded ${files.size} files to Supabase Storage for portfolio ${portfolioId}`);
 
-    const cdnUrl = `https://cdn.rolerabbit.com/portfolios/${portfolioId}`;
+    // Supabase Storage provides automatic CDN URLs
+    const bucketName = 'portfolios';
+    const storageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucketName}/${portfolioId}/index.html`;
 
-    return { success: true, cdnUrl };
-  }
-
-  /**
-   * Invalidate CloudFront cache
-   * Requirement #17: Invalidate CloudFront cache
-   */
-  private async invalidateCloudFrontCache(portfolioId: string): Promise<boolean> {
-    // TODO: In production, use AWS SDK
-    // import AWS from 'aws-sdk';
-    // const cloudfront = new AWS.CloudFront();
-    //
-    // await cloudfront.createInvalidation({
-    //   DistributionId: process.env.CLOUDFRONT_DISTRIBUTION_ID,
-    //   InvalidationBatch: {
-    //     CallerReference: `${portfolioId}-${Date.now()}`,
-    //     Paths: {
-    //       Quantity: 1,
-    //       Items: [`/portfolios/${portfolioId}/*`],
-    //     },
-    //   },
-    // }).promise();
-
-    console.log(`CloudFront cache invalidated for portfolio ${portfolioId}`);
-
-    return true;
+    return { success: true, storageUrl, bucketName };
   }
 
   /**
