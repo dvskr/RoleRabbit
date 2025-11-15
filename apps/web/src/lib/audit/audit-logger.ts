@@ -1,541 +1,278 @@
 /**
- * Audit Logging
- * Section 2.10: Authorization & Security
+ * Audit Logging System - Section 6.1
  *
- * Requirement #14: Audit logging for sensitive operations
- * Record: userId, IP, timestamp for portfolio delete, publish, template create/update
+ * Logs sensitive operations with userId, timestamp, IP address
  */
 
-import { logger, AuditAction } from '../logger/logger';
-import { NextRequest } from 'next/server';
+import { createSupabaseServiceClient } from '@/database/client';
 
-/**
- * Audit log entry interface
- */
+export enum AuditAction {
+  PORTFOLIO_CREATED = 'portfolio.created',
+  PORTFOLIO_UPDATED = 'portfolio.updated',
+  PORTFOLIO_DELETED = 'portfolio.deleted',
+  PORTFOLIO_PUBLISHED = 'portfolio.published',
+  PORTFOLIO_UNPUBLISHED = 'portfolio.unpublished',
+  PORTFOLIO_SHARED = 'portfolio.shared',
+  PORTFOLIO_EXPORTED = 'portfolio.exported',
+
+  TEMPLATE_CREATED = 'template.created',
+  TEMPLATE_UPDATED = 'template.updated',
+  TEMPLATE_DELETED = 'template.deleted',
+
+  USER_LOGIN = 'user.login',
+  USER_LOGOUT = 'user.logout',
+  USER_REGISTERED = 'user.registered',
+  USER_PASSWORD_CHANGED = 'user.password_changed',
+  USER_DELETED = 'user.deleted',
+
+  ADMIN_ACCESS = 'admin.access',
+  ADMIN_USER_MODIFIED = 'admin.user_modified',
+
+  DATA_EXPORTED = 'data.exported',
+  DATA_DELETED = 'data.deleted',
+}
+
 export interface AuditLogEntry {
-  id: string;
+  id?: string;
   action: AuditAction;
-  resource: string;
-  resourceId: string;
   userId: string;
-  userEmail?: string;
-  ip: string;
+  resourceType?: string;
+  resourceId?: string;
+  ipAddress?: string;
   userAgent?: string;
-  correlationId?: string;
   metadata?: Record<string, any>;
-  timestamp: string;
+  createdAt?: string;
 }
 
-/**
- * In-memory audit log store
- * TODO: In production, store in database table
- */
-const auditLogs: AuditLogEntry[] = [];
+class AuditLogger {
+  private supabase = createSupabaseServiceClient();
 
-/**
- * Get client IP from request
- */
-function getClientIP(request: NextRequest): string {
-  return (
-    request.ip ||
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown'
-  );
-}
+  async log(entry: AuditLogEntry): Promise<void> {
+    try {
+      const { error } = await this.supabase.from('audit_logs').insert({
+        action: entry.action,
+        user_id: entry.userId,
+        resource_type: entry.resourceType,
+        resource_id: entry.resourceId,
+        ip_address: entry.ipAddress,
+        user_agent: entry.userAgent,
+        metadata: entry.metadata,
+        created_at: new Date().toISOString(),
+      });
 
-/**
- * Create audit log entry
- * Requirement #14: Record userId, IP, timestamp
- */
-export function createAuditLog(
-  action: AuditAction,
-  resource: string,
-  resourceId: string,
-  request: NextRequest,
-  userId: string,
-  metadata?: Record<string, any>
-): AuditLogEntry {
-  const entry: AuditLogEntry = {
-    id: `audit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-    action,
-    resource,
-    resourceId,
-    userId,
-    ip: getClientIP(request),
-    userAgent: request.headers.get('user-agent') || undefined,
-    correlationId: request.headers.get('x-correlation-id') || undefined,
-    metadata,
-    timestamp: new Date().toISOString(),
-  };
+      if (error) {
+        console.error('Failed to write audit log:', error);
+      }
+    } catch (error) {
+      console.error('Audit logging error:', error);
+    }
+  }
 
-  // Store in memory
-  // TODO: In production, store in database
-  // await db.auditLog.create({ data: entry });
-  auditLogs.push(entry);
-
-  // Log to application logger
-  logger.audit(action, resource, userId, entry.ip, {
-    resourceId,
-    correlationId: entry.correlationId,
-    metadata,
-  });
-
-  return entry;
-}
-
-/**
- * Log portfolio operations
- * Requirement #14: Audit sensitive operations
- */
-export class PortfolioAuditLogger {
-  /**
-   * Log portfolio creation
-   */
-  static logCreate(
-    portfolioId: string,
-    request: NextRequest,
+  async logPortfolioCreated(
     userId: string,
-    metadata?: Record<string, any>
-  ): void {
-    createAuditLog(
-      AuditAction.PORTFOLIO_CREATE,
-      'portfolio',
-      portfolioId,
-      request,
+    portfolioId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.PORTFOLIO_CREATED,
       userId,
-      metadata
-    );
+      resourceType: 'portfolio',
+      resourceId: portfolioId,
+      ipAddress,
+      userAgent,
+    });
   }
 
-  /**
-   * Log portfolio update
-   */
-  static logUpdate(
-    portfolioId: string,
-    request: NextRequest,
+  async logPortfolioDeleted(
     userId: string,
-    changes?: Record<string, any>
-  ): void {
-    createAuditLog(
-      AuditAction.PORTFOLIO_UPDATE,
-      'portfolio',
-      portfolioId,
-      request,
+    portfolioId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.PORTFOLIO_DELETED,
       userId,
-      { changes }
-    );
+      resourceType: 'portfolio',
+      resourceId: portfolioId,
+      ipAddress,
+      userAgent,
+      metadata: { deletedAt: new Date().toISOString() },
+    });
   }
 
-  /**
-   * Log portfolio deletion
-   * Requirement #14: Audit portfolio delete
-   */
-  static logDelete(
-    portfolioId: string,
-    request: NextRequest,
+  async logPortfolioPublished(
     userId: string,
-    reason?: string
-  ): void {
-    createAuditLog(
-      AuditAction.PORTFOLIO_DELETE,
-      'portfolio',
-      portfolioId,
-      request,
+    portfolioId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.PORTFOLIO_PUBLISHED,
       userId,
-      { reason, deletedAt: new Date().toISOString() }
-    );
+      resourceType: 'portfolio',
+      resourceId: portfolioId,
+      ipAddress,
+      userAgent,
+    });
   }
 
-  /**
-   * Log portfolio publish
-   * Requirement #14: Audit publish
-   */
-  static logPublish(
-    portfolioId: string,
-    request: NextRequest,
+  async logTemplateCreated(
     userId: string,
-    subdomain?: string
-  ): void {
-    createAuditLog(
-      AuditAction.PORTFOLIO_PUBLISH,
-      'portfolio',
-      portfolioId,
-      request,
-      userId,
-      { subdomain, publishedAt: new Date().toISOString() }
-    );
-  }
-
-  /**
-   * Log portfolio unpublish
-   */
-  static logUnpublish(
-    portfolioId: string,
-    request: NextRequest,
-    userId: string
-  ): void {
-    createAuditLog(
-      AuditAction.PORTFOLIO_UNPUBLISH,
-      'portfolio',
-      portfolioId,
-      request,
-      userId,
-      { unpublishedAt: new Date().toISOString() }
-    );
-  }
-
-  /**
-   * Log portfolio deployment
-   */
-  static logDeploy(
-    portfolioId: string,
-    request: NextRequest,
-    userId: string,
-    deploymentId: string,
-    url?: string
-  ): void {
-    createAuditLog(
-      AuditAction.PORTFOLIO_DEPLOY,
-      'portfolio',
-      portfolioId,
-      request,
-      userId,
-      { deploymentId, url, deployedAt: new Date().toISOString() }
-    );
-  }
-}
-
-/**
- * Log template operations
- * Requirement #14: Audit template create/update
- */
-export class TemplateAuditLogger {
-  /**
-   * Log template creation
-   * Requirement #14: Audit template create
-   */
-  static logCreate(
     templateId: string,
-    request: NextRequest,
-    userId: string,
-    templateName: string
-  ): void {
-    createAuditLog(
-      AuditAction.TEMPLATE_CREATE,
-      'template',
-      templateId,
-      request,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.TEMPLATE_CREATED,
       userId,
-      { templateName, createdAt: new Date().toISOString() }
-    );
+      resourceType: 'template',
+      resourceId: templateId,
+      ipAddress,
+      userAgent,
+    });
   }
 
-  /**
-   * Log template update
-   * Requirement #14: Audit template update
-   */
-  static logUpdate(
+  async logTemplateDeleted(
+    userId: string,
     templateId: string,
-    request: NextRequest,
-    userId: string,
-    changes?: Record<string, any>
-  ): void {
-    createAuditLog(
-      AuditAction.TEMPLATE_UPDATE,
-      'template',
-      templateId,
-      request,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.TEMPLATE_DELETED,
       userId,
-      { changes, updatedAt: new Date().toISOString() }
-    );
+      resourceType: 'template',
+      resourceId: templateId,
+      ipAddress,
+      userAgent,
+    });
+  }
+
+  async logDataExported(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.DATA_EXPORTED,
+      userId,
+      resourceType: 'user',
+      resourceId: userId,
+      ipAddress,
+      userAgent,
+    });
+  }
+
+  async logDataDeleted(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.DATA_DELETED,
+      userId,
+      resourceType: 'user',
+      resourceId: userId,
+      ipAddress,
+      userAgent,
+      metadata: { deletedAt: new Date().toISOString() },
+    });
+  }
+
+  async logAdminAccess(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<void> {
+    await this.log({
+      action: AuditAction.ADMIN_ACCESS,
+      userId,
+      ipAddress,
+      userAgent,
+    });
   }
 
   /**
-   * Log template deletion
+   * Query audit logs for a user
    */
-  static logDelete(
-    templateId: string,
-    request: NextRequest,
-    userId: string
-  ): void {
-    createAuditLog(
-      AuditAction.TEMPLATE_DELETE,
-      'template',
-      templateId,
-      request,
-      userId,
-      { deletedAt: new Date().toISOString() }
-    );
+  async getUserAuditLogs(
+    userId: string,
+    limit: number = 100
+  ): Promise<AuditLogEntry[]> {
+    const { data, error } = await this.supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Failed to fetch audit logs:', error);
+      return [];
+    }
+
+    return data.map((row) => ({
+      id: row.id,
+      action: row.action,
+      userId: row.user_id,
+      resourceType: row.resource_type,
+      resourceId: row.resource_id,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+    }));
+  }
+
+  /**
+   * Query audit logs for a resource
+   */
+  async getResourceAuditLogs(
+    resourceType: string,
+    resourceId: string,
+    limit: number = 100
+  ): Promise<AuditLogEntry[]> {
+    const { data, error } = await this.supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('resource_type', resourceType)
+      .eq('resource_id', resourceId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Failed to fetch audit logs:', error);
+      return [];
+    }
+
+    return data.map((row) => ({
+      id: row.id,
+      action: row.action,
+      userId: row.user_id,
+      resourceType: row.resource_type,
+      resourceId: row.resource_id,
+      ipAddress: row.ip_address,
+      userAgent: row.user_agent,
+      metadata: row.metadata,
+      createdAt: row.created_at,
+    }));
   }
 }
 
-/**
- * Log version control operations
- */
-export class VersionAuditLogger {
-  /**
-   * Log version creation
-   */
-  static logCreate(
-    portfolioId: string,
-    versionId: string,
-    request: NextRequest,
-    userId: string,
-    versionNumber: number
-  ): void {
-    createAuditLog(
-      AuditAction.VERSION_CREATE,
-      'version',
-      versionId,
-      request,
-      userId,
-      { portfolioId, versionNumber }
-    );
-  }
+export const auditLogger = new AuditLogger();
 
-  /**
-   * Log version restore
-   */
-  static logRestore(
-    portfolioId: string,
-    versionId: string,
-    request: NextRequest,
-    userId: string,
-    versionNumber: number
-  ): void {
-    createAuditLog(
-      AuditAction.VERSION_RESTORE,
-      'version',
-      versionId,
-      request,
-      userId,
-      { portfolioId, versionNumber, restoredAt: new Date().toISOString() }
-    );
-  }
-}
+export function getRequestMetadata(req: any): {
+  ipAddress: string;
+  userAgent: string;
+} {
+  const ipAddress =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+    req.headers['x-real-ip'] ||
+    req.connection?.remoteAddress ||
+    'unknown';
 
-/**
- * Log sharing operations
- */
-export class ShareAuditLogger {
-  /**
-   * Log share creation
-   */
-  static logCreate(
-    shareId: string,
-    portfolioId: string,
-    request: NextRequest,
-    userId: string,
-    config?: { expiresAt?: string; hasPassword: boolean; maxViews?: number }
-  ): void {
-    createAuditLog(
-      AuditAction.SHARE_CREATE,
-      'share',
-      shareId,
-      request,
-      userId,
-      { portfolioId, config }
-    );
-  }
+  const userAgent = req.headers['user-agent'] || 'unknown';
 
-  /**
-   * Log share revocation
-   */
-  static logRevoke(
-    shareId: string,
-    portfolioId: string,
-    request: NextRequest,
-    userId: string
-  ): void {
-    createAuditLog(
-      AuditAction.SHARE_REVOKE,
-      'share',
-      shareId,
-      request,
-      userId,
-      { portfolioId, revokedAt: new Date().toISOString() }
-    );
-  }
-}
-
-/**
- * Log domain operations
- */
-export class DomainAuditLogger {
-  /**
-   * Log domain addition
-   */
-  static logAdd(
-    domainId: string,
-    portfolioId: string,
-    request: NextRequest,
-    userId: string,
-    domain: string
-  ): void {
-    createAuditLog(
-      AuditAction.DOMAIN_ADD,
-      'domain',
-      domainId,
-      request,
-      userId,
-      { portfolioId, domain }
-    );
-  }
-
-  /**
-   * Log domain verification
-   */
-  static logVerify(
-    domainId: string,
-    portfolioId: string,
-    request: NextRequest,
-    userId: string,
-    domain: string
-  ): void {
-    createAuditLog(
-      AuditAction.DOMAIN_VERIFY,
-      'domain',
-      domainId,
-      request,
-      userId,
-      { portfolioId, domain, verifiedAt: new Date().toISOString() }
-    );
-  }
-
-  /**
-   * Log domain removal
-   */
-  static logRemove(
-    domainId: string,
-    portfolioId: string,
-    request: NextRequest,
-    userId: string,
-    domain: string
-  ): void {
-    createAuditLog(
-      AuditAction.DOMAIN_REMOVE,
-      'domain',
-      domainId,
-      request,
-      userId,
-      { portfolioId, domain, removedAt: new Date().toISOString() }
-    );
-  }
-}
-
-/**
- * Log authentication events
- */
-export class AuthAuditLogger {
-  /**
-   * Log user login
-   */
-  static logLogin(
-    userId: string,
-    request: NextRequest,
-    success: boolean,
-    reason?: string
-  ): void {
-    createAuditLog(
-      AuditAction.USER_LOGIN,
-      'user',
-      userId,
-      request,
-      userId,
-      { success, reason, loginAt: new Date().toISOString() }
-    );
-  }
-
-  /**
-   * Log user logout
-   */
-  static logLogout(
-    userId: string,
-    request: NextRequest
-  ): void {
-    createAuditLog(
-      AuditAction.USER_LOGOUT,
-      'user',
-      userId,
-      request,
-      userId,
-      { logoutAt: new Date().toISOString() }
-    );
-  }
-}
-
-/**
- * Log admin operations
- */
-export class AdminAuditLogger {
-  /**
-   * Log admin action
-   */
-  static logAction(
-    adminId: string,
-    action: string,
-    request: NextRequest,
-    target?: { type: string; id: string },
-    metadata?: Record<string, any>
-  ): void {
-    createAuditLog(
-      AuditAction.ADMIN_ACTION,
-      target?.type || 'admin',
-      target?.id || adminId,
-      request,
-      adminId,
-      { action, ...metadata }
-    );
-  }
-}
-
-/**
- * Get audit logs for a resource
- */
-export function getAuditLogsForResource(
-  resource: string,
-  resourceId: string
-): AuditLogEntry[] {
-  return auditLogs.filter(
-    (log) => log.resource === resource && log.resourceId === resourceId
-  );
-}
-
-/**
- * Get audit logs for a user
- */
-export function getAuditLogsForUser(userId: string): AuditLogEntry[] {
-  return auditLogs.filter((log) => log.userId === userId);
-}
-
-/**
- * Get recent audit logs
- */
-export function getRecentAuditLogs(limit: number = 100): AuditLogEntry[] {
-  return auditLogs.slice(-limit).reverse();
-}
-
-/**
- * Export audit logs (for compliance)
- */
-export function exportAuditLogs(
-  startDate?: Date,
-  endDate?: Date
-): AuditLogEntry[] {
-  let filtered = [...auditLogs];
-
-  if (startDate) {
-    filtered = filtered.filter(
-      (log) => new Date(log.timestamp) >= startDate
-    );
-  }
-
-  if (endDate) {
-    filtered = filtered.filter(
-      (log) => new Date(log.timestamp) <= endDate
-    );
-  }
-
-  return filtered;
+  return { ipAddress, userAgent };
 }
