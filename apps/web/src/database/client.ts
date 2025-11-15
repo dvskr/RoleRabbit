@@ -13,11 +13,14 @@ import type {
   CreatePortfolioInput,
   UpdatePortfolioInput,
   PortfolioData,
+  PortfolioMedia,
   CustomDomain,
   PortfolioAnalytics,
   PortfolioShare,
   PortfolioDeployment,
   CreateCustomDomainInput,
+  CreatePortfolioMediaInput,
+  UpdatePortfolioMediaInput,
   UpsertAnalyticsInput,
   CreateShareInput,
   StartDeploymentInput,
@@ -47,6 +50,11 @@ export interface Database {
         Row: PortfolioVersion;
         Insert: Omit<PortfolioVersion, 'id' | 'createdAt'>;
         Update: never; // Versions are immutable
+      };
+      portfolio_media: {
+        Row: PortfolioMedia;
+        Insert: Omit<PortfolioMedia, 'id' | 'createdAt' | 'updatedAt'>;
+        Update: Partial<Omit<PortfolioMedia, 'id' | 'portfolioId' | 'createdAt'>>;
       };
       custom_domains: {
         Row: CustomDomain;
@@ -152,6 +160,10 @@ export interface Database {
       get_deployment_stats: {
         Args: { p_portfolio_id: string };
         Returns: DeploymentStats;
+      };
+      get_media_count: {
+        Args: { p_portfolio_id: string };
+        Returns: number;
       };
     };
   };
@@ -520,6 +532,146 @@ export class DatabaseHelpers {
     const { data, error } = await this.client.rpc('get_domains_needing_ssl_renewal', {
       p_days_before_expiry: daysBeforeExpiry,
     });
+
+    if (error) throw error;
+    return data;
+  }
+
+  // ============================================================================
+  // Portfolio Media (Section 3.9)
+  // ============================================================================
+
+  /**
+   * Create portfolio media
+   */
+  async createPortfolioMedia(input: CreatePortfolioMediaInput): Promise<PortfolioMedia> {
+    const { data, error } = await this.client
+      .from('portfolio_media')
+      .insert({
+        portfolio_id: input.portfolioId,
+        type: input.type,
+        url: input.url,
+        caption: input.caption,
+        display_order: input.displayOrder ?? 0,
+        width: input.width,
+        height: input.height,
+        file_size: input.fileSize,
+        mime_type: input.mimeType,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get portfolio media
+   */
+  async getPortfolioMedia(portfolioId: string): Promise<PortfolioMedia[]> {
+    const { data, error } = await this.client
+      .from('portfolio_media')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get single media item by ID
+   */
+  async getMediaById(mediaId: string): Promise<PortfolioMedia> {
+    const { data, error } = await this.client
+      .from('portfolio_media')
+      .select('*')
+      .eq('id', mediaId)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Update portfolio media
+   */
+  async updatePortfolioMedia(
+    mediaId: string,
+    input: UpdatePortfolioMediaInput
+  ): Promise<PortfolioMedia> {
+    const updateData: any = {};
+
+    if (input.url !== undefined) updateData.url = input.url;
+    if (input.caption !== undefined) updateData.caption = input.caption;
+    if (input.displayOrder !== undefined) updateData.display_order = input.displayOrder;
+    if (input.width !== undefined) updateData.width = input.width;
+    if (input.height !== undefined) updateData.height = input.height;
+    if (input.fileSize !== undefined) updateData.file_size = input.fileSize;
+    if (input.mimeType !== undefined) updateData.mime_type = input.mimeType;
+
+    const { data, error } = await this.client
+      .from('portfolio_media')
+      .update(updateData)
+      .eq('id', mediaId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Delete portfolio media
+   */
+  async deletePortfolioMedia(mediaId: string): Promise<void> {
+    const { error } = await this.client
+      .from('portfolio_media')
+      .delete()
+      .eq('id', mediaId);
+
+    if (error) throw error;
+  }
+
+  /**
+   * Reorder portfolio media
+   */
+  async reorderPortfolioMedia(
+    portfolioId: string,
+    mediaIds: string[]
+  ): Promise<void> {
+    // Update display_order for each media item
+    for (let i = 0; i < mediaIds.length; i++) {
+      await this.client
+        .from('portfolio_media')
+        .update({ display_order: i })
+        .eq('id', mediaIds[i])
+        .eq('portfolio_id', portfolioId);
+    }
+  }
+
+  /**
+   * Get media count for a portfolio
+   */
+  async getMediaCount(portfolioId: string): Promise<number> {
+    const { data, error } = await this.client.rpc('get_media_count', {
+      p_portfolio_id: portfolioId,
+    });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get media by type
+   */
+  async getMediaByType(portfolioId: string, type: 'IMAGE' | 'VIDEO'): Promise<PortfolioMedia[]> {
+    const { data, error } = await this.client
+      .from('portfolio_media')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .eq('type', type)
+      .order('display_order', { ascending: true });
 
     if (error) throw error;
     return data;

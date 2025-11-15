@@ -31,6 +31,23 @@ export enum PortfolioBuildStatus {
 }
 
 /**
+ * Portfolio availability status
+ */
+export enum AvailabilityStatus {
+  AVAILABLE = 'AVAILABLE',
+  NOT_AVAILABLE = 'NOT_AVAILABLE',
+  OPEN_TO_OPPORTUNITIES = 'OPEN_TO_OPPORTUNITIES',
+}
+
+/**
+ * Portfolio media type
+ */
+export enum MediaType {
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+}
+
+/**
  * Template category
  */
 export enum TemplateCategory {
@@ -79,6 +96,11 @@ export interface Portfolio {
 
   // Custom domain
   subdomain: string | null; // VARCHAR(63), 3-63 chars, lowercase, hyphens
+
+  // Profile information
+  tagline: string | null; // VARCHAR(200)
+  location: string | null; // VARCHAR(100)
+  availabilityStatus: AvailabilityStatus | null; // availability_status enum
 
   // SEO metadata
   metaTitle: string | null; // VARCHAR(255)
@@ -339,6 +361,9 @@ export interface UpdatePortfolioInput {
   isDraft?: boolean;
   visibility?: PortfolioVisibility;
   subdomain?: string;
+  tagline?: string;
+  location?: string;
+  availabilityStatus?: AvailabilityStatus;
   metaTitle?: string;
   metaDescription?: string;
   ogImage?: string;
@@ -556,6 +581,25 @@ export interface PortfolioDeployment {
   createdAt: Date; // TIMESTAMPTZ
 }
 
+/**
+ * Portfolio Media table (Section 3.9)
+ * Media assets for portfolios (images and videos)
+ */
+export interface PortfolioMedia {
+  id: string; // VARCHAR(30), pm_* prefix with CUID
+  portfolioId: string; // UUID, foreign key to portfolios
+  type: MediaType; // media_type enum
+  url: string; // VARCHAR(500)
+  caption: string | null; // TEXT
+  displayOrder: number; // INTEGER, default 0
+  width: number | null; // INTEGER
+  height: number | null; // INTEGER
+  fileSize: number | null; // INTEGER (bytes)
+  mimeType: string | null; // VARCHAR(100)
+  createdAt: Date; // TIMESTAMPTZ
+  updatedAt: Date; // TIMESTAMPTZ
+}
+
 // ============================================================================
 // Input Types for New Tables
 // ============================================================================
@@ -600,6 +644,34 @@ export interface CreateShareInput {
 export interface StartDeploymentInput {
   portfolioId: string;
   deployedBy?: string;
+}
+
+/**
+ * Input for creating portfolio media
+ */
+export interface CreatePortfolioMediaInput {
+  portfolioId: string;
+  type: MediaType;
+  url: string;
+  caption?: string;
+  displayOrder?: number;
+  width?: number;
+  height?: number;
+  fileSize?: number;
+  mimeType?: string;
+}
+
+/**
+ * Input for updating portfolio media
+ */
+export interface UpdatePortfolioMediaInput {
+  url?: string;
+  caption?: string;
+  displayOrder?: number;
+  width?: number;
+  height?: number;
+  fileSize?: number;
+  mimeType?: string;
 }
 
 // ============================================================================
@@ -673,6 +745,7 @@ export const TableName = {
   PORTFOLIOS: 'portfolios',
   PORTFOLIO_TEMPLATES: 'portfolio_templates',
   PORTFOLIO_VERSIONS: 'portfolio_versions',
+  PORTFOLIO_MEDIA: 'portfolio_media',
   CUSTOM_DOMAINS: 'custom_domains',
   PORTFOLIO_ANALYTICS: 'portfolio_analytics',
   PORTFOLIO_SHARES: 'portfolio_shares',
