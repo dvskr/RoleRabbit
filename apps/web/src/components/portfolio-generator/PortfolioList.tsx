@@ -1,8 +1,9 @@
 /**
  * Portfolio List Component
  * Example implementation showing error handling with retry (Section 1.5)
+ * Now with skeleton loading (Section 1.6 requirement #3)
  * Demonstrates:
- * - Loading states
+ * - Skeleton loading placeholders instead of blank screen
  * - Error states with retry button
  * - Empty states
  * - Success states
@@ -10,11 +11,13 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { FetchErrorState, useFetchState } from '../error/FetchErrorState';
+import React, { useEffect } from 'react';
+import { useFetchState } from '../error/FetchErrorState';
+import { SkeletonPortfolioList } from '../loading/Skeleton';
+import { ErrorDisplay } from '../error/ErrorDisplay';
 import { portfolioApi } from '../../lib/api/portfolioApi';
 import { Portfolio } from '../../types/portfolio';
-import { Folder, Calendar, Eye } from 'lucide-react';
+import { Folder, Calendar, Eye, FolderOpen } from 'lucide-react';
 
 export function PortfolioList() {
   const {
@@ -51,24 +54,37 @@ export function PortfolioList() {
     <div className="p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">My Portfolios</h2>
 
-      {/* Fetch error state handles loading, error, and empty states */}
-      <FetchErrorState
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        isEmpty={isEmpty}
-        onRetry={handleRetry}
-        loadingMessage="Loading your portfolios..."
-        emptyMessage="No portfolios yet"
-        emptyDescription="Create your first portfolio to get started!"
-      >
-        {/* Success state - render portfolio list */}
+      {/* Skeleton loading (Section 1.6 requirement #3) */}
+      {isLoading && <SkeletonPortfolioList count={6} />}
+
+      {/* Error state */}
+      {isError && error && (
+        <ErrorDisplay
+          error={error}
+          onRetry={handleRetry}
+          context={{ action: 'load portfolios' }}
+        />
+      )}
+
+      {/* Empty state */}
+      {!isLoading && !isError && isEmpty && (
+        <div className="flex flex-col items-center justify-center p-12 text-center">
+          <div className="p-4 bg-gray-100 rounded-full mb-4">
+            <FolderOpen className="text-gray-400" size={48} />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No portfolios yet</h3>
+          <p className="text-gray-600 mb-6 max-w-md">Create your first portfolio to get started!</p>
+        </div>
+      )}
+
+      {/* Success state - render portfolio list */}
+      {!isLoading && !isError && data && data.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data?.map((portfolio) => (
+          {data.map((portfolio) => (
             <PortfolioCard key={portfolio.id} portfolio={portfolio} />
           ))}
         </div>
-      </FetchErrorState>
+      )}
     </div>
   );
 }

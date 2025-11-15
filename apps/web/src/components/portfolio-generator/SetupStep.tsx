@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, User, Briefcase, Linkedin, Github, Globe } from 'lucide-react';
 import {
   validateName,
@@ -16,6 +16,7 @@ import {
 import { ValidationMessage } from '../validation/ValidationMessage';
 import { CharacterCount } from '../validation/CharacterCount';
 import { FormValidationSummary } from '../validation/FormValidationSummary';
+import { LoadingOverlay, ButtonSpinner } from '../loading/LoadingSpinner';
 
 interface SetupProfileData {
   firstName?: string;
@@ -62,6 +63,10 @@ interface FieldState {
 export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
   const initialName = profileData ? `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() : '';
 
+  // Loading states (Section 1.6)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
   // Field states
   const [name, setName] = useState<FieldState>({ value: initialName, touched: false });
   const [email, setEmail] = useState<FieldState>({ value: profileData?.email ?? '', touched: false });
@@ -85,6 +90,17 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Simulate loading profile data on mount (Section 1.6 requirement #1)
+  useEffect(() => {
+    const loadProfileData = async () => {
+      // Simulate fetching profile data
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsInitialLoading(false);
+    };
+
+    loadProfileData();
+  }, []);
 
   const templates = [
     {
@@ -152,7 +168,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
     reader.readAsDataURL(file);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     setAttemptedSubmit(true);
 
     // Mark all fields as touched
@@ -170,28 +186,41 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
       return;
     }
 
-    // Sanitize all text inputs before submitting
-    const data: SetupFormData = {
-      name: sanitizeText(name.value),
-      email: email.value.trim(),
-      role: company ? `${sanitizeText(role.value)} at ${sanitizeText(company)}` : sanitizeText(role.value),
-      bio: sanitizeText(bio.value),
-      professionalBio: sanitizeText(bio.value),
-      linkedin: linkedin.value.trim(),
-      github: github.value.trim(),
-      website: website.value.trim(),
-      profilePic,
-      template,
-      links: [linkedin.value, github.value, website.value].filter(Boolean),
-    };
+    // Set saving state (Section 1.6 requirement #2)
+    setIsSaving(true);
 
-    onComplete(data);
+    try {
+      // Sanitize all text inputs before submitting
+      const data: SetupFormData = {
+        name: sanitizeText(name.value),
+        email: email.value.trim(),
+        role: company ? `${sanitizeText(role.value)} at ${sanitizeText(company)}` : sanitizeText(role.value),
+        bio: sanitizeText(bio.value),
+        professionalBio: sanitizeText(bio.value),
+        linkedin: linkedin.value.trim(),
+        github: github.value.trim(),
+        website: website.value.trim(),
+        profilePic,
+        template,
+        links: [linkedin.value, github.value, website.value].filter(Boolean),
+      };
+
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      onComplete(data);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="h-full overflow-y-auto bg-gray-50">
       <div className="max-w-4xl mx-auto p-8">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 relative">
+          {/* Loading overlay when fetching profile data (Section 1.6 requirement #1) */}
+          {isInitialLoading && <LoadingOverlay text="Loading your profile..." />}
+
           <h2 className="text-3xl font-bold text-gray-900 mb-6">Setup Your Portfolio</h2>
           <p className="text-gray-600 mb-8">Let's start by gathering your basic information</p>
 
@@ -515,12 +544,21 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
             <button
               type="button"
               onClick={handleContinue}
-              disabled={!formValid && attemptedSubmit}
+              disabled={(!formValid && attemptedSubmit) || isSaving}
               className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              title={!formValid ? 'Please fix validation errors' : ''}
+              title={!formValid ? 'Please fix validation errors' : isSaving ? 'Saving...' : ''}
             >
-              Continue
-              <Briefcase size={20} />
+              {isSaving ? (
+                <>
+                  <ButtonSpinner size="sm" variant="white" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Continue
+                  <Briefcase size={20} />
+                </>
+              )}
             </button>
           </div>
         </div>
