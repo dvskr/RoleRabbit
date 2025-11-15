@@ -97,3 +97,29 @@ temp/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Secrets and Environment Files (Section 4.7)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.crt
+secrets/
+secrets.json
+credentials.json
+
+# AWS/Cloud credentials
+.aws/
+.gcloud/
+
+# Terraform state (contains secrets)
+*.tfstate
+*.tfstate.backup
+
+# Kubernetes secrets
+*-secret.yaml
+*secret*.yaml
