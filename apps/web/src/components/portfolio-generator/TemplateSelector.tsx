@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Palette, Layout, Code, Briefcase, Sparkles, ArrowRight, Monitor, Smartphone, Tablet, Eye } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { WebsiteConfig, PortfolioTemplateDefinition, TemplateCategory } from '../../types/portfolio';
 import TemplatePreviewModal from './TemplatePreviewModal';
+import { TemplateLoadErrorEmptyState } from '../empty-state';
+import { SkeletonTemplateGrid } from '../loading/Skeleton';
 
 interface TemplateSelectorProps {
   onNext: () => void;
@@ -141,21 +143,56 @@ const colorPalettes: ColorPalette[] = [
 ];
 
 export default function TemplateSelector({ onNext, onBack, config, onUpdate }: TemplateSelectorProps) {
+  // Loading and error states (Section 1.7 requirement #2)
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [loadedTemplates, setLoadedTemplates] = useState<PortfolioTemplateDefinition[]>([]);
+
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(config.theme?.templateId || 'minimal');
   const [selectedPalette, setSelectedPalette] = useState<string[]>(config.theme?.colors || ['#3b82f6']);
   const [categoryFilter, setCategoryFilter] = useState<'all' | TemplateCategory>('all');
   const [previewingTemplate, setPreviewingTemplate] = useState<PortfolioTemplateDefinition | null>(null);
 
-  const filteredTemplates = useMemo(() => {
-    if (categoryFilter === 'all') return templates;
-    return templates.filter(t => t.category === categoryFilter);
-  }, [categoryFilter]);
+  // Simulate loading templates from API (Section 1.7 requirement #2)
+  useEffect(() => {
+    loadTemplates();
+  }, []);
 
-  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+  const loadTemplates = async () => {
+    setIsLoading(true);
+    setIsError(false);
+
+    try {
+      // Simulate API call with delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // In a real app, this would be: const response = await portfolioApi.getTemplates();
+      // Uncomment the line below to simulate an error:
+      // throw new Error('Failed to load templates');
+
+      setLoadedTemplates(templates);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+      setIsError(true);
+      setIsLoading(false);
+    }
+  };
+
+  const handleRetry = () => {
+    loadTemplates();
+  };
+
+  const filteredTemplates = useMemo(() => {
+    if (categoryFilter === 'all') return loadedTemplates;
+    return loadedTemplates.filter(t => t.category === categoryFilter);
+  }, [categoryFilter, loadedTemplates]);
+
+  const selectedTemplate = loadedTemplates.find(t => t.id === selectedTemplateId);
 
   const handleSelectTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
-    const template = templates.find(t => t.id === templateId);
+    const template = loadedTemplates.find(t => t.id === templateId);
     if (template) {
       onUpdate({
         theme: {
@@ -209,27 +246,36 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
       {/* Content */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          {/* Category Filters */}
-          <div className="flex items-center gap-3 mb-6 p-2 bg-white rounded-xl shadow-sm">
-            {categories.map((cat) => {
-              const Icon = cat.icon;
-              return (
-                <button
-                  type="button"
-                  key={cat.id}
-                  onClick={() => setCategoryFilter(cat.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    categoryFilter === cat.id
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span>{cat.name}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Loading State (Section 1.6 requirement #8) */}
+          {isLoading && <SkeletonTemplateGrid count={6} />}
+
+          {/* Error State (Section 1.7 requirement #2) */}
+          {isError && <TemplateLoadErrorEmptyState onRetry={handleRetry} />}
+
+          {/* Success State - Show templates */}
+          {!isLoading && !isError && (
+            <>
+              {/* Category Filters */}
+              <div className="flex items-center gap-3 mb-6 p-2 bg-white rounded-xl shadow-sm">
+                {categories.map((cat) => {
+                  const Icon = cat.icon;
+                  return (
+                    <button
+                      type="button"
+                      key={cat.id}
+                      onClick={() => setCategoryFilter(cat.id)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                        categoryFilter === cat.id
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Template Grid */}
@@ -567,6 +613,8 @@ export default function TemplateSelector({ onNext, onBack, config, onUpdate }: T
               )}
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
 

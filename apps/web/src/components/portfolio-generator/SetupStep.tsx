@@ -276,7 +276,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 value={name.value}
                 onChange={e => setName({ value: e.target.value, touched: name.touched })}
                 onBlur={() => setName(prev => ({ ...prev, touched: true }))}
-                placeholder="John Doe"
+                placeholder="e.g., John Doe"
                 maxLength={VALIDATION_LIMITS.NAME.MAX}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   !nameValidation.isValid && (name.touched || attemptedSubmit)
@@ -327,7 +327,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 value={role.value}
                 onChange={e => setRole({ value: e.target.value, touched: role.touched })}
                 onBlur={() => setRole(prev => ({ ...prev, touched: true }))}
-                placeholder="Software Engineer"
+                placeholder="e.g., Senior Software Engineer"
                 maxLength={VALIDATION_LIMITS.ROLE.MAX}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   !roleValidation.isValid && (role.touched || attemptedSubmit)
@@ -355,7 +355,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 type="text"
                 value={company}
                 onChange={e => setCompany(e.target.value)}
-                placeholder="Tech Corp"
+                placeholder="e.g., Google, Microsoft, Acme Corp"
                 maxLength={100}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
@@ -372,7 +372,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               value={bio.value}
               onChange={e => setBio({ value: e.target.value, touched: bio.touched })}
               onBlur={() => setBio(prev => ({ ...prev, touched: true }))}
-              placeholder="Tell us about yourself..."
+              placeholder="e.g., Passionate software engineer with 5 years of experience building scalable web applications..."
               rows={4}
               maxLength={VALIDATION_LIMITS.BIO.MAX}
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${

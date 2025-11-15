@@ -2,10 +2,11 @@
  * Portfolio List Component
  * Example implementation showing error handling with retry (Section 1.5)
  * Now with skeleton loading (Section 1.6 requirement #3)
+ * Now with enhanced empty state (Section 1.7 requirement #1)
  * Demonstrates:
  * - Skeleton loading placeholders instead of blank screen
  * - Error states with retry button
- * - Empty states
+ * - Empty state with CTA button
  * - Success states
  */
 
@@ -15,9 +16,10 @@ import React, { useEffect } from 'react';
 import { useFetchState } from '../error/FetchErrorState';
 import { SkeletonPortfolioList } from '../loading/Skeleton';
 import { ErrorDisplay } from '../error/ErrorDisplay';
+import { NoPortfoliosEmptyState } from '../empty-state';
 import { portfolioApi } from '../../lib/api/portfolioApi';
 import { Portfolio } from '../../types/portfolio';
-import { Folder, Calendar, Eye, FolderOpen } from 'lucide-react';
+import { Folder, Calendar, Eye } from 'lucide-react';
 
 export function PortfolioList() {
   const {
@@ -50,6 +52,12 @@ export function PortfolioList() {
     retry(loadPortfolios);
   };
 
+  const handleCreatePortfolio = () => {
+    // Navigate to portfolio creation (would be implemented with router)
+    console.log('Navigate to create portfolio');
+    // In a real app: router.push('/portfolios/create');
+  };
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">My Portfolios</h2>
@@ -66,15 +74,9 @@ export function PortfolioList() {
         />
       )}
 
-      {/* Empty state */}
+      {/* Empty state with CTA (Section 1.7 requirement #1) */}
       {!isLoading && !isError && isEmpty && (
-        <div className="flex flex-col items-center justify-center p-12 text-center">
-          <div className="p-4 bg-gray-100 rounded-full mb-4">
-            <FolderOpen className="text-gray-400" size={48} />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No portfolios yet</h3>
-          <p className="text-gray-600 mb-6 max-w-md">Create your first portfolio to get started!</p>
-        </div>
+        <NoPortfoliosEmptyState onCreatePortfolio={handleCreatePortfolio} />
       )}
 
       {/* Success state - render portfolio list */}
