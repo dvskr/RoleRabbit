@@ -360,3 +360,25 @@ export function getRecommendedAction(result: ModerationResult): {
     message: 'Content passed moderation checks',
   };
 }
+
+/**
+ * Scan portfolio by ID (convenience wrapper)
+ */
+export async function scanPortfolio(portfolioId: string): Promise<ModerationResult> {
+  const { createSupabaseServiceClient } = await import('@/database/client');
+  const supabase = createSupabaseServiceClient();
+
+  // Fetch portfolio
+  const { data: portfolio, error } = await supabase
+    .from('portfolios')
+    .select('id, title, description, data')
+    .eq('id', portfolioId)
+    .single();
+
+  if (error || !portfolio) {
+    throw new Error('Portfolio not found');
+  }
+
+  // Scan portfolio content
+  return scanPortfolioContent(portfolio);
+}

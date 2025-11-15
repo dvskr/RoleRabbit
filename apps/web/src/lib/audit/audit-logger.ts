@@ -30,12 +30,19 @@ export enum AuditAction {
 
   DATA_EXPORTED = 'data.exported',
   DATA_DELETED = 'data.deleted',
+
+  CONTENT_MODERATED = 'content.moderated',
+  USER_BANNED = 'user.banned',
+
+  ACCOUNT_DELETION_SCHEDULED = 'account.deletion_scheduled',
+  ACCOUNT_DELETION_CANCELLED = 'account.deletion_cancelled',
 }
 
 export interface AuditLogEntry {
   id?: string;
   action: AuditAction;
   userId: string;
+  targetUserId?: string;
   resourceType?: string;
   resourceId?: string;
   ipAddress?: string;
@@ -52,6 +59,7 @@ class AuditLogger {
       const { error } = await this.supabase.from('audit_logs').insert({
         action: entry.action,
         user_id: entry.userId,
+        target_user_id: entry.targetUserId,
         resource_type: entry.resourceType,
         resource_id: entry.resourceId,
         ip_address: entry.ipAddress,

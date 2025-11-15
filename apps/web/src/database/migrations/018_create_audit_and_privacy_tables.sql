@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   action VARCHAR(100) NOT NULL,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  target_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE, -- For moderation actions
   resource_type VARCHAR(50),
   resource_id VARCHAR(255),
   ip_address VARCHAR(45), -- IPv6 compatible

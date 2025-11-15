@@ -551,3 +551,57 @@ export async function getUserViolationHistory(
     bans,
   };
 }
+
+/**
+ * Get abuse reports with filtering and pagination
+ */
+export async function getAbuseReports(options: {
+  status?: AbuseReportStatus;
+  page?: number;
+  limit?: number;
+}): Promise<{ reports: AbuseReport[]; total: number }> {
+  const supabase = createSupabaseServiceClient();
+  const { status, page = 1, limit = 20 } = options;
+
+  try {
+    let query = supabase
+      .from('abuse_reports')
+      .select('*', { count: 'exact' });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const offset = (page - 1) * limit;
+    query = query
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching abuse reports:', error);
+      return { reports: [], total: 0 };
+    }
+
+    const reports: AbuseReport[] = (data || []).map((row: any) => ({
+      id: row.id,
+      reporterId: row.reporter_id,
+      reportedUserId: row.reported_user_id,
+      portfolioId: row.portfolio_id,
+      reason: row.reason,
+      description: row.description,
+      status: row.status,
+      createdAt: row.created_at,
+      resolvedAt: row.resolved_at,
+      resolvedBy: row.resolved_by,
+      resolution: row.resolution,
+      actionTaken: row.action_taken,
+    }));
+
+    return { reports, total: count || 0 };
+  } catch (error) {
+    console.error('Error fetching abuse reports:', error);
+    return { reports: [], total: 0 };
+  }
+}

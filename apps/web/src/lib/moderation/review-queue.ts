@@ -424,3 +424,178 @@ export async function escalateReview(
     return { success: false };
   }
 }
+
+/**
+ * Priority levels for review queue
+ */
+export type ReviewPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+/**
+ * Get review queue with filtering and pagination
+ */
+export async function getReviewQueue(options: {
+  status?: ReviewStatus;
+  priority?: ReviewPriority;
+  page?: number;
+  limit?: number;
+}): Promise<{ items: ReviewQueueItem[]; total: number; stats?: any }> {
+  const supabase = createSupabaseServiceClient();
+  const { status, priority, page = 1, limit = 20 } = options;
+
+  try {
+    let query = supabase
+      .from('review_queue')
+      .select('*', { count: 'exact' });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (priority) {
+      query = query.eq('priority', priority);
+    }
+
+    const offset = (page - 1) * limit;
+    query = query
+      .range(offset, offset + limit - 1)
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('Error fetching review queue:', error);
+      return { items: [], total: 0 };
+    }
+
+    const items: ReviewQueueItem[] = (data || []).map((row: any) => ({
+      id: row.id,
+      portfolioId: row.portfolio_id,
+      userId: row.user_id,
+      contentType: row.content_type,
+      contentSnapshot: row.content_snapshot,
+      moderationResult: row.moderation_result,
+      status: row.status,
+      priority: row.priority,
+      createdAt: row.created_at,
+      reviewedAt: row.reviewed_at,
+      reviewedBy: row.reviewed_by,
+      reviewDecision: row.review_decision,
+      reviewNotes: row.review_notes,
+    }));
+
+    // Get stats
+    const stats = await getReviewQueueStats();
+
+    return { items, total: count || 0, stats };
+  } catch (error) {
+    console.error('Error fetching review queue:', error);
+    return { items: [], total: 0 };
+  }
+}
+
+/**
+ * Approve content from review queue
+ */
+export async function approveContent(
+  queueId: string,
+  reviewerId: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createSupabaseServiceClient();
+
+  try {
+    // Get review item
+    const { data: item, error: fetchError } = await supabase
+      .from('review_queue')
+      .select('portfolio_id')
+      .eq('id', queueId)
+      .single();
+
+    if (fetchError || !item) {
+      return { success: false, error: 'Review item not found' };
+    }
+
+    // Update review queue
+    const { error: updateQueueError } = await supabase
+      .from('review_queue')
+      .update({
+        status: ReviewStatus.APPROVED,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: reviewerId,
+        review_decision: ReviewDecision.APPROVE,
+        review_notes: notes,
+      })
+      .eq('id', queueId);
+
+    if (updateQueueError) {
+      throw updateQueueError;
+    }
+
+    // Ensure portfolio stays published
+    await supabase
+      .from('portfolios')
+      .update({ moderation_reason: null })
+      .eq('id', item.portfolio_id);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error approving content:', error);
+    return { success: false, error: 'Failed to approve content' };
+  }
+}
+
+/**
+ * Reject content from review queue
+ */
+export async function rejectContent(
+  queueId: string,
+  reviewerId: string,
+  notes: string,
+  requiresRevision?: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createSupabaseServiceClient();
+
+  try {
+    // Get review item
+    const { data: item, error: fetchError } = await supabase
+      .from('review_queue')
+      .select('portfolio_id')
+      .eq('id', queueId)
+      .single();
+
+    if (fetchError || !item) {
+      return { success: false, error: 'Review item not found' };
+    }
+
+    // Update review queue
+    const { error: updateQueueError } = await supabase
+      .from('review_queue')
+      .update({
+        status: ReviewStatus.REJECTED,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: reviewerId,
+        review_decision: requiresRevision ? ReviewDecision.REQUEST_CHANGES : ReviewDecision.REJECT,
+        review_notes: notes,
+      })
+      .eq('id', queueId);
+
+    if (updateQueueError) {
+      throw updateQueueError;
+    }
+
+    // Unpublish portfolio
+    await supabase
+      .from('portfolios')
+      .update({
+        published: false,
+        moderation_reason: notes,
+      })
+      .eq('id', item.portfolio_id);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error rejecting content:', error);
+    return { success: false, error: 'Failed to reject content' };
+  }
+}

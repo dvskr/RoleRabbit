@@ -34,6 +34,10 @@ export enum Permission {
   ADMIN_USERS = 'admin:users',
   ADMIN_MODERATE = 'admin:moderate',
 
+  // Moderation permissions
+  CONTENT_MODERATE = 'content:moderate',
+  USER_BAN = 'user:ban',
+
   // Organization permissions (future)
   ORG_CREATE = 'org:create',
   ORG_MANAGE = 'org:manage',
@@ -41,22 +45,25 @@ export enum Permission {
 }
 
 // Role-Permission mapping
+const userPermissions = [
+  Permission.PORTFOLIO_CREATE,
+  Permission.PORTFOLIO_READ,
+  Permission.PORTFOLIO_UPDATE,
+  Permission.PORTFOLIO_DELETE,
+  Permission.PORTFOLIO_PUBLISH,
+  Permission.PORTFOLIO_SHARE,
+  Permission.TEMPLATE_READ,
+  Permission.ANALYTICS_READ,
+  Permission.ANALYTICS_EXPORT,
+];
+
 const rolePermissions: Record<Role, Permission[]> = {
-  [Role.USER]: [
-    Permission.PORTFOLIO_CREATE,
-    Permission.PORTFOLIO_READ,
-    Permission.PORTFOLIO_UPDATE,
-    Permission.PORTFOLIO_DELETE,
-    Permission.PORTFOLIO_PUBLISH,
-    Permission.PORTFOLIO_SHARE,
-    Permission.TEMPLATE_READ,
-    Permission.ANALYTICS_READ,
-    Permission.ANALYTICS_EXPORT,
-  ],
+  [Role.USER]: userPermissions,
   [Role.MODERATOR]: [
     // All user permissions
-    ...rolePermissions[Role.USER],
+    ...userPermissions,
     Permission.ADMIN_MODERATE,
+    Permission.CONTENT_MODERATE,
   ],
   [Role.ADMIN]: [
     // All permissions
