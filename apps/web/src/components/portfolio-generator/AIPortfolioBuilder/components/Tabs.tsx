@@ -56,6 +56,7 @@ export function Tabs({ activeTab, onTabChange, colors }: TabsProps) {
       {tabs.map((tab) => (
         <button
           key={tab.id}
+          id={`tab-${tab.id}`}
           onClick={() => onTabChange(tab.id)}
           role="tab"
           aria-selected={activeTab === tab.id}

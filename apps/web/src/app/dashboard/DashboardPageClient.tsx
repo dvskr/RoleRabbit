@@ -89,6 +89,8 @@ import {
 import { ResumePreview } from './components/ResumePreview';
 import { CustomSectionEditor } from './components/CustomSectionEditor';
 import { DashboardModals } from './components/DashboardModals';
+// Import accessibility components
+import { SkipLinks, MainContent } from '../../components/accessibility/SkipLinks';
 // Import dashboard hooks
 import { useDashboardUI } from './hooks/useDashboardUI';
 import { useDashboardTemplates } from './hooks/useDashboardTemplates';
@@ -1109,6 +1111,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   return (
     <ErrorBoundary>
+      {/* Skip Links for keyboard accessibility */}
+      <SkipLinks />
+
       <div className="fixed inset-0 flex" style={{ background: colors.background }}>
         {activeTab === 'editor' && resumeApplyState.status !== 'idle' && resumeApplyMessage && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
@@ -1132,14 +1137,17 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
           </div>
         )}
         {/* Sidebar */}
-        <Sidebar
-          activeTab={activeTab}
-          sidebarCollapsed={sidebarCollapsed}
-          onTabChange={handleTabChange}
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
+        <nav id="navigation">
+          <Sidebar
+            activeTab={activeTab}
+            sidebarCollapsed={sidebarCollapsed}
+            onTabChange={handleTabChange}
+            onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          />
+        </nav>
 
         {/* Main Content Area */}
+        <MainContent>
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {/* Header */}
           {activeTab === 'editor' ? (
@@ -1325,6 +1333,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             )}
           </div>
         </div>
+        </MainContent>
       </div>
 
       {/* All Modals */}
