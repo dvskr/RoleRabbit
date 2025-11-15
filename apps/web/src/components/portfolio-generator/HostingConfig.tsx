@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Globe, Server, Cloud, Upload, CheckCircle, ExternalLink, Copy } from 'lucide-react';
+import { Globe, Server, Cloud, Upload, CheckCircle, ExternalLink, Copy, AlertCircle } from 'lucide-react';
 import { WebsiteConfig } from '../../types/portfolio';
+import { validateSubdomain } from '../../utils/formValidation';
+import { ValidationMessage } from '../validation/ValidationMessage';
 
 interface HostingConfigProps {
   onBack: () => void;
@@ -12,28 +14,46 @@ interface HostingConfigProps {
 
 type HostingOption = 'subdomain' | 'custom' | 'download';
 
+interface FieldState {
+  value: string;
+  touched: boolean;
+}
+
 export default function HostingConfig({ onBack, config, portfolioData }: HostingConfigProps) {
   const [hostingType, setHostingType] = useState<HostingOption>('subdomain');
-  const [subdomain, setSubdomain] = useState<string>('john-doe');
+  const [subdomain, setSubdomain] = useState<FieldState>({ value: 'john-doe', touched: false });
   const [customDomain, setCustomDomain] = useState<string>('johndoe.com');
   const [isDeploying, setIsDeploying] = useState(false);
   const [isDeployed, setIsDeployed] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const portfolioUrl = hostingType === 'subdomain'
-    ? `https://${subdomain}.roleready.portfolio`
-    : hostingType === 'custom'
-    ? `https://${customDomain}`
-    : null;
+  // Validate subdomain
+  const subdomainValidation = validateSubdomain(subdomain.value);
+
+  const portfolioUrl =
+    hostingType === 'subdomain'
+      ? `https://${subdomain.value}.roleready.portfolio`
+      : hostingType === 'custom'
+      ? `https://${customDomain}`
+      : null;
 
   const handleDeploy = async () => {
+    // If subdomain hosting, validate before deploying
+    if (hostingType === 'subdomain') {
+      setSubdomain(prev => ({ ...prev, touched: true }));
+
+      if (!subdomainValidation.isValid) {
+        return;
+      }
+    }
+
     setIsDeploying(true);
-    
+
     try {
       // Call the downloadPortfolio function to generate the ZIP
       const { downloadPortfolio } = await import('../../utils/portfolioExporter');
       await downloadPortfolio(config, portfolioData);
-      
+
       // Simulate deployment success
       setTimeout(() => {
         setIsDeploying(false);
@@ -84,6 +104,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {/* Subdomain Option */}
             <button
+              type="button"
               onClick={() => setHostingType('subdomain')}
               className={`p-6 rounded-xl border-2 text-left transition-all hover:shadow-lg ${
                 hostingType === 'subdomain'
@@ -97,9 +118,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                 </div>
                 <h3 className="font-semibold text-gray-900">Free Subdomain</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Host your portfolio on RoleReady's platform for free
-              </p>
+              <p className="text-sm text-gray-600 mb-4">Host your portfolio on RoleReady's platform for free</p>
               <div className="flex items-center gap-2 text-sm font-medium text-blue-600">
                 <span>Instant deployment</span>
               </div>
@@ -107,6 +126,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
 
             {/* Custom Domain Option */}
             <button
+              type="button"
               onClick={() => setHostingType('custom')}
               className={`p-6 rounded-xl border-2 text-left transition-all hover:shadow-lg ${
                 hostingType === 'custom'
@@ -120,9 +140,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                 </div>
                 <h3 className="font-semibold text-gray-900">Custom Domain</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Use your own domain name for a professional touch
-              </p>
+              <p className="text-sm text-gray-600 mb-4">Use your own domain name for a professional touch</p>
               <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
                 <span>Professional URL</span>
               </div>
@@ -130,6 +148,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
 
             {/* Download Option */}
             <button
+              type="button"
               onClick={() => setHostingType('download')}
               className={`p-6 rounded-xl border-2 text-left transition-all hover:shadow-lg ${
                 hostingType === 'download'
@@ -143,9 +162,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                 </div>
                 <h3 className="font-semibold text-gray-900">Download Files</h3>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Download static files to host anywhere you want
-              </p>
+              <p className="text-sm text-gray-600 mb-4">Download static files to host anywhere you want</p>
               <div className="flex items-center gap-2 text-sm font-medium text-green-600">
                 <span>Full control</span>
               </div>
@@ -155,32 +172,62 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
           {/* Configuration Panel */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h3 className="font-semibold text-gray-900 mb-4">Configuration</h3>
-            
+
             {hostingType === 'subdomain' && (
               <div className="space-y-4">
                 <div>
                   <label htmlFor="hosting-subdomain" className="block text-sm font-medium text-gray-700 mb-2">
-                    Subdomain
+                    Subdomain <span className="text-red-600">*</span>
                   </label>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 flex items-center border border-gray-300 rounded-lg px-4 py-2.5">
+                    <div
+                      className={`flex-1 flex items-center border rounded-lg px-4 py-2.5 ${
+                        !subdomainValidation.isValid && subdomain.touched
+                          ? 'border-red-500 bg-red-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
                       <span className="text-gray-500">https://</span>
                       <input
                         id="hosting-subdomain"
                         type="text"
-                        value={subdomain}
-                        onChange={(e) => setSubdomain(e.target.value)}
-                        className="flex-1 px-2 py-1 outline-none text-gray-900"
+                        value={subdomain.value}
+                        onChange={e =>
+                          setSubdomain(prev => ({ ...prev, value: e.target.value.toLowerCase() }))
+                        }
+                        onBlur={() => setSubdomain(prev => ({ ...prev, touched: true }))}
+                        className="flex-1 px-2 py-1 outline-none text-gray-900 bg-transparent"
                         placeholder="your-name"
                         aria-label="Subdomain input"
+                        maxLength={63}
                       />
                       <span className="text-gray-500">.roleready.portfolio</span>
                     </div>
                   </div>
+                  <ValidationMessage error={subdomainValidation.error} show={subdomain.touched} />
                   <p className="text-xs text-gray-500 mt-2">
-                    Your portfolio will be available at this URL
+                    Lowercase letters, numbers, and hyphens only (3-63 characters)
                   </p>
                 </div>
+
+                {/* Validation Info */}
+                {subdomain.touched && !subdomainValidation.isValid && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={18} />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-semibold mb-1">Subdomain Requirements:</p>
+                        <ul className="space-y-0.5 ml-4 list-disc">
+                          <li>3-63 characters long</li>
+                          <li>Lowercase letters, numbers, and hyphens</li>
+                          <li>Cannot start or end with a hyphen</li>
+                          <li>No consecutive hyphens</li>
+                          <li>Not a reserved word (www, api, admin, etc.)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -194,14 +241,12 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                     id="hosting-custom-domain"
                     type="text"
                     value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
+                    onChange={e => setCustomDomain(e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900"
                     placeholder="yourdomain.com"
                     aria-label="Custom domain input"
                   />
-                  <p className="text-xs text-gray-500 mt-2">
-                    You'll need to update your domain's DNS records
-                  </p>
+                  <p className="text-xs text-gray-500 mt-2">You'll need to update your domain's DNS records</p>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 mb-2">DNS Configuration</h4>
@@ -231,7 +276,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 mb-2">Recommended Hosting Platforms</h4>
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {['GitHub Pages', 'Netlify', 'Vercel', 'Cloudflare Pages', 'AWS S3'].map((platform) => (
+                    {['GitHub Pages', 'Netlify', 'Vercel', 'Cloudflare Pages', 'AWS S3'].map(platform => (
                       <span
                         key={platform}
                         className="px-3 py-1 bg-white rounded-md text-xs font-medium text-blue-900 border border-blue-200"
@@ -260,6 +305,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                     aria-label="Portfolio URL"
                   />
                   <button
+                    type="button"
                     onClick={handleCopyUrl}
                     className="px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     title="Copy URL"
@@ -276,9 +322,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
                     Visit
                   </a>
                 </div>
-                {copiedUrl && (
-                  <p className="text-xs text-green-600 mt-2" role="status">URL copied to clipboard!</p>
-                )}
+                {copiedUrl && <p className="text-xs text-green-600 mt-2" role="status">URL copied to clipboard!</p>}
               </div>
             )}
           </div>
@@ -314,6 +358,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
       {/* Navigation */}
       <div className="bg-white border-t border-gray-200 px-6 py-4 flex justify-between items-center">
         <button
+          type="button"
           onClick={onBack}
           className="px-6 py-2.5 border border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all"
         >
@@ -322,6 +367,7 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
         <div className="flex items-center gap-4">
           {hostingType === 'download' ? (
             <button
+              type="button"
               onClick={handleDownload}
               className="px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/30 hover:shadow-xl transition-all flex items-center gap-2"
             >
@@ -330,9 +376,15 @@ export default function HostingConfig({ onBack, config, portfolioData }: Hosting
             </button>
           ) : (
             <button
+              type="button"
               onClick={handleDeploy}
-              disabled={isDeploying || isDeployed}
+              disabled={isDeploying || isDeployed || (hostingType === 'subdomain' && !subdomainValidation.isValid)}
               className="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title={
+                hostingType === 'subdomain' && !subdomainValidation.isValid
+                  ? 'Please fix subdomain validation errors'
+                  : ''
+              }
             >
               {isDeploying ? (
                 <>
