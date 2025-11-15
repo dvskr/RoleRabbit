@@ -2,6 +2,9 @@
  * Toaster Component
  * Displays toast notifications using Radix UI Toast
  * Listens to toast service and renders notifications
+ * Section 1.8 requirement #5: role="alert" for error messages
+ * Section 1.8 requirement #6: role="status" for success messages
+ * Section 1.8 requirement #1: aria-label on close button
  */
 
 'use client';

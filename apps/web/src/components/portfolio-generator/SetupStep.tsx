@@ -17,6 +17,7 @@ import { ValidationMessage } from '../validation/ValidationMessage';
 import { CharacterCount } from '../validation/CharacterCount';
 import { FormValidationSummary } from '../validation/FormValidationSummary';
 import { LoadingOverlay, ButtonSpinner } from '../loading/LoadingSpinner';
+import { useUniqueId, useKeyboardNavigation } from '../../hooks/useA11y';
 
 interface SetupProfileData {
   firstName?: string;
@@ -66,6 +67,15 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
   // Loading states (Section 1.6)
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Generate unique IDs for accessibility (Section 1.8 requirement #4)
+  const nameErrorId = useUniqueId('name-error');
+  const emailErrorId = useUniqueId('email-error');
+  const roleErrorId = useUniqueId('role-error');
+  const bioErrorId = useUniqueId('bio-error');
+  const linkedinErrorId = useUniqueId('linkedin-error');
+  const githubErrorId = useUniqueId('github-error');
+  const websiteErrorId = useUniqueId('website-error');
 
   // Field states
   const [name, setName] = useState<FieldState>({ value: initialName, touched: false });
@@ -124,6 +134,26 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
       preview: 'Corporate & sophisticated',
     },
   ];
+
+  // Keyboard navigation for template selection (Section 1.8 requirement #7)
+  const { handleKeyDown: handleTemplateKeyDown, setCurrentIndex } = useKeyboardNavigation(
+    templates,
+    (index) => {
+      setTemplate(templates[index].id);
+    },
+    {
+      orientation: 'both',
+      initialIndex: templates.findIndex(t => t.id === template),
+    }
+  );
+
+  // Update current index when template changes
+  React.useEffect(() => {
+    const index = templates.findIndex(t => t.id === template);
+    if (index !== -1) {
+      setCurrentIndex(index);
+    }
+  }, [template, setCurrentIndex]);
 
   // Validation
   const nameValidation = validateName(name.value);
@@ -233,18 +263,19 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
             <div className="flex items-start gap-6">
               <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {profilePic ? (
-                  <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={profilePic} alt="Profile picture preview" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={40} className="text-gray-400" />
+                  <User size={40} className="text-gray-400" aria-hidden="true" />
                 )}
               </div>
               <div className="flex-1">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  aria-label="Upload profile picture"
                   className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-purple-500 hover:text-purple-600 transition-all"
                 >
-                  <Upload size={16} className="inline mr-2" />
+                  <Upload size={16} className="inline mr-2" aria-hidden="true" />
                   Upload Photo
                 </button>
                 <input
@@ -253,7 +284,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                   accept={VALIDATION_LIMITS.ALLOWED_FILE_TYPES?.IMAGE?.join(',') || 'image/*'}
                   className="hidden"
                   onChange={handleImageUpload}
-                  aria-label="Upload profile picture"
+                  aria-label="Upload profile picture file input"
                 />
                 <p className="text-xs text-gray-500 mt-2">
                   Max size: 5MB. Allowed: JPG, PNG, WebP
@@ -278,6 +309,10 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 onBlur={() => setName(prev => ({ ...prev, touched: true }))}
                 placeholder="e.g., John Doe"
                 maxLength={VALIDATION_LIMITS.NAME.MAX}
+                required
+                aria-required="true"
+                aria-invalid={!nameValidation.isValid && (name.touched || attemptedSubmit)}
+                aria-describedby={!nameValidation.isValid && (name.touched || attemptedSubmit) ? nameErrorId : undefined}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   !nameValidation.isValid && (name.touched || attemptedSubmit)
                     ? 'border-red-500'
@@ -285,7 +320,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 }`}
               />
               <div className="flex items-center justify-between mt-1">
-                <ValidationMessage error={nameValidation.error} show={name.touched || attemptedSubmit} />
+                <ValidationMessage error={nameValidation.error} show={name.touched || attemptedSubmit} id={nameErrorId} />
                 <CharacterCount
                   current={nameValidation.charCount || 0}
                   max={nameValidation.maxChars || VALIDATION_LIMITS.NAME.MAX}
@@ -307,13 +342,17 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 onBlur={() => setEmail(prev => ({ ...prev, touched: true }))}
                 placeholder="john@example.com"
                 maxLength={VALIDATION_LIMITS.EMAIL.MAX}
+                required
+                aria-required="true"
+                aria-invalid={!emailValidation.isValid && (email.touched || attemptedSubmit)}
+                aria-describedby={!emailValidation.isValid && (email.touched || attemptedSubmit) ? emailErrorId : undefined}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   !emailValidation.isValid && (email.touched || attemptedSubmit)
                     ? 'border-red-500'
                     : 'border-gray-300'
                 }`}
               />
-              <ValidationMessage error={emailValidation.error} show={email.touched || attemptedSubmit} />
+              <ValidationMessage error={emailValidation.error} show={email.touched || attemptedSubmit} id={emailErrorId} />
             </div>
 
             {/* Role Field */}
@@ -329,6 +368,10 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 onBlur={() => setRole(prev => ({ ...prev, touched: true }))}
                 placeholder="e.g., Senior Software Engineer"
                 maxLength={VALIDATION_LIMITS.ROLE.MAX}
+                required
+                aria-required="true"
+                aria-invalid={!roleValidation.isValid && (role.touched || attemptedSubmit)}
+                aria-describedby={!roleValidation.isValid && (role.touched || attemptedSubmit) ? roleErrorId : undefined}
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                   !roleValidation.isValid && (role.touched || attemptedSubmit)
                     ? 'border-red-500'
@@ -336,7 +379,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                 }`}
               />
               <div className="flex items-center justify-between mt-1">
-                <ValidationMessage error={roleValidation.error} show={role.touched || attemptedSubmit} />
+                <ValidationMessage error={roleValidation.error} show={role.touched || attemptedSubmit} id={roleErrorId} />
                 <CharacterCount
                   current={roleValidation.charCount || 0}
                   max={roleValidation.maxChars || VALIDATION_LIMITS.ROLE.MAX}
@@ -375,6 +418,8 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               placeholder="e.g., Passionate software engineer with 5 years of experience building scalable web applications..."
               rows={4}
               maxLength={VALIDATION_LIMITS.BIO.MAX}
+              aria-invalid={!bioValidation.isValid && (bio.touched || attemptedSubmit)}
+              aria-describedby={!bioValidation.isValid && (bio.touched || attemptedSubmit) ? bioErrorId : undefined}
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                 !bioValidation.isValid && (bio.touched || attemptedSubmit)
                   ? 'border-red-500'
@@ -382,7 +427,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               }`}
             />
             <div className="flex items-center justify-between mt-1">
-              <ValidationMessage error={bioValidation.error} show={bio.touched || attemptedSubmit} />
+              <ValidationMessage error={bioValidation.error} show={bio.touched || attemptedSubmit} id={bioErrorId} />
               <CharacterCount
                 current={bioValidation.charCount || 0}
                 max={bioValidation.maxChars || VALIDATION_LIMITS.BIO.MAX}
@@ -398,14 +443,18 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
               {/* LinkedIn */}
               <div>
                 <div className="flex items-center gap-3">
-                  <Linkedin size={20} className="text-blue-600 flex-shrink-0" />
+                  <Linkedin size={20} className="text-blue-600 flex-shrink-0" aria-hidden="true" />
                   <div className="flex-1">
+                    <label htmlFor="setup-linkedin" className="sr-only">LinkedIn URL</label>
                     <input
+                      id="setup-linkedin"
                       type="url"
                       value={linkedin.value}
                       onChange={e => setLinkedin({ value: e.target.value, touched: linkedin.touched })}
                       onBlur={() => setLinkedin(prev => ({ ...prev, touched: true }))}
                       placeholder="https://linkedin.com/in/yourname"
+                      aria-invalid={!linkedinValidation.isValid && (linkedin.touched || attemptedSubmit)}
+                      aria-describedby={!linkedinValidation.isValid && (linkedin.touched || attemptedSubmit) ? linkedinErrorId : undefined}
                       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                         !linkedinValidation.isValid && (linkedin.touched || attemptedSubmit)
                           ? 'border-red-500'
@@ -414,20 +463,24 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                     />
                   </div>
                 </div>
-                <ValidationMessage error={linkedinValidation.error} show={linkedin.touched || attemptedSubmit} />
+                <ValidationMessage error={linkedinValidation.error} show={linkedin.touched || attemptedSubmit} id={linkedinErrorId} />
               </div>
 
               {/* GitHub */}
               <div>
                 <div className="flex items-center gap-3">
-                  <Github size={20} className="text-gray-800 flex-shrink-0" />
+                  <Github size={20} className="text-gray-800 flex-shrink-0" aria-hidden="true" />
                   <div className="flex-1">
+                    <label htmlFor="setup-github" className="sr-only">GitHub URL</label>
                     <input
+                      id="setup-github"
                       type="url"
                       value={github.value}
                       onChange={e => setGithub({ value: e.target.value, touched: github.touched })}
                       onBlur={() => setGithub(prev => ({ ...prev, touched: true }))}
                       placeholder="https://github.com/yourname"
+                      aria-invalid={!githubValidation.isValid && (github.touched || attemptedSubmit)}
+                      aria-describedby={!githubValidation.isValid && (github.touched || attemptedSubmit) ? githubErrorId : undefined}
                       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                         !githubValidation.isValid && (github.touched || attemptedSubmit)
                           ? 'border-red-500'
@@ -436,20 +489,24 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                     />
                   </div>
                 </div>
-                <ValidationMessage error={githubValidation.error} show={github.touched || attemptedSubmit} />
+                <ValidationMessage error={githubValidation.error} show={github.touched || attemptedSubmit} id={githubErrorId} />
               </div>
 
               {/* Website */}
               <div>
                 <div className="flex items-center gap-3">
-                  <Globe size={20} className="text-purple-600 flex-shrink-0" />
+                  <Globe size={20} className="text-purple-600 flex-shrink-0" aria-hidden="true" />
                   <div className="flex-1">
+                    <label htmlFor="setup-website" className="sr-only">Website URL</label>
                     <input
+                      id="setup-website"
                       type="url"
                       value={website.value}
                       onChange={e => setWebsite({ value: e.target.value, touched: website.touched })}
                       onBlur={() => setWebsite(prev => ({ ...prev, touched: true }))}
                       placeholder="https://yourwebsite.com"
+                      aria-invalid={!websiteValidation.isValid && (website.touched || attemptedSubmit)}
+                      aria-describedby={!websiteValidation.isValid && (website.touched || attemptedSubmit) ? websiteErrorId : undefined}
                       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
                         !websiteValidation.isValid && (website.touched || attemptedSubmit)
                           ? 'border-red-500'
@@ -458,7 +515,7 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
                     />
                   </div>
                 </div>
-                <ValidationMessage error={websiteValidation.error} show={website.touched || attemptedSubmit} />
+                <ValidationMessage error={websiteValidation.error} show={website.touched || attemptedSubmit} id={websiteErrorId} />
               </div>
             </div>
           </div>
@@ -466,13 +523,22 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
           {/* Template Selection */}
           <div className="mb-8">
             <p className="block text-sm font-medium text-gray-700 mb-3">Choose Template</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {templates.map(t => (
+            <div
+              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              role="radiogroup"
+              aria-label="Portfolio template selection"
+              onKeyDown={handleTemplateKeyDown}
+            >
+              {templates.map((t, index) => (
                 <button
                   key={t.id}
                   type="button"
+                  role="radio"
+                  aria-checked={template === t.id}
+                  aria-label={`${t.name}: ${t.preview}`}
+                  tabIndex={template === t.id ? 0 : -1}
                   onClick={() => setTemplate(t.id)}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  className={`p-4 border-2 rounded-lg text-left transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
                     template === t.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
