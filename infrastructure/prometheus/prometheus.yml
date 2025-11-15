@@ -1,0 +1,105 @@
+# Prometheus Configuration (Section 4.6)
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'rolerabbit-prod'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load alerting rules
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # API servers
+  - job_name: 'rolerabbit-api'
+    static_configs:
+      - targets:
+          - 'api-1:3000'
+          - 'api-2:3000'
+    metrics_path: '/api/metrics'
+    scrape_interval: 30s
+
+  # Deployment workers
+  - job_name: 'rolerabbit-deployment-workers'
+    static_configs:
+      - targets:
+          - 'deployment-worker-1:9090'
+          - 'deployment-worker-2:9090'
+    scrape_interval: 30s
+
+  # PDF workers
+  - job_name: 'rolerabbit-pdf-workers'
+    static_configs:
+      - targets:
+          - 'pdf-worker:9090'
+    scrape_interval: 30s
+
+  # Node Exporter (system metrics)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - 'node-exporter:9100'
+    scrape_interval: 15s
+
+  # Kubernetes pods (if using Kubernetes)
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+            - rolerabbit
+    relabel_configs:
+      # Only scrape pods with prometheus.io/scrape: "true" annotation
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # Get metrics path from annotation
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      # Get port from annotation
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      # Add pod name as label
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod
+      # Add namespace as label
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+
+  # PostgreSQL (if using postgres_exporter)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets:
+          - 'postgres-exporter:9187'
+    scrape_interval: 30s
+
+  # Redis (if using redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets:
+          - 'redis-exporter:9121'
+    scrape_interval: 30s
+
+  # Nginx (if using nginx_exporter)
+  - job_name: 'nginx'
+    static_configs:
+      - targets:
+          - 'nginx-exporter:9113'
+    scrape_interval: 30s
