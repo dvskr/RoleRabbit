@@ -13,7 +13,6 @@ import {
   Upload
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
-import { RabbitLogo, RabbitLogoWithText } from '../ui/RabbitLogo';
 
 interface SidebarProps {
   onTabChange: (tab: string) => void;
@@ -165,11 +164,6 @@ const Sidebar = memo<SidebarProps>(({ onTabChange, onShowNewResumeModal, onShowI
       {/* Header */}
       <div className={headerClasses}>
         <div className="flex items-center gap-3 mb-1">
-            {sidebarCollapsed ? (
-              <RabbitLogo size={100} animated={true} />
-            ) : (
-              <RabbitLogoWithText size={100} animated={true} textSize="xl" />
-            )}
         </div>
       </div>
       

@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot } from 'lucide-react';
-import { RabbitLogo, RabbitLogoWithText } from '@/components/ui/RabbitLogo';
 
 interface SidebarProps {
   activeTab: string;
@@ -19,11 +18,6 @@ export default function Sidebar({
     <div className={`${sidebarCollapsed ? 'w-16' : 'w-72'} bg-gradient-to-b from-blue-50/30 to-purple-50/30 dark:from-slate-800/60 dark:to-slate-900/60 border-r border-blue-200/30 dark:border-slate-700/40 shadow-xl flex flex-col`}>
       <div className={`${sidebarCollapsed ? 'p-3' : 'p-4'} border-b border-blue-200/20 dark:border-slate-700/40 bg-gradient-to-r from-blue-100/20 to-purple-100/20 dark:from-slate-900/40 dark:to-slate-800/40`}>
         <div className="flex items-center gap-3 mb-1">
-          {sidebarCollapsed ? (
-            <RabbitLogo size={40} />
-          ) : (
-            <RabbitLogoWithText size={40} textSize="md" />
-          )}
         </div>
       </div>
       

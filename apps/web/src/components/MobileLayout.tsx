@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { MobileSidebar, MobileButton } from './MobileComponents';
-import { RabbitLogoWithText } from './ui/RabbitLogo';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -93,9 +92,6 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
           >
             <Menu className="w-6 h-6" />
           </MobileButton>
-
-          {/* App Title */}
-                <RabbitLogoWithText size={60} animated={true} textSize="md" />
 
           {/* Fullscreen Button */}
           <MobileButton

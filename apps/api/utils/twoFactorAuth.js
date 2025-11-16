@@ -396,7 +396,7 @@ async function log2FAAttempt(userId, success, method = 'totp') {
       INSERT INTO two_factor_attempts (
         id, user_id, success, attempted_at
       ) VALUES (
-        ${uuidv4()},
+        ${crypto.randomUUID()},
         ${userId},
         ${success},
         NOW()

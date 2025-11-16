@@ -7,7 +7,7 @@
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 /**
  * Log PII access
@@ -39,7 +39,7 @@ async function logPIIAccess({
         id, user_id, resource_type, resource_id, action,
         accessed_fields, reason, ip_address, user_agent, created_at
       ) VALUES (
-        ${uuidv4()},
+        ${crypto.randomUUID()},
         ${userId},
         ${resourceType},
         ${resourceId},

@@ -11,7 +11,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { logPIIAccess } = require('../utils/piiAccessLog');
 const { decryptResumeData } = require('../utils/piiEncryption');
 
@@ -50,7 +50,7 @@ router.post('/export-request', async (req, res) => {
     }
     
     // Create new export request
-    const requestId = uuidv4();
+    const requestId = crypto.randomUUID();
     await prisma.$executeRaw`
       INSERT INTO gdpr_data_requests (
         id, user_id, request_type, status, requested_at
@@ -190,7 +190,7 @@ router.post('/delete-request', async (req, res) => {
     }
     
     // Create deletion request
-    const requestId = uuidv4();
+    const requestId = crypto.randomUUID();
     await prisma.$executeRaw`
       INSERT INTO gdpr_data_requests (
         id, user_id, request_type, status, requested_at

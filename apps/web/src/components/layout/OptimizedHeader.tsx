@@ -11,7 +11,6 @@ import {
   Sun
 } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
-import { RabbitLogoWithText } from '../ui/RabbitLogo';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -162,8 +161,6 @@ const Header = memo<HeaderProps>(({
         >
           <Menu size={20} className="text-gray-600" />
         </button>
-
-                <RabbitLogoWithText size={80} animated={true} textSize="lg" />
       </div>
 
       {/* Center Section - Search */}
