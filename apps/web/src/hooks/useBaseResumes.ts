@@ -92,10 +92,28 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
     fileHash?: string;        // ✅ ADD: For caching/parsing
   }) => {
     setError(null);
+    
+    // ✅ OPTIMISTIC UPDATE: Add temporary resume to list immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimisticResume: BaseResume = {
+      id: tempId,
+      slotNumber: resumes.length + 1,
+      name: payload.name || 'New Resume',
+      isActive: false,
+      data: payload.data,
+      formatting: payload.formatting,
+      metadata: payload.metadata,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    upsertResume(optimisticResume);
+    
     try {
       const response = await apiService.createBaseResume(payload);
       if (response?.success && response.resume) {
-        // Add to local state immediately
+        // Replace temporary resume with real one
+        setResumes(prev => prev.filter(r => r.id !== tempId));
         upsertResume(response.resume);
         // Refresh from server to ensure consistency and get correct slot numbers
         await fetchResumes({ showSpinner: false });
@@ -106,10 +124,12 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
       }
     } catch (err: any) {
       logger.error('Failed to create base resume', err);
+      // ✅ ROLLBACK: Remove optimistic resume on error
+      setResumes(prev => prev.filter(r => r.id !== tempId));
       setError(err?.message || 'Failed to create base resume');
       throw err;
     }
-  }, [upsertResume, fetchResumes]);
+  }, [upsertResume, fetchResumes, resumes.length]);
 
   const activateResume = useCallback(async (id: string) => {
     setError(null);
@@ -139,15 +159,24 @@ export const useBaseResumes = (options: UseBaseResumesOptions = {}) => {
 
   const deleteResume = useCallback(async (id: string) => {
     setError(null);
+    
+    // ✅ OPTIMISTIC UPDATE: Remove resume from list immediately
+    const deletedResume = resumes.find(r => r.id === id);
+    setResumes(prev => prev.filter(r => r.id !== id));
+    
     try {
       await apiService.deleteBaseResume(id);
-      await fetchResumes();
+      await fetchResumes({ showSpinner: false });
     } catch (err: any) {
       logger.error('Failed to delete base resume', err);
+      // ✅ ROLLBACK: Restore deleted resume on error
+      if (deletedResume) {
+        upsertResume(deletedResume);
+      }
       setError(err?.message || 'Failed to delete base resume');
       throw err;
     }
-  }, [fetchResumes]);
+  }, [fetchResumes, resumes, upsertResume]);
 
   return {
     resumes,

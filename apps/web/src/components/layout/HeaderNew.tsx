@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Download, Upload, Save, Sparkles, Menu, Eye, EyeOff } from 'lucide-react';
+import { Download, Upload, Save, Sparkles, Menu, Eye, EyeOff, Undo2, Redo2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
@@ -73,6 +73,29 @@ export default function HeaderNew({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const savingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const savedTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Z or Cmd+Z for undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo && onUndo) {
+          onUndo();
+        }
+      }
+      // Ctrl+Y or Cmd+Shift+Z for redo
+      if (((e.ctrlKey || e.metaKey) && e.key === 'y') || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
+        e.preventDefault();
+        if (canRedo && onRedo) {
+          onRedo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo, onUndo, onRedo]);
 
   // Update save status based on isSaving and lastSavedAt
   useEffect(() => {
@@ -279,6 +302,62 @@ export default function HeaderNew({
             }
           }
         `}</style>
+
+        {/* Undo/Redo Buttons */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onUndo}
+            disabled={!canUndo}
+            className="p-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: canUndo ? colors.inputBackground : 'transparent',
+              border: `1px solid ${colors.border}`,
+              color: canUndo ? colors.primaryText : colors.tertiaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (canUndo) {
+                e.currentTarget.style.background = colors.hoverBackground;
+                e.currentTarget.style.borderColor = colors.activeBlueText;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (canUndo) {
+                e.currentTarget.style.background = colors.inputBackground;
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+            title="Undo (Ctrl+Z)"
+            aria-label="Undo last change"
+          >
+            <Undo2 size={16} />
+          </button>
+          <button
+            onClick={onRedo}
+            disabled={!canRedo}
+            className="p-2 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              background: canRedo ? colors.inputBackground : 'transparent',
+              border: `1px solid ${colors.border}`,
+              color: canRedo ? colors.primaryText : colors.tertiaryText,
+            }}
+            onMouseEnter={(e) => {
+              if (canRedo) {
+                e.currentTarget.style.background = colors.hoverBackground;
+                e.currentTarget.style.borderColor = colors.activeBlueText;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (canRedo) {
+                e.currentTarget.style.background = colors.inputBackground;
+                e.currentTarget.style.borderColor = colors.border;
+              }
+            }}
+            title="Redo (Ctrl+Y)"
+            aria-label="Redo last undone change"
+          >
+            <Redo2 size={16} />
+          </button>
+        </div>
 
         {/* Save to Base Resume Button - Always visible, only disabled when no draft (NOT during auto-save) */}
         <button

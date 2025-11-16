@@ -1,541 +1,305 @@
 /**
- * Comprehensive Error Handling System
- * Provides graceful error recovery, user-friendly messages, and monitoring
+ * Standardized Error Handler
+ * Provides consistent error responses across all API endpoints
  */
 
 const logger = require('./logger');
-const { getUserFriendlyError, formatErrorResponse } = require('./errorMessages');
 
-/**
- * Error categories for classification
- */
-const ErrorCategory = {
-  VALIDATION: 'VALIDATION',
-  AI_SERVICE: 'AI_SERVICE',
-  DATABASE: 'DATABASE',
-  NETWORK: 'NETWORK',
-  RATE_LIMIT: 'RATE_LIMIT',
-  AUTHENTICATION: 'AUTHENTICATION',
-  BUSINESS_LOGIC: 'BUSINESS_LOGIC',
-  UNKNOWN: 'UNKNOWN'
+// ============================================
+// ERROR CODES
+// ============================================
+
+const ErrorCodes = {
+  // Client Errors (4xx)
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  RESUME_NOT_FOUND: 'RESUME_NOT_FOUND',
+  DRAFT_NOT_FOUND: 'DRAFT_NOT_FOUND',
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  FORBIDDEN: 'FORBIDDEN',
+  SLOT_LIMIT_REACHED: 'SLOT_LIMIT_REACHED',
+  DUPLICATE_RESUME_NAME: 'DUPLICATE_RESUME_NAME',
+  INVALID_TEMPLATE: 'INVALID_TEMPLATE',
+  INVALID_FILE_FORMAT: 'INVALID_FILE_FORMAT',
+  FILE_TOO_LARGE: 'FILE_TOO_LARGE',
+  RESUME_CONFLICT: 'RESUME_CONFLICT',
+  AI_USAGE_LIMIT_EXCEEDED: 'AI_USAGE_LIMIT_EXCEEDED',
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMIT_EXCEEDED',
+  
+  // Server Errors (5xx)
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+  DATABASE_ERROR: 'DATABASE_ERROR',
+  AI_SERVICE_ERROR: 'AI_SERVICE_ERROR',
+  CACHE_ERROR: 'CACHE_ERROR',
+  FILE_PROCESSING_ERROR: 'FILE_PROCESSING_ERROR',
+  EXPORT_ERROR: 'EXPORT_ERROR'
 };
 
-/**
- * Error severity levels
- */
-const ErrorSeverity = {
-  LOW: 'LOW',           // User can continue, minor issue
-  MEDIUM: 'MEDIUM',     // User can retry, temporary issue
-  HIGH: 'HIGH',         // User cannot proceed, needs fix
-  CRITICAL: 'CRITICAL'  // System issue, requires immediate attention
-};
+// ============================================
+// ERROR CLASSES
+// ============================================
 
-/**
- * Custom error class with enhanced metadata
- */
 class AppError extends Error {
-  constructor(message, options = {}) {
+  constructor(message, code, statusCode = 500, details = null) {
     super(message);
     this.name = 'AppError';
-    this.category = options.category || ErrorCategory.UNKNOWN;
-    this.severity = options.severity || ErrorSeverity.MEDIUM;
-    this.userMessage = options.userMessage || message;
-    this.code = options.code;
-    this.statusCode = options.statusCode || 500;
-    this.retryable = options.retryable !== false; // Default true
-    this.metadata = options.metadata || {};
-    this.timestamp = new Date().toISOString();
-    
-    // Capture stack trace
+    this.code = code;
+    this.statusCode = statusCode;
+    this.details = details;
+    this.isOperational = true; // Distinguishes operational errors from programming errors
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-/**
- * Specific error classes for different scenarios
- */
 class ValidationError extends AppError {
-  constructor(message, field, suggestion) {
-    super(message, {
-      category: ErrorCategory.VALIDATION,
-      severity: ErrorSeverity.LOW,
-      statusCode: 400,
-      retryable: false,
-      userMessage: `Invalid input: ${message}`,
-      metadata: { field, suggestion }
-    });
+  constructor(message, details = null) {
+    super(message, ErrorCodes.VALIDATION_ERROR, 400, details);
     this.name = 'ValidationError';
   }
 }
 
-class AIServiceError extends AppError {
-  constructor(message, originalError, options = {}) {
-    super(message, {
-      category: ErrorCategory.AI_SERVICE,
-      severity: ErrorSeverity.MEDIUM,
-      statusCode: 503,
-      retryable: true,
-      userMessage: options.userMessage || 'AI service temporarily unavailable. Please try again.',
-      metadata: {
-        originalError: originalError?.message,
-        model: options.model,
-        tokens: options.tokens,
-        ...options.metadata
-      }
-    });
-    this.name = 'AIServiceError';
-    this.originalError = originalError;
+class NotFoundError extends AppError {
+  constructor(resource, details = null) {
+    super(`${resource} not found`, ErrorCodes[`${resource.toUpperCase()}_NOT_FOUND`] || ErrorCodes.RESUME_NOT_FOUND, 404, details);
+    this.name = 'NotFoundError';
+  }
+}
+
+class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized', details = null) {
+    super(message, ErrorCodes.UNAUTHORIZED, 401, details);
+    this.name = 'UnauthorizedError';
+  }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden', details = null) {
+    super(message, ErrorCodes.FORBIDDEN, 403, details);
+    this.name = 'ForbiddenError';
+  }
+}
+
+class ConflictError extends AppError {
+  constructor(message, details = null) {
+    super(message, ErrorCodes.RESUME_CONFLICT, 409, details);
+    this.name = 'ConflictError';
   }
 }
 
 class RateLimitError extends AppError {
-  constructor(retryAfter) {
-    super('Rate limit exceeded', {
-      category: ErrorCategory.RATE_LIMIT,
-      severity: ErrorSeverity.MEDIUM,
-      statusCode: 429,
-      retryable: true,
-      userMessage: `Please wait ${retryAfter} seconds before trying again.`,
-      metadata: { retryAfter }
-    });
+  constructor(message = 'Rate limit exceeded', details = null) {
+    super(message, ErrorCodes.RATE_LIMIT_EXCEEDED, 429, details);
     this.name = 'RateLimitError';
-    this.retryAfter = retryAfter;
   }
 }
 
-class DatabaseError extends AppError {
-  constructor(message, originalError) {
-    super(message, {
-      category: ErrorCategory.DATABASE,
-      severity: ErrorSeverity.HIGH,
-      statusCode: 500,
-      retryable: true,
-      userMessage: 'Database error. Our team has been notified.',
-      metadata: { originalError: originalError?.message }
-    });
-    this.name = 'DatabaseError';
-  }
-}
-
-class NetworkError extends AppError {
-  constructor(message, originalError) {
-    super(message, {
-      category: ErrorCategory.NETWORK,
-      severity: ErrorSeverity.MEDIUM,
-      statusCode: 503,
-      retryable: true,
-      userMessage: 'Network error. Please check your connection and try again.',
-      metadata: { originalError: originalError?.message }
-    });
-    this.name = 'NetworkError';
-  }
-}
+// ============================================
+// ERROR RESPONSE FORMATTER
+// ============================================
 
 /**
- * Classify errors by examining error objects
+ * Format error response in standardized format
+ * @param {Error} error - Error object
+ * @param {Object} context - Additional context (userId, requestId, etc.)
+ * @returns {Object} Formatted error response
  */
-function classifyError(error) {
-  if (!error) return ErrorCategory.UNKNOWN;
-  
-  const message = error.message?.toLowerCase() || '';
-  const code = error.code?.toLowerCase() || '';
-  
-  // AI Service errors
-  if (message.includes('openai') || 
-      message.includes('rate limit') ||
-      message.includes('token') ||
-      code === 'insufficient_quota' ||
-      code === 'context_length_exceeded') {
-    return ErrorCategory.AI_SERVICE;
-  }
-  
-  // Database errors
-  if (message.includes('prisma') ||
-      message.includes('database') ||
-      code.startsWith('p') || // Prisma error codes
-      message.includes('connection')) {
-    return ErrorCategory.DATABASE;
-  }
-  
-  // Network errors
-  if (message.includes('network') ||
-      message.includes('timeout') ||
-      message.includes('econnrefused') ||
-      code === 'enotfound' ||
-      code === 'etimedout') {
-    return ErrorCategory.NETWORK;
-  }
-  
-  // Validation errors
-  if (message.includes('validation') ||
-      message.includes('invalid') ||
-      message.includes('required') ||
-      error.statusCode === 400) {
-    return ErrorCategory.VALIDATION;
-  }
-  
-  // Rate limit
-  if (message.includes('rate limit') ||
-      error.statusCode === 429) {
-    return ErrorCategory.RATE_LIMIT;
-  }
-  
-  // Authentication
-  if (message.includes('unauthorized') ||
-      message.includes('authentication') ||
-      error.statusCode === 401) {
-    return ErrorCategory.AUTHENTICATION;
-  }
-  
-  return ErrorCategory.UNKNOWN;
-}
-
-/**
- * Get user-friendly error message based on error type
- */
-function getUserFriendlyMessage(error) {
-  if (error.userMessage) return error.userMessage;
-  
-  const category = error.category || classifyError(error);
-  
-  const messages = {
-    [ErrorCategory.VALIDATION]: 'Please check your input and try again.',
-    [ErrorCategory.AI_SERVICE]: 'AI service is temporarily unavailable. Please try again in a moment.',
-    [ErrorCategory.DATABASE]: 'We encountered a database issue. Our team has been notified.',
-    [ErrorCategory.NETWORK]: 'Network connection issue. Please check your internet and try again.',
-    [ErrorCategory.RATE_LIMIT]: 'Too many requests. Please wait a moment before trying again.',
-    [ErrorCategory.AUTHENTICATION]: 'Authentication failed. Please log in again.',
-    [ErrorCategory.BUSINESS_LOGIC]: 'Unable to complete this action. Please try again or contact support.',
-    [ErrorCategory.UNKNOWN]: 'An unexpected error occurred. Please try again.'
-  };
-  
-  return messages[category] || messages[ErrorCategory.UNKNOWN];
-}
-
-/**
- * Get suggested actions for user based on error
- */
-function getSuggestedActions(error) {
-  const category = error.category || classifyError(error);
-  
-  const actions = {
-    [ErrorCategory.VALIDATION]: [
-      'Review the highlighted fields',
-      'Ensure all required information is provided',
-      'Check that values are in the correct format'
-    ],
-    [ErrorCategory.AI_SERVICE]: [
-      'Wait a few seconds and try again',
-      'If the problem persists, try a different mode (Partial instead of Full)',
-      'Contact support if the issue continues'
-    ],
-    [ErrorCategory.DATABASE]: [
-      'Wait a moment and try again',
-      'Save your work locally if possible',
-      'Contact support if the issue persists'
-    ],
-    [ErrorCategory.NETWORK]: [
-      'Check your internet connection',
-      'Try refreshing the page',
-      'Wait a moment and retry'
-    ],
-    [ErrorCategory.RATE_LIMIT]: [
-      'Wait a few seconds before trying again',
-      'Reduce the frequency of requests',
-      'Consider upgrading your plan for higher limits'
-    ],
-    [ErrorCategory.AUTHENTICATION]: [
-      'Log out and log back in',
-      'Clear your browser cache',
-      'Contact support if you continue to have issues'
-    ],
-    [ErrorCategory.UNKNOWN]: [
-      'Try refreshing the page',
-      'Wait a moment and try again',
-      'Contact support if the problem persists'
-    ]
-  };
-  
-  return actions[category] || actions[ErrorCategory.UNKNOWN];
-}
-
-/**
- * Determine if error is retryable
- */
-function isRetryable(error) {
-  if (error.retryable !== undefined) return error.retryable;
-  
-  const category = classifyError(error);
-  
-  // Non-retryable errors
-  if (category === ErrorCategory.VALIDATION ||
-      category === ErrorCategory.AUTHENTICATION) {
-    return false;
-  }
-  
-  // Check status codes
-  const nonRetryableStatusCodes = [400, 401, 403, 404, 422];
-  if (error.statusCode && nonRetryableStatusCodes.includes(error.statusCode)) {
-    return false;
-  }
-  
-  // Everything else is potentially retryable
-  return true;
-}
-
-/**
- * Log error with appropriate level and metadata
- */
-function logError(error, context = {}) {
-  const category = error.category || classifyError(error);
-  const severity = error.severity || ErrorSeverity.MEDIUM;
-  
-  const logData = {
-    message: error.message,
-    category,
-    severity,
-    statusCode: error.statusCode,
-    retryable: isRetryable(error),
-    stack: error.stack,
-    timestamp: new Date().toISOString(),
-    ...context,
-    ...error.metadata
-  };
-  
-  // Log based on severity
-  if (severity === ErrorSeverity.CRITICAL) {
-    logger.error('CRITICAL ERROR', logData);
-    // TODO: Send alert to monitoring service (Sentry, etc.)
-  } else if (severity === ErrorSeverity.HIGH) {
-    logger.error('HIGH SEVERITY ERROR', logData);
-  } else if (severity === ErrorSeverity.MEDIUM) {
-    logger.warn('ERROR', logData);
-  } else {
-    logger.info('Low severity error', logData);
-  }
-  
-  return logData;
-}
-
-/**
- * Create error response object for API responses
- */
-function createErrorResponse(error, includeStack = false) {
-  const category = error.category || classifyError(error);
-  
+function formatErrorResponse(error, context = {}) {
   const response = {
     success: false,
-    error: {
-      message: getUserFriendlyMessage(error),
-      code: error.code,
-      category,
-      retryable: isRetryable(error),
-      suggestions: getSuggestedActions(error),
-      timestamp: error.timestamp || new Date().toISOString()
-    }
+    error: error.message || 'An error occurred',
+    code: error.code || ErrorCodes.INTERNAL_ERROR,
+    timestamp: new Date().toISOString()
   };
-  
-  // Include metadata if present
-  if (error.metadata && Object.keys(error.metadata).length > 0) {
-    response.error.details = error.metadata;
+
+  // Add details if available (validation errors, etc.)
+  if (error.details) {
+    response.details = error.details;
   }
-  
-  // Include stack trace only in development
-  if (includeStack && process.env.NODE_ENV === 'development') {
-    response.error.stack = error.stack;
+
+  // Add request ID if available
+  if (context.requestId) {
+    response.requestId = context.requestId;
   }
-  
+
+  // Don't expose internal error details in production
+  if (process.env.NODE_ENV === 'development' && error.stack) {
+    response.stack = error.stack;
+  }
+
   return response;
 }
 
+// ============================================
+// ERROR HANDLER MIDDLEWARE
+// ============================================
+
 /**
- * Wrap async functions with error handling
+ * Global error handler middleware for Fastify
+ * @param {Error} error - Error object
+ * @param {Object} request - Fastify request
+ * @param {Object} reply - Fastify reply
  */
-function asyncErrorHandler(fn) {
+async function errorHandler(error, request, reply) {
+  const context = {
+    requestId: request.id,
+    userId: request.user?.userId,
+    method: request.method,
+    url: request.url
+  };
+
+  // Determine status code
+  let statusCode = 500;
+  let errorCode = ErrorCodes.INTERNAL_ERROR;
+  let errorMessage = 'Internal server error';
+
+  if (error instanceof AppError) {
+    // Our custom errors
+    statusCode = error.statusCode;
+    errorCode = error.code;
+    errorMessage = error.message;
+  } else if (error.validation) {
+    // Fastify validation errors
+    statusCode = 400;
+    errorCode = ErrorCodes.VALIDATION_ERROR;
+    errorMessage = 'Validation failed';
+    error.details = error.validation;
+  } else if (error.statusCode) {
+    // HTTP errors
+    statusCode = error.statusCode;
+    errorMessage = error.message;
+  } else if (error.code === 'P2002') {
+    // Prisma unique constraint violation
+    statusCode = 409;
+    errorCode = ErrorCodes.DUPLICATE_RESUME_NAME;
+    errorMessage = 'A resume with this name already exists';
+  } else if (error.code === 'P2025') {
+    // Prisma record not found
+    statusCode = 404;
+    errorCode = ErrorCodes.RESUME_NOT_FOUND;
+    errorMessage = 'Resource not found';
+  } else if (error.code?.startsWith('P')) {
+    // Other Prisma errors
+    statusCode = 500;
+    errorCode = ErrorCodes.DATABASE_ERROR;
+    errorMessage = 'Database error occurred';
+  }
+
+  // Log error
+  const logLevel = statusCode >= 500 ? 'error' : 'warn';
+  logger[logLevel]('Request error', {
+    ...context,
+    statusCode,
+    errorCode,
+    errorMessage,
+    originalError: error.message,
+    stack: error.stack
+  });
+
+  // Send response
+  const response = formatErrorResponse(
+    {
+      message: errorMessage,
+      code: errorCode,
+      details: error.details,
+      stack: error.stack
+    },
+    context
+  );
+
+  reply.status(statusCode).send(response);
+}
+
+// ============================================
+// ERROR UTILITIES
+// ============================================
+
+/**
+ * Wrap async route handlers to catch errors
+ * @param {Function} fn - Async function to wrap
+ * @returns {Function} Wrapped function
+ */
+function asyncHandler(fn) {
   return async (request, reply) => {
     try {
-      return await fn(request, reply);
+      await fn(request, reply);
     } catch (error) {
-      // Log the error
-      logError(error, {
-        path: request.url,
-        method: request.method,
-        userId: request.user?.id
-      });
-      
-      // Send error response
-      const statusCode = error.statusCode || 500;
-      const errorResponse = createErrorResponse(error);
-      
-      return reply.status(statusCode).send(errorResponse);
+      await errorHandler(error, request, reply);
     }
   };
 }
 
 /**
- * Parse OpenAI errors and convert to AppError
+ * Assert condition or throw error
+ * @param {boolean} condition - Condition to check
+ * @param {string} message - Error message if condition is false
+ * @param {string} code - Error code
+ * @param {number} statusCode - HTTP status code
  */
-function parseOpenAIError(error) {
-  const message = error.message || 'OpenAI API error';
-  
-  // Rate limit
-  if (message.includes('Rate limit') || error.status === 429) {
-    const retryAfter = error.headers?.['retry-after'] || 60;
-    return new RateLimitError(retryAfter);
+function assert(condition, message, code = ErrorCodes.VALIDATION_ERROR, statusCode = 400) {
+  if (!condition) {
+    throw new AppError(message, code, statusCode);
   }
-  
-  // Token limit
-  if (message.includes('maximum context length') || 
-      message.includes('token')) {
-    return new AIServiceError(
-      'Content too large for AI processing',
-      error,
-      {
-        userMessage: 'Your resume or job description is too large. Please shorten it and try again.',
-        code: 'CONTENT_TOO_LARGE'
-      }
-    );
-  }
-  
-  // Quota exceeded
-  if (message.includes('quota') || 
-      message.includes('insufficient')) {
-    return new AIServiceError(
-      'AI service quota exceeded',
-      error,
-      {
-        userMessage: 'AI service is temporarily unavailable. Please try again later.',
-        code: 'QUOTA_EXCEEDED',
-        severity: ErrorSeverity.HIGH,
-        retryable: false
-      }
-    );
-  }
-  
-  // Generic AI error
-  return new AIServiceError(message, error);
 }
 
 /**
- * Parse Prisma errors and convert to AppError
+ * Assert resource exists or throw NotFoundError
+ * @param {any} resource - Resource to check
+ * @param {string} resourceName - Name of resource for error message
  */
-function parsePrismaError(error) {
-  const code = error.code;
-  
-  // Unique constraint violation
-  if (code === 'P2002') {
-    return new ValidationError(
-      'Record already exists',
-      error.meta?.target,
-      'Use a different value or update the existing record'
-    );
+function assertExists(resource, resourceName = 'Resource') {
+  if (!resource) {
+    throw new NotFoundError(resourceName);
   }
-  
-  // Record not found
-  if (code === 'P2025') {
-    return new ValidationError(
-      'Record not found',
-      null,
-      'The requested record does not exist'
-    );
-  }
-  
-  // Foreign key constraint
-  if (code === 'P2003') {
-    return new ValidationError(
-      'Invalid reference',
-      error.meta?.field_name,
-      'Referenced record does not exist'
-    );
-  }
-  
-  // Generic database error
-  return new DatabaseError('Database operation failed', error);
 }
 
 /**
- * Central error parser - converts any error to AppError
+ * Assert user owns resource or throw ForbiddenError
+ * @param {string} resourceUserId - User ID from resource
+ * @param {string} requestUserId - User ID from request
+ * @param {string} message - Custom error message
  */
-function parseError(error) {
-  // Already an AppError
-  if (error instanceof AppError) {
-    return error;
+function assertOwnership(resourceUserId, requestUserId, message = 'You do not have permission to access this resource') {
+  if (resourceUserId !== requestUserId) {
+    throw new ForbiddenError(message);
   }
-  
-  // OpenAI errors
-  if (error.type?.includes('openai') || 
-      error.constructor?.name === 'OpenAIError') {
-    return parseOpenAIError(error);
-  }
-  
-  // Prisma errors
-  if (error.code?.startsWith('P')) {
-    return parsePrismaError(error);
-  }
-  
-  // Network errors
-  if (error.code === 'ECONNREFUSED' ||
-      error.code === 'ETIMEDOUT' ||
-      error.code === 'ENOTFOUND') {
-    return new NetworkError(error.message, error);
-  }
-  
-  // Generic error - try to classify
-  const category = classifyError(error);
-  return new AppError(error.message, {
-    category,
-    statusCode: error.statusCode || error.status || 500,
-    metadata: { originalError: error.toString() }
-  });
 }
 
 /**
- * Global error handler for Fastify
- * This is the main error handler used by server.js
+ * Handle Zod validation errors
+ * @param {Object} zodResult - Result from Zod validation
+ * @throws {ValidationError} If validation failed
  */
-function globalErrorHandler(error, request, reply) {
-  // Parse the error into an AppError
-  const appError = parseError(error);
-  
-  // Log the error with context
-  logError(appError, {
-    path: request.url,
-    method: request.method,
-    userId: request.user?.userId,
-    ip: request.ip
-  });
-  
-  // Create error response
-  const errorResponse = createErrorResponse(appError, process.env.NODE_ENV === 'development');
-  
-  // Send response
-  const statusCode = appError.statusCode || 500;
-  return reply.status(statusCode).send(errorResponse);
+function handleZodValidation(zodResult) {
+  if (!zodResult.success) {
+    throw new ValidationError('Validation failed', zodResult.errors);
+  }
 }
+
+// ============================================
+// EXPORTS
+// ============================================
 
 module.exports = {
+  // Error codes
+  ErrorCodes,
+  
   // Error classes
   AppError,
   ValidationError,
-  AIServiceError,
+  NotFoundError,
+  UnauthorizedError,
+  ForbiddenError,
+  ConflictError,
   RateLimitError,
-  DatabaseError,
-  NetworkError,
   
-  // Error categories and severity
-  ErrorCategory,
-  ErrorSeverity,
+  // Middleware
+  errorHandler,
+  asyncHandler,
   
-  // Utility functions
-  classifyError,
-  getUserFriendlyMessage,
-  getSuggestedActions,
-  isRetryable,
-  logError,
-  createErrorResponse,
-  asyncErrorHandler,
-  parseError,
-  parseOpenAIError,
-  parsePrismaError,
-  globalErrorHandler
+  // Utilities
+  formatErrorResponse,
+  assert,
+  assertExists,
+  assertOwnership,
+  handleZodValidation
 };

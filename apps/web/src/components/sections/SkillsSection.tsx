@@ -4,10 +4,11 @@
 /* eslint-disable @next/next/no-inline-styles */
 /* stylelint-disable */
 // Inline styles are required for dynamic theming with ThemeContext
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Eye, Sparkles, GripVertical, X, Plus } from 'lucide-react';
 import { ResumeData } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
+import { getPopularSkillsForRole } from '../../data/exampleContent';
 
 interface SkillsSectionProps {
   resumeData: ResumeData;
@@ -31,6 +32,100 @@ const SkillsSection = React.memo(function SkillsSection({
   const skills = useMemo(() => {
     return Array.isArray(resumeData.skills) ? resumeData.skills : [];
   }, [resumeData.skills]);
+
+  // Autocomplete state
+  const [inputValue, setInputValue] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [duplicateError, setDuplicateError] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get popular skills based on job title
+  const popularSkills = useMemo(() => {
+    return getPopularSkillsForRole(resumeData.title || '');
+  }, [resumeData.title]);
+
+  // Filter suggestions based on input
+  const suggestions = useMemo(() => {
+    if (!inputValue.trim()) return [];
+    const lowerInput = inputValue.toLowerCase();
+    return popularSkills
+      .filter(skill => 
+        skill.toLowerCase().includes(lowerInput) &&
+        !skills.includes(skill) // Don't suggest already added skills
+      )
+      .slice(0, 8); // Limit to 8 suggestions
+  }, [inputValue, popularSkills, skills]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const addSkill = (skill: string) => {
+    const trimmedSkill = skill.trim();
+    
+    if (!trimmedSkill) {
+      return;
+    }
+    
+    // Check for case-insensitive duplicates
+    const isDuplicate = skills.some(
+      existingSkill => existingSkill.toLowerCase() === trimmedSkill.toLowerCase()
+    );
+    
+    if (isDuplicate) {
+      setDuplicateError('This skill is already added');
+      // Clear error after 3 seconds
+      setTimeout(() => setDuplicateError(''), 3000);
+      return;
+    }
+    
+    // Add skill
+    setResumeData(prev => ({ 
+      ...prev, 
+      skills: [...(Array.isArray(prev.skills) ? prev.skills : []), trimmedSkill] 
+    }));
+    setInputValue('');
+    setShowSuggestions(false);
+    setFocusedIndex(-1);
+    setDuplicateError('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (focusedIndex >= 0 && focusedIndex < suggestions.length) {
+        addSkill(suggestions[focusedIndex]);
+      } else if (inputValue.trim()) {
+        addSkill(inputValue);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(prev => 
+        prev < suggestions.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setFocusedIndex(-1);
+    }
+  };
 
   return (
     <div className="mb-4 p-1 sm:p-2 lg:p-4" style={{ contentVisibility: 'auto' }}>
@@ -106,55 +201,111 @@ const SkillsSection = React.memo(function SkillsSection({
             </div>
           ))}
           
-          {/* Inline skill input */}
-          <div 
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 min-w-0 max-w-full flex-shrink-0"
-            style={{
-              background: colors.cardBackground,
-              border: `2px solid ${colors.border}`,
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Enter skill..."
-              className="text-xs font-medium bg-transparent border-none outline-none w-24 min-w-0 max-w-full break-words overflow-wrap-anywhere"
-              style={{ color: colors.primaryText }}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  if ((e.target as HTMLInputElement).value.trim()) {
-                    setResumeData(prev => ({ ...prev, skills: [...(Array.isArray(prev.skills) ? prev.skills : []), (e.target as HTMLInputElement).value.trim()] }));
-                    (e.target as HTMLInputElement).value = '';
-                  }
-                }
+          {/* Inline skill input with autocomplete */}
+          <div className="relative flex-shrink-0">
+            <div 
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 min-w-0 max-w-full"
+              style={{
+                background: colors.cardBackground,
+                border: `2px solid ${duplicateError ? colors.errorRed : (showSuggestions && suggestions.length > 0 ? colors.activeBlueText : colors.border)}`,
               }}
-              onBlur={(e) => {
-                if ((e.target as HTMLInputElement).value.trim()) {
-                  setResumeData(prev => ({ ...prev, skills: [...(Array.isArray(prev.skills) ? prev.skills : []), (e.target as HTMLInputElement).value.trim()] }));
-                  (e.target as HTMLInputElement).value = '';
-                }
-              }}
-            />
-            <button
-              onClick={(e) => {
-                const input = e.currentTarget.parentElement?.querySelector('input') as HTMLInputElement;
-                if (input && input.value.trim()) {
-                  setResumeData(prev => ({ ...prev, skills: [...(Array.isArray(prev.skills) ? prev.skills : []), input.value.trim()] }));
-                  input.value = '';
-                }
-              }}
-              className="flex-shrink-0 transition-colors"
-              style={{ color: colors.primaryText }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = colors.secondaryText;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = colors.primaryText;
-              }}
-              aria-label="Add skill"
-              title="Add skill"
             >
-              <Plus size={12} />
-            </button>
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => {
+                  setInputValue(e.target.value);
+                  setShowSuggestions(true);
+                  setFocusedIndex(-1);
+                  setDuplicateError(''); // Clear error when user starts typing
+                }}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={(e) => {
+                  // Delay to allow clicking on suggestions
+                  setTimeout(() => {
+                    if (inputValue.trim() && !suggestions.includes(inputValue.trim())) {
+                      addSkill(inputValue);
+                    }
+                  }, 200);
+                }}
+                placeholder="Enter skill..."
+                className="text-xs font-medium bg-transparent border-none outline-none w-24 min-w-0 max-w-full break-words overflow-wrap-anywhere"
+                style={{ color: colors.primaryText }}
+              />
+              <button
+                onClick={() => {
+                  if (inputValue.trim()) {
+                    addSkill(inputValue);
+                  }
+                }}
+                className="flex-shrink-0 transition-colors"
+                style={{ color: colors.primaryText }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = colors.secondaryText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = colors.primaryText;
+                }}
+                aria-label="Add skill"
+                title="Add skill"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {showSuggestions && suggestions.length > 0 && !duplicateError && (
+              <div
+                ref={dropdownRef}
+                className="absolute top-full left-0 mt-1 w-48 rounded-lg shadow-lg border z-50 max-h-48 overflow-y-auto"
+                style={{
+                  background: colors.cardBackground,
+                  border: `1px solid ${colors.border}`,
+                }}
+              >
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => addSkill(suggestion)}
+                    className="w-full text-left px-3 py-2 text-xs font-medium transition-colors"
+                    style={{
+                      background: index === focusedIndex ? colors.hoverBackground : 'transparent',
+                      color: colors.primaryText,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = colors.hoverBackground;
+                    }}
+                    onMouseLeave={(e) => {
+                      if (index !== focusedIndex) {
+                        e.currentTarget.style.background = 'transparent';
+                      }
+                    }}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {/* Duplicate Error Message */}
+            {duplicateError && (
+              <div
+                className="absolute top-full left-0 mt-1 px-3 py-2 rounded-lg shadow-lg border z-50 text-xs font-medium flex items-center gap-2 animate-in slide-in-from-top duration-200"
+                style={{
+                  background: '#fef2f2',
+                  border: `1px solid ${colors.errorRed}`,
+                  color: colors.errorRed,
+                }}
+                role="alert"
+              >
+                <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span>{duplicateError}</span>
+              </div>
+            )}
           </div>
           
           {skills.length === 0 && (

@@ -19,6 +19,13 @@ import {
   ResumeSnapshot,
   BaseResumeRecord
 } from '../utils/resumeMapper';
+import {
+  saveDraftToLocalStorage,
+  loadDraftFromLocalStorage,
+  clearDraftFromLocalStorage,
+  DraftBackup
+} from '../utils/draftPersistence';
+import { cacheInvalidation } from '../utils/cacheInvalidation';
 
 const AUTOSAVE_DEBOUNCE_MS = 5000;
 
@@ -72,6 +79,9 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   const bulletStyleRef = useRef(bulletStyleState);
   const resumeFileNameRef = useRef(resumeFileNameState);
   const lastServerUpdatedAtRef = useRef(lastServerUpdatedAt);
+  const hasChangesRef = useRef(hasChanges);
+  const isSavingRef = useRef(isSaving);
+  const currentResumeIdRef = useRef(currentResumeId);
   
   // Update refs when state changes
   useEffect(() => {
@@ -113,6 +123,15 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
   useEffect(() => {
     lastServerUpdatedAtRef.current = lastServerUpdatedAt;
   }, [lastServerUpdatedAt]);
+  useEffect(() => {
+    hasChangesRef.current = hasChanges;
+  }, [hasChanges]);
+  useEffect(() => {
+    isSavingRef.current = isSaving;
+  }, [isSaving]);
+  useEffect(() => {
+    currentResumeIdRef.current = currentResumeId;
+  }, [currentResumeId]);
 
   const [history, setHistory] = useState<ResumeData[]>(() => [cloneResumeData(initialResumeData)]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -225,6 +244,11 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         });
         setHasChanges(true);
         setSaveError(null);
+        
+        // ✅ CACHE INVALIDATION: Mark ATS cache as stale when resume is edited
+        if (currentResumeIdRef.current) {
+          cacheInvalidation.markStale(currentResumeIdRef.current);
+        }
       }
       return next;
     });
@@ -320,10 +344,21 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     setHasChanges,
   ]);
 
+  const cancelAutoSave = useCallback(() => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+      logger.info('Auto-save cancelled');
+    }
+  }, []);
+
   const loadResumeById = useCallback(async (id: string) => {
     if (!id) {
       return null;
     }
+
+    // ✅ Cancel any ongoing auto-save when switching resumes
+    cancelAutoSave();
 
     console.log('📥 [LOAD] Loading resume by ID:', id);
     setIsLoading(true);
@@ -336,6 +371,25 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
         hasSummary: !!response?.resume?.data?.summary,
         summaryPreview: response?.resume?.data?.summary?.substring(0, 100)
       });
+      
+      // ✅ Try to recover from localStorage if server draft is missing
+      if (!response?.resume?.data && typeof window !== 'undefined') {
+        logger.info('Server draft missing, checking localStorage backup...');
+        const localBackup = loadDraftFromLocalStorage(id);
+        if (localBackup) {
+          logger.info('Recovered draft from localStorage', { resumeId: id });
+          const snapshot: ResumeSnapshot = {
+            resumeData: localBackup.resumeData,
+            sectionOrder: localBackup.sectionOrder,
+            sectionVisibility: localBackup.sectionVisibility,
+            customSections: localBackup.customSections,
+            formatting: localBackup.formatting,
+          };
+          applySnapshot(snapshot);
+          setIsLoading(false);
+          return { resume: null, snapshot };
+        }
+      }
       
       if (response?.resume) {
         console.log('📝 [LOAD] Applying resume to editor:', {
@@ -365,7 +419,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [applyBaseResume, setSaveError]);
+  }, [applyBaseResume, setSaveError, cancelAutoSave, applySnapshot]);
 
   useEffect(() => {
     const loadResume = async () => {
@@ -408,7 +462,8 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     logger.debug('Auto-save effect triggered', { hasChanges, isSaving, currentResumeId });
     
     // Don't auto-save if there's no resume ID or no changes or currently saving
-    if (!currentResumeId || !hasChanges || isSaving) {
+    // Use refs to avoid stale closure
+    if (!currentResumeIdRef.current || !hasChangesRef.current || isSavingRef.current) {
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
         autosaveTimerRef.current = null;
@@ -424,7 +479,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
                         (resumeDataRef.current.education && resumeDataRef.current.education.length > 0);
     
     if (!hasRealData) {
-      logger.debug('Auto-save skipped - resume data is empty', { currentResumeId });
+      logger.debug('Auto-save skipped - resume data is empty', { currentResumeId: currentResumeIdRef.current });
       if (autosaveTimerRef.current) {
         clearTimeout(autosaveTimerRef.current);
         autosaveTimerRef.current = null;
@@ -432,7 +487,11 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
       return undefined;
     }
 
-    logger.info('Starting auto-save timer (5 seconds)', { hasChanges, isSaving, currentResumeId });
+    logger.info('Starting auto-save timer (5 seconds)', { 
+      hasChanges: hasChangesRef.current, 
+      isSaving: isSavingRef.current, 
+      currentResumeId: currentResumeIdRef.current 
+    });
 
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
@@ -441,6 +500,13 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     autosaveTimerRef.current = setTimeout(async () => {
       logger.info('Auto-save timer fired, executing save...');
       autosaveTimerRef.current = null;
+
+      // ✅ CRITICAL: Prevent saving if resume is being switched
+      // Check if isSaving is true (could be loading a new resume)
+      if (isSavingRef.current) {
+        logger.warn('Auto-save skipped - resume is being loaded or saved');
+        return;
+      }
 
       // Prevent auto-save when validation fails (e.g., invalid email)
       const validation = validateResumeData(resumeDataRef.current);
@@ -475,11 +541,11 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
       const sanitizedPayload = sanitizeResumeData(mappedPayload);
 
       try {
-        console.log('💾 [AUTO-SAVE] Starting auto-save...', { currentResumeId });
+        console.log('💾 [AUTO-SAVE] Starting auto-save...', { currentResumeId: currentResumeIdRef.current });
         setIsSaving(true);
         setSaveError(null);
 
-        const currentId = currentResumeId;
+        const currentId = currentResumeIdRef.current;
         if (currentId) {
           logger.info('Auto-saving to working draft', { baseResumeId: currentId });
           try {
@@ -495,10 +561,12 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
               if (response.draft.updatedAt) {
                 setLastSavedAt(new Date(response.draft.updatedAt));
               }
+              // ✅ CRITICAL: Reset hasChanges to prevent duplicate saves
               setHasChanges(false);
               setHasConflict(false);
+              setSaveError(null);
               
-              logger.info('Draft auto-saved successfully', {
+              logger.info('Draft auto-saved successfully - hasChanges reset', {
                 draftId: response.draft.id,
                 updatedAt: response.draft.updatedAt
               });
@@ -532,7 +600,10 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
                   _setResumeFileName(savedResume.name || fileName);
                 });
               }
+              // ✅ CRITICAL: Reset hasChanges to prevent duplicate saves
               setHasChanges(false);
+              setSaveError(null);
+              logger.info('New resume created and saved - hasChanges reset');
             } else {
               logger.error('Create base resume response missing resume data', response);
               setSaveError('Failed to create resume: No resume data in response.');
@@ -564,12 +635,12 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           ||
           !isOnline();
         
-        if (isNetworkError && currentResumeId) {
+        if (isNetworkError && currentResumeIdRef.current) {
           const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
           // 🎯 NEW: Queue draft save for offline retry
           offlineQueue.add(
             'save',
-            `${apiBaseUrl}/api/working-draft/${currentResumeId}/save`,
+            `${apiBaseUrl}/api/working-draft/${currentResumeIdRef.current}/save`,
             {
               data: sanitizedPayload.data,
               formatting: sanitizedPayload.formatting,
@@ -618,18 +689,79 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     }
   }, []);
 
+  // ✅ Periodic localStorage backup (every 10 seconds)
+  useEffect(() => {
+    if (!currentResumeIdRef.current || !hasChangesRef.current) {
+      return;
+    }
+
+    const backupInterval = setInterval(() => {
+      if (currentResumeIdRef.current && hasChangesRef.current) {
+        const backup: DraftBackup = {
+          resumeId: currentResumeIdRef.current,
+          resumeData: resumeDataRef.current,
+          sectionOrder: sectionOrderRef.current,
+          sectionVisibility: sectionVisibilityRef.current,
+          customSections: customSectionsRef.current,
+          formatting: {
+            fontFamily: fontFamilyRef.current,
+            fontSize: fontSizeRef.current,
+            lineSpacing: lineSpacingRef.current,
+            sectionSpacing: sectionSpacingRef.current,
+            margins: marginsRef.current,
+            headingStyle: headingStyleRef.current,
+            bulletStyle: bulletStyleRef.current,
+          },
+          timestamp: Date.now(),
+        };
+        saveDraftToLocalStorage(backup);
+      }
+    }, 10000); // Every 10 seconds
+
+    return () => clearInterval(backupInterval);
+  }, [currentResumeId, hasChanges]);
+
   // 🎯 NEW: Draft management functions
   const commitDraft = useCallback(async () => {
     if (!currentResumeId) {
       logger.warn('Cannot commit draft: no current resume ID');
-      return;
+      return { success: false, error: 'No resume selected' };
     }
 
     try {
       setIsSaving(true);
       setSaveError(null);
 
-      logger.info('Committing draft to base resume', { baseResumeId: currentResumeId });
+      // ✅ CRITICAL: Check for conflicts before committing
+      logger.info('Checking for conflicts before committing draft...', { baseResumeId: currentResumeId });
+      
+      try {
+        const serverResume = await apiService.getBaseResume(currentResumeId);
+        if (serverResume?.resume?.updatedAt && lastServerUpdatedAtRef.current) {
+          const serverTime = new Date(serverResume.resume.updatedAt).getTime();
+          const localTime = new Date(lastServerUpdatedAtRef.current).getTime();
+          
+          if (serverTime > localTime) {
+            logger.warn('Conflict detected: server version is newer', {
+              serverTime: serverResume.resume.updatedAt,
+              localTime: lastServerUpdatedAtRef.current
+            });
+            setHasConflict(true);
+            setSaveError('This resume has been updated on another device. Please resolve the conflict.');
+            return { 
+              success: false, 
+              error: 'Conflict detected', 
+              hasConflict: true,
+              serverVersion: serverResume.resume 
+            };
+          }
+        }
+      } catch (checkError) {
+        logger.warn('Failed to check for conflicts, proceeding with commit', checkError);
+        // Proceed with commit even if conflict check fails
+      }
+
+      logger.info('No conflicts detected, committing draft to base resume', { baseResumeId: currentResumeId });
       
       const response = await apiService.commitDraftToBase(currentResumeId);
       
@@ -639,6 +771,9 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
           setLastSavedAt(new Date(response.baseResume.updatedAt));
         }
         setHasChanges(false);
+        
+        // ✅ Clear localStorage backup after successful commit
+        clearDraftFromLocalStorage();
         
         logger.info('Draft committed successfully', {
           baseResumeId: currentResumeId,
@@ -658,7 +793,7 @@ export const useResumeData = (options: UseResumeDataOptions = {}) => {
     } finally {
       setIsSaving(false);
     }
-  }, [currentResumeId, setIsSaving, setSaveError, setLastServerUpdatedAt, setLastSavedAt, setHasChanges]);
+  }, [currentResumeId, setIsSaving, setSaveError, setLastServerUpdatedAt, setLastSavedAt, setHasChanges, setHasConflict]);
 
   const discardDraft = useCallback(async () => {
     if (!currentResumeId) {

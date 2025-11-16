@@ -21,9 +21,11 @@ import type {
 
 class ApiService {
   private baseUrl: string;
+  private pendingRequests: Map<string, Promise<any>>;
 
   constructor() {
     this.baseUrl = API_BASE_URL;
+    this.pendingRequests = new Map();
   }
 
   private resolveUrl(endpoint: string): string {
@@ -38,6 +40,26 @@ class ApiService {
       return trimmed;
     }
     return `${this.baseUrl}${trimmed}`;
+  }
+
+  /**
+   * Generate a unique cache key for request deduplication
+   */
+  private generateRequestKey(endpoint: string, options: RequestInit): string {
+    const method = options.method || 'GET';
+    const body = options.body ? JSON.stringify(options.body) : '';
+    return `${method}:${endpoint}:${body}`;
+  }
+
+  /**
+   * Create an AbortController for request cancellation
+   * Usage:
+   *   const controller = apiService.createAbortController();
+   *   apiService.someMethod(params, controller.signal);
+   *   // Later: controller.abort();
+   */
+  createAbortController(): AbortController {
+    return new AbortController();
   }
 
   /**
@@ -56,41 +78,69 @@ class ApiService {
     endpoint: string,
     options: RequestInit = {},
     retryCount = 0,
-    skipRetry = false
+    skipRetry = false,
+    skipDedup = false
   ): Promise<T> {
+    // ✅ REQUEST DEDUPLICATION: Check if same request is already in flight
+    const requestKey = this.generateRequestKey(endpoint, options);
+    
+    // Skip deduplication for POST/PUT/DELETE (mutations) or if explicitly skipped
+    const method = (options.method || 'GET').toUpperCase();
+    const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method);
+    
+    if (!skipDedup && !isMutation && this.pendingRequests.has(requestKey)) {
+      logger.debug('Request deduplication: returning existing promise', { endpoint, method });
+      return this.pendingRequests.get(requestKey)!;
+    }
+
     // If retry is skipped (e.g., token refresh), use direct request
     if (skipRetry) {
       return this.directRequest<T>(endpoint, options, retryCount);
     }
 
-    // Use retry handler with exponential backoff
-    const result = await retryWithBackoff(
-      () => this.directRequest<T>(endpoint, options, 0),
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        maxDelay: 30000,
-        backoffMultiplier: 2,
-        retryableStatusCodes: [408, 429, 500, 502, 503, 504],
-        retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout'],
-      }
-    );
+    // Create the request promise
+    const requestPromise = (async () => {
+      try {
+        // Use retry handler with exponential backoff
+        const result = await retryWithBackoff(
+          () => this.directRequest<T>(endpoint, options, 0),
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            maxDelay: 30000,
+            backoffMultiplier: 2,
+            retryableStatusCodes: [408, 429, 500, 502, 503, 504],
+            retryableErrors: ['NetworkError', 'Failed to fetch', 'timeout'],
+          }
+        );
 
-    if (result.success && result.data !== undefined) {
-      return result.data;
+        if (result.success && result.data !== undefined) {
+          return result.data;
+        }
+
+        // If retry failed and we're offline, wait for online status
+        if (!isOnline()) {
+          logger.info('Device is offline, waiting for connection...');
+          const cameOnline = await waitForOnline(5000);
+          if (cameOnline) {
+            // Try once more after coming online
+            return this.directRequest<T>(endpoint, options, 0);
+          }
+        }
+
+        throw result.error || new Error('Request failed after retries');
+      } finally {
+        // ✅ Clean up pending request after completion
+        this.pendingRequests.delete(requestKey);
+      }
+    })();
+
+    // Store the promise for deduplication
+    if (!skipDedup && !isMutation) {
+      this.pendingRequests.set(requestKey, requestPromise);
     }
 
-    // If retry failed and we're offline, wait for online status
-    if (!isOnline()) {
-      logger.info('Device is offline, waiting for connection...');
-      const cameOnline = await waitForOnline(5000);
-      if (cameOnline) {
-        // Try once more after coming online
-        return this.directRequest<T>(endpoint, options, 0);
-      }
-    }
-
-    throw result.error || new Error('Request failed after retries');
+    return requestPromise;
   }
 
   /**
@@ -101,6 +151,8 @@ class ApiService {
     options: RequestInit = {},
     retryCount = 0
   ): Promise<T> {
+    // ✅ REQUEST CANCELLATION: Support AbortSignal
+    // The signal is passed through options.signal from the caller
     try {
       const headers: HeadersInit = {
         ...options.headers,

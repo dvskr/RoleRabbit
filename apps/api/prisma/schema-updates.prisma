@@ -1,0 +1,226 @@
+/**
+ * PRISMA SCHEMA UPDATES
+ * 
+ * Complete schema updates for sections 3.1, 3.2, and 3.3
+ * Copy these models into your main schema.prisma file
+ */
+
+// ============================================================================
+// 3.1 MISSING TABLES
+// ============================================================================
+
+/**
+ * Resume Templates Table
+ * Stores template definitions (if moving templates to database)
+ */
+model ResumeTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // "ats", "creative", "modern", "classic"
+  description String
+  layout      String   // "single-column", "two-column", "hybrid"
+  colorScheme String   // "blue", "green", "purple", etc.
+  isPremium   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  cssClasses  Json     // Template-specific CSS
+  previewUrl  String?
+  
+  rating      Float    @default(0)
+  usageCount  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@index([isPremium])
+  @@index([isActive])
+  @@map("resume_templates")
+}
+
+/**
+ * Resume Versions Table
+ * Stores version history for manual edits
+ */
+model ResumeVersion {
+  id            String   @id @default(cuid())
+  baseResumeId  String
+  userId        String
+  versionNumber Int      // 1, 2, 3, ...
+  changeType    String   // "manual_edit", "ai_tailor", "template_change"
+  
+  data          Json
+  formatting    Json
+  metadata      Json
+  
+  createdAt     DateTime @default(now())
+  
+  baseResume    BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([baseResumeId, versionNumber])
+  @@index([baseResumeId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("resume_versions")
+}
+
+/**
+ * Resume Share Links Table
+ * Stores public share links for resumes
+ */
+model ResumeShareLink {
+  id            String    @id @default(cuid())
+  baseResumeId  String
+  userId        String
+  token         String    @unique // Random token for public URL
+  
+  viewCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  expiresAt     DateTime?
+  
+  createdAt     DateTime  @default(now())
+  
+  baseResume    BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([baseResumeId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("resume_share_links")
+}
+
+/**
+ * Resume Analytics Table
+ * Tracks usage statistics for resumes
+ */
+model ResumeAnalytics {
+  id             String    @id @default(cuid())
+  baseResumeId   String    @unique
+  
+  viewCount      Int       @default(0)
+  exportCount    Int       @default(0)
+  tailorCount    Int       @default(0)
+  shareCount     Int       @default(0)
+  
+  lastViewedAt   DateTime?
+  lastExportedAt DateTime?
+  lastTailoredAt DateTime?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  baseResume     BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  
+  @@map("resume_analytics")
+}
+
+// ============================================================================
+// 3.2 MISSING COLUMNS - Update existing BaseResume model
+// ============================================================================
+
+/**
+ * UPDATED BaseResume Model
+ * Add these fields to your existing BaseResume model
+ */
+model BaseResume {
+  // ... existing fields ...
+  
+  // CRITICAL (P0) - Soft Delete
+  deletedAt   DateTime? // Soft delete timestamp
+  
+  // CRITICAL (P0) - Optimistic Locking
+  version     Int       @default(1) // Increment on each update
+  
+  // HIGH PRIORITY (P1) - Tagging
+  tags        String[]  @default([]) // User-defined tags
+  
+  // HIGH PRIORITY (P1) - Archiving
+  archivedAt  DateTime? // Archive timestamp
+  
+  // ... existing relations ...
+  
+  // NEW RELATIONS
+  versions       ResumeVersion[]
+  shareLinks     ResumeShareLink[]
+  analytics      ResumeAnalytics?
+  
+  // UPDATED INDEXES
+  @@index([userId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([updatedAt])
+  @@index([deletedAt])    // NEW: For soft delete queries
+  @@index([archivedAt])   // NEW: For archive queries
+  @@index([tags])         // NEW: For tag filtering
+  @@index([name])         // NEW: For name search
+  @@map("base_resumes")
+}
+
+// ============================================================================
+// 3.3 MISSING INDEXES - Update existing models
+// ============================================================================
+
+/**
+ * UPDATED WorkingDraft Model
+ * Add index on updatedAt
+ */
+model WorkingDraft {
+  // ... existing fields ...
+  
+  @@index([baseResumeId])
+  @@index([updatedAt])    // NEW: For finding stale drafts
+  @@map("working_drafts")
+}
+
+/**
+ * UPDATED TailoredVersion Model
+ * Add composite index
+ */
+model TailoredVersion {
+  // ... existing fields ...
+  
+  @@index([baseResumeId])
+  @@index([userId, createdAt]) // NEW: For user's recent versions
+  @@index([createdAt])
+  @@map("tailored_versions")
+}
+
+/**
+ * UPDATED AIRequestLog Model
+ * Add index on createdAt
+ */
+model AIRequestLog {
+  // ... existing fields ...
+  
+  @@index([userId])
+  @@index([createdAt])    // NEW: For date range queries
+  @@map("ai_request_logs")
+}
+
+/**
+ * UPDATED ResumeCache Model
+ * Add index on lastUsedAt
+ */
+model ResumeCache {
+  // ... existing fields ...
+  
+  @@index([cacheKey])
+  @@index([lastUsedAt])   // NEW: For cleanup queries
+  @@map("resume_caches")
+}
+
+/**
+ * UPDATED User Model
+ * Add relation to new tables
+ */
+model User {
+  // ... existing fields ...
+  
+  // NEW RELATIONS
+  resumeVersions  ResumeVersion[]
+  shareLinks      ResumeShareLink[]
+  
+  @@map("users")
+}
+

@@ -229,6 +229,10 @@ fastify.register(require('@fastify/multipart'), {
   }
 });
 
+// Add request ID middleware (runs first)
+const requestIdMiddleware = require('./middleware/requestId');
+fastify.addHook('onRequest', requestIdMiddleware);
+
 // Hook to make cookie token available for jwtVerify (runs after cookies are parsed)
 fastify.addHook('preHandler', async (request, _reply) => {
   // If we have a cookie token but no Authorization header, set it so jwtVerify can use it
@@ -321,6 +325,11 @@ fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' })
 fastify.register(require('./routes/resume.routes'));
 fastify.register(require('./routes/baseResume.routes'));
 fastify.register(require('./routes/workingDraft.routes'));
+fastify.register(require('./routes/export.routes')); // Resume export routes
+fastify.register(require('./routes/tailoredVersion.routes')); // Tailored version routes
+fastify.register(require('./routes/share.routes')); // Resume sharing routes
+fastify.register(require('./routes/template.routes')); // Resume template routes
+fastify.register(require('./routes/docs.routes')); // API documentation routes
 fastify.register(require('./routes/editorAI.routes'));
 fastify.register(require('./routes/jobs.routes'));
 fastify.register(require('./routes/coverLetters.routes'));

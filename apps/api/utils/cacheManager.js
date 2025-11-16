@@ -1,403 +1,269 @@
-const { LRUCache } = require('lru-cache');
-const Redis = require('ioredis');
-const logger = require('./logger');
-const cacheConfig = require('../config/cacheConfig');
-const { buildCacheKey } = require('./cacheKeys');
+/**
+ * Cache Manager
+ * 
+ * Unified cache management with invalidation, warming, and monitoring
+ */
 
-const memoryCache = new LRUCache({
-  max: cacheConfig.lruMaxItems,
-  ttl: cacheConfig.lruDefaultTtlMs,
-  allowStale: false
-});
+const { redisCache } = require('./redisCache');
+const { getInvalidationKeys, getCacheWarmingTasks, CACHE_MONITORING } = require('../config/cacheConfig');
 
-let redisClient = null;
-let redisStatus = 'disabled';
-let redisLastError = null;
-let redisLastErrorTime = null;
-let redisReconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 10;
-
-// Track Redis metrics
-const redisMetrics = {
+/**
+ * Cache statistics
+ */
+const cacheStats = {
   hits: 0,
   misses: 0,
   errors: 0,
-  reconnects: 0,
-  lastHealthCheck: null,
-  lastHealthCheckResult: null
+  sets: 0,
+  deletes: 0,
+  lastReset: Date.now()
 };
 
-function buildRedisOptions() {
-  const options = {
-    lazyConnect: cacheConfig.redisLazyConnect,
-    maxRetriesPerRequest: 3, // Increased from 1 for better reliability
-    enableAutoPipelining: true,
-    retryStrategy: (times) => {
-      // Exponential backoff with max 10 seconds
-      const delay = Math.min(times * 1000, 10000);
-      logger.info(`Redis retry attempt ${times}, waiting ${delay}ms`);
-      return delay;
-    },
-    reconnectOnError: (err) => {
-      // Reconnect on specific errors
-      const targetErrors = ['READONLY', 'ECONNREFUSED', 'ETIMEDOUT'];
-      return targetErrors.some(targetError => err.message.includes(targetError));
-    }
-  };
-
-  if (cacheConfig.redisTls) {
-    options.tls = {
-      rejectUnauthorized: process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false'
-    };
-  }
-
-  return options;
-}
-
-function initializeRedis() {
-  if (!cacheConfig.redisEnabled || redisClient) {
-    return;
-  }
-
-  redisStatus = 'connecting';
-  redisClient = new Redis(cacheConfig.redisUrl, buildRedisOptions());
-
-  redisClient.on('ready', () => {
-    redisStatus = 'ready';
-    redisReconnectAttempts = 0;
-    redisLastError = null;
-    logger.info('✅ Redis cache connected and ready');
-  });
-
-  redisClient.on('connect', () => {
-    logger.info('Redis cache connecting...');
-  });
-
-  redisClient.on('reconnecting', (delay) => {
-    redisStatus = 'reconnecting';
-    redisReconnectAttempts++;
-    redisMetrics.reconnects++;
-    logger.warn(`Redis reconnecting (attempt ${redisReconnectAttempts}), delay: ${delay}ms`);
+/**
+ * Invalidate cache based on event
+ */
+async function invalidateCache(event, ...params) {
+  try {
+    const keys = getInvalidationKeys(event, ...params);
     
-    if (redisReconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
-      logger.error(`Redis max reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached, giving up`);
-      redisClient.disconnect();
-      redisStatus = 'failed';
+    if (keys.length === 0) {
+      return { success: true, keysInvalidated: 0 };
     }
-  });
 
-  redisClient.on('error', (error) => {
-    redisStatus = 'error';
-    redisLastError = error.message;
-    redisLastErrorTime = new Date().toISOString();
-    redisMetrics.errors++;
-    
-    // Log error but don't spam logs
-    if (redisMetrics.errors % 10 === 1) { // Log every 10th error
-      logger.error('Redis cache error', { 
-        error: error.message,
-        errorCount: redisMetrics.errors,
-        reconnectAttempts: redisReconnectAttempts
-      });
-    }
-  });
+    console.log(`🗑️  Invalidating ${keys.length} cache keys for event: ${event}`);
 
-  redisClient.on('end', () => {
-    redisStatus = 'disconnected';
-    logger.warn('Redis connection ended');
-    
-    // Automatic reconnection is handled by ioredis retryStrategy
-    // Manual reconnection as fallback
-    if (cacheConfig.redisReconnectIntervalMs > 0 && redisReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-      setTimeout(() => {
-        try {
-          logger.info('Attempting manual Redis reconnection...');
-          redisClient.connect().catch((error) => {
-            logger.error('Manual Redis reconnect failed', { error: error.message });
-          });
-        } catch (error) {
-          logger.error('Manual Redis reconnect threw', { error: error.message });
+    let invalidated = 0;
+    for (const key of keys) {
+      // Handle wildcard keys
+      if (key.includes('*')) {
+        const pattern = key.replace('*', '*');
+        const matchingKeys = await redisCache.keys(pattern);
+        for (const matchingKey of matchingKeys) {
+          await redisCache.del(matchingKey);
+          invalidated++;
         }
-      }, cacheConfig.redisReconnectIntervalMs);
-    }
-  });
-
-  redisClient.on('close', () => {
-    redisStatus = 'closed';
-    logger.warn('Redis connection closed');
-  });
-}
-
-initializeRedis();
-
-function isRedisReady() {
-  return redisClient && redisStatus === 'ready';
-}
-
-function toRedisKey(key) {
-  if (!cacheConfig.redisEnabled) {
-    return key;
-  }
-  const prefix = cacheConfig.redisKeyPrefix ? `${cacheConfig.redisKeyPrefix}:` : '';
-  return `${prefix}${key}`;
-}
-
-async function readRedis(key) {
-  if (!isRedisReady()) {
-    redisMetrics.misses++;
-    return undefined;
-  }
-
-  try {
-    const raw = await redisClient.get(toRedisKey(key));
-    if (!raw) {
-      redisMetrics.misses++;
-      return undefined;
-    }
-    redisMetrics.hits++;
-    return JSON.parse(raw);
-  } catch (error) {
-    redisMetrics.errors++;
-    logger.error('Failed to read value from Redis cache', { error: error.message, key });
-    return undefined;
-  }
-}
-
-async function writeRedis(key, value, ttlMs) {
-  if (!isRedisReady()) {
-    return;
-  }
-
-  try {
-    const serialized = JSON.stringify(value);
-    if (typeof ttlMs === 'number' && ttlMs > 0) {
-      await redisClient.set(toRedisKey(key), serialized, 'PX', ttlMs);
-    } else {
-      await redisClient.set(toRedisKey(key), serialized);
-    }
-  } catch (error) {
-    logger.error('Failed to write value to Redis cache', { error: error.message, key });
-  }
-}
-
-async function deleteRedisKey(key) {
-  if (!isRedisReady()) {
-    return;
-  }
-
-  try {
-    await redisClient.del(toRedisKey(key));
-  } catch (error) {
-    logger.error('Failed to delete Redis cache key', { error: error.message, key });
-  }
-}
-
-async function get(namespace, parts) {
-  const cacheKey = buildCacheKey(namespace, parts);
-  const memoryValue = memoryCache.get(cacheKey);
-
-  if (memoryValue !== undefined) {
-    return memoryValue;
-  }
-
-  const remoteValue = await readRedis(cacheKey);
-  if (remoteValue !== undefined) {
-    memoryCache.set(cacheKey, remoteValue);
-  }
-  return remoteValue;
-}
-
-async function set(namespace, parts, value, options = {}) {
-  const cacheKey = buildCacheKey(namespace, parts);
-  const ttlMs = typeof options.ttl === 'number' ? options.ttl : cacheConfig.defaultTtlMs;
-
-  memoryCache.set(cacheKey, value, { ttl: ttlMs });
-
-  if (options.skipRemote !== true) {
-    await writeRedis(cacheKey, value, ttlMs);
-  }
-
-  return cacheKey;
-}
-
-async function del(namespace, parts) {
-  const cacheKey = buildCacheKey(namespace, parts);
-  memoryCache.delete(cacheKey);
-  await deleteRedisKey(cacheKey);
-}
-
-async function invalidateNamespace(namespace, parts = []) {
-  const prefix = buildCacheKey(namespace, parts);
-
-  for (const key of memoryCache.keys()) {
-    if (key.startsWith(prefix)) {
-      memoryCache.delete(key);
-    }
-  }
-
-  if (!isRedisReady()) {
-    return;
-  }
-
-  const pattern = `${toRedisKey(prefix)}*`;
-  let cursor = '0';
-  try {
-    do {
-      const [nextCursor, keys] = await redisClient.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-      if (keys && keys.length > 0) {
-        await redisClient.del(keys);
+      } else {
+        await redisCache.del(key);
+        invalidated++;
       }
-      cursor = nextCursor;
-    } while (cursor !== '0');
-  } catch (error) {
-    logger.error('Failed to invalidate Redis namespace', { error: error.message, namespace, prefix });
-  }
-}
-
-async function wrap({ namespace, keyParts, ttl, fetch, forceRefresh = false, skipRemote = false }) {
-  if (!forceRefresh) {
-    const cached = await get(namespace, keyParts);
-    if (cached !== undefined) {
-      return { value: cached, hit: true };
     }
-  }
 
-  const value = await fetch();
-  if (value !== undefined) {
-    await set(namespace, keyParts, value, { ttl, skipRemote });
-  }
-  return { value, hit: false };
-}
+    cacheStats.deletes += invalidated;
 
-/**
- * Perform Redis health check
- */
-async function checkRedisHealth() {
-  if (!cacheConfig.redisEnabled) {
+    console.log(`✅ Invalidated ${invalidated} cache keys`);
+
     return {
-      status: 'disabled',
-      message: 'Redis is not enabled'
+      success: true,
+      keysInvalidated: invalidated,
+      event
     };
-  }
 
-  if (!redisClient) {
-    return {
-      status: 'not_initialized',
-      message: 'Redis client not initialized'
-    };
-  }
-
-  try {
-    const startTime = Date.now();
-    await redisClient.ping();
-    const responseTime = Date.now() - startTime;
-    
-    // Get Redis info
-    const info = await redisClient.info('memory');
-    const memoryMatch = info.match(/used_memory_human:([^\r\n]+)/);
-    const memoryUsed = memoryMatch ? memoryMatch[1] : 'unknown';
-    
-    redisMetrics.lastHealthCheck = new Date().toISOString();
-    redisMetrics.lastHealthCheckResult = 'healthy';
-    
-    return {
-      status: 'healthy',
-      responseTime: `${responseTime}ms`,
-      memoryUsed,
-      connectionStatus: redisStatus,
-      reconnectAttempts: redisReconnectAttempts,
-      lastError: redisLastError,
-      lastErrorTime: redisLastErrorTime
-    };
   } catch (error) {
-    redisMetrics.lastHealthCheck = new Date().toISOString();
-    redisMetrics.lastHealthCheckResult = 'unhealthy';
-    redisMetrics.errors++;
-    
+    console.error(`❌ Cache invalidation failed for event: ${event}`, error);
+    cacheStats.errors++;
     return {
-      status: 'unhealthy',
+      success: false,
       error: error.message,
-      connectionStatus: redisStatus,
-      reconnectAttempts: redisReconnectAttempts,
-      lastError: redisLastError,
-      lastErrorTime: redisLastErrorTime
+      event
     };
   }
 }
 
 /**
- * Get Redis memory usage
+ * Warm cache with predefined data
  */
-async function getRedisMemoryUsage() {
-  if (!isRedisReady()) {
-    return null;
-  }
-
+async function warmCache(type, ...params) {
   try {
-    const info = await redisClient.info('memory');
-    const stats = {};
+    const tasks = getCacheWarmingTasks(type, ...params);
     
-    // Parse memory info
-    const patterns = {
-      used_memory: /used_memory:(\d+)/,
-      used_memory_human: /used_memory_human:([^\r\n]+)/,
-      used_memory_peak: /used_memory_peak:(\d+)/,
-      used_memory_peak_human: /used_memory_peak_human:([^\r\n]+)/,
-      maxmemory: /maxmemory:(\d+)/,
-      maxmemory_human: /maxmemory_human:([^\r\n]+)/
-    };
-    
-    for (const [key, pattern] of Object.entries(patterns)) {
-      const match = info.match(pattern);
-      if (match) {
-        stats[key] = match[1];
+    if (tasks.length === 0) {
+      return { success: true, keysWarmed: 0 };
+    }
+
+    console.log(`🔥 Warming ${tasks.length} cache keys for: ${type}`);
+
+    let warmed = 0;
+    for (const task of tasks) {
+      try {
+        const data = await task.fetch();
+        await redisCache.set(task.key, data, task.ttl);
+        warmed++;
+        cacheStats.sets++;
+      } catch (error) {
+        console.error(`Failed to warm cache key: ${task.key}`, error);
+        cacheStats.errors++;
       }
     }
-    
-    return stats;
+
+    console.log(`✅ Warmed ${warmed} cache keys`);
+
+    return {
+      success: true,
+      keysWarmed: warmed,
+      type
+    };
+
   } catch (error) {
-    logger.error('Failed to get Redis memory usage', { error: error.message });
-    return null;
+    console.error(`❌ Cache warming failed for type: ${type}`, error);
+    cacheStats.errors++;
+    return {
+      success: false,
+      error: error.message,
+      type
+    };
   }
 }
 
-function getStats() {
-  const totalRequests = redisMetrics.hits + redisMetrics.misses;
-  const hitRate = totalRequests > 0 
-    ? ((redisMetrics.hits / totalRequests) * 100).toFixed(2)
-    : 0;
+/**
+ * Get cache statistics
+ */
+function getCacheStats() {
+  const total = cacheStats.hits + cacheStats.misses;
+  const hitRate = total > 0 ? cacheStats.hits / total : 0;
+  const missRate = total > 0 ? cacheStats.misses / total : 0;
+  const errorRate = total > 0 ? cacheStats.errors / total : 0;
 
   return {
-    memory: {
-      entries: memoryCache.size,
-      capacity: cacheConfig.lruMaxItems,
-      utilizationPercent: ((memoryCache.size / cacheConfig.lruMaxItems) * 100).toFixed(2)
-    },
-    redis: {
-      enabled: cacheConfig.redisEnabled,
-      status: redisStatus,
-      hits: redisMetrics.hits,
-      misses: redisMetrics.misses,
-      errors: redisMetrics.errors,
-      reconnects: redisMetrics.reconnects,
-      hitRate: `${hitRate}%`,
-      lastHealthCheck: redisMetrics.lastHealthCheck,
-      lastHealthCheckResult: redisMetrics.lastHealthCheckResult,
-      lastError: redisLastError,
-      lastErrorTime: redisLastErrorTime,
-      reconnectAttempts: redisReconnectAttempts
-    }
+    hits: cacheStats.hits,
+    misses: cacheStats.misses,
+    errors: cacheStats.errors,
+    sets: cacheStats.sets,
+    deletes: cacheStats.deletes,
+    total,
+    hitRate: (hitRate * 100).toFixed(2) + '%',
+    missRate: (missRate * 100).toFixed(2) + '%',
+    errorRate: (errorRate * 100).toFixed(2) + '%',
+    uptime: Date.now() - cacheStats.lastReset,
+    lastReset: new Date(cacheStats.lastReset).toISOString()
   };
+}
+
+/**
+ * Reset cache statistics
+ */
+function resetCacheStats() {
+  cacheStats.hits = 0;
+  cacheStats.misses = 0;
+  cacheStats.errors = 0;
+  cacheStats.sets = 0;
+  cacheStats.deletes = 0;
+  cacheStats.lastReset = Date.now();
+  
+  console.log('📊 Cache statistics reset');
+}
+
+/**
+ * Track cache hit
+ */
+function trackCacheHit() {
+  cacheStats.hits++;
+}
+
+/**
+ * Track cache miss
+ */
+function trackCacheMiss() {
+  cacheStats.misses++;
+}
+
+/**
+ * Track cache error
+ */
+function trackCacheError() {
+  cacheStats.errors++;
+}
+
+/**
+ * Check cache health
+ */
+function checkCacheHealth() {
+  const stats = getCacheStats();
+  const hitRate = parseFloat(stats.hitRate) / 100;
+  const errorRate = parseFloat(stats.errorRate) / 100;
+
+  const issues = [];
+
+  // Check hit rate
+  if (hitRate < CACHE_MONITORING.MIN_HIT_RATE) {
+    issues.push({
+      severity: 'warning',
+      message: `Cache hit rate is low: ${stats.hitRate} (threshold: ${CACHE_MONITORING.MIN_HIT_RATE * 100}%)`,
+      recommendation: 'Consider increasing cache TTLs or improving cache warming strategy'
+    });
+  }
+
+  // Check error rate
+  if (errorRate > CACHE_MONITORING.MAX_ERROR_RATE) {
+    issues.push({
+      severity: 'critical',
+      message: `Cache error rate is high: ${stats.errorRate} (threshold: ${CACHE_MONITORING.MAX_ERROR_RATE * 100}%)`,
+      recommendation: 'Check Redis connection and error logs'
+    });
+  }
+
+  return {
+    healthy: issues.length === 0,
+    stats,
+    issues
+  };
+}
+
+/**
+ * Monitor cache performance
+ */
+function startCacheMonitoring() {
+  console.log('📊 Starting cache monitoring...');
+
+  const interval = setInterval(() => {
+    const health = checkCacheHealth();
+
+    if (!health.healthy) {
+      console.warn('⚠️  Cache health issues detected:');
+      health.issues.forEach(issue => {
+        console.warn(`  [${issue.severity}] ${issue.message}`);
+        console.warn(`  → ${issue.recommendation}`);
+      });
+    }
+
+    // Log stats periodically
+    if (process.env.LOG_CACHE_STATS === 'true') {
+      console.log('📊 Cache Stats:', health.stats);
+    }
+
+  }, CACHE_MONITORING.METRICS_INTERVAL);
+
+  // Cleanup on shutdown
+  process.on('SIGTERM', () => {
+    clearInterval(interval);
+  });
+
+  return interval;
+}
+
+/**
+ * Flush all cache
+ */
+async function flushCache() {
+  try {
+    await redisCache.flushall();
+    resetCacheStats();
+    console.log('🗑️  Cache flushed successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Failed to flush cache:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 module.exports = {
-  get,
-  set,
-  del,
-  wrap,
-  invalidateNamespace,
-  getStats,
-  checkRedisHealth,
-  getRedisMemoryUsage,
-  isRedisReady: () => isRedisReady()
+  invalidateCache,
+  warmCache,
+  getCacheStats,
+  resetCacheStats,
+  trackCacheHit,
+  trackCacheMiss,
+  trackCacheError,
+  checkCacheHealth,
+  startCacheMonitoring,
+  flushCache
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import MultiResumeManager from './MultiResumeManager';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ResumeEditorProps } from './ResumeEditor/types/ResumeEditor.types';
@@ -12,6 +12,8 @@ import SectionsList from './ResumeEditor/components/SectionsList';
 import NameInput from './ResumeEditor/components/NameInput';
 import ContactFieldsGrid from './ResumeEditor/components/ContactFieldsGrid';
 import FormattingPanel from './ResumeEditor/components/FormattingPanel';
+import ZoomControls from './ResumeEditor/components/ZoomControls';
+import ResumeTipsWidget from './ResumeEditor/components/ResumeTipsWidget';
 import { getTemplateClasses } from '../../app/dashboard/utils/templateClassesHelper';
 import { PanelLeftClose } from 'lucide-react';
 
@@ -84,6 +86,22 @@ export default function ResumeEditor({
 
   // Apply template when selectedTemplateId changes
   useTemplateApplication(selectedTemplateId, onTemplateApply);
+
+  // Zoom state
+  const [zoom, setZoom] = useState(100);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleFitToWidth = () => {
+    setZoom(100); // Reset to 100% for fit to width
+  };
+
+  const handleFitToPage = () => {
+    setZoom(75); // Set to 75% for better page view
+  };
+
+  // Track active section for contextual tips
+  const [activeSection, setActiveSection] = useState<string>('default');
+  const [showTips, setShowTips] = useState(true);
 
   // Memoize sections to prevent unnecessary re-renders
   const renderedSections = useMemo(() => {
@@ -247,6 +265,17 @@ export default function ResumeEditor({
               onResetToDefault={onResetToDefault}
               colors={colors}
             />
+
+            {/* Resume Tips Widget */}
+            {showTips && (
+              <div className="mt-4">
+                <ResumeTipsWidget
+                  activeSection={activeSection}
+                  colors={colors}
+                  onClose={() => setShowTips(false)}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -278,8 +307,25 @@ export default function ResumeEditor({
         })()}
         {/* Diff Banner - REMOVED */}
         
-        {/* Resume Content */}
+        {/* Zoom Controls - Fixed at top right */}
         <div
+          className="absolute top-4 right-4 z-10"
+          style={{
+            pointerEvents: 'auto',
+          }}
+        >
+          <ZoomControls
+            zoom={zoom}
+            onZoomChange={setZoom}
+            onFitToWidth={handleFitToWidth}
+            onFitToPage={handleFitToPage}
+            colors={colors}
+          />
+        </div>
+
+        {/* Resume Content with Zoom */}
+        <div
+          ref={contentRef}
           style={{
             flex: '1 1 0%',
             overflowY: 'auto',
@@ -293,6 +339,15 @@ export default function ResumeEditor({
           paddingRight: '1.5rem',
         }}
       >
+        {/* Zoom wrapper */}
+        <div
+          style={{
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: 'top center',
+            transition: 'transform 0.2s ease-in-out',
+            minHeight: zoom < 100 ? `${(100 / zoom) * 100}%` : 'auto',
+          }}
+        >
         {/* Dynamic styles for heading, bullet, and template formatting */}
         <style>{`
           .resume-editor-content h3 {
@@ -363,6 +418,7 @@ export default function ResumeEditor({
           {renderedSections}
         </div>
         </div>
+      </div>
       </div>
     </div>
   );

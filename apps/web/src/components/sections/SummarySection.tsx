@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Eye, Sparkles, GripVertical, AlertCircle } from 'lucide-react';
+import { Eye, Sparkles, GripVertical, AlertCircle, Lightbulb } from 'lucide-react';
 import { ResumeData } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MAX_LENGTHS, validateMaxLength } from '../../utils/validation';
+import { getExampleSummaryForRole } from '../../data/exampleContent';
 
 interface SummarySectionProps {
   resumeData: ResumeData;
@@ -113,24 +114,49 @@ const SummarySection = React.memo(function SummarySection({
               </div>
             )}
           </div>
-          <button 
-            onClick={() => onOpenAIGenerateModal('summary')}
-            className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
-            style={{
-              color: colors.badgePurpleText,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = colors.badgePurpleBg;
-              e.currentTarget.style.color = colors.badgePurpleText;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = colors.badgePurpleText;
-            }}
-          >
-            <Sparkles size={16} />
-            AI Generate
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Example Summary Button - Only show when empty */}
+            {!resumeData.summary && (
+              <button
+                onClick={() => {
+                  const example = getExampleSummaryForRole(resumeData.title || '');
+                  setResumeData((prev: ResumeData) => ({ ...prev, summary: example }));
+                }}
+                className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
+                style={{
+                  color: colors.badgeGreenText || '#059669',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = colors.badgeGreenBg || '#d1fae5';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+                title="Insert example summary"
+              >
+                <Lightbulb size={16} />
+                Example
+              </button>
+            )}
+            <button 
+              onClick={() => onOpenAIGenerateModal('summary')}
+              className="text-sm flex items-center gap-2 font-semibold px-3 py-2 rounded-lg transition-colors"
+              style={{
+                color: colors.badgePurpleText,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = colors.badgePurpleBg;
+                e.currentTarget.style.color = colors.badgePurpleText;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = colors.badgePurpleText;
+              }}
+            >
+              <Sparkles size={16} />
+              AI Generate
+            </button>
+          </div>
         </div>
       </div>
     </div>

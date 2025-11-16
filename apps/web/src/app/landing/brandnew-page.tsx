@@ -11,7 +11,6 @@ import {
     useAnimationFrame,
   } from "framer-motion";
   import { useRef, useState, useEffect } from "react";
-  import { RabbitLogo } from "@/components/ui/RabbitLogo";
   import {
     Sparkles,
     Zap,
@@ -301,30 +300,6 @@ import {
         <div className="max-w-7xl w-full mx-auto px-6">
           <div className="rounded-full backdrop-blur-xl border border-white/[0.15] shadow-xl">
             <div className="px-6 py-3.5 flex items-center justify-between">
-              {/* Logo */}
-              <motion.div
-                className="flex items-center gap-2.5 cursor-pointer"
-                whileHover={{ scale: 1.02 }}
-                transition={{ type: "spring", stiffness: 400 }}
-                onClick={() =>
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                }
-              >
-                <motion.div
-                  animate={{ rotate: [0, 8, -8, 0] }}
-                  transition={{
-                    duration: 2.5,
-                    repeat: Infinity,
-                    repeatDelay: 4,
-                  }}
-                >
-                  <RabbitLogo size={44} />
-                </motion.div>
-                <span className="text-xl font-bold">
-                  <span className="text-white">Role</span>
-                  <span className="text-emerald-500">Rabbit</span>
-                </span>
-              </motion.div>
     
               {/* Center Navigation */}
               <div className="hidden md:flex items-center gap-8">
@@ -457,45 +432,6 @@ import {
           style={{ y, opacity, scale }}
           className="relative max-w-6xl mx-auto px-6 text-center z-10"
         >
-          {/* Large Centered Animated Rabbit Logo */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{
-              delay: 0.2,
-              duration: 0.8,
-              type: "spring",
-              stiffness: 100,
-            }}
-            className="flex items-center justify-center mb-12"
-          >
-            <motion.div
-              animate={{
-                y: [0, -15, 0],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="relative"
-            >
-              {/* Glow effect behind rabbit */}
-              <motion.div
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute inset-0 bg-gradient-to-br from-teal-500/40 to-cyan-500/40 rounded-full blur-3xl"
-              />
-              <RabbitLogo size={180} />
-            </motion.div>
-          </motion.div>
   
           {/* Animated headline with text reveal */}
           <div className="mb-6 overflow-hidden">
@@ -1373,7 +1309,6 @@ import {
                     whileHover={{ scale: 1.05, z: 100 }}
                     className="aspect-square rounded-xl bg-gradient-to-br from-teal-500/20 to-cyan-500/20 border border-white/10 p-4 flex items-center justify-center"
                   >
-                    <RabbitLogo size={32} />
                   </motion.div>
                 ))}
               </motion.div>
@@ -2001,7 +1936,6 @@ import {
             {/* Header */}
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <RabbitLogo size={18} />
                 <span className="text-sm truncate">
                   Dashboard
                 </span>
@@ -2895,28 +2829,6 @@ import {
       >
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-center justify-center gap-8">
-            {/* Animated Logo */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6 }}
-              className="flex items-center gap-2.5"
-            >
-              <motion.div
-                animate={{ rotate: [0, 8, -8, 0] }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  repeatDelay: 4,
-                }}
-              >
-                <RabbitLogo size={40} />
-              </motion.div>
-              <span className="text-2xl font-bold">
-                <span className="text-white">Role</span>
-                <span className="text-emerald-500">Rabbit</span>
-              </span>
-            </motion.div>
   
             {/* Social Icons */}
             <motion.div

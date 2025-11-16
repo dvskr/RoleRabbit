@@ -16,6 +16,7 @@ interface EnhancedProgressTrackerProps {
   message: string;
   elapsedTime?: number;
   estimatedTimeRemaining?: number;
+  warningMessage?: string; // Warning message for long-running operations
   colors: {
     text: string;
     textSecondary: string;
@@ -70,6 +71,7 @@ export default function EnhancedProgressTracker({
   message,
   elapsedTime = 0,
   estimatedTimeRemaining = 0,
+  warningMessage,
   colors
 }: EnhancedProgressTrackerProps) {
   const stages = getStagesForOperation(operation);
@@ -137,6 +139,21 @@ export default function EnhancedProgressTracker({
             </span>
           )}
         </div>
+
+        {/* Warning Message for Long-Running Operations */}
+        {warningMessage && progress < 100 && (
+          <div
+            className="text-xs p-2 rounded-lg flex items-center gap-2"
+            style={{
+              background: 'rgba(245, 158, 11, 0.1)',
+              color: '#f59e0b',
+              border: '1px solid rgba(245, 158, 11, 0.2)'
+            }}
+          >
+            <span>⏳</span>
+            <span className="font-medium">{warningMessage}</span>
+          </div>
+        )}
       </div>
 
       {/* Stage Breakdown */}

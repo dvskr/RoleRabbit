@@ -16,7 +16,7 @@ interface SectionItemProps {
   colors: ThemeColors;
 }
 
-export default function SectionItem({
+function SectionItem({
   section,
   index,
   totalSections,
@@ -110,4 +110,16 @@ export default function SectionItem({
     </div>
   );
 }
+
+// ✅ PERFORMANCE: Memoize to prevent unnecessary re-renders
+export default React.memo(SectionItem, (prevProps, nextProps) => {
+  return (
+    prevProps.section === nextProps.section &&
+    prevProps.index === nextProps.index &&
+    prevProps.totalSections === nextProps.totalSections &&
+    prevProps.isVisible === nextProps.isVisible &&
+    prevProps.displayName === nextProps.displayName
+    // colors and callbacks are assumed stable
+  );
+});
 

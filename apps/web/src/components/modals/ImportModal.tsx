@@ -8,6 +8,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useBaseResumes } from '../../hooks/useBaseResumes';
 import { useToasts } from '../Toast';
 import apiService from '../../services/apiService';
+import { StepIndicator } from '../common/StepIndicator';
 import type {
   ResumeApplyContext,
   ResumeApplySuccessPayload,
@@ -118,6 +119,9 @@ export default function ImportModal({
   const [isApplying, setIsApplying] = useState<boolean>(false);
   // Track which resume is currently being activated (for loading state)
   const [activatingId, setActivatingId] = useState<string | null>(null);
+  
+  // Track upload/parse progress steps
+  const [uploadStep, setUploadStep] = useState<'idle' | 'uploading' | 'parsing' | 'complete'>('idle');
 
   const handleChooseFile = useCallback((slot: number) => {
     const ref = fileInputRefs.current[slot];
@@ -211,6 +215,7 @@ export default function ImportModal({
   const uploadToCreate = useCallback(async (file: File) => {
     const nameFromFile = file.name.replace(/\.[^.]+$/, '');
     try {
+      setUploadStep('uploading');
       showToast('Uploading resume...', 'info', 2000);
       
       // 1. Upload file to storage first
@@ -224,6 +229,8 @@ export default function ImportModal({
         throw new Error('File upload failed');
       }
       
+      setUploadStep('parsing');
+      
       // 2. Create BaseResume linked to the uploaded file
       const created = await createResume({
         name: nameFromFile,
@@ -233,13 +240,17 @@ export default function ImportModal({
       });
       
       if (created?.id) {
+        setUploadStep('complete');
         setSelectedId(created.id);
         setLastStagedId(created.id);
         showToast('Resume uploaded successfully!', 'success', 3000);
+        setTimeout(() => setUploadStep('idle'), 2000);
       } else {
+        setUploadStep('idle');
         showToast('Upload succeeded but slot creation failed', 'error', 6000);
       }
     } catch (createErr: any) {
+      setUploadStep('idle');
       showToast(createErr?.message || 'Failed to upload resume', 'error', 6000);
     }
   }, [createResume, showToast]);
@@ -912,6 +923,25 @@ export default function ImportModal({
             <X size={18} />
           </button>
         </div>
+        
+        {/* Step Indicator - Show during upload/parse */}
+        {uploadStep !== 'idle' && (
+          <div className="mb-6 p-4 rounded-lg" style={{ background: colors.inputBackground, border: `1px solid ${colors.border}` }}>
+            <StepIndicator
+              steps={[
+                { number: 1, label: 'Upload', status: uploadStep === 'uploading' ? 'active' : uploadStep === 'parsing' || uploadStep === 'complete' ? 'completed' : 'pending' },
+                { number: 2, label: 'Parse', status: uploadStep === 'parsing' ? 'active' : uploadStep === 'complete' ? 'completed' : 'pending' },
+                { number: 3, label: 'Apply', status: uploadStep === 'complete' ? 'completed' : 'pending' }
+              ]}
+              className="mb-2"
+            />
+            <p className="text-xs text-center mt-3" style={{ color: colors.secondaryText }}>
+              {uploadStep === 'uploading' && 'Uploading resume file...'}
+              {uploadStep === 'parsing' && 'Creating resume slot...'}
+              {uploadStep === 'complete' && 'Complete! Resume ready to use.'}
+            </p>
+          </div>
+        )}
         
         <div className="mb-4 space-y-1 text-sm" style={{ color: colors.secondaryText }}>
           <p>Upload up to {maxSlots} resumes. Activate one to use as your base resume.</p>

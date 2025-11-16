@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ATSAnalysisResult } from '../../../types/ai';
-import { calculateATSScore } from '../utils/atsHelpers';
+// ✅ PERFORMANCE: Use memoized version to cache expensive ATS calculations
+import { calculateATSScoreMemoized as calculateATSScore } from '../utils/memoizedATS';
 import type { ResumeData } from '../../../types/resume';
 
 export const useATSData = () => {

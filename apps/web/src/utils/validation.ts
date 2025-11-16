@@ -4,9 +4,12 @@
 
 // Maximum length constants for resume fields
 export const MAX_LENGTHS = {
+  RESUME_NAME: 100,
   NAME: 100,
   TITLE: 100,
-  SUMMARY: 2000, // ~300-400 words
+  EMAIL: 254,
+  PHONE: 20,
+  SUMMARY: 1000,
   LOCATION: 100,
   EXPERIENCE_BULLET: 500,
   EXPERIENCE_DESCRIPTION: 1000,
@@ -14,6 +17,16 @@ export const MAX_LENGTHS = {
   EDUCATION_DESCRIPTION: 500,
   CERTIFICATION_DESCRIPTION: 500,
   CUSTOM_FIELD: 200,
+  CUSTOM_SECTION_NAME: 50,
+  CUSTOM_SECTION_CONTENT: 5000,
+} as const;
+
+// Font size, margin, and spacing validation ranges
+export const FORMATTING_RANGES = {
+  FONT_SIZE: { min: 8, max: 18, unit: 'px' },
+  MARGINS: { min: 0.25, max: 2, unit: 'in' },
+  LINE_SPACING: { min: 1.0, max: 2.5, unit: '' },
+  SECTION_SPACING: { min: 0, max: 3, unit: 'rem' },
 } as const;
 
 // Email validation regex
@@ -196,6 +209,194 @@ export const validateRequired = (
     return { 
       isValid: false, 
       error: `${fieldName} is required` 
+    };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Parses a date string (flexible format)
+ * Supports: "Jan 2020", "January 2020", "2020-01", "01/2020", "Present", "Current", etc.
+ */
+export const parseDate = (dateStr: string): Date | null => {
+  if (!dateStr || typeof dateStr !== 'string') {
+    return null;
+  }
+  
+  const trimmed = dateStr.trim().toLowerCase();
+  
+  // Handle "Present", "Current", "Now", etc.
+  if (['present', 'current', 'now', 'ongoing'].includes(trimmed)) {
+    return new Date(); // Return current date
+  }
+  
+  // Try parsing as ISO date first
+  const isoDate = new Date(dateStr);
+  if (!isNaN(isoDate.getTime())) {
+    return isoDate;
+  }
+  
+  // Try parsing common formats
+  // Format: "Jan 2020", "January 2020"
+  const monthYearMatch = dateStr.match(/^([a-zA-Z]+)\s+(\d{4})$/);
+  if (monthYearMatch) {
+    const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const monthIndex = monthNames.findIndex(m => monthYearMatch[1].toLowerCase().startsWith(m));
+    if (monthIndex !== -1) {
+      return new Date(parseInt(monthYearMatch[2]), monthIndex, 1);
+    }
+  }
+  
+  // Format: "2020-01", "2020/01"
+  const yearMonthMatch = dateStr.match(/^(\d{4})[-\/](\d{1,2})$/);
+  if (yearMonthMatch) {
+    return new Date(parseInt(yearMonthMatch[1]), parseInt(yearMonthMatch[2]) - 1, 1);
+  }
+  
+  // Format: "01/2020", "01-2020"
+  const monthYearNumMatch = dateStr.match(/^(\d{1,2})[-\/](\d{4})$/);
+  if (monthYearNumMatch) {
+    return new Date(parseInt(monthYearNumMatch[2]), parseInt(monthYearNumMatch[1]) - 1, 1);
+  }
+  
+  // Format: "2020" (year only)
+  const yearMatch = dateStr.match(/^(\d{4})$/);
+  if (yearMatch) {
+    return new Date(parseInt(yearMatch[1]), 0, 1);
+  }
+  
+  return null;
+};
+
+/**
+ * Validates date range (start date must be before end date)
+ */
+export const validateDateRange = (
+  startDate: string, 
+  endDate: string
+): { isValid: boolean; error?: string; warning?: string } => {
+  if (!startDate || !endDate) {
+    return { isValid: true }; // Empty dates are valid (optional)
+  }
+  
+  const start = parseDate(startDate);
+  const end = parseDate(endDate);
+  
+  if (!start || !end) {
+    return { isValid: true }; // If we can't parse, don't show error (user might be typing)
+  }
+  
+  if (start > end) {
+    return { 
+      isValid: false, 
+      error: 'End date must be after start date' 
+    };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Validates future date (warns if date is too far in the future)
+ */
+export const validateFutureDate = (
+  dateStr: string,
+  allowPresent: boolean = true
+): { isValid: boolean; warning?: string } => {
+  if (!dateStr) {
+    return { isValid: true }; // Empty is valid
+  }
+  
+  const trimmed = dateStr.trim().toLowerCase();
+  
+  // "Present" is always valid if allowed
+  if (allowPresent && ['present', 'current', 'now', 'ongoing'].includes(trimmed)) {
+    return { isValid: true };
+  }
+  
+  const date = parseDate(dateStr);
+  if (!date) {
+    return { isValid: true }; // Can't parse, don't warn
+  }
+  
+  const now = new Date();
+  const twoYearsFromNow = new Date();
+  twoYearsFromNow.setFullYear(now.getFullYear() + 2);
+  
+  if (date > twoYearsFromNow) {
+    return { 
+      isValid: true, // Still valid, just a warning
+      warning: 'Date seems far in the future. Please verify.' 
+    };
+  }
+  
+  return { isValid: true };
+};
+
+/**
+ * Checks if two experience entries are duplicates
+ * Considers company, position, and dates
+ */
+export const isDuplicateExperience = (
+  exp1: { company?: string; position?: string; period?: string; endPeriod?: string },
+  exp2: { company?: string; position?: string; period?: string; endPeriod?: string }
+): boolean => {
+  const normalize = (str: string | undefined) => (str || '').trim().toLowerCase();
+  
+  return (
+    normalize(exp1.company) === normalize(exp2.company) &&
+    normalize(exp1.position) === normalize(exp2.position) &&
+    normalize(exp1.period) === normalize(exp2.period) &&
+    normalize(exp1.endPeriod) === normalize(exp2.endPeriod)
+  );
+};
+
+/**
+ * Validates custom section name
+ * Rules: No empty strings, no duplicates, no special characters that break rendering, max 50 characters
+ */
+export const validateCustomSectionName = (
+  name: string,
+  existingNames: string[] = []
+): { isValid: boolean; error?: string } => {
+  // Check if empty
+  if (!name || name.trim() === '') {
+    return {
+      isValid: false,
+      error: 'Section name cannot be empty'
+    };
+  }
+  
+  const trimmedName = name.trim();
+  
+  // Check max length
+  if (trimmedName.length > MAX_LENGTHS.CUSTOM_SECTION_NAME) {
+    return {
+      isValid: false,
+      error: `Section name must be ${MAX_LENGTHS.CUSTOM_SECTION_NAME} characters or less`
+    };
+  }
+  
+  // Check for duplicates (case-insensitive)
+  const isDuplicate = existingNames.some(
+    existing => existing.toLowerCase() === trimmedName.toLowerCase()
+  );
+  
+  if (isDuplicate) {
+    return {
+      isValid: false,
+      error: 'A section with this name already exists'
+    };
+  }
+  
+  // Check for special characters that could break rendering
+  // Allow letters, numbers, spaces, hyphens, and common punctuation
+  const invalidCharsRegex = /[<>{}[\]\\\/|`~]/;
+  if (invalidCharsRegex.test(trimmedName)) {
+    return {
+      isValid: false,
+      error: 'Section name contains invalid characters'
     };
   }
   
