@@ -299,6 +299,27 @@ async function cleanupOldLoginAttempts() {
   }
 }
 
+/**
+ * Generic rate limiting middleware factory
+ * 
+ * @param {string} action - Action type ('login', 'signup', 'api', 'passwordReset')
+ * @returns {Function} Express middleware
+ */
+function ipRateLimit(action) {
+  switch (action) {
+    case 'login':
+      return rateLimitLogin();
+    case 'signup':
+      return rateLimitSignup();
+    case 'api':
+      return rateLimitAPI();
+    case 'passwordReset':
+      return rateLimitPasswordReset();
+    default:
+      return rateLimitAPI(); // Default to API rate limit
+  }
+}
+
 module.exports = {
   RATE_LIMITS,
   getClientIP,
@@ -308,5 +329,6 @@ module.exports = {
   rateLimitSignup,
   rateLimitAPI,
   rateLimitPasswordReset,
-  cleanupOldLoginAttempts
+  cleanupOldLoginAttempts,
+  ipRateLimit
 };

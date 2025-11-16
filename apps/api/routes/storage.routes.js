@@ -62,7 +62,7 @@ const { checkFileSizeLimit, checkStorageQuotaLimit, checkFileCountLimit } = requ
 const { SafeLogger } = require('../utils/safeLogging');
 const { sanitizePath } = require('../utils/fileAuditTrail');
 const { enforceFileOwnership, enforceSharePermission, createUserRateLimitMiddleware, requireAdminRole } = require('../middleware/accessControl');
-const { scheduleExpiredFileCleanup } = require('../utils/dataRetention');
+const { scheduleDataRetentionCleanup } = require('../utils/dataRetention');
 const { secureDelete } = require('../utils/secureDeletion');
 const { detectPII } = require('../utils/piiDetection');
 
@@ -72,7 +72,7 @@ const { detectPII } = require('../utils/piiDetection');
  */
 async function storageRoutes(fastify, _options) {
   // SEC-005: Schedule expired file cleanup
-  scheduleExpiredFileCleanup();
+  scheduleDataRetentionCleanup();
   
   // Log route registration
   logger.info('📁 Storage routes registered: /api/storage/*');

@@ -1,6 +1,7 @@
 /**
  * Individual Template API Routes
  * Section 2.2: Template Management Endpoints
+ * Updated to use Prisma Database
  *
  * GET /api/templates/:id - Get single template with full details
  * PUT /api/templates/:id - Update template (admin only)
@@ -9,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
 // ============================================================================
 // TYPES (Duplicated for clarity - in production, import from shared types)
@@ -157,7 +159,7 @@ export async function GET(
 
     // Requirement #6: Check cache first (TTL: 1 hour)
     const cacheKey = `template:${id}`;
-    const cachedTemplate = getCache<PortfolioTemplate>(cacheKey);
+    const cachedTemplate = getCache(cacheKey);
 
     if (cachedTemplate) {
       return NextResponse.json({
@@ -166,12 +168,17 @@ export async function GET(
       });
     }
 
-    // TODO: Replace with actual database query
-    // const template = await db.portfolioTemplate.findUnique({
-    //   where: { id },
-    // });
-
-    const template = templates.find((t) => t.id === id);
+    // Fetch template from database with Prisma
+    const template = await prisma.portfolioTemplate.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            portfolios: true, // Count how many portfolios use this template
+          },
+        },
+      },
+    });
 
     if (!template) {
       return NextResponse.json(
@@ -180,16 +187,26 @@ export async function GET(
       );
     }
 
-    if (!template.isActive) {
+    if (!template.isPublic) {
       return NextResponse.json(
-        { error: 'Template is not active' },
+        { error: 'Template is not available' },
         { status: 404 }
       );
     }
 
-    // Requirement #5: Return full template including htmlTemplate, cssTemplate, jsTemplate
+    // Requirement #5: Return full template including structure and styles
     // Cache the result (1 hour TTL)
     setCache(cacheKey, template, 3600);
+
+    // Increment downloads count
+    await prisma.portfolioTemplate.update({
+      where: { id },
+      data: {
+        downloads: {
+          increment: 1,
+        },
+      },
+    });
 
     return NextResponse.json({
       template,

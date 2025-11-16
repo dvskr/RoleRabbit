@@ -1,6 +1,7 @@
 /**
  * Portfolio Templates API Routes
  * Section 2.2: Template Management Endpoints
+ * Updated to use Prisma Database
  *
  * GET /api/templates - List all active templates with category filter
  * POST /api/templates - Create new template (admin only)
@@ -8,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
 
 // ============================================================================
 // TYPES
@@ -239,36 +241,42 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // TODO: Replace with actual database query
-    // const activeTemplates = await db.portfolioTemplate.findMany({
-    //   where: {
-    //     isActive: true,
-    //     ...(category && { category }),
-    //     ...(isPremium !== undefined && { isPremium }),
-    //   },
-    //   orderBy: { usageCount: 'desc' },
-    // });
-
-    let filteredTemplates = templates.filter((t) => t.isActive);
+    // Fetch templates from database with Prisma
+    const where: any = {
+      isPublic: true, // Only show public templates
+    };
 
     // Requirement #1: Apply category filter
     if (category) {
-      filteredTemplates = filteredTemplates.filter((t) => t.category === category);
+      where.category = category;
     }
 
-    if (isPremium !== undefined) {
-      filteredTemplates = filteredTemplates.filter((t) => t.isPremium === isPremium);
-    }
-
-    // Requirement #2-3: Return metadata only (exclude htmlTemplate, cssTemplate, jsTemplate)
-    const templateMetadata = filteredTemplates.map(stripTemplateContent);
+    const templates = await prisma.portfolioTemplate.findMany({
+      where,
+      orderBy: {
+        downloads: 'desc', // Sort by popularity
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        thumbnail: true,
+        category: true,
+        isPublic: true,
+        downloads: true,
+        rating: true,
+        createdAt: true,
+        updatedAt: true,
+        // Exclude structure and styles from list view for performance
+      },
+    });
 
     // Requirement #4: Cache the result (1 hour TTL)
-    setCache(cacheKey, templateMetadata, 3600);
+    setCache(cacheKey, templates, 3600);
 
     return NextResponse.json({
-      templates: templateMetadata,
-      total: templateMetadata.length,
+      data: templates,
+      total: templates.length,
       cached: false,
     });
 

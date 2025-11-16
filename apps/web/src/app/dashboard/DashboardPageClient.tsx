@@ -34,7 +34,7 @@ const JobTracker = dynamic(() => import('../../components/JobTracker'), { ssr: f
 const Discussion = dynamic(() => import('../../components/Discussion'), { ssr: false });
 const Email = dynamic(() => import('../../components/Email'), { ssr: false });
 const CoverLetterGenerator = dynamic(() => import('../../components/CoverLetterGenerator'), { ssr: false });
-const PortfolioGenerator = dynamic(() => import('../../components/portfolio-generator/AIPortfolioBuilder'), { ssr: false });
+const PortfolioManagement = dynamic(() => import('../../components/PortfolioManagement'), { ssr: false });
 import {
   ResumeData,
   CustomSection,
@@ -1222,7 +1222,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       case 'cover-letter':
         return <CoverLetterGenerator />;
       case 'portfolio':
-        return <PortfolioGenerator />;
+        return <PortfolioManagement />;
       default:
         return <DashboardFigma onNavigateToTab={handleTabChange} />;
     }

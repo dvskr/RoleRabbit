@@ -1,10 +1,13 @@
 /**
  * Portfolio CRUD API Endpoints
  * Section 2.1: Core Portfolio CRUD Endpoints (#1-30)
+ * Updated to use Prisma Database
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -49,64 +52,35 @@ const PaginationSchema = z.object({
 });
 
 // ============================================================================
-// MOCK DATABASE (Replace with actual database in production)
+// HELPER FUNCTIONS
 // ============================================================================
 
-interface Portfolio {
-  id: string;
-  userId: string;
-  name: string;
-  slug: string;
-  templateId?: string;
-  data: any;
-  isPublished: boolean;
-  isDraft: boolean;
-  visibility: 'PUBLIC' | 'PRIVATE' | 'UNLISTED';
-  subdomain?: string;
-  customDomains: string[];
-  viewCount: number;
-  createdBy: string;
-  updatedBy: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string;
-  version: number;
-}
-
-// Mock in-memory database
-const portfolios: Portfolio[] = [];
-
 // Helper: Get current user ID (replace with actual auth)
-function getCurrentUserId(): string {
-  // TODO: Replace with actual authentication
+async function getCurrentUserId(): Promise<string> {
+  // TODO: Implement proper authentication
+  // For now, return a test user ID
+  // In production, get from session/JWT/auth token
   return 'user-123';
 }
 
 // Helper: Generate unique slug
-function generateSlug(name: string, userId: string): string {
-  const baseSlug = name
+async function generateUniqueSlug(title: string, userId: string): Promise<string> {
+  const baseSlug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-
-  // Check for collision
-  const existingSlugs = portfolios
-    .filter((p) => p.userId === userId && !p.deletedAt)
-    .map((p) => p.slug);
-
-  if (!existingSlugs.includes(baseSlug)) {
-    return baseSlug;
+    .replace(/^-|-$/g, '');
+  
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (await prisma.portfolio.findUnique({ where: { slug } })) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
   }
-
-  // Append random suffix
-  const suffix = Math.random().toString(36).substring(2, 6);
-  return `${baseSlug}-${suffix}`;
+  
+  return slug;
 }
 
-// Helper: Verify ownership
-function verifyOwnership(portfolio: Portfolio, userId: string): boolean {
-  return portfolio.userId === userId;
-}
 
 // ============================================================================
 // POST /api/portfolios - Create Portfolio
@@ -115,7 +89,7 @@ function verifyOwnership(portfolio: Portfolio, userId: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = getCurrentUserId();
+    const userId = await getCurrentUserId();
     const body = await request.json();
 
     // Validate request body (#2-3)
@@ -134,40 +108,41 @@ export async function POST(request: NextRequest) {
 
     // Validate template exists (if provided) (#2)
     if (templateId) {
-      // TODO: Check if template exists in database
-      // const templateExists = await db.template.findUnique({ where: { id: templateId } });
-      // if (!templateExists) {
-      //   return NextResponse.json({ error: 'Template not found' }, { status: 404 });
-      // }
+      const templateExists = await prisma.portfolioTemplate.findUnique({ 
+        where: { id: templateId } 
+      });
+      if (!templateExists) {
+        return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+      }
     }
 
     // Generate unique slug (#5)
-    const slug = generateSlug(name, userId);
+    const slug = await generateUniqueSlug(name, userId);
 
-    // Create portfolio with defaults (#6)
-    const portfolio: Portfolio = {
-      id: crypto.randomUUID(),
-      userId,
-      name,
-      slug,
-      templateId,
-      data,
-      isPublished: false,
-      isDraft: true,
-      visibility: 'PRIVATE',
-      customDomains: [],
-      viewCount: 0,
-      createdBy: userId, // #4
-      updatedBy: userId, // #4
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      version: 1,
-    };
-
-    portfolios.push(portfolio);
-
-    // TODO: Save to actual database
-    // const createdPortfolio = await db.portfolio.create({ data: portfolio });
+    // Create portfolio in database (#6)
+    const portfolio = await prisma.portfolio.create({
+      data: {
+        userId,
+        title: name,
+        slug,
+        templateId,
+        content: data as Prisma.InputJsonValue,
+        status: 'DRAFT',
+        visibility: 'PRIVATE',
+        viewCount: 0,
+        shareCount: 0,
+      },
+      include: {
+        template: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     return NextResponse.json(portfolio, { status: 201 });
   } catch (error) {
@@ -186,7 +161,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = getCurrentUserId();
+    const userId = await getCurrentUserId();
     const { searchParams } = new URL(request.url);
 
     // Parse and validate query parameters (#8-9)
@@ -210,43 +185,50 @@ export async function GET(request: NextRequest) {
     const { page, limit, isPublished, isDraft, sortBy, sortOrder } =
       validationResult.data;
 
-    // Filter portfolios by user (#10)
-    let filtered = portfolios.filter(
-      (p) => p.userId === userId && !p.deletedAt
-    );
+    // Build Prisma where clause
+    const where: Prisma.PortfolioWhereInput = {
+      userId,
+    };
 
-    // Apply filters (#7)
-    if (isPublished !== undefined) {
-      filtered = filtered.filter((p) => p.isPublished === (isPublished === 'true'));
+    // Apply status filters
+    if (isPublished === 'true') {
+      where.status = 'PUBLISHED';
+    } else if (isDraft === 'true') {
+      where.status = 'DRAFT';
     }
-    if (isDraft !== undefined) {
-      filtered = filtered.filter((p) => p.isDraft === (isDraft === 'true'));
-    }
 
-    // Sort (#7)
-    filtered.sort((a, b) => {
-      const aValue = a[sortBy as keyof Portfolio];
-      const bValue = b[sortBy as keyof Portfolio];
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortOrder === 'asc'
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
-
-      return 0;
-    });
-
-    // Pagination (#8-9)
-    const total = filtered.length;
+    // Get total count for pagination
+    const total = await prisma.portfolio.count({ where });
     const totalPages = Math.ceil(total / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedResults = filtered.slice(startIndex, endIndex);
+
+    // Fetch paginated results with sorting
+    const portfolios = await prisma.portfolio.findMany({
+      where,
+      include: {
+        template: {
+          select: {
+            id: true,
+            name: true,
+            thumbnail: true,
+          },
+        },
+        _count: {
+          select: {
+            versions: true,
+            shares: true,
+          },
+        },
+      },
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
 
     // Return with metadata (#9)
     return NextResponse.json({
-      data: paginatedResults,
+      data: portfolios,
       meta: {
         total,
         page,

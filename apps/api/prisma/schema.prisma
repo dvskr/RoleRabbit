@@ -233,11 +233,6 @@ model file_comments {
   file_comments                       file_comments?  @relation("file_commentsTofile_comments", fields: [parentId], references: [id], onDelete: Cascade)
   other_file_comments                 file_comments[] @relation("file_commentsTofile_comments")
   users_file_comments_userIdTousers   users           @relation("file_comments_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
-  // DB-030: editedAt column - Already exists (line 228)
-  // DB-031: editedBy column - Already exists (line 229)
-  // DB-032: mentions column - Already exists (line 230)
-  // DB-033: Check constraint preventing parentId = id - Enforced at application level (validation)
-  // DB-034: Check constraint on content length - Already enforced with @db.VarChar(5000) (line 223)
 
   @@index([editedBy])
   @@index([fileId])
@@ -249,32 +244,25 @@ model file_shares {
   fileId                              String
   userId                              String
   sharedWith                          String
-  permission                          FilePermission @default(VIEW) // DB-021: Enum for permission validation
+  permission                          FilePermission @default(VIEW)
   expiresAt                           DateTime?
   createdAt                           DateTime       @default(now())
   updatedAt                           DateTime
-  createdBy                           String? // DB-056: Track who created
-  updatedBy                           String? // DB-056: Track who updated
   notifiedAt                          DateTime?
   accessedAt                          DateTime?
   lastAccessedAt                      DateTime?
+  createdBy                           String?
+  updatedBy                           String?
   storage_files                       storage_files  @relation(fields: [fileId], references: [id], onDelete: Cascade)
   users_file_shares_sharedWithTousers users          @relation("file_shares_sharedWithTousers", fields: [sharedWith], references: [id], onDelete: Cascade)
   users_file_shares_userIdTousers     users          @relation("file_shares_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
-  users_file_shares_createdByTousers  users?         @relation("file_shares_createdByTousers", fields: [createdBy], references: [id])
-  users_file_shares_updatedByTousers  users?         @relation("file_shares_updatedByTousers", fields: [updatedBy], references: [id])
-  // DB-021: Check constraint on permission enum - Now using FilePermission enum
-  // DB-022: Check constraint on expiresAt > createdAt - Enforced at application level (validation)
 
   @@unique([fileId, sharedWith])
   @@index([accessedAt])
   @@index([createdBy])
-  @@index([expiresAt])
   @@index([fileId])
   @@index([lastAccessedAt])
   @@index([sharedWith])
-  @@index([updatedBy])
-  @@index([userId, fileId])
 }
 
 model generated_documents {
@@ -606,6 +594,7 @@ model resume_templates {
   @@index([isActive])
   @@index([isPremium])
   @@index([rating])
+  @@index([category], map: "idx_resume_templates_category")
 }
 
 model resumes {
@@ -684,39 +673,28 @@ model sessions {
 }
 
 model share_links {
-  id                                 String         @id
-  fileId                             String
-  userId                             String
-  token                              String         @unique
-  password                           String?
-  expiresAt                          DateTime?
-  maxDownloads                       Int?
-  downloadCount                      Int            @default(0)
-  createdAt                          DateTime       @default(now())
-  permission                         FilePermission @default(VIEW) // DB-026: Enum for permission validation
-  createdBy                          String? // DB-056: Track who created
-  updatedBy                          String? // DB-056: Track who updated
-  accessedAt                         DateTime?
-  lastAccessedAt                     DateTime?
-  storage_files                      storage_files  @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  users                              users          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  users_share_links_createdByTousers users?         @relation("share_links_createdByTousers", fields: [createdBy], references: [id])
-  users_share_links_updatedByTousers users?         @relation("share_links_updatedByTousers", fields: [updatedBy], references: [id])
-  // DB-025: createdBy column - Already exists as userId (line 674)
-  // DB-026: Check constraint on permission enum - Now using FilePermission enum
-  // DB-027: Check constraint on expiresAt > createdAt - Enforced at application level (validation)
-  // DB-028: Check constraint on maxDownloads > 0 - Enforced at application level (validation)
-  // DB-029: Check constraint on downloadCount >= 0 - Enforced at application level (default 0)
+  id             String         @id
+  fileId         String
+  userId         String
+  token          String         @unique
+  password       String?
+  expiresAt      DateTime?
+  maxDownloads   Int?
+  downloadCount  Int            @default(0)
+  createdAt      DateTime       @default(now())
+  permission     FilePermission @default(VIEW)
+  accessedAt     DateTime?
+  lastAccessedAt DateTime?
+  createdBy      String?
+  updatedBy      String?
+  storage_files  storage_files  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  users          users          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([accessedAt])
-  @@index([createdBy])
   @@index([expiresAt])
   @@index([fileId])
   @@index([lastAccessedAt])
-  @@index([permission])
   @@index([token])
-  @@index([updatedBy])
-  @@index([userId, fileId])
 }
 
 model skills {
@@ -747,21 +725,21 @@ model storage_files {
   isArchived                            Boolean            @default(false)
   folderId                              String?
   deletedAt                             DateTime?
-  deletedBy                             String? // DB-058: Track who deleted
   downloadCount                         Int                @default(0)
   viewCount                             Int                @default(0)
   createdAt                             DateTime           @default(now())
   updatedAt                             DateTime
   fileHash                              String?
-  version                               Int                @default(1) // DB-001: Version column for file versioning
+  version                               Int                @default(1)
   isCorrupted                           Boolean            @default(false)
-  thumbnail                             String? // DB-005: Thumbnail path/URL (equivalent to thumbnailPath)
+  thumbnail                             String?
   tags                                  String[]           @default([])
   expiresAt                             DateTime?
   lastAccessedAt                        DateTime?
   metadata                              Json?
   uploadedBy                            String?
   modifiedBy                            String?
+  deletedBy                             String?
   base_resumes                          base_resumes[]
   credentials                           credentials[]
   file_access_logs                      file_access_logs[]
@@ -770,18 +748,12 @@ model storage_files {
   job_attachments                       job_attachments[]
   share_links                           share_links[]
   storage_folders                       storage_folders?   @relation(fields: [folderId], references: [id])
-  file_versions                         file_versions[]
-  users_storage_files_deletedByTousers  users?             @relation("storage_files_deletedByTousers", fields: [deletedBy], references: [id])
   users_storage_files_modifiedByTousers users?             @relation("storage_files_modifiedByTousers", fields: [modifiedBy], references: [id])
   users_storage_files_uploadedByTousers users?             @relation("storage_files_uploadedByTousers", fields: [uploadedBy], references: [id])
   users_storage_files_userIdTousers     users              @relation("storage_files_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
-  // DB-009: Unique constraint on (userId, name) - NOT implemented to allow duplicate names (can add with folderId for uniqueness)
-  // DB-010: Check constraint on size > 0 - Enforced at application level (validation)
-  // DB-011: Check constraint on contentType format - Enforced at application level (validation)
 
-  // DB-042: Add missing indexes for frequently queried fields
-  @@index([createdAt]) // For sorting by creation date
-  @@index([updatedAt]) // For sorting by update date
+  @@index([createdAt])
+  @@index([updatedAt])
   @@index([deletedAt])
   @@index([expiresAt])
   @@index([fileHash])
@@ -789,23 +761,20 @@ model storage_files {
   @@index([isArchived])
   @@index([isStarred])
   @@index([lastAccessedAt])
-  @@index([deletedBy])
   @@index([modifiedBy])
   @@index([type])
   @@index([uploadedBy])
   @@index([userId])
-  // DB-043: Add composite indexes for common query patterns
-  @@index([userId, deletedAt, type]) // Common filter: user's files by type, excluding deleted
-  @@index([userId, isStarred, deletedAt]) // Starred files query
-  @@index([userId, isArchived, deletedAt]) // Archived files query
-  @@index([userId, folderId, deletedAt]) // Files in folder query
-  @@index([userId, createdAt]) // Sort by creation date
-  @@index([userId, updatedAt]) // Sort by update date
+  @@index([userId, deletedAt, type])
+  @@index([userId, isStarred, deletedAt])
+  @@index([userId, isArchived, deletedAt])
+  @@index([userId, folderId, deletedAt])
+  @@index([userId, createdAt])
+  @@index([userId, updatedAt])
 }
 
-// BE-011: File versioning model
 model file_versions {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   fileId        String
   versionNumber Int
   fileName      String
@@ -815,10 +784,8 @@ model file_versions {
   fileHash      String?
   description   String?
   createdBy     String
-  createdAt     DateTime      @default(now())
+  createdAt     DateTime @default(now())
   metadata      Json?
-  storage_files storage_files @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  users         users         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@unique([fileId, versionNumber])
   @@index([fileId])
@@ -828,40 +795,32 @@ model file_versions {
 }
 
 model storage_folders {
-  id                                     String            @id
-  userId                                 String
-  name                                   String
-  parentId                               String?
-  color                                  String?
-  createdAt                              DateTime          @default(now())
-  updatedAt                              DateTime
-  deletedAt                              DateTime?
-  deletedBy                              String? // DB-058: Track who deleted
-  createdBy                              String? // DB-056: Track who created
-  updatedBy                              String? // DB-056: Track who updated
-  description                            String?
-  icon                                   String?
-  sortOrder                              Int               @default(0)
-  metadata                               Json?
-  storage_files                          storage_files[]
-  storage_folders                        storage_folders?  @relation("storage_foldersTostorage_folders", fields: [parentId], references: [id], onDelete: Cascade)
-  other_storage_folders                  storage_folders[] @relation("storage_foldersTostorage_folders")
-  users                                  users             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  users_storage_folders_deletedByTousers users?            @relation("storage_folders_deletedByTousers", fields: [deletedBy], references: [id])
-  users_storage_folders_createdByTousers users?            @relation("storage_folders_createdByTousers", fields: [createdBy], references: [id])
-  users_storage_folders_updatedByTousers users?            @relation("storage_folders_updatedByTousers", fields: [updatedBy], references: [id])
-  // DB-017: Check constraint preventing parentId = id is enforced at application level
+  id                    String            @id
+  userId                String
+  name                  String
+  parentId              String?
+  color                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime
+  deletedAt             DateTime?
+  description           String?
+  icon                  String?
+  sortOrder             Int               @default(0)
+  metadata              Json?
+  createdBy             String?
+  deletedBy             String?
+  updatedBy             String?
+  storage_files         storage_files[]
+  storage_folders       storage_folders?  @relation("storage_foldersTostorage_folders", fields: [parentId], references: [id], onDelete: Cascade)
+  other_storage_folders storage_folders[] @relation("storage_foldersTostorage_folders")
+  users                 users             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, name]) // DB-016: Unique constraint on (userId, name)
-  @@index([createdBy])
+  @@unique([userId, name])
   @@index([deletedAt])
-  @@index([deletedBy])
   @@index([parentId])
   @@index([sortOrder])
-  @@index([updatedBy])
   @@index([userId])
   @@index([userId, deletedAt])
-  @@index([userId, parentId])
 }
 
 model storage_quotas {
@@ -875,12 +834,6 @@ model storage_quotas {
   warnedAt   DateTime?
   upgradedAt DateTime?
   users      users            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // DB-035: tier column - Already exists (SubscriptionTier enum, line 828)
-  // DB-036: warnedAt column - Already exists (line 829)
-  // DB-037: upgradedAt column - Already exists (line 830)
-  // DB-038: Check constraint on usedBytes >= 0 - Enforced at application level (default 0)
-  // DB-039: Check constraint on limitBytes > 0 - Enforced at application level (default 5368709120)
-  // DB-040: Check constraint on usedBytes <= limitBytes - Enforced at application level (quota management)
 
   @@index([tier])
   @@index([userId])
@@ -1056,6 +1009,14 @@ model users {
   tailorPreferredMode                                 TailorMode?                @default(PARTIAL)
   tailorPreferredTone                                 String?                    @default("professional")
   tailorPreferredLength                               String?                    @default("thorough")
+  AbuseReport_Reporter                                AbuseReport[]              @relation("AbuseReports_Reporter")
+  AbuseReport_Resolver                                AbuseReport[]              @relation("AbuseReports_Resolver")
+  AuditLog                                            AuditLog[]
+  DeletionRequest                                     DeletionRequest[]
+  Portfolio                                           Portfolio[]
+  PortfolioVersion                                    PortfolioVersion[]
+  ReviewQueue_Assignee                                ReviewQueue[]              @relation("ReviewQueue_Assignee")
+  ReviewQueue_Reviewer                                ReviewQueue[]              @relation("ReviewQueue_Reviewer")
   ai_drafts                                           ai_drafts[]
   ai_request_logs                                     ai_request_logs[]
   analytics_events                                    analytics_events[]
@@ -1067,9 +1028,6 @@ model users {
   file_comments_file_comments_userIdTousers           file_comments[]            @relation("file_comments_userIdTousers")
   file_shares_file_shares_sharedWithTousers           file_shares[]              @relation("file_shares_sharedWithTousers")
   file_shares_file_shares_userIdTousers               file_shares[]              @relation("file_shares_userIdTousers")
-  file_shares_file_shares_createdByTousers            file_shares[]              @relation("file_shares_createdByTousers")
-  file_shares_file_shares_updatedByTousers            file_shares[]              @relation("file_shares_updatedByTousers")
-  file_versions                                       file_versions[]
   generated_documents                                 generated_documents[]
   idempotency_keys                                    idempotency_keys[]
   interview_notes                                     interview_notes[]
@@ -1087,16 +1045,10 @@ model users {
   saved_views                                         saved_views[]
   sessions                                            sessions[]
   share_links                                         share_links[]
-  share_links_share_links_createdByTousers            share_links[]              @relation("share_links_createdByTousers")
-  share_links_share_links_updatedByTousers            share_links[]              @relation("share_links_updatedByTousers")
-  storage_files_storage_files_deletedByTousers        storage_files[]            @relation("storage_files_deletedByTousers")
   storage_files_storage_files_modifiedByTousers       storage_files[]            @relation("storage_files_modifiedByTousers")
   storage_files_storage_files_uploadedByTousers       storage_files[]            @relation("storage_files_uploadedByTousers")
   storage_files_storage_files_userIdTousers           storage_files[]            @relation("storage_files_userIdTousers")
   storage_folders                                     storage_folders[]
-  storage_folders_storage_folders_deletedByTousers    storage_folders[]          @relation("storage_folders_deletedByTousers")
-  storage_folders_storage_folders_createdByTousers    storage_folders[]          @relation("storage_folders_createdByTousers")
-  storage_folders_storage_folders_updatedByTousers    storage_folders[]          @relation("storage_folders_updatedByTousers")
   storage_quotas                                      storage_quotas?
   tailored_versions                                   tailored_versions[]
   tailoring_analytics                                 tailoring_analytics[]
@@ -1183,6 +1135,242 @@ model working_drafts {
   @@index([baseResumeId])
 }
 
+model Portfolio {
+  id            String                @id @default(uuid())
+  userId        String
+  title         String
+  slug          String                @unique
+  description   String?
+  content       Json
+  templateId    String?
+  theme         Json?
+  seoSettings   Json?
+  status        PortfolioStatus       @default(DRAFT)
+  visibility    PortfolioVisibility   @default(PRIVATE)
+  publishedAt   DateTime?
+  customDomain  String?               @unique
+  subdomain     String?               @unique
+  viewCount     Int                   @default(0)
+  shareCount    Int                   @default(0)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  customDomains CustomDomain[]
+  template      PortfolioTemplate?    @relation(fields: [templateId], references: [id])
+  user          users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics     PortfolioAnalytics[]
+  deployments   PortfolioDeployment[]
+  media         PortfolioMedia[]
+  shares        PortfolioShare[]
+  versions      PortfolioVersion[]
+
+  @@index([userId])
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@index([userId, status])
+  @@index([userId, updatedAt])
+}
+
+model PortfolioTemplate {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  thumbnail   String?
+  category    String?
+  structure   Json
+  styles      Json?
+  isPublic    Boolean     @default(true)
+  downloads   Int         @default(0)
+  rating      Float       @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  portfolios  Portfolio[]
+
+  @@index([category])
+  @@index([isPublic])
+  @@index([rating])
+  @@index([downloads])
+}
+
+model PortfolioVersion {
+  id          String    @id @default(uuid())
+  portfolioId String
+  version     Int
+  content     Json
+  changeLog   String?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  creator     users     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, version])
+  @@index([portfolioId])
+  @@index([createdBy])
+  @@index([createdAt])
+}
+
+model PortfolioShare {
+  id          String    @id @default(uuid())
+  portfolioId String
+  token       String    @unique
+  expiresAt   DateTime?
+  maxViews    Int?
+  viewCount   Int       @default(0)
+  isActive    Boolean   @default(true)
+  password    String?
+  createdAt   DateTime  @default(now())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([portfolioId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+model PortfolioAnalytics {
+  id          String    @id @default(uuid())
+  portfolioId String
+  date        DateTime  @default(now())
+  views       Int       @default(0)
+  uniqueViews Int       @default(0)
+  shares      Int       @default(0)
+  referrer    String?
+  country     String?
+  city        String?
+  device      String?
+  browser     String?
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, date])
+  @@index([date])
+  @@index([country])
+}
+
+model PortfolioDeployment {
+  id          String           @id @default(uuid())
+  portfolioId String
+  version     Int
+  status      DeploymentStatus
+  deployedAt  DateTime?
+  buildLog    String?
+  errorLog    String?
+  url         String?
+  createdAt   DateTime         @default(now())
+  portfolio   Portfolio        @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CustomDomain {
+  id          String    @id @default(uuid())
+  portfolioId String
+  domain      String    @unique
+  isVerified  Boolean   @default(false)
+  sslEnabled  Boolean   @default(false)
+  dnsRecords  Json?
+  createdAt   DateTime  @default(now())
+  verifiedAt  DateTime?
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([domain])
+  @@index([portfolioId])
+  @@index([isVerified])
+}
+
+model PortfolioMedia {
+  id          String    @id @default(uuid())
+  portfolioId String
+  type        String
+  url         String
+  filename    String
+  size        BigInt
+  mimeType    String
+  thumbnail   String?
+  metadata    Json?
+  uploadedAt  DateTime  @default(now())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([type])
+}
+
+model AbuseReport {
+  id          String       @id @default(uuid())
+  portfolioId String
+  reportedBy  String
+  reason      AbuseReason
+  description String?
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+  notes       String?
+  reporter    users        @relation("AbuseReports_Reporter", fields: [reportedBy], references: [id], onDelete: Cascade)
+  resolver    users?       @relation("AbuseReports_Resolver", fields: [resolvedBy], references: [id])
+
+  @@index([portfolioId])
+  @@index([status])
+  @@index([reportedBy])
+  @@index([createdAt])
+}
+
+model ReviewQueue {
+  id               String         @id @default(uuid())
+  portfolioId      String
+  priority         ReviewPriority @default(MEDIUM)
+  status           ReviewStatus   @default(PENDING)
+  moderationResult Json?
+  assignedTo       String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  notes            String?
+  createdAt        DateTime       @default(now())
+  assignee         users?         @relation("ReviewQueue_Assignee", fields: [assignedTo], references: [id])
+  reviewer         users?         @relation("ReviewQueue_Reviewer", fields: [reviewedBy], references: [id])
+
+  @@index([portfolioId])
+  @@index([status])
+  @@index([priority])
+  @@index([assignedTo])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  user       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+}
+
+model DeletionRequest {
+  id           String         @id @default(uuid())
+  userId       String
+  reason       String?
+  status       DeletionStatus @default(PENDING)
+  scheduledFor DateTime
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  user         users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledFor])
+}
+
 enum AIAction {
   GENERATE_CONTENT
   TAILOR_PARTIAL
@@ -1267,10 +1455,66 @@ enum TemplateUsageAction {
   SHARE
 }
 
-// DB-021, DB-026: Permission enum for file shares and share links
 enum FilePermission {
   VIEW
   COMMENT
   EDIT
   ADMIN
+}
+
+enum PortfolioStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  SUSPENDED
+}
+
+enum PortfolioVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum DeploymentStatus {
+  PENDING
+  BUILDING
+  DEPLOYED
+  FAILED
+}
+
+enum AbuseReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  COPYRIGHT_VIOLATION
+  MALWARE
+  PHISHING
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  NEEDS_CHANGES
+}
+
+enum ReviewPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum DeletionStatus {
+  PENDING
+  CANCELLED
+  COMPLETED
 }

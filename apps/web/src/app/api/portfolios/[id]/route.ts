@@ -1,10 +1,13 @@
 /**
  * Individual Portfolio API Endpoints
  * Section 2.1: GET, PUT, PATCH, DELETE operations (#11-24)
+ * Updated to use Prisma Database
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // ============================================================================
 // VALIDATION SCHEMAS
@@ -35,39 +38,14 @@ const PortfolioPatchSchema = z.object({
 }).partial();
 
 // ============================================================================
-// MOCK DATABASE (Replace with actual database)
+// HELPER FUNCTIONS
 // ============================================================================
 
-interface Portfolio {
-  id: string;
-  userId: string;
-  name: string;
-  slug: string;
-  templateId?: string;
-  data: any;
-  isPublished: boolean;
-  isDraft: boolean;
-  visibility: 'PUBLIC' | 'PRIVATE' | 'UNLISTED';
-  subdomain?: string;
-  customDomains: string[];
-  viewCount: number;
-  createdBy: string;
-  updatedBy: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string;
-  version: number;
-}
-
-// Mock in-memory database (shared with route.ts)
-const portfolios: Portfolio[] = [];
-
-function getCurrentUserId(): string {
+async function getCurrentUserId(): Promise<string> {
+  // TODO: Implement proper authentication
+  // For now, return a test user ID
+  // In production, get from session/JWT/auth token
   return 'user-123';
-}
-
-function verifyOwnership(portfolio: Portfolio, userId: string): boolean {
-  return portfolio.userId === userId;
 }
 
 // ============================================================================
@@ -80,13 +58,37 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = getCurrentUserId();
+    const userId = await getCurrentUserId();
     const { id } = params;
 
-    // Find portfolio
-    const portfolio = portfolios.find(
-      (p) => p.id === id && !p.deletedAt
-    );
+    // Find portfolio with relations
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id },
+      include: {
+        template: {
+          select: {
+            id: true,
+            name: true,
+            thumbnail: true,
+            category: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            versions: true,
+            shares: true,
+            analytics: true,
+          },
+        },
+      },
+    });
 
     // Return 404 if not found (#13)
     if (!portfolio) {
@@ -97,28 +99,14 @@ export async function GET(
     }
 
     // Verify ownership (#12)
-    if (!verifyOwnership(portfolio, userId)) {
+    if (portfolio.userId !== userId) {
       return NextResponse.json(
         { error: 'Forbidden - You do not own this portfolio' },
         { status: 403 }
       );
     }
 
-    // Return with related entities (#11)
-    // TODO: Fetch actual related data from database
-    const enrichedPortfolio = {
-      ...portfolio,
-      template: portfolio.templateId ? { id: portfolio.templateId, name: 'Template Name' } : null,
-      versionsCount: 5, // TODO: Get actual count
-      analytics: {
-        totalViews: portfolio.viewCount,
-        uniqueVisitors: Math.floor(portfolio.viewCount * 0.7),
-        avgTimeOnPage: 120,
-        bounceRate: 35,
-      },
-    };
-
-    return NextResponse.json(enrichedPortfolio);
+    return NextResponse.json(portfolio);
   } catch (error) {
     console.error('Failed to get portfolio:', error);
     return NextResponse.json(
@@ -138,26 +126,24 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = getCurrentUserId();
+    const userId = await getCurrentUserId();
     const { id } = params;
     const body = await request.json();
 
     // Find portfolio
-    const portfolioIndex = portfolios.findIndex(
-      (p) => p.id === id && !p.deletedAt
-    );
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id },
+    });
 
-    if (portfolioIndex === -1) {
+    if (!portfolio) {
       return NextResponse.json(
         { error: 'Portfolio not found' },
         { status: 404 }
       );
     }
 
-    const portfolio = portfolios[portfolioIndex];
-
     // Verify ownership (#15)
-    if (!verifyOwnership(portfolio, userId)) {
+    if (portfolio.userId !== userId) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -176,31 +162,39 @@ export async function PUT(
       );
     }
 
-    // Optimistic locking check (#18)
-    const requestVersion = body.version;
-    if (requestVersion && requestVersion !== portfolio.version) {
-      return NextResponse.json(
-        {
-          error: 'Conflict - Portfolio was modified by another process',
-          currentVersion: portfolio.version,
-        },
-        { status: 409 }
-      );
+    const { name, data, isPublished, isDraft, visibility } = validationResult.data;
+
+    // Map frontend fields to Prisma schema
+    const updateData: Prisma.PortfolioUpdateInput = {};
+    if (name) updateData.title = name;
+    if (data) updateData.content = data as Prisma.InputJsonValue;
+    if (visibility) updateData.visibility = visibility as any;
+    
+    // Map isPublished/isDraft to status
+    if (isPublished !== undefined) {
+      updateData.status = isPublished ? 'PUBLISHED' : 'DRAFT';
+      if (isPublished && !portfolio.publishedAt) {
+        updateData.publishedAt = new Date();
+      }
+    } else if (isDraft !== undefined) {
+      updateData.status = isDraft ? 'DRAFT' : 'PUBLISHED';
     }
 
     // Update portfolio
-    const updatedPortfolio = {
-      ...portfolio,
-      ...validationResult.data,
-      updatedBy: userId, // #17
-      updatedAt: new Date().toISOString(), // #17
-      version: portfolio.version + 1, // #18
-    };
-
-    portfolios[portfolioIndex] = updatedPortfolio;
-
-    // TODO: Save to actual database
-    // await db.portfolio.update({ where: { id }, data: updatedPortfolio });
+    const updatedPortfolio = await prisma.portfolio.update({
+      where: { id },
+      data: updateData,
+      include: {
+        template: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     return NextResponse.json(updatedPortfolio);
   } catch (error) {
@@ -222,26 +216,24 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = getCurrentUserId();
+    const userId = await getCurrentUserId();
     const { id } = params;
     const body = await request.json();
 
     // Find portfolio
-    const portfolioIndex = portfolios.findIndex(
-      (p) => p.id === id && !p.deletedAt
-    );
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id },
+    });
 
-    if (portfolioIndex === -1) {
+    if (!portfolio) {
       return NextResponse.json(
         { error: 'Portfolio not found' },
         { status: 404 }
       );
     }
 
-    const portfolio = portfolios[portfolioIndex];
-
     // Verify ownership
-    if (!verifyOwnership(portfolio, userId)) {
+    if (portfolio.userId !== userId) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -260,20 +252,47 @@ export async function PATCH(
       );
     }
 
-    // Merge provided fields without overwriting unspecified fields (#20)
-    const updatedPortfolio = {
-      ...portfolio,
-      ...validationResult.data,
-      // Deep merge data object if provided
-      data: validationResult.data.data
-        ? { ...portfolio.data, ...validationResult.data.data }
-        : portfolio.data,
-      updatedBy: userId,
-      updatedAt: new Date().toISOString(),
-      version: portfolio.version + 1,
-    };
+    const { name, data, isPublished, isDraft, visibility } = validationResult.data;
 
-    portfolios[portfolioIndex] = updatedPortfolio;
+    // Build update data
+    const updateData: Prisma.PortfolioUpdateInput = {};
+    if (name) updateData.title = name;
+    if (visibility) updateData.visibility = visibility as any;
+    
+    // Deep merge content if provided
+    if (data) {
+      const currentContent = portfolio.content as any;
+      updateData.content = {
+        ...currentContent,
+        ...data,
+      } as Prisma.InputJsonValue;
+    }
+    
+    // Map isPublished/isDraft to status
+    if (isPublished !== undefined) {
+      updateData.status = isPublished ? 'PUBLISHED' : 'DRAFT';
+      if (isPublished && !portfolio.publishedAt) {
+        updateData.publishedAt = new Date();
+      }
+    } else if (isDraft !== undefined) {
+      updateData.status = isDraft ? 'DRAFT' : 'PUBLISHED';
+    }
+
+    // Update portfolio
+    const updatedPortfolio = await prisma.portfolio.update({
+      where: { id },
+      data: updateData,
+      include: {
+        template: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     return NextResponse.json(updatedPortfolio);
   } catch (error) {
@@ -295,25 +314,23 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const userId = getCurrentUserId();
+    const userId = await getCurrentUserId();
     const { id } = params;
 
     // Find portfolio
-    const portfolioIndex = portfolios.findIndex(
-      (p) => p.id === id && !p.deletedAt
-    );
+    const portfolio = await prisma.portfolio.findUnique({
+      where: { id },
+    });
 
-    if (portfolioIndex === -1) {
+    if (!portfolio) {
       return NextResponse.json(
         { error: 'Portfolio not found' },
         { status: 404 }
       );
     }
 
-    const portfolio = portfolios[portfolioIndex];
-
     // Verify ownership (#22)
-    if (!verifyOwnership(portfolio, userId)) {
+    if (portfolio.userId !== userId) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -321,27 +338,25 @@ export async function DELETE(
     }
 
     // If published, unpublish first (#24)
-    if (portfolio.isPublished) {
+    if (portfolio.status === 'PUBLISHED') {
       // TODO: Remove from hosting
       // await hostingService.unpublish(portfolio.id);
-
-      portfolio.isPublished = false;
-      portfolio.subdomain = undefined;
+      
+      await prisma.portfolio.update({
+        where: { id },
+        data: {
+          status: 'ARCHIVED',
+          subdomain: null,
+        },
+      });
     }
 
-    // Soft delete (#23)
-    portfolios[portfolioIndex] = {
-      ...portfolio,
-      deletedAt: new Date().toISOString(),
-      updatedBy: userId,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // TODO: Cascade delete related records (#24)
-    // await db.portfolioVersion.deleteMany({ where: { portfolioId: id } });
-    // await db.portfolioAnalytics.deleteMany({ where: { portfolioId: id } });
-    // await db.portfolioShare.deleteMany({ where: { portfolioId: id } });
-    // await db.deployment.deleteMany({ where: { portfolioId: id } });
+    // Delete portfolio with cascade (#23, #24)
+    // Prisma will automatically cascade delete related records
+    // based on the onDelete: Cascade in schema.prisma
+    await prisma.portfolio.delete({
+      where: { id },
+    });
 
     return NextResponse.json(
       { message: 'Portfolio deleted successfully' },

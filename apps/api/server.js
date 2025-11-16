@@ -2,6 +2,7 @@
 require('dotenv').config();
 
 // INFRA-002: Validate environment variables on startup (fail fast if missing)
+// Use the new consolidated validator for runtime checks
 const { validateEnvironment } = require('./utils/envValidation');
 try {
   validateEnvironment();
@@ -10,20 +11,6 @@ try {
   if (process.env.NODE_ENV === 'production') {
     process.exit(1);
   }
-}
-
-// SECURITY: Validate environment variables on startup (legacy validator)
-const { validateEnv, printEnvStatus } = require('./utils/envValidator');
-
-// Validate required environment variables
-validateEnv({
-  exitOnError: process.env.NODE_ENV === 'production', // Exit on error in production
-  logResults: true
-});
-
-// Print environment status (only in development)
-if (process.env.NODE_ENV !== 'production') {
-  printEnvStatus();
 }
 
 const fastify = require('fastify')({

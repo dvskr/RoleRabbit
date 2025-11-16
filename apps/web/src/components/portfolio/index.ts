@@ -49,3 +49,7 @@ export {
   useOnboarding,
 } from './OnboardingTour';
 export type { TourStep, OnboardingTourProps } from './OnboardingTour';
+
+// Container Components with API Integration
+export { PortfolioListContainer } from './PortfolioListContainer';
+export { TemplateGalleryContainer } from './TemplateGalleryContainer';

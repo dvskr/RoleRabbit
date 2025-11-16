@@ -3,7 +3,7 @@
  * INFRA-001, INFRA-002: Document and validate all required environment variables
  */
 
-const logger = require('./logger');
+const { logger } = require('./logger');
 
 // INFRA-001: Document all required environment variables for My Files feature
 const REQUIRED_ENV_VARS = {

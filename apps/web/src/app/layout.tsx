@@ -7,6 +7,8 @@ import { ProfileProvider } from '../contexts/ProfileContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import GlobalErrorBoundary from '../components/GlobalErrorBoundary';
 import { ServiceWorkerRegistration } from '../components/ServiceWorkerRegistration';
+import { SkipLinks } from '../components/accessibility/SkipLinks';
+import { CookieConsent } from '../components/CookieConsent';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -81,6 +83,7 @@ export default function RootLayout({
         style={{ margin: 0, padding: 0, backgroundColor: initialBodyBackground }}
         suppressHydrationWarning
       >
+        <SkipLinks />
         <ServiceWorkerRegistration />
         <GlobalErrorBoundary level="page">
           <ThemeProvider initialThemeMode={initialTheme}>
@@ -95,6 +98,7 @@ export default function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </GlobalErrorBoundary>
+        <CookieConsent />
       </body>
     </html>
   );

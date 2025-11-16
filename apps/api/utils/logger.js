@@ -247,6 +247,8 @@ function errorLoggingMiddleware(err, req, res, next) {
   next(err);
 }
 
+// Export logger as default and also expose individual methods for backward compatibility
+// This allows both `const logger = require('./logger')` and `const { logger } = require('./logger')` to work
 module.exports = {
   logger,
   createLogger,
@@ -260,5 +262,10 @@ module.exports = {
   logPerformance,
   requestLoggingMiddleware,
   errorLoggingMiddleware,
-  LOG_LEVELS
+  LOG_LEVELS,
+  // Add logger methods directly for backward compatibility
+  info: logger.info.bind(logger),
+  warn: logger.warn.bind(logger),
+  error: logger.error.bind(logger),
+  debug: logger.debug.bind(logger)
 };

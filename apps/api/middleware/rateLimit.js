@@ -103,38 +103,39 @@ function createRateLimiter(options = {}) {
   const {
     windowMs = 60000, // 1 minute
     max = 60, // 60 requests per minute
-    keyGenerator = (req) => req.user?.id || req.ip,
+    keyGenerator = (request) => request.user?.id || request.ip,
     skip = () => false,
     store = globalStore,
     message = 'Too many requests, please try again later'
   } = options;
 
-  return async (req, res, next) => {
+  // Return Fastify preHandler hook (request, reply signature, no 'next')
+  return async (request, reply) => {
     try {
       // Skip if condition met
-      if (skip(req)) {
-        return next();
+      if (skip(request)) {
+        return;
       }
 
       // Generate key
-      const key = keyGenerator(req);
+      const key = keyGenerator(request);
       if (!key) {
         console.warn('Rate limiter: No key generated, skipping');
-        return next();
+        return;
       }
 
       // Get current count
       const { count, resetTime } = store.increment(key, windowMs);
 
       // Set rate limit headers
-      res.setHeader('X-RateLimit-Limit', max);
-      res.setHeader('X-RateLimit-Remaining', Math.max(0, max - count));
-      res.setHeader('X-RateLimit-Reset', new Date(resetTime).toISOString());
+      reply.header('X-RateLimit-Limit', max);
+      reply.header('X-RateLimit-Remaining', Math.max(0, max - count));
+      reply.header('X-RateLimit-Reset', new Date(resetTime).toISOString());
 
       // Check if limit exceeded
       if (count > max) {
         const retryAfter = Math.ceil((resetTime - Date.now()) / 1000);
-        res.setHeader('Retry-After', retryAfter);
+        reply.header('Retry-After', retryAfter);
 
         console.warn(`Rate limit exceeded for key: ${key}`, {
           count,
@@ -142,23 +143,21 @@ function createRateLimiter(options = {}) {
           resetTime: new Date(resetTime).toISOString()
         });
 
-        return sendErrorResponse(
-          res,
-          ErrorCodes.AI_RATE_LIMIT,
-          message,
-          {
+        return reply.status(429).send({
+          error: message,
+          code: ErrorCodes.AI_RATE_LIMIT,
+          details: {
             limit: max,
             current: count,
             retryAfter
           }
-        );
+        });
       }
 
-      next();
+      // Success - continue to next handler
     } catch (error) {
       console.error('Rate limiter error:', error);
       // Don't block request on rate limiter error
-      next();
     }
   };
 }
@@ -216,6 +215,27 @@ const globalLimiter = createRateLimiter({
   windowMs: 900000, // 15 minutes
   max: 1000,
   message: 'Too many requests. Please slow down.'
+});
+
+/**
+ * Profile-related rate limiters
+ */
+const profileGetRateLimit = createRateLimiter({
+  windowMs: 60000, // 1 minute
+  max: 60,
+  message: 'Too many profile requests. Please try again later.'
+});
+
+const profilePutRateLimit = createRateLimiter({
+  windowMs: 60000, // 1 minute
+  max: 10,
+  message: 'Too many profile update requests. Please try again later.'
+});
+
+const profilePictureRateLimit = createRateLimiter({
+  windowMs: 300000, // 5 minutes
+  max: 5,
+  message: 'Too many profile picture uploads. Please try again later.'
 });
 
 /**
@@ -300,11 +320,15 @@ function skipForAdmin(req) {
 
 module.exports = {
   createRateLimiter,
+  createRateLimitMiddleware: createRateLimiter, // Alias for backward compatibility
   resumeCRUDLimiter,
   aiOperationsLimiter,
   exportLimiter,
   authLimiter,
   globalLimiter,
+  profileGetRateLimit,
+  profilePutRateLimit,
+  profilePictureRateLimit,
   RedisRateLimitStore,
   createRedisRateLimiter,
   skipForAdmin,

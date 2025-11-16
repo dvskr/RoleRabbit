@@ -80,6 +80,7 @@ async function optionalAuthenticate(request, _reply) {
 
 module.exports = {
   authenticate,
+  authenticateToken: authenticate, // Alias for backward compatibility
   optionalAuthenticate
 };
 
