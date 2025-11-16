@@ -1,7 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ResumeFile } from '../../../types/cloudStorage';
 import { logger } from '../../../utils/logger';
 import apiService from '../../../services/apiService';
+import { parseNetworkError, isRetryableError } from '../../../utils/networkErrorHandler';
+import { deduplicateRequest, generateRequestKey } from '../../../utils/requestDeduplication';
+import { getCache, setCache } from '../../../utils/cache';
+import { useOfflineQueue } from '../../../hooks/useOfflineQueue';
+import { serviceWorkerManager } from '../../../utils/serviceWorker';
 
 // Helper to format file size
 const formatBytes = (bytes: number): string => {
@@ -17,6 +22,8 @@ type UploadPayload = {
   displayName?: string;
   type?: ResumeFile['type'] | string;
   description?: string;
+  tags?: string[];
+  expiresAt?: string;
   folderId?: string | null;
 };
 
@@ -37,12 +44,70 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageInfo, setStorageInfo] = useState({ usedGB: 0, limitGB: 0, percentage: 0 });
+  const [operationErrors, setOperationErrors] = useState<Map<string, { error: string; retryable: boolean }>>(new Map());
+  const [loadingOperations, setLoadingOperations] = useState<Set<string>>(new Set());
+  const optimisticUpdatesRef = useRef<Map<string, ResumeFile>>(new Map());
+  const fileVersionsRef = useRef<Map<string, number>>(new Map());
+  
+  // FE-042: Pagination state
+  const [pagination, setPagination] = useState<{
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }>({
+    page: 1,
+    pageSize: 20,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
 
-  const loadFilesFromAPI = useCallback(async (includeDeleted: boolean = false) => {
+  const loadFilesFromAPI = useCallback(async (
+    includeDeleted: boolean = false,
+    page: number = 1,
+    pageSize: number = 20,
+    sortBy: string = 'date',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ) => {
     setIsLoading(true);
     try {
-      logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, ')');
-      const response = await apiService.getCloudFiles(undefined, includeDeleted);
+      // FE-042: Cache key includes pagination params
+      const cacheKey = `files_${includeDeleted}_${page}_${pageSize}_${sortBy}_${sortOrder}`;
+      const cached = getCache<{ files: ResumeFile[]; storage: any; pagination: any; timestamp: number }>(cacheKey);
+      if (cached && Date.now() - cached.timestamp < 30000) { // 30 second cache
+        logger.debug('Using cached files');
+        setFiles(cached.files);
+        if (cached.storage) {
+          setStorageInfo(cached.storage);
+          onStorageUpdate?.(cached.storage);
+        }
+        if (cached.pagination) {
+          setPagination(cached.pagination);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      logger.info('📥 Loading files from API (includeDeleted:', includeDeleted, ', page:', page, ', search:', searchTerm, ', type:', filterType, ')');
+      
+      // FE-044: Request deduplication with pagination params
+      const requestKey = generateRequestKey('/api/storage/files', { 
+        includeDeleted, 
+        page, 
+        pageSize, 
+        sortBy, 
+        sortOrder,
+        search: searchTerm,
+        type: filterType,
+        folderId
+      });
+      const response = await deduplicateRequest(requestKey, () => 
+        apiService.getCloudFiles(folderId || undefined, includeDeleted, page, pageSize, sortBy, sortOrder, searchTerm, filterType)
+      );
       logger.info('📥 API response:', { 
         filesCount: response?.files?.length || 0,
         success: response?.success
@@ -66,7 +131,20 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
           deletedAt: file.deletedAt || null, // Ensure null instead of undefined
         }));
         setFiles(formattedFiles);
-        logger.info(`✅ Loaded ${formattedFiles.length} files from API`);
+        logger.info(`✅ Loaded ${formattedFiles.length} files from API (page ${page} of ${response?.pagination?.totalPages || 1})`);
+        
+        // FE-042: Update pagination state
+        if (response?.pagination) {
+          setPagination(response.pagination);
+        }
+        
+        // FE-043: Cache the result with pagination
+        setCache(cacheKey, {
+          files: formattedFiles,
+          storage: response?.storage,
+          pagination: response?.pagination,
+          timestamp: Date.now(),
+        }, 30000); // 30 second TTL
       } else {
         logger.warn('⚠️ No files in API response');
         setFiles([]);
@@ -78,7 +156,12 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
     } catch (error: any) {
       logger.error('❌ Failed to load files from API:', error);
-      logger.error('Error details:', error.message);
+      const networkError = parseNetworkError(error);
+      setOperationErrors(prev => {
+        const newMap = new Map(prev);
+        newMap.set('load_files', { error: networkError.message, retryable: networkError.retryable });
+        return newMap;
+      });
       setFiles([]);
     } finally {
       setIsLoading(false);
@@ -101,27 +184,140 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
   }, []);
 
   const handleDeleteFiles = useCallback(async () => {
+    // FE-038: Track bulk operation results
+    const results: Array<{ fileId: string; success: boolean; error?: string }> = [];
+    const filesToDelete = selectedFiles.map(id => files.find(f => f.id === id)).filter(Boolean) as ResumeFile[];
+    
+    // FE-040: Store original state for rollback
+    const originalFiles = new Map(filesToDelete.map(f => [f.id, f]));
+    
+    // FE-040: Optimistic update
+    setFiles(prev => prev.map(file => 
+      selectedFiles.includes(file.id) 
+        ? { ...file, deletedAt: new Date().toISOString() } 
+        : file
+    ));
+    
     try {
-      // Delete from backend (soft delete)
-      await Promise.all(selectedFiles.map(id => apiService.deleteCloudFile(id)));
-      // Update local state - set deletedAt instead of removing
-      setFiles(prev => prev.map(file => 
-        selectedFiles.includes(file.id) 
-          ? { ...file, deletedAt: new Date().toISOString() } 
-          : file
-      ));
+      // Use bulk delete endpoint if multiple files, otherwise individual delete
+      if (selectedFiles.length > 1) {
+        // FE-038: Use bulk delete endpoint for efficiency
+        try {
+          setLoadingOperations(prev => {
+            const newSet = new Set(prev);
+            selectedFiles.forEach(id => newSet.add(id));
+            return newSet;
+          });
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Operation timed out')), 60000)
+          );
+          
+          const response = await Promise.race([
+            apiService.bulkDeleteFiles(selectedFiles),
+            timeoutPromise,
+          ]);
+          
+          // Process bulk response
+          if (response && response.results) {
+            response.results.forEach((result: any) => {
+              results.push({
+                fileId: result.fileId,
+                success: result.success,
+                error: result.error
+              });
+              
+              // Rollback failed files
+              if (!result.success) {
+                const originalFile = originalFiles.get(result.fileId);
+                if (originalFile) {
+                  setFiles(prev => prev.map(f => 
+                    f.id === result.fileId ? originalFile : f
+                  ));
+                }
+              }
+            });
+          } else {
+            // If response format is different, assume all succeeded
+            selectedFiles.forEach(fileId => {
+              results.push({ fileId, success: true });
+            });
+          }
+        } catch (error: any) {
+          const networkError = parseNetworkError(error);
+          // All failed
+          selectedFiles.forEach(fileId => {
+            results.push({ 
+              fileId, 
+              success: false, 
+              error: networkError.message 
+            });
+            const originalFile = originalFiles.get(fileId);
+            if (originalFile) {
+              setFiles(prev => prev.map(f => 
+                f.id === fileId ? originalFile : f
+              ));
+            }
+          });
+        } finally {
+          setLoadingOperations(prev => {
+            const newSet = new Set(prev);
+            selectedFiles.forEach(id => newSet.delete(id));
+            return newSet;
+          });
+        }
+      } else {
+        // Single file - use individual delete
+        const fileId = selectedFiles[0];
+        try {
+          setLoadingOperations(prev => new Set(prev).add(fileId));
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Operation timed out')), 30000)
+          );
+          
+          await Promise.race([
+            apiService.deleteCloudFile(fileId),
+            timeoutPromise,
+          ]);
+          
+          results.push({ fileId, success: true });
+        } catch (error: any) {
+          const networkError = parseNetworkError(error);
+          results.push({ 
+            fileId, 
+            success: false, 
+            error: networkError.message 
+          });
+          
+          // FE-040: Rollback optimistic update for failed file
+          const originalFile = originalFiles.get(fileId);
+          if (originalFile) {
+            setFiles(prev => prev.map(f => 
+              f.id === fileId ? originalFile : f
+            ));
+          }
+        } finally {
+          setLoadingOperations(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(fileId);
+            return newSet;
+          });
+        }
+      }
+      
       setSelectedFiles([]);
-    } catch (error) {
+      return results;
+    } catch (error: any) {
       logger.error('Failed to delete files:', error);
-      // Fallback to local state update
-      setFiles(prev => prev.map(file => 
-        selectedFiles.includes(file.id) 
-          ? { ...file, deletedAt: new Date().toISOString() } 
-          : file
-      ));
-      setSelectedFiles([]);
+      // FE-040: Rollback all optimistic updates
+      setFiles(prev => prev.map(file => {
+        const original = originalFiles.get(file.id);
+        return original || file;
+      }));
+      throw error;
     }
-  }, [selectedFiles]);
+  }, [selectedFiles, files]);
 
   const handleDownloadFile = useCallback(async (file: ResumeFile, format?: 'pdf' | 'doc') => {
     try {
@@ -138,6 +334,16 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       
       if (!blob || blob.size === 0) {
         throw new Error('File is empty or corrupted');
+      }
+
+      // FE-061: Cache file in service worker for offline access
+      try {
+        const fileUrl = `/api/storage/files/${file.id}/download`;
+        await serviceWorkerManager.cacheFile(fileUrl, blob);
+        logger.debug('[Service Worker] File cached for offline access:', file.id);
+      } catch (error) {
+        logger.warn('[Service Worker] Failed to cache file:', error);
+        // Continue with download even if caching fails
       }
 
       const url = window.URL.createObjectURL(blob);
@@ -191,6 +397,14 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
       }
       if (payload.description) {
         formData.append('description', payload.description);
+      }
+      // FE-017: Add tags to upload
+      if (payload.tags && payload.tags.length > 0) {
+        formData.append('tags', JSON.stringify(payload.tags));
+      }
+      // FE-018: Add expiration date to upload
+      if (payload.expiresAt) {
+        formData.append('expiresAt', payload.expiresAt);
       }
 
       logger.info('📤 Uploading file to API...');
@@ -323,9 +537,18 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [loadFilesFromAPI]);
 
-  const handleRefresh = useCallback(async (includeDeleted: boolean = false) => {
-    logger.debug('Refreshing files...', { includeDeleted });
-    await loadFilesFromAPI(includeDeleted);
+  const handleRefresh = useCallback(async (
+    includeDeleted: boolean = false,
+    page: number = 1,
+    pageSize: number = 20,
+    sortBy: string = 'date',
+    sortOrder: 'asc' | 'desc' = 'desc',
+    searchTerm?: string,
+    filterType?: string,
+    folderId?: string | null
+  ) => {
+    logger.debug('Refreshing files...', { includeDeleted, page });
+    await loadFilesFromAPI(includeDeleted, page, pageSize, sortBy, sortOrder, searchTerm, filterType, folderId);
   }, [loadFilesFromAPI]);
 
   const handleStarFile = useCallback(async (fileId: string) => {
@@ -334,26 +557,60 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     
     const newStarredState = !file.isStarred;
     
-    // Optimistic update - update UI immediately
+    // FE-040: Store original state for rollback
+    optimisticUpdatesRef.current.set(fileId, file);
+    
+    // FE-040: Optimistic update - update UI immediately
     setFiles(prev => prev.map(f => 
       f.id === fileId 
         ? { ...f, isStarred: newStarredState }
         : f
     ));
     
+    setLoadingOperations(prev => new Set(prev).add(fileId));
+    
     try {
-      await apiService.updateCloudFile(fileId, { isStarred: newStarredState });
+      // FE-037: Add timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Operation timed out')), 10000)
+      );
+      
+      await Promise.race([
+        apiService.updateCloudFile(fileId, { isStarred: newStarredState }),
+        timeoutPromise,
+      ]);
+      
       // Success - optimistic update was correct
-    } catch (error) {
+      optimisticUpdatesRef.current.delete(fileId);
+    } catch (error: any) {
       logger.error('Failed to toggle star status:', error);
-      // Revert optimistic update on error
-      setFiles(prev => prev.map(f => 
-        f.id === fileId 
-          ? { ...f, isStarred: !newStarredState }
-          : f
-      ));
+      const networkError = parseNetworkError(error);
+      
+      // FE-040: Revert optimistic update on error
+      const original = optimisticUpdatesRef.current.get(fileId);
+      if (original) {
+        setFiles(prev => prev.map(f => 
+          f.id === fileId ? original : f
+        ));
+        optimisticUpdatesRef.current.delete(fileId);
+      }
+      
+      // FE-031: Store error for retry
+      if (isRetryableError(error)) {
+        setOperationErrors(prev => {
+          const newMap = new Map(prev);
+          newMap.set(`star_${fileId}`, { error: networkError.message, retryable: true });
+          return newMap;
+        });
+      }
+    } finally {
+      setLoadingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
     }
-  }, [files, setFiles]);
+  }, [files]);
 
   const handleArchiveFile = useCallback(async (fileId: string) => {
     const file = files.find(f => f.id === fileId);
@@ -459,6 +716,228 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     }
   }, [onStorageUpdate, loadFilesFromAPI]);
 
+  // GAP-008: Handle duplicate file
+  const handleDuplicateFile = useCallback(async (fileId: string) => {
+    setLoadingOperations(prev => new Set(prev).add(`duplicate_${fileId}`));
+    try {
+      const response = await apiService.duplicateFile(fileId);
+      logger.info(`✅ File duplicated: ${fileId} -> ${response.file?.id}`);
+      
+      // Add duplicated file to local state
+      if (response.file) {
+        setFiles(prev => [...prev, response.file as ResumeFile]);
+      }
+      
+      // Update storage quota if provided
+      if (response?.storage && onStorageUpdate) {
+        onStorageUpdate(response.storage);
+      }
+      
+      // Reload files to ensure consistency
+      await loadFilesFromAPI(false);
+      
+      return response;
+    } catch (error: any) {
+      logger.error('Failed to duplicate file:', error);
+      const networkError = parseNetworkError(error);
+      setOperationErrors(prev => {
+        const newMap = new Map(prev);
+        newMap.set(`duplicate_${fileId}`, { error: networkError.message, retryable: isRetryableError(error) });
+        return newMap;
+      });
+      throw error;
+    } finally {
+      setLoadingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`duplicate_${fileId}`);
+        return newSet;
+      });
+    }
+  }, [loadFilesFromAPI, onStorageUpdate]);
+
+  // GAP-008: Handle bulk restore files
+  const handleBulkRestore = useCallback(async (fileIds: string[]) => {
+    if (fileIds.length === 0) return [];
+    
+    const operationId = `bulk_restore_${fileIds.join('_')}`;
+    setLoadingOperations(prev => new Set(prev).add(operationId));
+    
+    try {
+      const response = await apiService.bulkRestoreFiles(fileIds);
+      logger.info(`✅ Bulk restore completed: ${fileIds.length} files`);
+      
+      // Update local state to remove deletedAt
+      setFiles(prev => prev.map(file => 
+        fileIds.includes(file.id) ? { ...file, deletedAt: null } : file
+      ));
+      
+      // Update storage quota if provided
+      if (response?.storage && onStorageUpdate) {
+        onStorageUpdate(response.storage);
+      }
+      
+      // Reload files to ensure consistency
+      await loadFilesFromAPI(false);
+      
+      // Return results for bulk operation display
+      const results = fileIds.map(fileId => ({
+        fileId,
+        success: true,
+      }));
+      
+      return results;
+    } catch (error: any) {
+      logger.error('Failed to bulk restore files:', error);
+      const networkError = parseNetworkError(error);
+      setOperationErrors(prev => {
+        const newMap = new Map(prev);
+        newMap.set(operationId, { error: networkError.message, retryable: isRetryableError(error) });
+        return newMap;
+      });
+      
+      // Return partial results if some succeeded
+      return fileIds.map(fileId => ({
+        fileId,
+        success: false,
+        error: networkError.message,
+      }));
+    } finally {
+      setLoadingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(operationId);
+        return newSet;
+      });
+    }
+  }, [loadFilesFromAPI, onStorageUpdate]);
+
+  // GAP-008: Handle restore specific file version
+  const handleRestoreVersion = useCallback(async (fileId: string, versionId: string) => {
+    setLoadingOperations(prev => new Set(prev).add(`restore_version_${fileId}_${versionId}`));
+    try {
+      // TODO: This endpoint needs to be implemented in backend (GAP-009)
+      // For now, we'll use a placeholder that will fail gracefully
+      const response = await apiService.request(`/api/storage/files/${fileId}/versions/${versionId}/restore`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      logger.info(`✅ Version restored: ${fileId} version ${versionId}`);
+      
+      // Reload files to get updated version
+      await loadFilesFromAPI(false);
+      
+      return response;
+    } catch (error: any) {
+      logger.error('Failed to restore version:', error);
+      // Check if endpoint doesn't exist (404) and show helpful message
+      if (error?.status === 404 || error?.message?.includes('404')) {
+        logger.warn('Version restore endpoint not yet implemented in backend (GAP-009)');
+      }
+      const networkError = parseNetworkError(error);
+      setOperationErrors(prev => {
+        const newMap = new Map(prev);
+        newMap.set(`restore_version_${fileId}_${versionId}`, { 
+          error: networkError.message || 'Version restore endpoint not yet implemented', 
+          retryable: false 
+        });
+        return newMap;
+      });
+      throw error;
+    } finally {
+      setLoadingOperations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(`restore_version_${fileId}_${versionId}`);
+        return newSet;
+      });
+    }
+  }, [loadFilesFromAPI]);
+
+  // GAP-008: Handle download specific file version
+  const handleDownloadVersion = useCallback(async (fileId: string, versionId: string) => {
+    try {
+      // TODO: This endpoint needs to be implemented in backend (GAP-010)
+      // Use apiService's request method instead of direct fetch
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/storage/files/${fileId}/versions/${versionId}/download`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Version download endpoint not yet implemented in backend (GAP-010)');
+        }
+        const error = await response.json();
+        throw new Error(error.error || error.message || 'Failed to download version');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // Try to get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `version_${versionId}.${blob.type.split('/')[1] || 'bin'}`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      logger.info(`✅ Version downloaded: ${fileId} version ${versionId}`);
+    } catch (error: any) {
+      logger.error('Failed to download version:', error);
+      throw error;
+    }
+  }, []);
+
+  // GAP-008: Load file statistics
+  const loadFileStats = useCallback(async () => {
+    try {
+      const stats = await apiService.getFileStats();
+      logger.debug('📊 File stats loaded:', stats);
+      return stats;
+    } catch (error) {
+      logger.error('Failed to load file stats:', error);
+      // Return null on error, don't throw - stats are optional
+      return null;
+    }
+  }, []);
+
+  // GAP-008: Load file access logs
+  const loadFileAccessLogs = useCallback(async (fileId: string) => {
+    try {
+      const logs = await apiService.getFileAccessLogs(fileId);
+      logger.debug(`📋 Access logs loaded for file ${fileId}:`, logs);
+      return logs;
+    } catch (error) {
+      logger.error('Failed to load access logs:', error);
+      // Return empty array on error, don't throw
+      return [];
+    }
+  }, []);
+
+  // GAP-008: Load file activity timeline
+  const loadFileActivity = useCallback(async (fileId: string, limit: number = 50, offset: number = 0) => {
+    try {
+      const activity = await apiService.getFileActivity(fileId, limit, offset);
+      logger.debug(`📈 Activity loaded for file ${fileId}:`, activity);
+      return activity;
+    } catch (error) {
+      logger.error('Failed to load file activity:', error);
+      // Return empty array on error, don't throw
+      return [];
+    }
+  }, []);
+
   return {
     files,
     setFiles,
@@ -479,7 +958,23 @@ export const useFileOperations = ({ onStorageUpdate }: UseFileOperationsOptions 
     handleEditFile,
     handleRefresh,
     handleStarFile,
-    handleArchiveFile
+    handleArchiveFile,
+    // GAP-008: New handler functions
+    handleDuplicateFile,
+    handleBulkRestore,
+    handleRestoreVersion,
+    handleDownloadVersion,
+    loadFileStats,
+    loadFileAccessLogs,
+    loadFileActivity,
+    // FE-035: Loading operations state
+    loadingOperations,
+    // FE-031: Operation errors state
+    operationErrors,
+    // FE-042: Pagination state
+    pagination,
+    // Storage info state
+    storageInfo,
   };
 };
 

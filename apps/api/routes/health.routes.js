@@ -6,6 +6,7 @@
 const { prisma } = require('../utils/db');
 const logger = require('../utils/logger');
 const { checkRedisHealth } = require('../utils/cacheManager');
+const storageHandler = require('../utils/storageHandler');
 
 /**
  * Register health check routes
@@ -38,7 +39,8 @@ async function healthRoutes(fastify, options) {
       server: { status: 'ok', responseTime: 0 },
       database: { status: 'unknown', responseTime: 0 },
       redis: { status: 'unknown', responseTime: 0 },
-      openai: { status: 'unknown', responseTime: 0 }
+      openai: { status: 'unknown', responseTime: 0 },
+      storage: { status: 'unknown', responseTime: 0 } // BE-063: Storage service health check
     };
 
     // Check database connection
@@ -84,6 +86,34 @@ async function healthRoutes(fastify, options) {
     } catch (error) {
       checks.openai.status = 'error';
       checks.openai.error = error.message;
+    }
+
+    // BE-063: Check storage service health
+    try {
+      const storageStart = Date.now();
+      // Test storage by checking if we can generate a test path
+      const testPath = 'health-check/test.txt';
+      const testBuffer = Buffer.from('health check');
+      
+      // Try to check storage accessibility (lightweight check)
+      if (storageHandler && typeof storageHandler.checkHealth === 'function') {
+        const storageHealth = await storageHandler.checkHealth();
+        checks.storage.status = storageHealth.status || 'ok';
+        checks.storage.responseTime = Date.now() - storageStart;
+        if (storageHealth.error) {
+          checks.storage.error = storageHealth.error;
+        }
+      } else {
+        // Fallback: check if storage handler is initialized
+        checks.storage.status = storageHandler ? 'ok' : 'error';
+        checks.storage.responseTime = Date.now() - storageStart;
+        checks.storage.note = 'Storage handler initialized (not tested)';
+      }
+    } catch (error) {
+      checks.storage.status = 'error';
+      checks.storage.error = error.message;
+      checks.storage.responseTime = Date.now() - storageStart;
+      logger.error('[HEALTH] Storage check failed', { error: error.message });
     }
 
     // Calculate overall status

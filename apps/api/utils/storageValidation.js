@@ -235,21 +235,79 @@ function validateFileType(fileType) {
 
 /**
  * Validate storage path (prevent directory traversal)
+ * BE-038: Storage path validation error handling
  */
 function validateStoragePath(storagePath, userId) {
+  if (!storagePath || typeof storagePath !== 'string') {
+    return {
+      valid: false,
+      error: 'Storage path is required and must be a string',
+      code: 'STORAGE_PATH_INVALID'
+    };
+  }
+
   // Ensure path starts with userId
   if (!storagePath.startsWith(userId)) {
     return {
       valid: false,
-      error: 'Invalid storage path'
+      error: 'Invalid storage path: path must start with user ID',
+      code: 'STORAGE_PATH_INVALID',
+      details: {
+        path: storagePath,
+        expectedPrefix: userId
+      }
     };
   }
 
   // Check for directory traversal attempts
-  if (storagePath.includes('..') || storagePath.includes('//')) {
+  if (storagePath.includes('..')) {
     return {
       valid: false,
-      error: 'Invalid storage path: directory traversal detected'
+      error: 'Invalid storage path: directory traversal detected (contains "..")',
+      code: 'STORAGE_PATH_INVALID',
+      details: {
+        path: storagePath,
+        reason: 'directory_traversal'
+      }
+    };
+  }
+
+  // Check for double slashes (potential path manipulation)
+  if (storagePath.includes('//')) {
+    return {
+      valid: false,
+      error: 'Invalid storage path: double slashes detected',
+      code: 'STORAGE_PATH_INVALID',
+      details: {
+        path: storagePath,
+        reason: 'double_slash'
+      }
+    };
+  }
+
+  // Check for absolute paths
+  if (storagePath.startsWith('/')) {
+    return {
+      valid: false,
+      error: 'Invalid storage path: absolute paths not allowed',
+      code: 'STORAGE_PATH_INVALID',
+      details: {
+        path: storagePath,
+        reason: 'absolute_path'
+      }
+    };
+  }
+
+  // Check for null bytes (potential injection)
+  if (storagePath.includes('\0')) {
+    return {
+      valid: false,
+      error: 'Invalid storage path: null bytes detected',
+      code: 'STORAGE_PATH_INVALID',
+      details: {
+        path: storagePath,
+        reason: 'null_byte'
+      }
     };
   }
 

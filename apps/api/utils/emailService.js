@@ -406,6 +406,92 @@ async function sendMarketingEmail({ to, subject, html, text, userId, prisma = nu
   });
 }
 
+/**
+ * INFRA-012: Send quota warning email (when >80% used)
+ */
+async function sendQuotaWarningEmail(userId, quota, prisma = null) {
+  try {
+    // Get user info
+    let prismaClient = prisma;
+    if (!prismaClient) {
+      const { prisma: db } = require('./db');
+      prismaClient = db;
+    }
+    
+    const user = await prismaClient.user.findUnique({
+      where: { id: userId },
+      select: { email: true, name: true }
+    });
+    
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+    
+    const usedGB = (Number(quota.usedBytes) / (1024 * 1024 * 1024)).toFixed(2);
+    const limitGB = (Number(quota.limitBytes) / (1024 * 1024 * 1024)).toFixed(2);
+    const percentage = ((Number(quota.usedBytes) / Number(quota.limitBytes)) * 100).toFixed(1);
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #F59E0B; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background: #f9fafb; }
+          .warning { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px; margin: 20px 0; }
+          .progress-bar { background: #E5E7EB; height: 24px; border-radius: 12px; overflow: hidden; margin: 20px 0; }
+          .progress-fill { background: #F59E0B; height: 100%; width: ${percentage}%; transition: width 0.3s; }
+          .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>⚠️ Storage Quota Warning</h1>
+          </div>
+          <div class="content">
+            <p>Hi ${user.name},</p>
+            <p>Your storage quota is getting full!</p>
+            <div class="warning">
+              <strong>Current Usage:</strong><br>
+              ${usedGB} GB / ${limitGB} GB (${percentage}% used)
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill"></div>
+            </div>
+            <p>You're using ${percentage}% of your storage quota. Consider:</p>
+            <ul>
+              <li>Deleting old or unused files</li>
+              <li>Archiving files you don't need frequently</li>
+              <li>Upgrading your plan for more storage</li>
+            </ul>
+            <p>
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/files" class="button">Manage Files</a>
+            </p>
+            <p>Best regards,<br>The RoleReady Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    return sendEmail({
+      to: user.email,
+      subject: `Storage Quota Warning - ${percentage}% Used`,
+      html,
+      text: `Your storage quota is ${percentage}% full (${usedGB} GB / ${limitGB} GB). Manage your files at ${process.env.FRONTEND_URL || 'http://localhost:3000'}/files`,
+      isSecurityEmail: false,
+      userId: user.id,
+      prisma: prismaClient
+    });
+  } catch (error) {
+    logger.error(`Failed to send quota warning email to user ${userId}:`, error);
+    throw error;
+  }
+}
+
 module.exports = {
   sendEmail,
   sendWelcomeEmail,
@@ -414,6 +500,7 @@ module.exports = {
   sendEmailChangeNotification,
   sendEmailChangeConfirmation,
   sendMarketingEmail,
+  sendQuotaWarningEmail,
   shouldSendMarketingEmail,
 };
 

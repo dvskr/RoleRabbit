@@ -482,10 +482,29 @@ function parseError(error) {
   
   // Generic error - try to classify
   const category = classifyError(error);
-  return new AppError(error.message, {
+  
+  // Properly serialize original error
+  let originalErrorStr = 'Unknown error';
+  try {
+    if (error && typeof error === 'object') {
+      if (error.message) {
+        originalErrorStr = error.message;
+      } else if (error.stack) {
+        originalErrorStr = error.stack.split('\n')[0]; // First line of stack
+      } else {
+        originalErrorStr = JSON.stringify(error, Object.getOwnPropertyNames(error));
+      }
+    } else if (error) {
+      originalErrorStr = String(error);
+    }
+  } catch {
+    originalErrorStr = 'Error serialization failed';
+  }
+  
+  return new AppError(error.message || 'An error occurred', {
     category,
     statusCode: error.statusCode || error.status || 500,
-    metadata: { originalError: error.toString() }
+    metadata: { originalError: originalErrorStr }
   });
 }
 

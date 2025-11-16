@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useMemo, useRef, useEffect } from 'react';
-import { Filter, Upload, Trash2, Search } from 'lucide-react';
+import { Filter, Upload, Trash2, Search, RotateCcw } from 'lucide-react';
 import { ResumeFile, FileType, SortBy } from '../../types/cloudStorage';
 import FileCard from './FileCard';
 import { EmptyFilesState } from './EmptyFilesState';
+import { FileListSkeleton } from './LoadingSkeleton';
 import { useTheme } from '../../contexts/ThemeContext';
 import { TabType } from './types';
 
@@ -105,6 +106,7 @@ interface RedesignedFileListProps {
   selectedFiles: string[];
   onSelectAll: () => void;
   onDeleteSelected: () => void;
+  onBulkRestore?: () => void;
   onFileSelect: (fileId: string) => void;
   onDownload: (file: ResumeFile, format?: 'pdf' | 'doc') => void;
   onShare: (file: ResumeFile) => void;
@@ -126,6 +128,17 @@ interface RedesignedFileListProps {
   onTabChange: (tab: TabType) => void;
   filesCount: number;
   credentialsCount: number;
+  isLoading?: boolean;
+  loadingOperations?: Set<string>;
+  operationErrors?: Map<string, { error: string; retryable: boolean }>;
+  bulkOperationProgress?: { current: number; total: number; operation: string } | null;
+  quickFilters?: {
+    starred?: boolean;
+    archived?: boolean;
+    shared?: boolean;
+    recent?: boolean;
+    public?: boolean;
+  };
 }
 
 export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
@@ -138,7 +151,8 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   setSortBy,
   selectedFiles,
   onSelectAll,
-  onDeleteSelected,
+    onDeleteSelected,
+    onBulkRestore,
   onFileSelect,
   onDownload,
   onShare,
@@ -160,6 +174,11 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   onTabChange,
   filesCount,
   credentialsCount,
+  isLoading = false,
+  loadingOperations = new Set(),
+  operationErrors = new Map(),
+  bulkOperationProgress = null,
+  quickFilters = {},
 }) => {
   const { theme } = useTheme();
   const palette = colors || theme.colors;
@@ -183,6 +202,10 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
   };
 
   const content = useMemo(() => {
+    if (isLoading) {
+      return <FileListSkeleton count={6} colors={palette} />;
+    }
+
     if (files.length === 0) {
       return (
         <EmptyFilesState
@@ -191,6 +214,7 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
           onUpload={showDeleted ? undefined : onUpload}
           colors={palette}
           showDeleted={showDeleted}
+          quickFilters={quickFilters}
         />
       );
     }
@@ -217,6 +241,8 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
             onRemoveShare={onRemoveShare}
             onMove={onMove}
             folders={folders}
+            isLoading={loadingOperations.has(file.id)}
+            operationError={operationErrors.get(file.id)}
           />
         ))}
       </div>
@@ -343,21 +369,79 @@ export const RedesignedFileList: React.FC<RedesignedFileListProps> = ({
         </div>
 
         {hasSelection && (
+          <div className="flex items-center gap-2">
+            {/* GAP-004: Bulk restore button when in recycle bin */}
+            {showDeleted && onBulkRestore && (
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+                style={{
+                  background: `${palette.badgeSuccessBg || palette.badgeInfoBg}`,
+                  color: palette.primaryBlue,
+                }}
+              >
+                <button
+                  onClick={onBulkRestore}
+                  className="flex items-center gap-2 text-sm font-medium"
+                  style={{ color: palette.primaryBlue }}
+                >
+                  <RotateCcw size={16} />
+                  Restore {selectedFiles.length > 1 ? `${selectedFiles.length} files` : 'file'}
+                </button>
+              </div>
+            )}
+            
+            {/* Delete button */}
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+              style={{
+                background: `${palette.badgeErrorBg}`,
+                color: palette.errorRed,
+              }}
+            >
+              <button
+                onClick={onDeleteSelected}
+                className="flex items-center gap-2 text-sm font-medium"
+                style={{ color: palette.errorRed }}
+              >
+                <Trash2 size={16} />
+                {showDeleted ? (
+                  <>Permanently Delete {selectedFiles.length > 1 ? `${selectedFiles.length} files` : 'file'}</>
+                ) : (
+                  <>Delete {selectedFiles.length > 1 ? `${selectedFiles.length} files` : 'file'}</>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Operation Progress */}
+        {bulkOperationProgress && (
           <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+            className="flex items-center gap-3 px-4 py-2 rounded-lg text-sm"
             style={{
-              background: `${palette.badgeErrorBg}`,
-              color: palette.errorRed,
+              background: palette.badgeInfoBg,
+              border: `1px solid ${palette.border}`,
             }}
           >
-            <button
-              onClick={onDeleteSelected}
-              className="flex items-center gap-2 text-sm font-medium"
-              style={{ color: palette.errorRed }}
-            >
-              <Trash2 size={16} />
-              Delete {selectedFiles.length > 1 ? `${selectedFiles.length} files` : 'file'}
-            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium" style={{ color: palette.primaryText }}>
+                  {bulkOperationProgress.operation}
+                </span>
+                <span className="text-xs" style={{ color: palette.secondaryText }}>
+                  {bulkOperationProgress.current} / {bulkOperationProgress.total}
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: palette.inputBackground }}>
+                <div
+                  className="h-full transition-all duration-300"
+                  style={{
+                    width: `${(bulkOperationProgress.current / bulkOperationProgress.total) * 100}%`,
+                    background: palette.primaryBlue,
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -1,7 +1,18 @@
 // Load environment variables FIRST before anything else
 require('dotenv').config();
 
-// SECURITY: Validate environment variables on startup
+// INFRA-002: Validate environment variables on startup (fail fast if missing)
+const { validateEnvironment } = require('./utils/envValidation');
+try {
+  validateEnvironment();
+} catch (error) {
+  console.error('❌ Environment validation failed:', error.message);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
+// SECURITY: Validate environment variables on startup (legacy validator)
 const { validateEnv, printEnvStatus } = require('./utils/envValidator');
 
 // Validate required environment variables
@@ -189,17 +200,26 @@ fastify.register(require('@fastify/csrf-protection'), {
 
 // Register rate limiting globally
 fastify.register(require('@fastify/rate-limit'), {
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || (process.env.NODE_ENV === 'production' ? 100 : 10000), // Much higher limit for development
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || (process.env.NODE_ENV === 'production' ? 100 : 100000), // Much higher limit for development (100k requests)
   timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || (process.env.NODE_ENV === 'production' ? 15 * 60 * 1000 : 60 * 1000), // 1 minute window for dev
   skip: (request) => {
-    // Skip rate limiting for localhost in development
+    // Skip rate limiting entirely in development
     if (process.env.NODE_ENV !== 'production') {
-      const isLocalhost = request.ip === '127.0.0.1' || request.ip === '::1' || request.ip === '::ffff:127.0.0.1' || request.hostname === 'localhost';
-      if (isLocalhost) {
-        return true; // Skip rate limiting for localhost in development
-      }
+      return true; // Skip all rate limiting in development
     }
-    // Skip rate limiting for long-running operations if needed
+    // Skip rate limiting for localhost in production too (for admin access)
+    const isLocalhost = 
+      request.ip === '127.0.0.1' || 
+      request.ip === '::1' || 
+      request.ip === '::ffff:127.0.0.1' ||
+      request.ip === '::ffff:0:127.0.0.1' ||
+      request.ip?.startsWith('127.') ||
+      request.ip?.startsWith('::ffff:127.') ||
+      request.hostname === 'localhost' ||
+      request.hostname === '127.0.0.1';
+    if (isLocalhost) {
+      return true;
+    }
     return false;
   },
   errorResponseBuilder: (request, context) => {
@@ -318,6 +338,8 @@ fastify.register(require('./routes/auth.routes'));
 fastify.register(require('./routes/users.routes'));
 fastify.register(require('./routes/userPreferences.routes'));
 fastify.register(require('./routes/storage.routes'), { prefix: '/api/storage' });
+// SEC-021: Public share link routes (no /api prefix for public access)
+fastify.register(require('./routes/storage.shareLink.routes'), { prefix: '/api/storage' });
 fastify.register(require('./routes/resume.routes'));
 fastify.register(require('./routes/baseResume.routes'));
 fastify.register(require('./routes/workingDraft.routes'));
@@ -439,6 +461,43 @@ const start = async () => {
     
     // Start listening first
     await fastify.listen({ port, host });
+    
+    // INFRA-005 to INFRA-012: Initialize background jobs
+    if (process.env.ENABLE_JOB_QUEUE !== 'false') {
+      try {
+        const { scheduleRecurringJobs } = require('./jobs');
+        await scheduleRecurringJobs();
+        logger.info('✅ Background jobs scheduled');
+      } catch (error) {
+        logger.warn('⚠️ Failed to initialize background jobs:', error.message);
+      }
+      
+      // INFRA-024 to INFRA-026: Schedule alert checks
+      try {
+        const { runAllAlerts } = require('./utils/alerting');
+        const { fileMetrics } = require('./config/observability');
+        // Run alerts every 15 minutes
+        setInterval(async () => {
+          try {
+            await runAllAlerts(fileMetrics);
+          } catch (error) {
+            logger.error('Error running alerts:', error);
+          }
+        }, 15 * 60 * 1000);
+        logger.info('✅ Alerting system initialized');
+      } catch (error) {
+        logger.warn('⚠️ Failed to initialize alerting:', error.message);
+      }
+    }
+
+    // SEC-020: Initialize log rotation
+    try {
+      const { LogRotation } = require('./utils/safeLogging');
+      LogRotation.scheduleLogRotation(90); // 90 day retention
+      logger.info('✅ Log rotation scheduled');
+    } catch (error) {
+      logger.warn('⚠️ Failed to initialize log rotation:', error.message);
+    }
     
     // Initialize Socket.IO server after HTTP server starts
     // Use fastify.server which is the underlying Node.js HTTP server

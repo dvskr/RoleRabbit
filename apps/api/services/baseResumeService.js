@@ -54,7 +54,7 @@ async function getBaseResume({ userId, baseResumeId }) {
   logger.info('📤 [GET_RESUME] Fetching resume...', { userId, baseResumeId });
   
   // Get the base resume
-  const baseResume = await prisma.baseResume.findFirst({
+  const baseResume = await prisma.base_resumes.findFirst({
     where: { id: baseResumeId, userId },
     select: {
       id: true,
@@ -119,7 +119,7 @@ async function updateBaseResume({
   metadata,
   lastKnownServerUpdatedAt
 }) {
-  const resume = await prisma.baseResume.findFirst({
+  const resume = await prisma.base_resumes.findFirst({
     where: { id: baseResumeId, userId },
     select: {
       id: true,
@@ -144,7 +144,7 @@ async function updateBaseResume({
 
   const preparedData = normalizeResumePayload(data);
 
-  const updatedResume = await prisma.baseResume.update({
+  const updatedResume = await prisma.base_resumes.update({
     where: { id: baseResumeId },
     data: {
       ...(name ? { name } : {}),
@@ -176,7 +176,7 @@ async function updateBaseResume({
 }
 
 async function ensureActiveResume(userId) {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { activeBaseResumeId: true }
   });
@@ -193,7 +193,7 @@ async function ensureActiveResume(userId) {
 }
 
 async function listBaseResumes(userId) {
-  const resumes = await prisma.baseResume.findMany({
+  const resumes = await prisma.base_resumes.findMany({
     where: { userId },
     orderBy: { slotNumber: 'asc' },
     select: {
@@ -213,7 +213,7 @@ async function listBaseResumes(userId) {
 }
 
 async function findNextAvailableSlot(userId, maxSlots) {
-  const slots = await prisma.baseResume.findMany({
+  const slots = await prisma.base_resumes.findMany({
     where: { userId },
     select: { slotNumber: true }
   });
@@ -227,11 +227,11 @@ async function findNextAvailableSlot(userId, maxSlots) {
 }
 
 async function countBaseResumes(userId) {
-  return prisma.baseResume.count({ where: { userId } });
+  return prisma.base_resumes.count({ where: { userId } });
 }
 
 async function createBaseResume({ userId, name, data, formatting, metadata, storageFileId, fileHash }) {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: { subscriptionTier: true }
   });
@@ -258,7 +258,7 @@ async function createBaseResume({ userId, name, data, formatting, metadata, stor
 
   const preparedData = normalizeResumePayload(data);
 
-  const resume = await prisma.baseResume.create({
+  const resume = await prisma.base_resumes.create({
     data: {
       userId,
       slotNumber,
@@ -349,7 +349,7 @@ function isResumeDataEmpty(data) {
 }
 
 async function activateBaseResume({ userId, baseResumeId }) {
-  const resume = await prisma.baseResume.findFirst({
+  const resume = await prisma.base_resumes.findFirst({
     where: { id: baseResumeId, userId },
     select: {
       id: true,
@@ -390,7 +390,7 @@ async function activateBaseResume({ userId, baseResumeId }) {
 }
 
 async function deleteBaseResume({ userId, baseResumeId }) {
-  const resume = await prisma.baseResume.findFirst({
+  const resume = await prisma.base_resumes.findFirst({
     where: { id: baseResumeId, userId },
     select: {
       id: true,
@@ -409,7 +409,7 @@ async function deleteBaseResume({ userId, baseResumeId }) {
   // Use raw SQL for delete to avoid vector type issues
   await prisma.$executeRaw`DELETE FROM base_resumes WHERE id = ${baseResumeId}`;
 
-  const remaining = await prisma.baseResume.findMany({
+  const remaining = await prisma.base_resumes.findMany({
     where: { userId },
     orderBy: { slotNumber: 'asc' },
     select: {
@@ -422,7 +422,7 @@ async function deleteBaseResume({ userId, baseResumeId }) {
     if (remaining.length > 0) {
       await activateBaseResume({ userId, baseResumeId: remaining[0].id });
     } else {
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: userId },
         data: { activeBaseResumeId: null }
       });

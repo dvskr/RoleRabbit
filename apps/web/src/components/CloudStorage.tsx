@@ -19,6 +19,17 @@ import { RedesignedFileList, FilesTabsBar } from './cloudStorage/RedesignedFileL
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from './common/Toast';
 import { logger } from '../utils/logger';
+import { KeyboardShortcutsModal } from './cloudStorage/KeyboardShortcutsModal';
+import { FileConflictResolutionModal } from './cloudStorage/FileConflictResolutionModal';
+import { FileVersionHistoryModal } from './cloudStorage/FileVersionHistoryModal';
+import { FileVersionHistoryModalWithData } from './cloudStorage/FileVersionHistoryModalWithData';
+import { FileActivityTimeline } from './cloudStorage/FileActivityTimeline';
+import { CloudStorageErrorBoundary } from './cloudStorage/ErrorBoundary';
+import { ErrorRecovery } from './cloudStorage/ErrorRecovery';
+import { BulkOperationResults, BulkOperationResult } from './cloudStorage/BulkOperationResults';
+import { FileOperationLoader } from './cloudStorage/FileOperationLoader';
+import { getUserFriendlyErrorMessage } from '../utils/networkErrorHandler';
+import { PaginationControls } from './cloudStorage/PaginationControls';
 
 export default function CloudStorage({ onClose }: CloudStorageProps) {
   const { theme } = useTheme();
@@ -29,8 +40,15 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     return <LoadingState colors={{}} message="Loading theme" />;
   }
 
+  // FE-038: Bulk operation results state
+  const [bulkOperationResults, setBulkOperationResults] = useState<BulkOperationResult[] | null>(null);
+
   const [activeTab, setActiveTab] = useState<TabType>('files');
   const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [fileConflict, setFileConflict] = useState<{ fileId: string; fileName: string; localVersion: any; serverVersion: any } | null>(null);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [selectedFileForHistory, setSelectedFileForHistory] = useState<ResumeFile | null>(null);
 
   const {
     files,
@@ -48,13 +66,20 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     selectedFolderId,
     quickFilters,
     filteredFiles,
+    currentPage,
+    pageSize,
+    pagination,
+    sortOrder,
     setSearchTerm,
     setFilterType,
     setSortBy,
+    setSortOrder,
     setShowUploadModal,
     setShowDeleted,
     setSelectedFolderId,
     setQuickFilters,
+    setCurrentPage,
+    setPageSize,
     handleFileSelect,
     handleSelectAll,
     handleDeleteFiles,
@@ -80,6 +105,16 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleRenameFolder,
     handleDeleteFolder,
     handleMoveToFolder,
+    // GAP-008: New handler functions
+    handleDuplicateFile,
+    handleBulkRestore,
+    handleRestoreVersion,
+    handleDownloadVersion,
+    loadFileStats,
+    loadFileAccessLogs,
+    loadFileActivity,
+    loadingOperations,
+    operationErrors,
   } = useCloudStorage();
 
   const {
@@ -131,6 +166,28 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     handleSelectAll(filteredFiles);
   }, [handleSelectAll, filteredFiles]);
 
+  // FE-038: Wrapper for handleDeleteFiles to track bulk operation results
+  const handleDeleteFilesWrapper = useCallback(async () => {
+    try {
+      const results = await handleDeleteFiles();
+      if (results && results.length > 0) {
+        const fileNames = files.filter(f => results.some(r => r.fileId === f.id)).map(f => f.name);
+        const bulkResults: BulkOperationResult[] = results.map((r, idx) => ({
+          fileId: r.fileId,
+          fileName: fileNames[idx] || 'Unknown',
+          success: r.success,
+          error: r.error,
+        }));
+        setBulkOperationResults(bulkResults);
+        
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => setBulkOperationResults(null), 10000);
+      }
+    } catch (err: any) {
+      error(`Failed to delete files: ${getUserFriendlyErrorMessage(err)}`);
+    }
+  }, [handleDeleteFiles, files, error]);
+
   const handleFolderSelect = useCallback(
     (folderId: string | null) => {
       setSelectedFolderId(folderId);
@@ -174,13 +231,114 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
     }
   }, [isLoading]);
 
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts when typing in inputs
+      if ((e.target as HTMLElement).tagName === 'INPUT' || 
+          (e.target as HTMLElement).tagName === 'TEXTAREA' ||
+          (e.target as HTMLElement).isContentEditable) {
+        return;
+      }
+
+      // Focus search with '/'
+      if (e.key === '/' && !showUploadModal && !showKeyboardShortcuts) {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }
+
+      // Open upload modal with 'U'
+      if ((e.key === 'u' || e.key === 'U') && !showUploadModal && !showDeleted && activeTab === 'files') {
+        e.preventDefault();
+        setShowUploadModal(true);
+      }
+
+      // Delete selected files with 'Delete'
+      if (e.key === 'Delete' && selectedFiles.length > 0 && !showDeleted) {
+        e.preventDefault();
+        handleDeleteFilesWrapper();
+      }
+
+      // Download with 'D'
+      if ((e.key === 'd' || e.key === 'D') && selectedFiles.length > 0) {
+        e.preventDefault();
+        const file = files.find(f => f.id === selectedFiles[0]);
+        if (file) {
+          handleDownloadFileWrapper(file);
+        }
+      }
+
+      // Star/unstar with 'S'
+      if ((e.key === 's' || e.key === 'S') && selectedFiles.length > 0) {
+        e.preventDefault();
+        const file = files.find(f => f.id === selectedFiles[0]);
+        if (file) {
+          handleStarFile(file.id);
+        }
+      }
+
+      // Archive/unarchive with 'A'
+      if ((e.key === 'a' || e.key === 'A') && selectedFiles.length > 0 && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const file = files.find(f => f.id === selectedFiles[0]);
+        if (file) {
+          handleArchiveFile(file.id);
+        }
+      }
+
+      // Select all with Ctrl+A
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAllWrapper();
+      }
+
+      // Deselect all with Ctrl+D
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        // Deselect all by toggling each selected file
+        selectedFiles.forEach(id => {
+          if (selectedFiles.includes(id)) {
+            handleFileSelect(id);
+          }
+        });
+      }
+
+      // Show keyboard shortcuts with '?'
+      if (e.key === '?' && !e.shiftKey && !showUploadModal) {
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    showUploadModal,
+    showKeyboardShortcuts,
+    showDeleted,
+    activeTab,
+    selectedFiles,
+    files,
+    handleDeleteFiles,
+    handleDownloadFileWrapper,
+    handleStarFile,
+    handleArchiveFile,
+    handleSelectAllWrapper,
+    handleFileSelect,
+    setShowUploadModal,
+  ]);
+
   if (!hasLoadedInitial && isLoading) {
     return <LoadingState colors={colors} />;
   }
 
   return (
-    <div
-      className="h-full flex flex-col overflow-hidden min-h-0"
+    <CloudStorageErrorBoundary>
+      <div
+        className="h-full flex flex-col overflow-hidden min-h-0"
       style={{ background: colors.background }}
       data-testid="cloud-storage-root"
     >
@@ -244,9 +402,31 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               setSortBy={setSortBy}
               selectedFiles={selectedFiles}
               onSelectAll={handleSelectAllWrapper}
-              onDeleteSelected={handleDeleteFiles}
+              onDeleteSelected={handleDeleteFilesWrapper}
+              onBulkRestore={showDeleted ? async () => {
+                try {
+                  const results = await handleBulkRestore(selectedFiles);
+                  if (results && results.length > 0) {
+                    const fileNames = files.filter(f => results.some(r => r.fileId === f.id)).map(f => f.name);
+                    const bulkResults: BulkOperationResult[] = results.map((r, idx) => ({
+                      fileId: r.fileId,
+                      fileName: fileNames[idx] || 'Unknown',
+                      success: r.success,
+                      error: r.error,
+                    }));
+                    setBulkOperationResults(bulkResults);
+                    setTimeout(() => setBulkOperationResults(null), 10000);
+                    success(`${results.filter(r => r.success).length} file(s) restored successfully`);
+                  }
+                } catch (err: any) {
+                  error(`Failed to restore files: ${getUserFriendlyErrorMessage(err)}`);
+                }
+              } : undefined}
               onFileSelect={handleFileSelect}
               onDownload={handleDownloadFileWrapper}
+              isLoading={isLoading}
+              loadingOperations={loadingOperations}
+              operationErrors={operationErrors}
               onShare={handleShareFile}
               onDelete={async (fileId) => {
                 try {
@@ -316,6 +496,20 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
               onTabChange={setActiveTab}
               filesCount={activeFiles.length}
               credentialsCount={credentials.length}
+              quickFilters={quickFilters || {}}
+            />
+          )}
+          
+          {/* FE-042: Pagination Controls */}
+          {pagination && pagination.totalPages > 1 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              colors={colors}
             />
           )}
         </div>
@@ -353,8 +547,78 @@ export default function CloudStorage({ onClose }: CloudStorageProps) {
           onClose={() => setShowUploadModal(false)}
           onUpload={handleUploadFile}
           activeFolderId={selectedFolderId}
+          storageInfo={storageInfo}
+          existingFiles={files}
         />
       )}
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+      />
+
+      {/* File Conflict Resolution Modal */}
+      {fileConflict && (
+        <FileConflictResolutionModal
+          isOpen={!!fileConflict}
+          conflict={fileConflict}
+          onResolve={(action) => {
+            // Handle conflict resolution (requires backend support)
+            logger.info('Conflict resolution:', action, fileConflict);
+            setFileConflict(null);
+            // TODO: Implement conflict resolution logic
+          }}
+          onClose={() => setFileConflict(null)}
+        />
+      )}
+
+      {/* File Version History Modal */}
+      {selectedFileForHistory && (
+        <FileVersionHistoryModalWithData
+          isOpen={showVersionHistory}
+          fileId={selectedFileForHistory.id}
+          fileName={selectedFileForHistory.name}
+          onClose={() => {
+            setShowVersionHistory(false);
+            setSelectedFileForHistory(null);
+          }}
+          onRestoreVersion={async (versionId) => {
+            if (!selectedFileForHistory) return;
+            try {
+              await handleRestoreVersion(selectedFileForHistory.id, versionId);
+              success('Version restored successfully');
+              setShowVersionHistory(false);
+              setSelectedFileForHistory(null);
+              handleRefresh(); // Refresh file list
+            } catch (err: any) {
+              error(`Failed to restore version: ${err.message || 'Unknown error'}`);
+            }
+          }}
+          onDownloadVersion={async (versionId) => {
+            if (!selectedFileForHistory) return;
+            try {
+              await handleDownloadVersion(selectedFileForHistory.id, versionId);
+              success('Version downloaded successfully');
+            } catch (err: any) {
+              error(`Failed to download version: ${err.message || 'Unknown error'}`);
+            }
+          }}
+        />
+      )}
+
+      {/* FE-038: Bulk operation results */}
+      {bulkOperationResults && bulkOperationResults.length > 0 && (
+        <div className="px-6 pb-4">
+          <BulkOperationResults
+            results={bulkOperationResults}
+            operation="Delete"
+            onDismiss={() => setBulkOperationResults(null)}
+            colors={colors}
+          />
+        </div>
+      )}
     </div>
+    </CloudStorageErrorBoundary>
   );
 }

@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { SharePermission } from '../types';
 import { logger } from '../../../../utils/logger';
+import { validateEmail } from '../../../../utils/validation';
 
 interface UseFileSharingProps {
   fileId: string;
@@ -21,13 +22,24 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
   const [sharePassword, setSharePassword] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleShareSubmit = async (): Promise<void> => {
     console.log('handleShareSubmit called', { shareEmail, isSharing, fileId });
     
+    // FE-026: Validate email format
+    const emailValidation = validateEmail(shareEmail);
+    if (!emailValidation.valid) {
+      setEmailError(emailValidation.error || 'Invalid email address');
+      logger.warn('Cannot share: invalid email', { email: shareEmail, error: emailValidation.error });
+      return;
+    }
+    
+    setEmailError(null);
+    
     if (!shareEmail.trim()) {
+      setEmailError('Email address is required');
       logger.warn('Cannot share: email is empty');
-      console.error('Share failed: email is empty');
       return;
     }
 
@@ -145,6 +157,8 @@ export const useFileSharing = ({ fileId, onShareWithUser }: UseFileSharingProps)
     resetShareForm,
     isSharing,
     shareSuccess,
+    emailError,
+    setEmailError,
   };
 };
 

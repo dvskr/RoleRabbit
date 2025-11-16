@@ -1,6 +1,7 @@
 // Authentication endpoints for RoleReady API
 const { hashPassword, verifyPassword, sanitizeInput, isValidEmail, isStrongPassword } = require('./utils/security');
 const { prisma } = require('./utils/db');
+const { v4: uuidv4 } = require('uuid');
 
 /**
  * Register a new user
@@ -17,7 +18,7 @@ async function registerUser(email, password, name) {
   }
 
   // Check if user already exists
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await prisma.users.findUnique({
     where: { email },
     select: { id: true }
   });
@@ -28,15 +29,53 @@ async function registerUser(email, password, name) {
   // Hash password
   const hashedPassword = await hashPassword(password);
 
+  // Generate UUID for user id
+  const userId = uuidv4();
+
   // Create user in database
-  const user = await prisma.user.create({
+  const now = new Date();
+  const user = await prisma.users.create({
     data: {
+      id: userId,
       email: sanitizeInput(email),
       password: hashedPassword,
       name: sanitizeInput(name),
-      provider: 'local'
+      provider: 'local',
+      updatedAt: now
     }
   });
+
+  // Initialize storage quota for new user (default: FREE tier, 5GB limit)
+  try {
+    // Ensure storage_quotas model exists (defensive check)
+    if (!prisma.storage_quotas) {
+      const logger = require('./utils/logger');
+      logger.error('Prisma storage_quotas model not found. Run "npx prisma generate" to regenerate the client.');
+      throw new Error('Storage quota model not available');
+    }
+    
+    const { getQuotaLimitForTier } = require('./config/scaling');
+    const limits = getQuotaLimitForTier(user.subscriptionTier || 'FREE');
+    
+    // Generate UUID for storage quota id
+    const quotaId = uuidv4();
+    const quotaNow = new Date();
+    
+    await prisma.storage_quotas.create({
+      data: {
+        id: quotaId,
+        userId: user.id,
+        usedBytes: BigInt(0),
+        limitBytes: BigInt(limits.limitBytes),
+        tier: user.subscriptionTier || 'FREE',
+        updatedAt: quotaNow,
+      },
+    });
+  } catch (quotaError) {
+    // Log error but don't fail registration if quota creation fails
+    const logger = require('./utils/logger');
+    logger.warn('Failed to create storage quota for new user:', quotaError);
+  }
 
   // Return user without password
   const { password: _, ...userWithoutPassword } = user;
@@ -48,7 +87,7 @@ async function registerUser(email, password, name) {
  */
 async function authenticateUser(email, password) {
   // Find user in database (only select fields that exist in users table)
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { email },
     select: {
       id: true,
@@ -82,7 +121,7 @@ async function authenticateUser(email, password) {
  * Get user by ID
  */
 async function getUserById(userId) {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: {
       id: true,
@@ -107,7 +146,7 @@ async function getUserById(userId) {
  * Update user password
  */
 async function updateUserPassword(userId, oldPassword, newPassword) {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.users.findUnique({
     where: { id: userId },
     select: {
       id: true,
@@ -133,7 +172,7 @@ async function updateUserPassword(userId, oldPassword, newPassword) {
 
   // Hash new password and update in database
   const hashedPassword = await hashPassword(newPassword);
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: userId },
     data: { password: hashedPassword }
   });
@@ -154,9 +193,9 @@ async function resetUserPassword(token, newPassword) {
   const hashedPassword = await hashPassword(newPassword);
   
   // Get token and user
-  const resetToken = await prisma.passwordResetToken.findUnique({
+  const resetToken = await prisma.password_reset_tokens.findUnique({
     where: { token },
-    include: { user: true },
+    include: { users: true },
   });
 
   if (!resetToken) {
@@ -172,12 +211,12 @@ async function resetUserPassword(token, newPassword) {
   }
 
   // Update password and mark token as used
-  await prisma.user.update({
+  await prisma.users.update({
     where: { id: resetToken.userId },
     data: { password: hashedPassword },
   });
 
-  await prisma.passwordResetToken.update({
+  await prisma.password_reset_tokens.update({
     where: { token },
     data: { used: true },
   });
@@ -189,7 +228,7 @@ async function resetUserPassword(token, newPassword) {
  * Get all users (for development/debugging)
  */
 async function getAllUsers() {
-  const users = await prisma.user.findMany({
+  const users = await prisma.users.findMany({
     select: {
       id: true,
       email: true,

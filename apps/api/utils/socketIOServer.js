@@ -108,55 +108,79 @@ class SocketIOServer {
 
   /**
    * Emit file created event to user
+   * BE-034: Real-time event emission error handling (log but don't fail request)
    */
   notifyFileCreated(userId, file) {
     if (!this.io) return;
-    this.io.to(`user:${userId}`).emit('file_created', {
-      file,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      this.io.to(`user:${userId}`).emit('file_created', {
+        file,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Failed to emit file_created event:', error);
+      // Don't throw - log but don't fail the request
+    }
   }
 
   /**
    * Emit file updated event to user and file watchers
+   * BE-034: Real-time event emission error handling
    */
   notifyFileUpdated(userId, file, updates) {
     if (!this.io) return;
-    const eventData = {
-      fileId: file.id,
-      file,
-      updates,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Notify the owner
-    this.io.to(`user:${userId}`).emit('file_updated', eventData);
-    
-    // Notify anyone watching this file
-    this.io.to(`file:${file.id}`).emit('file_updated', eventData);
+    try {
+      const eventData = {
+        fileId: file.id,
+        file,
+        updates,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Notify the owner
+      this.io.to(`user:${userId}`).emit('file_updated', eventData);
+      
+      // Notify anyone watching this file
+      this.io.to(`file:${file.id}`).emit('file_updated', eventData);
+    } catch (error) {
+      logger.error('Failed to emit file_updated event:', error);
+      // Don't throw - log but don't fail the request
+    }
   }
 
   /**
    * Emit file deleted event to user
+   * BE-034: Real-time event emission error handling
    */
   notifyFileDeleted(userId, fileId, permanently = false) {
     if (!this.io) return;
-    this.io.to(`user:${userId}`).emit('file_deleted', {
-      fileId,
-      permanently,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      this.io.to(`user:${userId}`).emit('file_deleted', {
+        fileId,
+        permanently,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Failed to emit file_deleted event:', error);
+      // Don't throw - log but don't fail the request
+    }
   }
 
   /**
    * Emit file restored event to user
+   * BE-034: Real-time event emission error handling
    */
   notifyFileRestored(userId, file) {
     if (!this.io) return;
-    this.io.to(`user:${userId}`).emit('file_restored', {
-      file,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      this.io.to(`user:${userId}`).emit('file_restored', {
+        file,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Failed to emit file_restored event:', error);
+      // Don't throw - log but don't fail the request
+    }
   }
 
   /**
@@ -181,32 +205,44 @@ class SocketIOServer {
 
   /**
    * Emit share removed event
+   * BE-034: Real-time event emission error handling
    */
   notifyShareRemoved(userId, fileId, shareId) {
     if (!this.io) return;
-    this.io.to(`user:${userId}`).emit('share_removed', {
-      fileId,
-      shareId,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      this.io.to(`user:${userId}`).emit('share_removed', {
+        fileId,
+        shareId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Failed to emit share_removed event:', error);
+      // Don't throw - log but don't fail the request
+    }
   }
 
   /**
    * Emit comment added event
+   * BE-034: Real-time event emission error handling
    */
   notifyCommentAdded(userId, fileId, comment) {
     if (!this.io) return;
-    const eventData = {
-      fileId,
-      comment,
-      timestamp: new Date().toISOString()
-    };
-    
-    // Notify the owner
-    this.io.to(`user:${userId}`).emit('comment_added', eventData);
-    
-    // Notify anyone watching this file
-    this.io.to(`file:${fileId}`).emit('comment_added', eventData);
+    try {
+      const eventData = {
+        fileId,
+        comment,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Notify the owner
+      this.io.to(`user:${userId}`).emit('comment_added', eventData);
+      
+      // Notify anyone watching this file
+      this.io.to(`file:${fileId}`).emit('comment_added', eventData);
+    } catch (error) {
+      logger.error('Failed to emit comment_added event:', error);
+      // Don't throw - log but don't fail the request
+    }
   }
 
   /**

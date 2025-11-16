@@ -29,6 +29,7 @@ import { logger } from '../../utils/logger';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatRelativeTime, formatFileSize } from '../../utils/formatters';
+import apiService from '../../services/apiService';
 import { getUserFilePermission, canView, canComment, canEdit, canDelete, canManageShares } from '../../utils/filePermissions';
 import { FileCardProps, SharePermission, DownloadFormat } from './fileCard/types';
 import {
@@ -53,6 +54,7 @@ import {
   FilePreviewModal,
 } from './fileCard/components';
 import { MoveFileModal } from './MoveFileModal';
+import { ErrorRecovery } from '../ErrorRecovery';
 
 const FILE_TYPE_OPTIONS: ResumeFile['type'][] = [
   'resume',
@@ -90,7 +92,9 @@ const FileCard = React.memo(function FileCard({
   onShareWithUser,
   onRemoveShare,
   onMove,
-  folders = []
+  folders = [],
+  isLoading = false,
+  operationError,
 }: FileCardProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
@@ -109,6 +113,9 @@ const FileCard = React.memo(function FileCard({
   const [editingName, setEditingName] = useState(file.name);
   const [editingType, setEditingType] = useState<ResumeFile['type']>(file.type as ResumeFile['type']);
   const [isSaving, setIsSaving] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(file.thumbnail || null);
+  const [isLoadingThumbnail, setIsLoadingThumbnail] = useState(false);
   
   // Custom hooks for state management
   const fileSharing = useFileSharing({
@@ -148,6 +155,42 @@ const FileCard = React.memo(function FileCard({
       setEditingType(file.type as ResumeFile['type']);
     }
   }, [file.name, file.type, isEditing]);
+
+  // FE-009: Fetch thumbnail for image files if not available
+  useEffect(() => {
+    // Check if this is an image file and thumbnail is missing
+    const isImageFile = file.contentType?.startsWith('image/');
+    const hasThumbnail = file.thumbnail || thumbnailUrl;
+    
+    if (isImageFile && !hasThumbnail && !thumbnailError && !isLoadingThumbnail) {
+      setIsLoadingThumbnail(true);
+      apiService.getThumbnail(file.id)
+        .then((blob) => {
+          if (blob && blob.size > 0) {
+            const url = URL.createObjectURL(blob);
+            setThumbnailUrl(url);
+          }
+        })
+        .catch((error) => {
+          logger.warn('Failed to load thumbnail for file:', file.id, error);
+          setThumbnailError(true);
+        })
+        .finally(() => {
+          setIsLoadingThumbnail(false);
+        });
+    } else if (file.thumbnail && file.thumbnail !== thumbnailUrl) {
+      // Update thumbnail URL if file.thumbnail changed
+      setThumbnailUrl(file.thumbnail);
+      setThumbnailError(false);
+    }
+    
+    // Cleanup blob URL on unmount
+    return () => {
+      if (thumbnailUrl && thumbnailUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(thumbnailUrl);
+      }
+    };
+  }, [file.id, file.thumbnail, file.contentType, thumbnailError, isLoadingThumbnail, thumbnailUrl]);
   
   // Edit handlers
   const handleStartEdit = () => {
@@ -255,27 +298,91 @@ const FileCard = React.memo(function FileCard({
     
     return (
       <div 
-        className="group rounded-xl p-5 transition-all duration-300 w-full"
+        className="group rounded-xl p-5 transition-all duration-300 w-full relative"
         style={{
           background: darkBg,
           border: `1px solid ${isSelected ? blueAccent : '#2D3748'}`,
           boxShadow: isSelected ? `0 0 0 2px ${blueAccent}40` : 'none',
           maxWidth: '340px',
           minWidth: '280px',
+          opacity: isLoading ? 0.7 : 1,
         }}
       >
+        {/* FE-035: Loading spinner overlay for individual file operations */}
+        {isLoading && (
+          <div 
+            className="absolute inset-0 rounded-xl flex items-center justify-center z-10"
+            style={{
+              background: 'rgba(0, 0, 0, 0.5)',
+            }}
+            aria-live="polite"
+            aria-label="File operation in progress"
+          >
+            <div 
+              className="w-6 h-6 border-2 rounded-full animate-spin"
+              style={{
+                borderColor: colors.primaryBlue,
+                borderTopColor: 'transparent',
+              }}
+            />
+          </div>
+        )}
+        
+        {/* FE-031: Error recovery UI */}
+        {operationError && (
+          <div 
+            className="absolute top-2 right-2 z-20"
+            role="alert"
+            aria-live="assertive"
+          >
+            <ErrorRecovery
+              error={operationError.error}
+              onRetry={() => {
+                // Retry the last operation - could be enhanced to track operation type
+                if (operationError.retryable) {
+                  window.location.reload(); // Simple retry for now
+                }
+              }}
+              operation="File operation"
+              colors={colors}
+            />
+          </div>
+        )}
         {/* Top Section - Header */}
         <div className="mb-4">
           <div className="flex items-start gap-4">
-            {/* Blue Square Icon */}
-            <div 
-              className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{
-                background: blueAccent,
-              }}
-            >
-              <FileText size={24} color={lightText} />
-            </div>
+            {/* Blue Square Icon or Thumbnail */}
+            {thumbnailUrl && !thumbnailError ? (
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden relative"
+                style={{
+                  background: blueAccent,
+                }}
+              >
+                <img
+                  src={thumbnailUrl}
+                  alt={file.name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={() => setThumbnailError(true)}
+                  onLoad={() => setIsLoadingThumbnail(false)}
+                />
+                {isLoadingThumbnail && (
+                  <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)' }}>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div 
+                className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: blueAccent,
+                }}
+              >
+                <FileText size={24} color={lightText} />
+              </div>
+            )}
 
             {/* File Name and Resume Button Section */}
             <div className="flex-1 min-w-0">

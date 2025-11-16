@@ -113,7 +113,43 @@ export default function MinimalAuthPage() {
         router.push('/dashboard');
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      // Extract error message from various error formats
+      let errorMessage = 'Authentication failed. Please check your credentials and try again.';
+      
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object') {
+        // Try different possible error message properties
+        if (err.message && typeof err.message === 'string') {
+          errorMessage = err.message;
+        } else if (err.error && typeof err.error === 'string') {
+          errorMessage = err.error;
+        } else if (err.details?.message && typeof err.details.message === 'string') {
+          errorMessage = err.details.message;
+        } else if (err.response?.data?.error && typeof err.response.data.error === 'string') {
+          errorMessage = err.response.data.error;
+        } else if (err.response?.data?.message && typeof err.response.data.message === 'string') {
+          errorMessage = err.response.data.message;
+        } else {
+          // Last resort: try to extract meaningful message
+          try {
+            if (err.response?.data) {
+              const errorData = err.response.data;
+              if (typeof errorData === 'string') {
+                errorMessage = errorData;
+              } else if (errorData.error && typeof errorData.error === 'string') {
+                errorMessage = errorData.error;
+              } else if (errorData.message && typeof errorData.message === 'string') {
+                errorMessage = errorData.message;
+              }
+            }
+          } catch {
+            // Keep default error message if extraction fails
+          }
+        }
+      }
+      
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
@@ -532,7 +568,7 @@ export default function MinimalAuthPage() {
                   exit={{ opacity: 0, y: -10 }}
                   className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
                 >
-                  {error}
+                  {typeof error === 'string' ? error : 'Authentication failed. Please check your credentials and try again.'}
                 </motion.div>
               )}
             </AnimatePresence>

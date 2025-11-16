@@ -17,6 +17,12 @@ export interface EmptyFilesStateProps {
   onUpload?: () => void;
   colors: ThemeColors;
   showDeleted?: boolean;
+  quickFilters?: {
+    starred?: boolean;
+    archived?: boolean;
+    shared?: boolean;
+    recent?: boolean;
+  };
 }
 
 // Folder modal props (base)

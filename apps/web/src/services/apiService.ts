@@ -478,6 +478,78 @@ class ApiService {
   // ===== STORAGE ENDPOINTS =====
 
   /**
+   * Get file activity timeline
+   */
+  async getFileActivity(fileId: string, limit: number = 50, offset: number = 0): Promise<any> {
+    return this.get<any>(`/api/storage/files/${fileId}/activity?limit=${limit}&offset=${offset}`);
+  }
+
+  /**
+   * Get file versions
+   */
+  async getFileVersions(fileId: string): Promise<any> {
+    return this.get<any>(`/api/storage/files/${fileId}/versions`);
+  }
+
+  /**
+   * Get single file by ID (FE-001)
+   * Use this instead of filtering full file list
+   */
+  async getFileById(fileId: string): Promise<any> {
+    return this.get<any>(`/api/storage/files/${fileId}`);
+  }
+
+  /**
+   * Duplicate file (FE-002)
+   */
+  async duplicateFile(fileId: string): Promise<any> {
+    return this.request(`/api/storage/files/${fileId}/duplicate`, {
+      method: 'POST',
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Get file access logs (FE-004)
+   */
+  async getFileAccessLogs(fileId: string): Promise<any> {
+    return this.get<any>(`/api/storage/files/${fileId}/access-logs`);
+  }
+
+  /**
+   * Bulk delete files
+   */
+  async bulkDeleteFiles(fileIds: string[]): Promise<any> {
+    return this.request('/api/storage/files/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ fileIds }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Bulk move files to folder
+   */
+  async bulkMoveFiles(fileIds: string[], folderId: string | null): Promise<any> {
+    return this.request('/api/storage/files/bulk-move', {
+      method: 'POST',
+      body: JSON.stringify({ fileIds, folderId }),
+      credentials: 'include',
+    });
+  }
+
+  /**
+   * Bulk restore files from trash (FE-000)
+   */
+  async bulkRestoreFiles(fileIds: string[]): Promise<any> {
+    return this.request('/api/storage/files/bulk-restore', {
+      method: 'POST',
+      body: JSON.stringify({ fileIds }),
+      credentials: 'include',
+    });
+  }
+
+  /**
    * Upload storage file
    */
   async uploadStorageFile(formData: FormData): Promise<any> {
@@ -498,10 +570,27 @@ class ApiService {
   /**
    * Get cloud storage files
    */
-  async getCloudFiles(folderId?: string, includeDeleted?: boolean): Promise<any> {
+  async getCloudFiles(
+    folderId?: string, 
+    includeDeleted?: boolean, 
+    page?: number, 
+    pageSize?: number,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
+    searchTerm?: string,
+    filterType?: string
+  ): Promise<any> {
     const params = new URLSearchParams();
     if (folderId) params.append('folderId', folderId);
     if (includeDeleted) params.append('includeDeleted', 'true');
+    // FE-042: Add pagination parameters
+    if (page !== undefined) params.append('page', page.toString());
+    if (pageSize !== undefined) params.append('pageSize', pageSize.toString());
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
+    // FE-042: Add search and filter parameters
+    if (searchTerm) params.append('search', searchTerm);
+    if (filterType && filterType !== 'all') params.append('type', filterType);
     
     const queryString = params.toString();
     const endpoint = queryString ? `/api/storage/files?${queryString}` : '/api/storage/files';
@@ -735,6 +824,48 @@ class ApiService {
   }
 
   /**
+   * Upload thumbnail for file (FE-005)
+   */
+  async uploadThumbnail(fileId: string, thumbnailBlob: Blob): Promise<any> {
+    const formData = new FormData();
+    // Convert Blob to File if needed
+    const thumbnailFile = thumbnailBlob instanceof File 
+      ? thumbnailBlob 
+      : new File([thumbnailBlob], 'thumbnail.png', { type: 'image/png' });
+    formData.append('thumbnail', thumbnailFile);
+
+    const response = await fetch(`${this.baseUrl}/api/storage/files/${fileId}/thumbnail`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to upload thumbnail');
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Get thumbnail for file (FE-006)
+   */
+  async getThumbnail(fileId: string): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}/api/storage/files/${fileId}/thumbnail`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || error.message || 'Failed to get thumbnail');
+    }
+
+    return await response.blob();
+  }
+
+  /**
    * Get credentials
    */
   async getCredentials(): Promise<any> {
@@ -814,6 +945,14 @@ class ApiService {
       method: 'GET',
       credentials: 'include',
     });
+  }
+
+  /**
+   * Get file statistics (FE-003)
+   * Alias for getStorageStats for consistency
+   */
+  async getFileStats(): Promise<any> {
+    return this.getStorageStats();
   }
 
   // ===== RESUME ENDPOINTS =====

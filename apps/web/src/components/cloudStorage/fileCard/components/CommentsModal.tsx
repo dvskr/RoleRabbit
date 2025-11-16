@@ -7,6 +7,7 @@ import { MessageCircle, Loader2, CheckCircle2 } from 'lucide-react';
 import { FileComment } from '../../../types/cloudStorage';
 import { COMMENTS } from '../constants';
 import { formatRelativeTime } from '../../../../utils/formatters';
+import { MAX_COMMENT_LENGTH } from '../../../../utils/validation';
 
 interface CommentsModalProps {
   comments: FileComment[];
@@ -135,8 +136,15 @@ const CommentsModalComponent: React.FC<CommentsModalProps> = ({
           <div className="flex-1 min-w-0 max-w-full">
             <textarea
               value={commentsState.newComment}
-              onChange={(e) => commentsState.setNewComment(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // FE-028: Enforce max length
+                if (value.length <= MAX_COMMENT_LENGTH) {
+                  commentsState.setNewComment(value);
+                }
+              }}
               placeholder={COMMENTS.PLACEHOLDER}
+              maxLength={MAX_COMMENT_LENGTH}
               className="w-full max-w-full px-3 py-2 rounded-lg focus:outline-none resize-none text-sm box-border transition-all"
               style={{
                 background: colors.inputBackground,
@@ -151,6 +159,13 @@ const CommentsModalComponent: React.FC<CommentsModalProps> = ({
               }}
               rows={2}
             />
+            <p className="text-xs mt-1" style={{ 
+              color: commentsState.newComment.length > MAX_COMMENT_LENGTH * 0.9 
+                ? colors.errorRed 
+                : colors.tertiaryText 
+            }}>
+              {commentsState.newComment.length} / {MAX_COMMENT_LENGTH} characters
+            </p>
             <div className="flex justify-end mt-2 space-x-2">
               <button
                 onClick={commentsState.handleCommentSubmit}

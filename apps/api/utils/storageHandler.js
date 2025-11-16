@@ -9,11 +9,21 @@ const path = require('path');
 const crypto = require('crypto');
 const { pipeline } = require('stream/promises');
 const logger = require('./logger');
+const { retryWithBackoff } = require('./storageRetry');
+const { getCircuitBreaker } = require('./storageCircuitBreaker');
+const { getStorageMonitor } = require('./storageMonitor');
 
 // Determine storage type from environment
 // Default to Supabase Storage (works for both dev and production)
 const STORAGE_TYPE = process.env.STORAGE_TYPE || 'supabase'; // 'supabase' (recommended) or 'local'
 const STORAGE_PATH = process.env.STORAGE_PATH || './uploads';
+
+// BE-059: Timeout configuration
+const STORAGE_TIMEOUT_MS = parseInt(process.env.STORAGE_TIMEOUT_MS) || 60000; // 60 seconds default
+
+// Initialize utilities
+const circuitBreaker = getCircuitBreaker();
+const monitor = getStorageMonitor();
 
 // Supabase Storage Configuration
 let supabaseClient = null;
@@ -114,9 +124,21 @@ function generateFilePath(userId, fileName, fileExtension) {
 }
 
 /**
- * Upload file to Supabase Storage
+ * Upload file to Supabase Storage with timeout, retry, and circuit breaker
+ * BE-059, BE-060, BE-061: Timeout, retry, circuit breaker
  */
 async function uploadToSupabase(fileStream, userId, fileName, contentType) {
+  const startTime = Date.now();
+  const operation = 'upload';
+  
+  // Check circuit breaker
+  const circuitCheck = circuitBreaker.canExecute();
+  if (!circuitCheck.allowed) {
+    monitor.recordOperation(operation, false, Date.now() - startTime, 
+      new Error(circuitCheck.reason));
+    throw new Error(circuitCheck.reason);
+  }
+  
   try {
     const fileExtension = path.extname(fileName);
     const { storagePath, displayName } = generateFilePath(userId, fileName, fileExtension);
@@ -128,14 +150,29 @@ async function uploadToSupabase(fileStream, userId, fileName, contentType) {
     }
     const fileBuffer = Buffer.concat(chunks);
     
-    // Upload to Supabase Storage
-    const { error } = await supabaseClient.storage
-      .from(supabaseStorageBucket)
-      .upload(storagePath, fileBuffer, {
-        contentType: contentType || 'application/octet-stream',
-        upsert: false,
-        cacheControl: '3600'
-      });
+    // BE-059: Upload with timeout
+    const uploadWithTimeout = async () => {
+      const uploadPromise = supabaseClient.storage
+        .from(supabaseStorageBucket)
+        .upload(storagePath, fileBuffer, {
+          contentType: contentType || 'application/octet-stream',
+          upsert: false,
+          cacheControl: '3600'
+        });
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Upload timeout after ${STORAGE_TIMEOUT_MS}ms`)), STORAGE_TIMEOUT_MS)
+      );
+      
+      return await Promise.race([uploadPromise, timeoutPromise]);
+    };
+    
+    // BE-060: Retry with exponential backoff
+    const { error } = await retryWithBackoff(
+      uploadWithTimeout,
+      undefined,
+      `Supabase upload: ${storagePath}`
+    );
     
     if (error) {
       throw new Error(`Supabase upload failed: ${error.message}`);
@@ -152,6 +189,11 @@ async function uploadToSupabase(fileStream, userId, fileName, contentType) {
       logger.warn('Could not get public URL:', urlError.message);
     }
     
+    // Record success
+    const latency = Date.now() - startTime;
+    circuitBreaker.recordSuccess();
+    monitor.recordOperation(operation, true, latency);
+    
     return {
       path: storagePath,
       fullPath: storagePath,
@@ -160,6 +202,11 @@ async function uploadToSupabase(fileStream, userId, fileName, contentType) {
       size: fileBuffer.length
     };
   } catch (error) {
+    // Record failure
+    const latency = Date.now() - startTime;
+    circuitBreaker.recordFailure();
+    monitor.recordOperation(operation, false, latency, error);
+    
     logger.error('Supabase upload error:', error);
     throw error;
   }
@@ -213,34 +260,62 @@ async function uploadToLocal(fileStream, userId, fileName, _contentType) {
 
 /**
  * Upload file (main method)
+ * BE-062: Fallback to local storage if Supabase is unavailable
  */
 async function upload(fileStream, userId, fileName, contentType) {
   await initializeStorage();
   
   if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await uploadToSupabase(fileStream, userId, fileName, contentType);
+    try {
+      return await uploadToSupabase(fileStream, userId, fileName, contentType);
+    } catch (error) {
+      // BE-062: Fallback to local storage on failure
+      logger.warn('Supabase upload failed, falling back to local storage:', error.message);
+      return await uploadToLocal(fileStream, userId, fileName, contentType);
+    }
   } else {
     return await uploadToLocal(fileStream, userId, fileName, contentType);
   }
 }
 
 /**
- * Download file from Supabase Storage
+ * Download file from Supabase Storage with timeout, retry, and circuit breaker
+ * BE-059, BE-060, BE-061: Timeout, retry, circuit breaker
  */
 async function downloadFromSupabase(storagePath) {
+  const startTime = Date.now();
+  const operation = 'download';
+  
+  // Check circuit breaker
+  const circuitCheck = circuitBreaker.canExecute();
+  if (!circuitCheck.allowed) {
+    monitor.recordOperation(operation, false, Date.now() - startTime,
+      new Error(circuitCheck.reason));
+    throw new Error(circuitCheck.reason);
+  }
+  
   try {
     logger.info(`📥 Downloading from Supabase: ${storagePath}`);
     
-    // Add timeout to prevent hanging
-    const downloadPromise = supabaseClient.storage
-      .from(supabaseStorageBucket)
-      .download(storagePath);
+    // BE-059: Download with timeout
+    const downloadWithTimeout = async () => {
+      const downloadPromise = supabaseClient.storage
+        .from(supabaseStorageBucket)
+        .download(storagePath);
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Download timeout after ${STORAGE_TIMEOUT_MS}ms`)), STORAGE_TIMEOUT_MS)
+      );
+      
+      return await Promise.race([downloadPromise, timeoutPromise]);
+    };
     
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Supabase download timeout after 60 seconds')), 60000)
+    // BE-060: Retry with exponential backoff
+    const { data, error } = await retryWithBackoff(
+      downloadWithTimeout,
+      undefined,
+      `Supabase download: ${storagePath}`
     );
-    
-    const { data, error } = await Promise.race([downloadPromise, timeoutPromise]);
     
     if (error) {
       throw new Error(`Supabase download failed: ${error.message}`);
@@ -250,8 +325,20 @@ async function downloadFromSupabase(storagePath) {
     
     // Convert Blob to Buffer/Stream
     const arrayBuffer = await data.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Record success
+    const latency = Date.now() - startTime;
+    circuitBreaker.recordSuccess();
+    monitor.recordOperation(operation, true, latency);
+    
+    return buffer;
   } catch (error) {
+    // Record failure
+    const latency = Date.now() - startTime;
+    circuitBreaker.recordFailure();
+    monitor.recordOperation(operation, false, latency, error);
+    
     logger.error('Supabase download error:', error);
     throw error;
   }
@@ -288,15 +375,24 @@ async function downloadFromLocal(storagePath) {
 /**
  * Download file (main method)
  * Returns a readable stream or buffer
+ * BE-062: Fallback to local storage if Supabase is unavailable
  */
 async function download(storagePath) {
   await initializeStorage();
   
   if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    const buffer = await downloadFromSupabase(storagePath);
-    // Convert buffer to stream for consistency
-    const { Readable } = require('stream');
-    return Readable.from(buffer);
+    try {
+      const buffer = await downloadFromSupabase(storagePath);
+      // Convert buffer to stream for consistency
+      const { Readable } = require('stream');
+      return Readable.from(buffer);
+    } catch (error) {
+      // BE-062: Fallback to local storage on failure
+      logger.warn('Supabase download failed, falling back to local storage:', error.message);
+      const buffer = await downloadFromLocal(storagePath);
+      const { Readable } = require('stream');
+      return Readable.from(buffer);
+    }
   } else {
     const buffer = await downloadFromLocal(storagePath);
     const { Readable } = require('stream');
@@ -306,12 +402,19 @@ async function download(storagePath) {
 
 /**
  * Download file as buffer (for resume parsing)
+ * BE-062: Fallback to local storage if Supabase is unavailable
  */
 async function downloadAsBuffer(storagePath) {
   await initializeStorage();
   
   if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await downloadFromSupabase(storagePath);
+    try {
+      return await downloadFromSupabase(storagePath);
+    } catch (error) {
+      // BE-062: Fallback to local storage on failure
+      logger.warn('Supabase download failed, falling back to local storage:', error.message);
+      return await downloadFromLocal(storagePath);
+    }
   } else {
     return await downloadFromLocal(storagePath);
   }
@@ -319,29 +422,93 @@ async function downloadAsBuffer(storagePath) {
 
 /**
  * Get download URL (for direct browser access)
+ * BE-065: Enhanced signed URL generation for private file access
  */
-async function getDownloadUrl(storagePath, expiresIn = 3600) {
+async function getDownloadUrl(storagePath, expiresIn = 3600, options = {}) {
   await initializeStorage();
   
   if (STORAGE_TYPE === 'supabase' && supabaseClient) {
     try {
-      // Get signed URL for private files
-      const { data, error } = await supabaseClient.storage
-        .from(supabaseStorageBucket)
-        .createSignedUrl(storagePath, expiresIn);
+      const startTime = Date.now();
+      const operation = 'getDownloadUrl';
+      
+      // Check circuit breaker
+      const circuitCheck = circuitBreaker.canExecute();
+      if (!circuitCheck.allowed) {
+        monitor.recordOperation(operation, false, Date.now() - startTime,
+          new Error(circuitCheck.reason));
+        // Fallback to public URL if available
+        try {
+          const { data: publicData } = supabaseClient.storage
+            .from(supabaseStorageBucket)
+            .getPublicUrl(storagePath);
+          return publicData?.publicUrl || null;
+        } catch {
+          return null;
+        }
+      }
+      
+      // BE-065: Generate signed URL with timeout and retry
+      const getSignedUrlWithTimeout = async () => {
+        const signedUrlPromise = supabaseClient.storage
+          .from(supabaseStorageBucket)
+          .createSignedUrl(storagePath, expiresIn);
+        
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`Signed URL generation timeout after ${STORAGE_TIMEOUT_MS}ms`)), STORAGE_TIMEOUT_MS)
+        );
+        
+        return await Promise.race([signedUrlPromise, timeoutPromise]);
+      };
+      
+      // Retry with exponential backoff
+      const { data, error } = await retryWithBackoff(
+        getSignedUrlWithTimeout,
+        undefined,
+        `Get signed URL: ${storagePath}`
+      );
       
       if (error) {
         // Try public URL as fallback
         const { data: publicData } = supabaseClient.storage
           .from(supabaseStorageBucket)
           .getPublicUrl(storagePath);
+        
+        const latency = Date.now() - startTime;
+        circuitBreaker.recordFailure();
+        monitor.recordOperation(operation, false, latency, error);
+        
         return publicData?.publicUrl || null;
       }
       
-      return data?.signedUrl || null;
+      // BE-066: CDN integration - if CDN URL is configured, use it
+      let signedUrl = data?.signedUrl || null;
+      if (signedUrl && process.env.STORAGE_CDN_URL) {
+        // Replace Supabase domain with CDN domain
+        const cdnUrl = process.env.STORAGE_CDN_URL;
+        signedUrl = signedUrl.replace(
+          new URL(signedUrl).origin,
+          cdnUrl
+        );
+      }
+      
+      // Record success
+      const latency = Date.now() - startTime;
+      circuitBreaker.recordSuccess();
+      monitor.recordOperation(operation, true, latency);
+      
+      return signedUrl;
     } catch (error) {
       logger.error('Failed to generate download URL:', error);
-      return null;
+      // Fallback to public URL
+      try {
+        const { data: publicData } = supabaseClient.storage
+          .from(supabaseStorageBucket)
+          .getPublicUrl(storagePath);
+        return publicData?.publicUrl || null;
+      } catch {
+        return null;
+      }
     }
   } else {
     // Local storage - return relative URL
@@ -350,20 +517,67 @@ async function getDownloadUrl(storagePath, expiresIn = 3600) {
 }
 
 /**
- * Delete file from Supabase Storage
+ * BE-065: Generate signed URL for private file access (alias for getDownloadUrl)
+ */
+async function generateSignedUrl(storagePath, expiresIn = 3600) {
+  return await getDownloadUrl(storagePath, expiresIn);
+}
+
+/**
+ * Delete file from Supabase Storage with timeout, retry, and circuit breaker
+ * BE-059, BE-060, BE-061: Timeout, retry, circuit breaker
  */
 async function deleteFromSupabase(storagePath) {
+  const startTime = Date.now();
+  const operation = 'delete';
+  
+  // Check circuit breaker
+  const circuitCheck = circuitBreaker.canExecute();
+  if (!circuitCheck.allowed) {
+    monitor.recordOperation(operation, false, Date.now() - startTime,
+      new Error(circuitCheck.reason));
+    throw new Error(circuitCheck.reason);
+  }
+  
   try {
-    const { error } = await supabaseClient.storage
-      .from(supabaseStorageBucket)
-      .remove([storagePath]);
+    // BE-059: Delete with timeout
+    const deleteWithTimeout = async () => {
+      const deletePromise = supabaseClient.storage
+        .from(supabaseStorageBucket)
+        .remove([storagePath]);
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Delete timeout after ${STORAGE_TIMEOUT_MS}ms`)), STORAGE_TIMEOUT_MS)
+      );
+      
+      const { error } = await Promise.race([deletePromise, timeoutPromise]);
+      
+      if (error) {
+        throw new Error(`Supabase delete failed: ${error.message}`);
+      }
+      
+      return true;
+    };
     
-    if (error) {
-      throw new Error(`Supabase delete failed: ${error.message}`);
-    }
+    // BE-060: Retry with exponential backoff
+    await retryWithBackoff(
+      deleteWithTimeout,
+      undefined,
+      `Supabase delete: ${storagePath}`
+    );
+    
+    // Record success
+    const latency = Date.now() - startTime;
+    circuitBreaker.recordSuccess();
+    monitor.recordOperation(operation, true, latency);
     
     return true;
   } catch (error) {
+    // Record failure
+    const latency = Date.now() - startTime;
+    circuitBreaker.recordFailure();
+    monitor.recordOperation(operation, false, latency, error);
+    
     logger.error('Supabase delete error:', error);
     throw error;
   }
@@ -397,12 +611,19 @@ async function deleteFromLocal(storagePath) {
 
 /**
  * Delete file (main method)
+ * BE-062: Fallback to local storage if Supabase is unavailable
  */
 async function deleteFile(storagePath) {
   await initializeStorage();
   
   if (STORAGE_TYPE === 'supabase' && supabaseClient) {
-    return await deleteFromSupabase(storagePath);
+    try {
+      return await deleteFromSupabase(storagePath);
+    } catch (error) {
+      // BE-062: Fallback to local storage on failure
+      logger.warn('Supabase delete failed, falling back to local storage:', error.message);
+      return await deleteFromLocal(storagePath);
+    }
   } else {
     return await deleteFromLocal(storagePath);
   }
@@ -538,6 +759,105 @@ async function generateThumbnail(storagePath, contentType) {
   }
 }
 
+/**
+ * BE-063: Health check for storage service
+ */
+// BE-063: Storage service health check
+async function checkHealth() {
+  await initializeStorage();
+  const startTime = Date.now();
+  
+  try {
+    if (STORAGE_TYPE === 'supabase' && supabaseClient) {
+      // Test Supabase connection by checking if bucket exists
+      const { data, error } = await supabaseClient.storage
+        .from(supabaseStorageBucket)
+        .list('', { limit: 1 });
+      
+      if (error) {
+        return {
+          status: 'error',
+          error: error.message,
+          responseTime: Date.now() - startTime
+        };
+      }
+      
+      return {
+        status: 'ok',
+        type: 'supabase',
+        bucket: supabaseStorageBucket,
+        responseTime: Date.now() - startTime
+      };
+    } else {
+      // Test local storage by checking if directory exists
+      try {
+        await fs.access(STORAGE_PATH);
+        return {
+          status: 'ok',
+          type: 'local',
+          path: STORAGE_PATH,
+          responseTime: Date.now() - startTime
+        };
+      } catch (error) {
+        return {
+          status: 'error',
+          error: `Local storage path not accessible: ${error.message}`,
+          responseTime: Date.now() - startTime
+        };
+      }
+    }
+  } catch (error) {
+    return {
+      status: 'error',
+      error: error.message,
+      responseTime: Date.now() - startTime
+    };
+  }
+}
+
+// Legacy health check function (backward compatibility)
+async function healthCheck() {
+  const health = {
+    status: 'healthy',
+    storageType: STORAGE_TYPE,
+    supabaseConfigured: STORAGE_TYPE === 'supabase' && supabaseClient !== null,
+    circuitBreaker: circuitBreaker.getState(),
+    metrics: monitor.getMetrics(),
+    timestamp: new Date().toISOString()
+  };
+  
+  // Test storage connectivity
+  if (STORAGE_TYPE === 'supabase' && supabaseClient) {
+    try {
+      const testStartTime = Date.now();
+      const { error } = await Promise.race([
+        supabaseClient.storage.from(supabaseStorageBucket).list('', { limit: 1 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Health check timeout')), 5000))
+      ]);
+      
+      if (error) {
+        health.status = 'degraded';
+        health.error = error.message;
+      } else {
+        health.latency = Date.now() - testStartTime;
+      }
+    } catch (error) {
+      health.status = 'unhealthy';
+      health.error = error.message;
+    }
+  } else {
+    // Test local storage
+    try {
+      await fs.access(STORAGE_PATH);
+    } catch (error) {
+      health.status = 'unhealthy';
+      health.error = error.message;
+    }
+  }
+  
+  return health;
+}
+
 module.exports = {
   upload,
   download,
@@ -546,9 +866,15 @@ module.exports = {
   fileExists,
   getMetadata,
   getDownloadUrl,
+  generateSignedUrl, // BE-065: Signed URL generation
   generateThumbnail,
+  checkHealth, // BE-063: Storage service health check
+  healthCheck, // Alias for backward compatibility
   // Expose storage type for info
   getStorageType: () => STORAGE_TYPE,
-  isSupabase: () => STORAGE_TYPE === 'supabase' && supabaseClient !== null
+  isSupabase: () => STORAGE_TYPE === 'supabase' && supabaseClient !== null,
+  // Expose utilities for monitoring
+  getCircuitBreaker: () => circuitBreaker,
+  getMonitor: () => monitor
 };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { FileType, SortBy, StorageInfo, CredentialInfo, CredentialReminder, CloudIntegration } from '../types/cloudStorage';
 import { filterAndSortFiles } from './useCloudStorage/utils/fileFiltering';
 import { useFileOperations, useCopyMoveOperations } from './useCloudStorage/hooks/useFileOperations';
@@ -13,6 +13,9 @@ import { logger } from '../utils/logger';
 import apiService from '../services/apiService';
 import { webSocketService } from '../services/webSocketService';
 import { useAuth } from '../contexts/AuthContext';
+import { useDebouncedCallback } from '../utils/debounce';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { clearCache } from '../utils/cache';
 
 export const BYTES_IN_GB = 1024 ** 3;
 
@@ -88,12 +91,74 @@ export const useCloudStorage = () => {
 
   // UI state
   const [showDeleted, setShowDeleted] = useState(false); // Recycle bin toggle
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<FileType>('all');
+  const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // FE-042: Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  
+  // FE-032: Offline queue
+  const offlineQueue = useOfflineQueue();
+  
+  // FE-041: Debounce search input (300ms)
+  const debouncedSetSearch = useDebouncedCallback((value: string) => {
+    setDebouncedSearchTerm(value);
+  }, 300);
 
-  // Load files from API on mount
+  // Update debounced search when searchTerm changes
   useEffect(() => {
-    fileOps.loadFilesFromAPI(showDeleted);
+    debouncedSetSearch(searchTerm);
+  }, [searchTerm, debouncedSetSearch]);
+
+  // FE-039: Track file versions/timestamps for race condition handling
+  const fileVersionsRef = useRef<Map<string, { version: number; timestamp: number }>>(new Map());
+  
+  // FE-046: State synchronization check (every 5 minutes)
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      logger.debug('Performing state synchronization check');
+      fileOps.loadFilesFromAPI(
+        showDeleted,
+        currentPage,
+        pageSize,
+        sortBy,
+        sortOrder,
+        debouncedSearchTerm,
+        filterType,
+        selectedFolderId
+      ).catch(err => {
+        logger.error('State sync check failed:', err);
+      });
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(syncInterval);
+  }, [showDeleted, currentPage, pageSize, sortBy, sortOrder, debouncedSearchTerm, filterType, selectedFolderId, fileOps]);
+
+  // FE-042: Load files from API with pagination
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showDeleted, filterType, selectedFolderId, debouncedSearchTerm]);
+  
+  useEffect(() => {
+    // FE-042: Pass search term and filters to server (debounced)
+    fileOps.loadFilesFromAPI(
+      showDeleted, 
+      currentPage, 
+      pageSize, 
+      sortBy, 
+      sortOrder,
+      debouncedSearchTerm,
+      filterType,
+      selectedFolderId
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDeleted]);
+  }, [showDeleted, currentPage, pageSize, sortBy, sortOrder, debouncedSearchTerm, filterType, selectedFolderId]);
 
   // Real-time WebSocket listeners for file updates
   useEffect(() => {
@@ -107,13 +172,40 @@ export const useCloudStorage = () => {
     // Set up real-time event listeners
     const unsubscribeFileCreated = webSocketService.on('file_created', (data) => {
       if (!showDeleted && data.file) {
-        // Add new file to the list
+        // FE-042: With pagination, check if file should be on current page
+        // If file matches current filters, add it; otherwise refresh current page
         setFiles((prevFiles) => {
           // Check if file already exists to avoid duplicates
           if (prevFiles.some(f => f.id === data.file.id)) {
+            logger.debug('WebSocket: File already exists, skipping duplicate', data.file.id);
             return prevFiles;
           }
-          return [...prevFiles, { ...data.file, sharedWith: [], comments: [] }];
+          
+          // FE-039: Store version/timestamp for race condition handling
+          const timestamp = data.file.updatedAt ? new Date(data.file.updatedAt).getTime() : Date.now();
+          fileVersionsRef.current.set(data.file.id, {
+            version: data.file.version || 1,
+            timestamp,
+          });
+          
+          // FE-042: If we're on page 1 and have space, add the file
+          // Otherwise, refresh the current page to get updated data
+          if (currentPage === 1 && prevFiles.length < pageSize) {
+            return [...prevFiles, { ...data.file, sharedWith: [], comments: [] }];
+          } else {
+            // Refresh current page to get updated list
+            fileOps.loadFilesFromAPI(
+              showDeleted,
+              currentPage,
+              pageSize,
+              sortBy,
+              sortOrder,
+              debouncedSearchTerm,
+              filterType,
+              selectedFolderId
+            ).catch(err => logger.error('Failed to refresh after file created:', err));
+            return prevFiles;
+          }
         });
         logger.info('Real-time: File created', data.file.id);
       }
@@ -121,12 +213,31 @@ export const useCloudStorage = () => {
 
     const unsubscribeFileUpdated = webSocketService.on('file_updated', (data) => {
       if (data.fileId && data.file) {
+        // FE-039: Use version/timestamp to determine latest update
+        const existingVersion = fileVersionsRef.current.get(data.fileId);
+        const newTimestamp = data.file.updatedAt ? new Date(data.file.updatedAt).getTime() : Date.now();
+        const newVersion = data.file.version || 1;
+        
+        // Only update if this is a newer version
+        if (existingVersion && 
+            (existingVersion.version > newVersion || 
+             (existingVersion.version === newVersion && existingVersion.timestamp >= newTimestamp))) {
+          logger.debug('WebSocket: Ignoring stale update', data.fileId);
+          return;
+        }
+        
         setFiles((prevFiles) =>
-          prevFiles.map((file) =>
-            file.id === data.fileId
-              ? { ...file, ...data.file, updatedAt: new Date().toISOString() }
-              : file
-          )
+          prevFiles.map((file) => {
+            if (file.id === data.fileId) {
+              // FE-039: Update version tracking
+              fileVersionsRef.current.set(data.fileId, {
+                version: newVersion,
+                timestamp: newTimestamp,
+              });
+              return { ...file, ...data.file, updatedAt: new Date().toISOString() };
+            }
+            return file;
+          })
         );
         logger.info('Real-time: File updated', data.fileId);
       }
@@ -144,8 +255,24 @@ export const useCloudStorage = () => {
             )
           );
         } else {
-          // Remove from active files list
-          setFiles((prevFiles) => prevFiles.filter((file) => file.id !== data.fileId));
+          // FE-042: Remove from active files list, then refresh if needed to maintain page size
+          setFiles((prevFiles) => {
+            const filtered = prevFiles.filter((file) => file.id !== data.fileId);
+            // If we removed a file and now have fewer than pageSize, refresh to get next file
+            if (filtered.length < pageSize && currentPage === 1) {
+              fileOps.loadFilesFromAPI(
+                showDeleted,
+                currentPage,
+                pageSize,
+                sortBy,
+                sortOrder,
+                debouncedSearchTerm,
+                filterType,
+                selectedFolderId
+              ).catch(err => logger.error('Failed to refresh after file deleted:', err));
+            }
+            return filtered;
+          });
         }
         logger.info('Real-time: File deleted', data.fileId);
       }
@@ -153,19 +280,18 @@ export const useCloudStorage = () => {
 
     const unsubscribeFileRestored = webSocketService.on('file_restored', (data) => {
       if (data.file && !showDeleted) {
-        // Add restored file back to active list
-        setFiles((prevFiles) => {
-          const exists = prevFiles.some(f => f.id === data.file.id);
-          if (exists) {
-            // Update existing file
-            return prevFiles.map((file) =>
-              file.id === data.file.id
-                ? { ...file, ...data.file, deletedAt: null }
-                : file
-            );
-          }
-          return [...prevFiles, { ...data.file, deletedAt: null, sharedWith: [], comments: [] }];
-        });
+        // FE-042: With pagination, refresh current page to get updated list
+        // The restored file may not belong on current page based on filters/sorting
+        fileOps.loadFilesFromAPI(
+          showDeleted,
+          currentPage,
+          pageSize,
+          sortBy,
+          sortOrder,
+          debouncedSearchTerm,
+          filterType,
+          selectedFolderId
+        ).catch(err => logger.error('Failed to refresh after file restored:', err));
         logger.info('Real-time: File restored', data.file.id);
       }
     });
@@ -258,13 +384,9 @@ export const useCloudStorage = () => {
       unsubscribeShareRemoved();
       unsubscribeCommentAdded();
     };
-  }, [user?.id, showDeleted, setFiles]);
+  }, [user?.id, showDeleted, setFiles, currentPage, pageSize, sortBy, sortOrder, debouncedSearchTerm, filterType, selectedFolderId, fileOps]);
 
-  // UI state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<FileType>('all');
-  const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  // Quick filters state (searchTerm, filterType, sortBy, showUploadModal already declared above)
   const [quickFilters, setQuickFilters] = useState<{
     starred?: boolean;
     archived?: boolean;
@@ -352,24 +474,23 @@ export const useCloudStorage = () => {
   const cloudOps = useCloudIntegration();
 
   // Computed values
+  // FE-042: With pagination, server handles search, type filter, folder filter, and sorting
+  // Client only needs to handle quick filters (starred, archived, shared, recent)
   const filteredFiles = useMemo(() => {
     logger.debug('Filtering cloud storage files', {
       totalFiles: files.length,
-      searchTerm,
-      filterType,
-      sortBy,
-      selectedFolderId,
-      showDeleted,
       quickFilters
     });
     
+    // FE-042: Server handles search, type filter, folder filter, and sorting
+    // Client only needs to handle quick filters (starred, archived, shared, recent)
     const result = filterAndSortFiles(files, {
-      searchTerm,
-      filterType,
-      sortBy,
-      selectedFolderId,
+      searchTerm: '', // Server handles search
+      filterType: 'all', // Server handles type filter
+      sortBy: 'date', // Server handles sorting
+      selectedFolderId: null, // Server handles folder filter
       showDeleted,
-      quickFilters
+      quickFilters // Only client-side quick filters remain
     });
     
     logger.debug('Filtered cloud storage files result', {
@@ -378,7 +499,7 @@ export const useCloudStorage = () => {
     });
     
     return result;
-  }, [files, searchTerm, filterType, sortBy, selectedFolderId, showDeleted, quickFilters]);
+  }, [files, showDeleted, quickFilters]);
 
   useEffect(() => {
     refreshStorageInfo();
@@ -406,6 +527,7 @@ export const useCloudStorage = () => {
     searchTerm,
     filterType,
     sortBy,
+    sortOrder, // FE-042: Expose sort order
     showUploadModal,
     showDeleted,
     storageInfo,
@@ -416,6 +538,9 @@ export const useCloudStorage = () => {
     accessLogs: accessTracking.accessLogs,
     cloudIntegrations,
     quickFilters,
+    currentPage, // FE-042: Expose current page
+    pageSize, // FE-042: Expose page size
+    pagination: fileOps.pagination || null, // FE-042: Expose pagination info
     
     // Computed
     filteredFiles,
@@ -426,10 +551,13 @@ export const useCloudStorage = () => {
     setSearchTerm,
     setFilterType,
     setSortBy,
+    setSortOrder, // FE-042: Expose sort order setter
     setShowUploadModal,
     setShowDeleted,
     setSelectedFolderId,
     setQuickFilters,
+    setCurrentPage, // FE-042: Expose page setter
+    setPageSize, // FE-042: Expose page size setter
     
     // File Actions
     handleFileSelect: fileOps.handleFileSelect,
@@ -444,8 +572,17 @@ export const useCloudStorage = () => {
     handleEditFile: (fileId: string, updates: any) => fileOps.handleEditFile(fileId, updates, showDeleted),
     handleRefresh: async () => {
       try {
-        // Refresh files (respect current showDeleted state)
-        await fileOps.handleRefresh(showDeleted);
+        // FE-042: Refresh files with current pagination params
+        await fileOps.loadFilesFromAPI(
+          showDeleted,
+          currentPage,
+          pageSize,
+          sortBy,
+          sortOrder,
+          debouncedSearchTerm,
+          filterType,
+          selectedFolderId
+        );
         // Refresh folders
         await loadFolders();
         // Refresh storage info
@@ -484,6 +621,15 @@ export const useCloudStorage = () => {
     handleArchiveFile: fileOps.handleArchiveFile,
     handleMoveFile,
     
+    // GAP-008: New handler functions
+    handleDuplicateFile: fileOps.handleDuplicateFile,
+    handleBulkRestore: fileOps.handleBulkRestore,
+    handleRestoreVersion: fileOps.handleRestoreVersion,
+    handleDownloadVersion: fileOps.handleDownloadVersion,
+    loadFileStats: fileOps.loadFileStats,
+    loadFileAccessLogs: fileOps.loadFileAccessLogs,
+    loadFileActivity: fileOps.loadFileActivity,
+    
     // Sharing and Access Management
     handleShareWithUser: sharingOps.handleShareWithUser,
     handleRemoveShare: sharingOps.handleRemoveShare,
@@ -511,6 +657,11 @@ export const useCloudStorage = () => {
     handleCreateFolder: folderOps.handleCreateFolder,
     handleRenameFolder: folderOps.handleRenameFolder,
     handleDeleteFolder: folderOps.handleDeleteFolder,
-    handleMoveToFolder: folderOps.handleMoveToFolder
+    handleMoveToFolder: folderOps.handleMoveToFolder,
+    
+    // FE-035: Loading operations state for individual file operations
+    loadingOperations: fileOps.loadingOperations,
+    // FE-031: Operation errors state
+    operationErrors: fileOps.operationErrors,
   };
 };

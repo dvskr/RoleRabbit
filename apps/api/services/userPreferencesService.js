@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
  */
 async function getUserTailoringPreferences(userId) {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
         tailorPreferredMode: true,
@@ -82,7 +82,7 @@ async function updateUserTailoringPreferences(userId, preferences) {
     }
 
     // Update user preferences
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: userId },
       data: updates,
       select: {
@@ -112,7 +112,7 @@ async function updateUserTailoringPreferences(userId, preferences) {
  */
 async function resetUserTailoringPreferences(userId) {
   try {
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: userId },
       data: {
         tailorPreferredMode: 'PARTIAL',
@@ -146,7 +146,7 @@ async function resetUserTailoringPreferences(userId) {
  */
 async function getUserPreferences(userId) {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
         emailNotifications: true,

@@ -19,7 +19,7 @@ async function createSession(userId, ipAddress, userAgent, daysToExpire = 3650) 
     // This is much longer than cookie expiration, so session persists until user logs out
     const expirationDate = new Date(Date.now() + daysToExpire * 24 * 60 * 60 * 1000);
     
-    await prisma.session.create({
+    await prisma.sessions.create({
       data: {
         id: sessionId,
         userId,
@@ -45,9 +45,9 @@ async function createSession(userId, ipAddress, userAgent, daysToExpire = 3650) 
  */
 async function getSession(sessionId) {
   try {
-    const session = await prisma.session.findUnique({
+    const session = await prisma.sessions.findUnique({
       where: { id: sessionId },
-      include: { user: true }
+      include: { users: true }
     });
     
     if (!session) {
@@ -61,7 +61,7 @@ async function getSession(sessionId) {
     
     // Update lastActivity on each access to track user activity
     // Don't await to avoid blocking the request
-    prisma.session.update({
+    prisma.sessions.update({
       where: { id: sessionId },
       data: { lastActivity: new Date() }
     }).catch(err => {
@@ -80,7 +80,7 @@ async function getSession(sessionId) {
  */
 async function deactivateSession(sessionId) {
   try {
-    await prisma.session.update({
+    await prisma.sessions.update({
       where: { id: sessionId },
       data: { isActive: false }
     });
@@ -99,7 +99,7 @@ async function deactivateSession(sessionId) {
  */
 async function deactivateAllUserSessions(userId) {
   try {
-    const result = await prisma.session.updateMany({
+    const result = await prisma.sessions.updateMany({
       where: { userId, isActive: true },
       data: { isActive: false }
     });
@@ -119,7 +119,7 @@ async function deactivateAllUserSessions(userId) {
  */
 async function getUserSessions(userId) {
   try {
-    const sessions = await prisma.session.findMany({
+    const sessions = await prisma.sessions.findMany({
       where: {
         userId,
         isActive: true
@@ -143,7 +143,7 @@ async function getUserSessions(userId) {
  */
 async function refreshSession(sessionId) {
   try {
-    const session = await prisma.session.update({
+    const session = await prisma.sessions.update({
       where: { id: sessionId },
       data: {
         lastActivity: new Date()
@@ -163,7 +163,7 @@ async function refreshSession(sessionId) {
  */
 async function cleanupExpiredSessions() {
   try {
-    const result = await prisma.session.deleteMany({
+    const result = await prisma.sessions.deleteMany({
       where: {
         expiresAt: {
           lt: new Date()
