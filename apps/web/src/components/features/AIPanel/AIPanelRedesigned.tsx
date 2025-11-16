@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { AIPanelProps, ApplyChangesHandlerDeps } from './types/AIPanel.types';
 import { ChevronDown, ChevronUp, X, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -9,6 +9,7 @@ import { InlineProgress } from '../../common/InlineProgress';
 import ResumeQualityIndicator from './components/ResumeQualityIndicator';
 import EnhancedProgressTracker from './components/EnhancedProgressTracker';
 import { useSimulatedProgress } from '../../../hooks/useSimulatedProgress';
+import { cacheInvalidation } from '../../../utils/cacheInvalidation';
 
 export const createApplyChangesHandler =
   ({ confirmTailorChanges, analyzeJobDescription, setApplyError, setBeforeScore }: ApplyChangesHandlerDeps) =>
@@ -75,6 +76,16 @@ export default function AIPanelRedesigned({
   const [beforeScore, setBeforeScore] = useState<number | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [changesApplied, setChangesApplied] = useState(false);
+  
+  // Error states for retry functionality
+  const [atsError, setAtsError] = useState<string | null>(null);
+  const [tailorError, setTailorError] = useState<string | null>(null);
+  const [lastAtsParams, setLastAtsParams] = useState<any>(null);
+  const [lastTailorParams, setLastTailorParams] = useState<any>(null);
+  
+  // AbortController for canceling operations
+  const atsAbortControllerRef = useRef<AbortController | null>(null);
+  const tailorAbortControllerRef = useRef<AbortController | null>(null);
 
   // Enhanced progress tracking
   const tailorProgressSimulator = useSimulatedProgress('tailor');
@@ -121,7 +132,37 @@ export default function AIPanelRedesigned({
     setBeforeScore(null);
     setTailorResult?.(null);
     setApplyError(null);
-    await onAnalyzeJobDescription?.();
+    setAtsError(null);
+    
+    // Store parameters for retry
+    setLastAtsParams({ jobDescription, resumeData });
+    
+    // Create new AbortController for this operation
+    atsAbortControllerRef.current = new AbortController();
+    
+    try {
+      await onAnalyzeJobDescription?.();
+      
+      // ✅ Mark ATS cache as fresh after successful analysis
+      if (currentResumeId) {
+        cacheInvalidation.markFresh(currentResumeId, 'ats');
+      }
+    } catch (error: any) {
+      setAtsError(error?.message || 'Analysis failed. Please try again.');
+    }
+  };
+
+  const handleRetryATS = async () => {
+    setAtsError(null);
+    await handleRunAnalysis();
+  };
+
+  const handleCancelATS = () => {
+    if (atsAbortControllerRef.current) {
+      atsAbortControllerRef.current.abort();
+      atsAbortControllerRef.current = null;
+      atsProgressSimulator.complete();
+    }
   };
 
   const handleAutoTailor = async () => {
@@ -129,11 +170,36 @@ export default function AIPanelRedesigned({
       setBeforeScore(matchScore.overall);
     }
     setApplyError(null);
+    setTailorError(null);
+    
+    // Store parameters for retry
+    setLastTailorParams({ jobDescription, resumeData, matchScore });
+    
+    // Create new AbortController for this operation
+    tailorAbortControllerRef.current = new AbortController();
     
     // Start progress simulation
     tailorProgressSimulator.start();
     
-    await onTailorResume?.();
+    try {
+      await onTailorResume?.();
+    } catch (error: any) {
+      setTailorError(error?.message || 'Tailoring failed. Please try again.');
+      tailorProgressSimulator.complete();
+    }
+  };
+
+  const handleRetryTailor = async () => {
+    setTailorError(null);
+    await handleAutoTailor();
+  };
+
+  const handleCancelTailor = () => {
+    if (tailorAbortControllerRef.current) {
+      tailorAbortControllerRef.current.abort();
+      tailorAbortControllerRef.current = null;
+      tailorProgressSimulator.complete();
+    }
   };
 
   // Complete progress when tailoring finishes
@@ -326,17 +392,84 @@ export default function AIPanelRedesigned({
             </div>
           )}
 
+          {/* ATS Error State */}
+          {atsError && !isAnalyzing && (
+            <div className="space-y-3">
+              <div
+                className="p-4 rounded-lg border"
+                style={{
+                  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                  borderColor: '#f87171',
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#dc2626' }} />
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm mb-1" style={{ color: '#991b1b' }}>
+                      Analysis Failed
+                    </h4>
+                    <p className="text-sm" style={{ color: '#7f1d1d' }}>
+                      {atsError}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleRetryATS}
+                className="w-full py-2.5 px-4 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Try Again
+              </button>
+            </div>
+          )}
+
           {/* ATS Progress or Button */}
-          {isAnalyzing && atsProgressSimulator.progressState.isActive ? (
-            <EnhancedProgressTracker
-              operation="ats"
-              currentStage={atsProgressSimulator.progressState.stage}
-              progress={atsProgressSimulator.progressState.progress}
-              message={atsProgressSimulator.progressState.message}
-              elapsedTime={atsProgressSimulator.progressState.elapsedTime}
-              estimatedTimeRemaining={atsProgressSimulator.progressState.estimatedTimeRemaining}
-              colors={colors}
-            />
+          {!atsError && (isAnalyzing && atsProgressSimulator.progressState.isActive ? (
+            <div className="space-y-2">
+              <EnhancedProgressTracker
+                operation="ats"
+                currentStage={atsProgressSimulator.progressState.stage}
+                progress={atsProgressSimulator.progressState.progress}
+                message={atsProgressSimulator.progressState.message}
+                elapsedTime={atsProgressSimulator.progressState.elapsedTime}
+                estimatedTimeRemaining={atsProgressSimulator.progressState.estimatedTimeRemaining}
+                warningMessage={atsProgressSimulator.progressState.warningMessage}
+                colors={colors}
+              />
+              <button
+                onClick={handleCancelATS}
+                className="w-full py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                  color: '#dc2626',
+                  border: '1px solid #f87171',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                }}
+              >
+                <X className="w-4 h-4" />
+                Cancel Analysis
+              </button>
+            </div>
           ) : (
             <button
               onClick={handleRunAnalysis}
@@ -362,7 +495,7 @@ export default function AIPanelRedesigned({
                 </>
               )}
             </button>
-          )}
+          ))}
         </div>
 
         {/* Step 2: ATS Score Panel */}
@@ -411,6 +544,24 @@ export default function AIPanelRedesigned({
                 </div>
               </div>
             </div>
+
+            {/* ✅ Stale Cache Warning */}
+            {currentResumeId && cacheInvalidation.isStale(currentResumeId, 'ats') && (
+              <div
+                className="p-3 rounded-lg flex items-start gap-2 text-xs"
+                style={{
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  color: '#d97706',
+                }}
+              >
+                <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong>ATS score may be outdated.</strong> You've edited your resume since this score was calculated.
+                  Run a new ATS check to get the latest score.
+                </div>
+              </div>
+            )}
 
             {/* Show Details Toggle */}
             <button
@@ -517,29 +668,97 @@ export default function AIPanelRedesigned({
           </div>
         )}
 
+        {/* Tailor Error State */}
+        {tailorError && !isTailoring && showATSScore && matchScore && (
+          <div className="space-y-3">
+            <div
+              className="p-4 rounded-lg border"
+              style={{
+                background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                borderColor: '#f87171',
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#dc2626' }} />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm mb-1" style={{ color: '#991b1b' }}>
+                    Tailoring Failed
+                  </h4>
+                  <p className="text-sm" style={{ color: '#7f1d1d' }}>
+                    {tailorError}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleRetryTailor}
+              className="w-full py-2.5 px-4 rounded-lg font-semibold text-white transition-all flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-1px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Try Again
+            </button>
+          </div>
+        )}
+
         {/* Step 3: Tailor Resume Button */}
-        {showATSScore && matchScore && !tailorResult && (
-          <button
-            onClick={handleAutoTailor}
-            disabled={isTailoring || !jobDescription || jobDescription.length < 100}
-            className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-            }}
-          >
-            {isTailoring ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Tailoring Resume...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                Tailor Resume
-              </>
+        {!tailorError && showATSScore && matchScore && !tailorResult && (
+          <div className="space-y-2">
+            <button
+              onClick={handleAutoTailor}
+              disabled={isTailoring || !jobDescription || jobDescription.length < 100}
+              className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              {isTailoring ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Tailoring Resume...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5" />
+                  Tailor Resume
+                </>
+              )}
+            </button>
+            {isTailoring && tailorProgressSimulator.progressState.isActive && (
+              <button
+                onClick={handleCancelTailor}
+                className="w-full py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                  color: '#dc2626',
+                  border: '1px solid #f87171',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                }}
+              >
+                <X className="w-4 h-4" />
+                Cancel Tailoring
+              </button>
             )}
-          </button>
+          </div>
         )}
 
         {/* Step 4: Tailoring Results */}

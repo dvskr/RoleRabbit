@@ -1,344 +1,471 @@
 /**
- * Frontend Unit Tests: Validation Functions (Section 5.1)
- *
- * Tests for validation utilities
+ * Unit Tests for Validation Utilities
  */
 
 import {
   validateEmail,
+  validatePhone,
   validateURL,
-  validateSubdomain,
-  validatePortfolioData,
-  validateSectionData,
+  validateResumeData,
+  validateContactInfo,
+  validateExperience,
+  validateEducation,
+  validateSkills
 } from '../validation';
 
-describe('Validation Functions', () => {
+describe('Validation Utilities', () => {
+  // ============================================================================
+  // EMAIL VALIDATION TESTS
+  // ============================================================================
+
   describe('validateEmail', () => {
     it('should validate correct email addresses', () => {
-      expect(validateEmail('user@example.com')).toBe(true);
-      expect(validateEmail('user.name@example.com')).toBe(true);
-      expect(validateEmail('user+tag@example.co.uk')).toBe(true);
-      expect(validateEmail('user123@sub.example.com')).toBe(true);
+      const validEmails = [
+        'user@example.com',
+        'john.doe@company.co.uk',
+        'test+tag@domain.com',
+        'user123@test-domain.com',
+        'a@b.co'
+      ];
+
+      validEmails.forEach(email => {
+        expect(validateEmail(email)).toBe(true);
+      });
     });
 
     it('should reject invalid email addresses', () => {
-      expect(validateEmail('invalid')).toBe(false);
-      expect(validateEmail('user@')).toBe(false);
-      expect(validateEmail('@example.com')).toBe(false);
-      expect(validateEmail('user@.com')).toBe(false);
-      expect(validateEmail('user example@test.com')).toBe(false);
-      expect(validateEmail('')).toBe(false);
+      const invalidEmails = [
+        'invalid',
+        '@example.com',
+        'user@',
+        'user @example.com',
+        'user@.com',
+        'user@domain',
+        '',
+        'user@@example.com'
+      ];
+
+      invalidEmails.forEach(email => {
+        expect(validateEmail(email)).toBe(false);
+      });
     });
 
-    it('should handle null and undefined', () => {
+    it('should handle edge cases', () => {
       expect(validateEmail(null as any)).toBe(false);
       expect(validateEmail(undefined as any)).toBe(false);
-    });
-
-    it('should trim whitespace', () => {
-      expect(validateEmail('  user@example.com  ')).toBe(true);
+      expect(validateEmail('   ')).toBe(false);
     });
   });
+
+  // ============================================================================
+  // PHONE VALIDATION TESTS
+  // ============================================================================
+
+  describe('validatePhone', () => {
+    it('should validate correct phone numbers', () => {
+      const validPhones = [
+        '555-0100',
+        '(555) 555-0100',
+        '+1 555 555 0100',
+        '555.555.0100',
+        '5555550100',
+        '+44 20 7123 4567'
+      ];
+
+      validPhones.forEach(phone => {
+        expect(validatePhone(phone)).toBe(true);
+      });
+    });
+
+    it('should reject invalid phone numbers', () => {
+      const invalidPhones = [
+        '123',
+        'abc-defg',
+        '555-555',
+        '',
+        '++1234567890'
+      ];
+
+      invalidPhones.forEach(phone => {
+        expect(validatePhone(phone)).toBe(false);
+      });
+    });
+
+    it('should handle optional phone numbers', () => {
+      expect(validatePhone('', true)).toBe(true);
+      expect(validatePhone(null as any, true)).toBe(true);
+      expect(validatePhone(undefined as any, true)).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // URL VALIDATION TESTS
+  // ============================================================================
 
   describe('validateURL', () => {
     it('should validate correct URLs', () => {
-      expect(validateURL('https://example.com')).toBe(true);
-      expect(validateURL('http://example.com')).toBe(true);
-      expect(validateURL('https://sub.example.com/path')).toBe(true);
-      expect(validateURL('https://example.com/path?query=value')).toBe(true);
-      expect(validateURL('https://example.com:8080')).toBe(true);
+      const validURLs = [
+        'https://example.com',
+        'http://www.example.com',
+        'https://example.com/path',
+        'https://example.com/path?query=value',
+        'https://subdomain.example.com',
+        'https://example.com:8080'
+      ];
+
+      validURLs.forEach(url => {
+        expect(validateURL(url)).toBe(true);
+      });
     });
 
     it('should reject invalid URLs', () => {
-      expect(validateURL('not-a-url')).toBe(false);
-      expect(validateURL('example.com')).toBe(false);
-      expect(validateURL('ftp://example.com')).toBe(false);
-      expect(validateURL('')).toBe(false);
-      expect(validateURL('javascript:alert(1)')).toBe(false);
+      const invalidURLs = [
+        'not-a-url',
+        'example.com',
+        'ftp://example.com',
+        'javascript:alert(1)',
+        '',
+        '//example.com'
+      ];
+
+      invalidURLs.forEach(url => {
+        expect(validateURL(url)).toBe(false);
+      });
     });
 
-    it('should handle null and undefined', () => {
-      expect(validateURL(null as any)).toBe(false);
-      expect(validateURL(undefined as any)).toBe(false);
-    });
-
-    it('should optionally require HTTPS', () => {
-      expect(validateURL('http://example.com', { requireHTTPS: true })).toBe(false);
-      expect(validateURL('https://example.com', { requireHTTPS: true })).toBe(true);
-    });
-
-    it('should validate localhost URLs', () => {
-      expect(validateURL('http://localhost:3000')).toBe(true);
-      expect(validateURL('https://localhost')).toBe(true);
+    it('should handle optional URLs', () => {
+      expect(validateURL('', true)).toBe(true);
+      expect(validateURL(null as any, true)).toBe(true);
+      expect(validateURL(undefined as any, true)).toBe(true);
     });
   });
 
-  describe('validateSubdomain', () => {
-    it('should validate correct subdomains', () => {
-      expect(validateSubdomain('myportfolio')).toBe(true);
-      expect(validateSubdomain('my-portfolio')).toBe(true);
-      expect(validateSubdomain('portfolio123')).toBe(true);
-      expect(validateSubdomain('a')).toBe(true);
-    });
+  // ============================================================================
+  // CONTACT INFO VALIDATION TESTS
+  // ============================================================================
 
-    it('should reject invalid subdomains', () => {
-      expect(validateSubdomain('')).toBe(false);
-      expect(validateSubdomain('my_portfolio')).toBe(false);
-      expect(validateSubdomain('my portfolio')).toBe(false);
-      expect(validateSubdomain('my.portfolio')).toBe(false);
-      expect(validateSubdomain('-portfolio')).toBe(false);
-      expect(validateSubdomain('portfolio-')).toBe(false);
-      expect(validateSubdomain('UPPER')).toBe(false); // Should be lowercase
-    });
-
-    it('should enforce length limits', () => {
-      expect(validateSubdomain('a'.repeat(63))).toBe(true);
-      expect(validateSubdomain('a'.repeat(64))).toBe(false);
-      expect(validateSubdomain('ab')).toBe(true);
-      expect(validateSubdomain('a')).toBe(true);
-    });
-
-    it('should reject reserved subdomains', () => {
-      expect(validateSubdomain('www')).toBe(false);
-      expect(validateSubdomain('admin')).toBe(false);
-      expect(validateSubdomain('api')).toBe(false);
-      expect(validateSubdomain('mail')).toBe(false);
-      expect(validateSubdomain('app')).toBe(false);
-    });
-
-    it('should handle null and undefined', () => {
-      expect(validateSubdomain(null as any)).toBe(false);
-      expect(validateSubdomain(undefined as any)).toBe(false);
-    });
-
-    it('should trim whitespace', () => {
-      expect(validateSubdomain('  myportfolio  ')).toBe(true);
-    });
-  });
-
-  describe('validatePortfolioData', () => {
-    it('should validate complete portfolio data', () => {
-      const data = {
-        title: 'My Portfolio',
-        subtitle: 'Web Developer',
-        description: 'A portfolio website',
-        templateId: 'template-1',
-        subdomain: 'myportfolio',
-        settings: {
-          theme: 'light',
-          primaryColor: '#000000',
-          fontFamily: 'Inter',
-        },
+  describe('validateContactInfo', () => {
+    it('should validate complete contact info', () => {
+      const validContact = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '555-0100',
+        location: 'New York, NY',
+        linkedin: 'https://linkedin.com/in/johndoe',
+        github: 'https://github.com/johndoe'
       };
 
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(true);
+      const result = validateContactInfo(validContact);
+      expect(result.isValid).toBe(true);
       expect(result.errors).toEqual({});
     });
 
-    it('should reject missing required fields', () => {
-      const data = {
-        subtitle: 'Web Developer',
+    it('should require name and email', () => {
+      const invalidContact = {
+        name: '',
+        email: '',
+        phone: '555-0100'
       };
 
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors).toHaveProperty('title');
-      expect(result.errors).toHaveProperty('templateId');
+      const result = validateContactInfo(invalidContact);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.name).toBeDefined();
+      expect(result.errors.email).toBeDefined();
     });
 
-    it('should reject empty title', () => {
-      const data = {
-        title: '',
-        templateId: 'template-1',
+    it('should validate email format', () => {
+      const invalidContact = {
+        name: 'John Doe',
+        email: 'invalid-email',
+        phone: '555-0100'
       };
 
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.title).toBeTruthy();
+      const result = validateContactInfo(invalidContact);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.email).toContain('valid email');
     });
 
-    it('should validate title length', () => {
-      const longTitle = 'a'.repeat(101);
-      const data = {
-        title: longTitle,
-        templateId: 'template-1',
+    it('should validate optional fields', () => {
+      const contact = {
+        name: 'John Doe',
+        email: 'john@example.com',
+        linkedin: 'not-a-url'
       };
 
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.title).toContain('too long');
-    });
-
-    it('should validate subdomain format', () => {
-      const data = {
-        title: 'Portfolio',
-        templateId: 'template-1',
-        subdomain: 'invalid_subdomain',
-      };
-
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.subdomain).toBeTruthy();
-    });
-
-    it('should validate custom domain format', () => {
-      const data = {
-        title: 'Portfolio',
-        templateId: 'template-1',
-        customDomain: 'not-a-valid-domain',
-      };
-
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.customDomain).toBeTruthy();
-    });
-
-    it('should validate color format', () => {
-      const data = {
-        title: 'Portfolio',
-        templateId: 'template-1',
-        settings: {
-          primaryColor: 'invalid-color',
-        },
-      };
-
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.settings).toBeTruthy();
+      const result = validateContactInfo(contact);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.linkedin).toBeDefined();
     });
   });
 
-  describe('validateSectionData', () => {
-    it('should validate hero section', () => {
-      const section = {
-        type: 'hero',
-        content: {
-          title: 'Welcome',
-          subtitle: 'Developer',
-          backgroundImage: 'https://example.com/bg.jpg',
-        },
+  // ============================================================================
+  // EXPERIENCE VALIDATION TESTS
+  // ============================================================================
+
+  describe('validateExperience', () => {
+    it('should validate complete experience entry', () => {
+      const validExperience = {
+        company: 'Tech Corp',
+        role: 'Software Engineer',
+        startDate: '2020-01',
+        endDate: '2023-12',
+        location: 'San Francisco, CA',
+        bullets: [
+          'Developed features',
+          'Improved performance'
+        ]
       };
 
-      const result = validateSectionData(section);
-
-      expect(result.valid).toBe(true);
+      const result = validateExperience(validExperience);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
     });
 
-    it('should validate about section', () => {
-      const section = {
-        type: 'about',
-        content: {
-          text: 'About me text',
-          image: 'https://example.com/photo.jpg',
-        },
+    it('should require company and role', () => {
+      const invalidExperience = {
+        company: '',
+        role: '',
+        startDate: '2020-01'
       };
 
-      const result = validateSectionData(section);
-
-      expect(result.valid).toBe(true);
+      const result = validateExperience(invalidExperience);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.company).toBeDefined();
+      expect(result.errors.role).toBeDefined();
     });
 
-    it('should validate projects section', () => {
-      const section = {
-        type: 'projects',
-        content: {
-          items: [
-            {
-              name: 'Project 1',
-              description: 'Description',
-              url: 'https://project.com',
-              technologies: ['React', 'TypeScript'],
-            },
-          ],
-        },
+    it('should validate date order', () => {
+      const invalidExperience = {
+        company: 'Tech Corp',
+        role: 'Engineer',
+        startDate: '2023-01',
+        endDate: '2020-01'
       };
 
-      const result = validateSectionData(section);
-
-      expect(result.valid).toBe(true);
+      const result = validateExperience(invalidExperience);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.endDate).toContain('after start date');
     });
 
-    it('should reject invalid section type', () => {
-      const section = {
-        type: 'invalid',
-        content: {},
+    it('should allow current position (no end date)', () => {
+      const currentPosition = {
+        company: 'Tech Corp',
+        role: 'Engineer',
+        startDate: '2020-01',
+        endDate: ''
       };
 
-      const result = validateSectionData(section);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.type).toBeTruthy();
+      const result = validateExperience(currentPosition);
+      expect(result.isValid).toBe(true);
     });
 
-    it('should reject missing required content', () => {
-      const section = {
-        type: 'hero',
-        content: {},
+    it('should validate bullets array', () => {
+      const experienceWithInvalidBullets = {
+        company: 'Tech Corp',
+        role: 'Engineer',
+        startDate: '2020-01',
+        bullets: ['', '   ', 'Valid bullet']
       };
 
-      const result = validateSectionData(section);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.content).toBeTruthy();
-    });
-
-    it('should validate URL fields in content', () => {
-      const section = {
-        type: 'hero',
-        content: {
-          title: 'Welcome',
-          backgroundImage: 'invalid-url',
-        },
-      };
-
-      const result = validateSectionData(section);
-
-      expect(result.valid).toBe(false);
-      expect(result.errors.content).toContain('URL');
+      const result = validateExperience(experienceWithInvalidBullets);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.bullets).toContain('empty');
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle very long strings', () => {
-      const longString = 'a'.repeat(10000);
-      const data = {
-        title: longString,
-        templateId: 'template-1',
+  // ============================================================================
+  // EDUCATION VALIDATION TESTS
+  // ============================================================================
+
+  describe('validateEducation', () => {
+    it('should validate complete education entry', () => {
+      const validEducation = {
+        institution: 'University of Example',
+        degree: 'Bachelor of Science',
+        field: 'Computer Science',
+        startDate: '2016-09',
+        endDate: '2020-05',
+        gpa: '3.8'
       };
 
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(false);
+      const result = validateEducation(validEducation);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
     });
 
-    it('should handle special characters', () => {
-      const data = {
-        title: 'Portfolio™ & Company®',
-        templateId: 'template-1',
+    it('should require institution and degree', () => {
+      const invalidEducation = {
+        institution: '',
+        degree: '',
+        field: 'Computer Science'
       };
 
-      const result = validatePortfolioData(data);
-
-      expect(result.valid).toBe(true);
+      const result = validateEducation(invalidEducation);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.institution).toBeDefined();
+      expect(result.errors.degree).toBeDefined();
     });
 
-    it('should handle unicode characters', () => {
-      const data = {
-        title: 'Portfolio 日本語 中文',
-        templateId: 'template-1',
+    it('should validate GPA format', () => {
+      const invalidGPA = {
+        institution: 'University',
+        degree: 'BS',
+        field: 'CS',
+        gpa: '5.0' // Invalid: > 4.0
       };
 
-      const result = validatePortfolioData(data);
+      const result = validateEducation(invalidGPA);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.gpa).toContain('0.0 and 4.0');
+    });
 
-      expect(result.valid).toBe(true);
+    it('should allow current student (no end date)', () => {
+      const currentStudent = {
+        institution: 'University',
+        degree: 'BS',
+        field: 'CS',
+        startDate: '2020-09',
+        endDate: ''
+      };
+
+      const result = validateEducation(currentStudent);
+      expect(result.isValid).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // SKILLS VALIDATION TESTS
+  // ============================================================================
+
+  describe('validateSkills', () => {
+    it('should validate skills object', () => {
+      const validSkills = {
+        technical: ['JavaScript', 'Python', 'React'],
+        tools: ['Git', 'Docker'],
+        soft: ['Communication', 'Leadership']
+      };
+
+      const result = validateSkills(validSkills);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
+    });
+
+    it('should require at least one skill category', () => {
+      const emptySkills = {
+        technical: [],
+        tools: [],
+        soft: []
+      };
+
+      const result = validateSkills(emptySkills);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.skills).toContain('at least one skill');
+    });
+
+    it('should filter out empty strings', () => {
+      const skillsWithEmpty = {
+        technical: ['JavaScript', '', '   ', 'Python'],
+        tools: []
+      };
+
+      const result = validateSkills(skillsWithEmpty);
+      expect(result.isValid).toBe(true);
+      // Should only count non-empty skills
+    });
+  });
+
+  // ============================================================================
+  // RESUME DATA VALIDATION TESTS
+  // ============================================================================
+
+  describe('validateResumeData', () => {
+    it('should validate complete resume data', () => {
+      const validResume = {
+        contact: {
+          name: 'John Doe',
+          email: 'john@example.com',
+          phone: '555-0100'
+        },
+        summary: 'Experienced software engineer',
+        experience: [
+          {
+            company: 'Tech Corp',
+            role: 'Engineer',
+            startDate: '2020-01',
+            endDate: '2023-12',
+            bullets: ['Developed features']
+          }
+        ],
+        education: [
+          {
+            institution: 'University',
+            degree: 'BS',
+            field: 'CS',
+            startDate: '2016-09',
+            endDate: '2020-05'
+          }
+        ],
+        skills: {
+          technical: ['JavaScript', 'Python']
+        }
+      };
+
+      const result = validateResumeData(validResume);
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toEqual({});
+    });
+
+    it('should validate all sections', () => {
+      const invalidResume = {
+        contact: {
+          name: '',
+          email: 'invalid-email'
+        },
+        summary: '',
+        experience: [],
+        education: [],
+        skills: {
+          technical: []
+        }
+      };
+
+      const result = validateResumeData(invalidResume);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.contact).toBeDefined();
+      expect(result.errors.summary).toBeDefined();
+    });
+
+    it('should handle special characters in text fields', () => {
+      const resumeWithSpecialChars = {
+        contact: {
+          name: "John O'Doe",
+          email: 'john+test@example.com'
+        },
+        summary: 'Expert in C++ & Python (5+ years)',
+        skills: {
+          technical: ['C++', 'C#', 'Node.js']
+        }
+      };
+
+      const result = validateResumeData(resumeWithSpecialChars);
+      expect(result.isValid).toBe(true);
+    });
+
+    it('should enforce maximum lengths', () => {
+      const resumeWithLongText = {
+        contact: {
+          name: 'John Doe',
+          email: 'john@example.com'
+        },
+        summary: 'A'.repeat(2000), // Assuming max is 1000
+        skills: {
+          technical: ['JavaScript']
+        }
+      };
+
+      const result = validateResumeData(resumeWithLongText);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.summary).toContain('too long');
     });
   });
 });

@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Eye, Sparkles, GripVertical, Plus, X, Trash2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Eye, Sparkles, GripVertical, Plus, X, Trash2, AlertTriangle } from 'lucide-react';
 import { ResumeData, ExperienceItem, CustomField } from '../../types/resume';
 import { useTheme } from '../../contexts/ThemeContext';
+import { isDuplicateExperience } from '../../utils/validation';
 
 const sanitize = (value: unknown): string => {
   if (typeof value !== 'string') {
@@ -124,11 +125,34 @@ const ExperienceSection = React.memo(function ExperienceSection({
 }: ExperienceSectionProps) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  
+  // Track dismissed duplicate warnings
+  const [dismissedDuplicates, setDismissedDuplicates] = useState<Set<number>>(new Set());
 
   const experiences = useMemo(
     () => normalizeExperienceArray(resumeData.experience),
     [resumeData.experience]
   );
+  
+  // Check for duplicate experiences
+  const duplicateWarnings = useMemo(() => {
+    const warnings: Record<number, boolean> = {};
+    experiences.forEach((exp, index) => {
+      // Skip if already dismissed
+      if (dismissedDuplicates.has(exp.id)) {
+        return;
+      }
+      
+      // Check if this experience is a duplicate of any previous experience
+      for (let i = 0; i < index; i++) {
+        if (isDuplicateExperience(exp, experiences[i])) {
+          warnings[exp.id] = true;
+          break;
+        }
+      }
+    });
+    return warnings;
+  }, [experiences, dismissedDuplicates]);
 
   const updateExperiences = (updater: (current: ExperienceItem[]) => ExperienceItem[]) => {
     setResumeData((prev) => {
@@ -321,8 +345,38 @@ const ExperienceSection = React.memo(function ExperienceSection({
           <div
             key={exp.id}
             className="mb-6 group p-3 sm:p-4 lg:p-6 border-2 rounded-2xl transition-all"
-            style={{ background: colors.cardBackground, border: `2px solid ${colors.border}` }}
+            style={{ background: colors.cardBackground, border: `2px solid ${duplicateWarnings[exp.id] ? colors.warningYellow || '#f59e0b' : colors.border}` }}
           >
+            {/* Duplicate Warning Banner */}
+            {duplicateWarnings[exp.id] && (
+              <div
+                className="mb-4 p-3 rounded-lg flex items-start gap-3"
+                style={{
+                  background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                  border: `1px solid ${colors.warningYellow || '#f59e0b'}`,
+                }}
+              >
+                <AlertTriangle size={18} className="flex-shrink-0 mt-0.5" style={{ color: '#d97706' }} />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm mb-1" style={{ color: '#92400e' }}>
+                    Possible Duplicate Entry
+                  </h4>
+                  <p className="text-xs" style={{ color: '#78350f' }}>
+                    This looks like a duplicate. You have another experience entry with the same company, position, and dates.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDismissedDuplicates(prev => new Set(prev).add(exp.id))}
+                  className="p-1 rounded hover:bg-black hover:bg-opacity-10 transition-colors flex-shrink-0"
+                  style={{ color: '#92400e' }}
+                  aria-label="Dismiss warning"
+                  title="Dismiss warning"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+            
             <div className="flex items-start gap-3 mb-4">
               <GripVertical size={18} className="cursor-move mt-2 flex-shrink-0" style={{ color: colors.tertiaryText }} />
               <div className="flex-1 space-y-3 min-w-0">

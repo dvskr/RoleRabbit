@@ -7,3 +7,6 @@ export { default as MobileMenuModal } from './MobileMenuModal';
 export { default as AIGenerateModal } from './AIGenerateModal';
 export { default as ResumeSaveToCloudModal } from './ResumeSaveToCloudModal';
 export { default as ResumeImportFromCloudModal } from './ResumeImportFromCloudModal';
+export { default as ConflictResolutionModal } from './ConflictResolutionModal';
+export { default as DiscardDraftModal } from './DiscardDraftModal';
+export { default as KeyboardShortcutsModal } from './KeyboardShortcutsModal';

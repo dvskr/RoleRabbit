@@ -1,0 +1,321 @@
+[
+  {
+    "id": "software-engineer-resume",
+    "name": "Software Engineer Resume",
+    "description": "Full-stack developer with 5 years experience",
+    "data": {
+      "contact": {
+        "name": "John Doe",
+        "title": "Senior Software Engineer",
+        "email": "john.doe@example.com",
+        "phone": "+1-555-123-4567",
+        "location": "San Francisco, CA",
+        "links": [
+          {
+            "type": "linkedin",
+            "url": "https://linkedin.com/in/johndoe",
+            "label": "LinkedIn"
+          },
+          {
+            "type": "github",
+            "url": "https://github.com/johndoe",
+            "label": "GitHub"
+          },
+          {
+            "type": "portfolio",
+            "url": "https://johndoe.dev",
+            "label": "Portfolio"
+          }
+        ]
+      },
+      "summary": "Experienced full-stack software engineer with 5+ years of expertise in building scalable web applications. Proficient in React, Node.js, and cloud technologies. Led teams of 5+ developers and delivered projects serving 1M+ users.",
+      "experience": [
+        {
+          "company": "Tech Corp",
+          "role": "Senior Software Engineer",
+          "location": "San Francisco, CA",
+          "startDate": "2020-01",
+          "endDate": "2023-12",
+          "isCurrent": false,
+          "bullets": [
+            "Led development of microservices architecture serving 1M+ active users",
+            "Improved application performance by 40% through code optimization and caching strategies",
+            "Mentored team of 5 junior developers and conducted code reviews",
+            "Implemented CI/CD pipeline reducing deployment time by 60%",
+            "Collaborated with product team to define technical requirements and roadmap"
+          ]
+        },
+        {
+          "company": "StartupXYZ",
+          "role": "Software Engineer",
+          "location": "San Francisco, CA",
+          "startDate": "2018-06",
+          "endDate": "2019-12",
+          "isCurrent": false,
+          "bullets": [
+            "Built RESTful APIs using Node.js and Express serving 100K+ requests daily",
+            "Developed responsive React components used across 10+ product features",
+            "Integrated third-party payment systems (Stripe, PayPal) with 99.9% uptime",
+            "Participated in agile ceremonies and contributed to sprint planning"
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "University of California, Berkeley",
+          "degree": "Bachelor of Science",
+          "field": "Computer Science",
+          "location": "Berkeley, CA",
+          "startDate": "2014-09",
+          "endDate": "2018-05",
+          "gpa": "3.8",
+          "bullets": [
+            "Dean's List all semesters",
+            "Teaching Assistant for Data Structures course"
+          ]
+        }
+      ],
+      "skills": {
+        "technical": [
+          "JavaScript",
+          "TypeScript",
+          "React",
+          "Node.js",
+          "Express.js",
+          "PostgreSQL",
+          "MongoDB",
+          "Redis",
+          "AWS",
+          "Docker",
+          "Kubernetes",
+          "Git",
+          "CI/CD",
+          "REST APIs",
+          "GraphQL"
+        ],
+        "tools": [
+          "VS Code",
+          "Postman",
+          "Jira",
+          "Figma",
+          "GitHub"
+        ],
+        "soft": [
+          "Leadership",
+          "Communication",
+          "Problem Solving",
+          "Team Collaboration",
+          "Mentoring"
+        ]
+      },
+      "projects": [
+        {
+          "name": "E-commerce Platform",
+          "summary": "Built full-stack e-commerce platform with React, Node.js, and PostgreSQL",
+          "technologies": ["React", "Node.js", "PostgreSQL", "Stripe", "AWS"],
+          "link": "https://github.com/johndoe/ecommerce",
+          "bullets": [
+            "Implemented shopping cart, checkout, and payment processing",
+            "Deployed on AWS with auto-scaling and load balancing",
+            "Achieved 99.9% uptime and <200ms response times"
+          ]
+        }
+      ],
+      "certifications": [
+        {
+          "name": "AWS Certified Solutions Architect",
+          "issuer": "Amazon Web Services",
+          "issueDate": "2022-06",
+          "expirationDate": "2025-06",
+          "link": "https://aws.amazon.com/certification/"
+        }
+      ]
+    }
+  },
+  {
+    "id": "product-manager-resume",
+    "name": "Product Manager Resume",
+    "description": "Product manager with 7 years experience in SaaS",
+    "data": {
+      "contact": {
+        "name": "Sarah Johnson",
+        "title": "Senior Product Manager",
+        "email": "sarah.johnson@example.com",
+        "phone": "+1-555-987-6543",
+        "location": "New York, NY",
+        "links": [
+          {
+            "type": "linkedin",
+            "url": "https://linkedin.com/in/sarahjohnson",
+            "label": "LinkedIn"
+          }
+        ]
+      },
+      "summary": "Results-driven product manager with 7+ years of experience leading cross-functional teams to deliver innovative SaaS products. Proven track record of increasing user engagement by 150% and revenue by $5M annually. Expert in agile methodologies, user research, and data-driven decision making.",
+      "experience": [
+        {
+          "company": "SaaS Company",
+          "role": "Senior Product Manager",
+          "location": "New York, NY",
+          "startDate": "2020-03",
+          "isCurrent": true,
+          "bullets": [
+            "Led product strategy for flagship product serving 500K+ users, increasing engagement by 150%",
+            "Managed product roadmap and prioritized features based on user feedback and business goals",
+            "Collaborated with engineering, design, and marketing teams to launch 15+ features",
+            "Conducted user research and A/B testing to validate product hypotheses",
+            "Increased annual revenue by $5M through strategic feature launches and pricing optimization"
+          ]
+        },
+        {
+          "company": "Tech Startup",
+          "role": "Product Manager",
+          "location": "San Francisco, CA",
+          "startDate": "2017-01",
+          "endDate": "2020-02",
+          "isCurrent": false,
+          "bullets": [
+            "Defined product vision and strategy for B2B SaaS platform",
+            "Led agile development process with 2-week sprints and daily standups",
+            "Launched MVP in 6 months, acquiring 10K users in first year",
+            "Created product documentation, user stories, and acceptance criteria"
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Stanford University",
+          "degree": "Master of Business Administration",
+          "field": "Technology Management",
+          "location": "Stanford, CA",
+          "startDate": "2015-09",
+          "endDate": "2017-06"
+        },
+        {
+          "institution": "University of Michigan",
+          "degree": "Bachelor of Science",
+          "field": "Computer Science",
+          "location": "Ann Arbor, MI",
+          "startDate": "2011-09",
+          "endDate": "2015-05"
+        }
+      ],
+      "skills": {
+        "technical": [
+          "Product Strategy",
+          "Agile/Scrum",
+          "User Research",
+          "A/B Testing",
+          "Data Analysis",
+          "SQL",
+          "Jira",
+          "Figma",
+          "Google Analytics",
+          "Mixpanel"
+        ],
+        "soft": [
+          "Leadership",
+          "Communication",
+          "Stakeholder Management",
+          "Strategic Thinking",
+          "Problem Solving"
+        ]
+      },
+      "certifications": [
+        {
+          "name": "Certified Scrum Product Owner (CSPO)",
+          "issuer": "Scrum Alliance",
+          "issueDate": "2019-03"
+        }
+      ]
+    }
+  },
+  {
+    "id": "entry-level-resume",
+    "name": "Entry Level Resume",
+    "description": "Recent graduate seeking first software engineering role",
+    "data": {
+      "contact": {
+        "name": "Alex Chen",
+        "title": "Software Engineer",
+        "email": "alex.chen@example.com",
+        "phone": "+1-555-456-7890",
+        "location": "Boston, MA",
+        "links": [
+          {
+            "type": "linkedin",
+            "url": "https://linkedin.com/in/alexchen",
+            "label": "LinkedIn"
+          },
+          {
+            "type": "github",
+            "url": "https://github.com/alexchen",
+            "label": "GitHub"
+          }
+        ]
+      },
+      "summary": "Recent computer science graduate with strong foundation in software development and passion for building user-centric applications. Completed multiple internships and personal projects demonstrating proficiency in full-stack development.",
+      "experience": [
+        {
+          "company": "Tech Company",
+          "role": "Software Engineering Intern",
+          "location": "Boston, MA",
+          "startDate": "2023-06",
+          "endDate": "2023-08",
+          "isCurrent": false,
+          "bullets": [
+            "Developed React components for internal dashboard used by 50+ employees",
+            "Fixed 15+ bugs and improved code quality through peer code reviews",
+            "Collaborated with senior engineers on feature development using agile methodology"
+          ]
+        }
+      ],
+      "education": [
+        {
+          "institution": "Massachusetts Institute of Technology",
+          "degree": "Bachelor of Science",
+          "field": "Computer Science",
+          "location": "Cambridge, MA",
+          "startDate": "2019-09",
+          "endDate": "2023-05",
+          "gpa": "3.7",
+          "bullets": [
+            "Relevant Coursework: Data Structures, Algorithms, Web Development, Databases",
+            "Member of Computer Science Club"
+          ]
+        }
+      ],
+      "skills": {
+        "technical": [
+          "JavaScript",
+          "Python",
+          "React",
+          "Node.js",
+          "HTML/CSS",
+          "Git",
+          "SQL",
+          "MongoDB"
+        ]
+      },
+      "projects": [
+        {
+          "name": "Task Management App",
+          "summary": "Full-stack web application for managing tasks and projects",
+          "technologies": ["React", "Node.js", "MongoDB", "Express"],
+          "link": "https://github.com/alexchen/task-app",
+          "bullets": [
+            "Built RESTful API with authentication and authorization",
+            "Implemented responsive UI with React and Material-UI",
+            "Deployed on Heroku with CI/CD pipeline"
+          ]
+        },
+        {
+          "name": "Weather Dashboard",
+          "summary": "Real-time weather dashboard using OpenWeather API",
+          "technologies": ["React", "TypeScript", "Tailwind CSS"],
+          "link": "https://github.com/alexchen/weather-dashboard"
+        }
+      ]
+    }
+  }
+]

@@ -1,204 +1,250 @@
 /**
  * Scaling Configuration
- * INFRA-015 to INFRA-020: Scaling considerations for My Files feature
+ * 
+ * Configuration for horizontal scaling, load balancing, and CDN
  */
-
-const logger = require('../utils/logger');
-const { getEnv } = require('../utils/envValidation');
 
 /**
- * INFRA-015: Horizontal scaling support for file uploads
- * Use shared storage (Supabase), not local filesystem
+ * Horizontal Scaling Configuration
  */
-function getStorageConfig() {
-  const storageType = getEnv('STORAGE_TYPE', 'local').toLowerCase();
+const HORIZONTAL_SCALING = {
+  // Minimum number of API instances
+  minInstances: process.env.MIN_INSTANCES || 2,
   
-  if (storageType === 'local') {
-    logger.warn('⚠️ Using local filesystem storage - not suitable for horizontal scaling');
-    logger.warn('⚠️ Consider using Supabase Storage or S3 for production');
+  // Maximum number of API instances
+  maxInstances: process.env.MAX_INSTANCES || 10,
+  
+  // Target CPU utilization for auto-scaling
+  targetCPU: process.env.TARGET_CPU || 70, // 70%
+  
+  // Target memory utilization for auto-scaling
+  targetMemory: process.env.TARGET_MEMORY || 80, // 80%
+  
+  // Scale up threshold (requests per second)
+  scaleUpThreshold: process.env.SCALE_UP_THRESHOLD || 1000,
+  
+  // Scale down threshold (requests per second)
+  scaleDownThreshold: process.env.SCALE_DOWN_THRESHOLD || 200,
+  
+  // Cool down period between scaling operations (seconds)
+  coolDownPeriod: process.env.COOL_DOWN_PERIOD || 300, // 5 minutes
+  
+  // Health check configuration
+  healthCheck: {
+    path: '/api/health',
+    interval: 30, // seconds
+    timeout: 5, // seconds
+    unhealthyThreshold: 3,
+    healthyThreshold: 2
   }
-  
-  return {
-    type: storageType,
-    shared: storageType !== 'local', // Shared storage supports horizontal scaling
-    path: getEnv('STORAGE_PATH', './storage')
-  };
-}
+};
 
 /**
- * INFRA-016: CDN for public file serving
+ * Load Balancer Configuration
  */
-function getCDNConfig() {
-  const cdnUrl = getEnv('CDN_URL');
-  const cdnEnabled = !!cdnUrl;
+const LOAD_BALANCER = {
+  // Load balancing algorithm
+  algorithm: process.env.LB_ALGORITHM || 'round-robin', // 'round-robin' | 'least-connections' | 'ip-hash'
   
-  if (cdnEnabled) {
-    logger.info(`✅ CDN enabled: ${cdnUrl}`);
-  } else {
-    logger.warn('⚠️ CDN not configured - consider using CDN for public file serving');
+  // Session affinity (sticky sessions)
+  sessionAffinity: process.env.SESSION_AFFINITY === 'true',
+  sessionAffinityTTL: 3600, // 1 hour
+  
+  // Connection draining timeout (seconds)
+  drainingTimeout: 30,
+  
+  // Maximum connections per instance
+  maxConnectionsPerInstance: 1000,
+  
+  // Timeout configuration
+  timeouts: {
+    idle: 60, // seconds
+    request: 30, // seconds
+    response: 30 // seconds
   }
-  
-  return {
-    enabled: cdnEnabled,
-    url: cdnUrl,
-    // Replace Supabase domain with CDN URL for public files
-    replaceDomain: (url) => {
-      if (!cdnUrl || !url) return url;
-      // Replace Supabase domain with CDN domain
-      return url.replace(/https:\/\/[^/]+\.supabase\.co/, cdnUrl);
-    }
-  };
-}
+};
 
 /**
- * INFRA-017: Database connection pooling configuration
+ * Database Connection Pooling Configuration
  */
-function getDatabasePoolConfig() {
-  return {
-    // Prisma connection pool settings
-    // These should be set in DATABASE_URL or Prisma schema
-    maxConnections: parseInt(getEnv('DB_POOL_MAX', '10')),
-    minConnections: parseInt(getEnv('DB_POOL_MIN', '2')),
-    connectionTimeout: parseInt(getEnv('DB_POOL_TIMEOUT', '10000')),
-    
-    // Optimize for file operations
-    // File operations are typically read-heavy with occasional writes
-    // Consider read replicas for scaling reads
-    readReplicas: getEnv('DB_READ_REPLICA_URL') ? [getEnv('DB_READ_REPLICA_URL')] : []
-  };
-}
+const DATABASE_POOLING = {
+  // Connection pool size per instance
+  poolSize: parseInt(process.env.DATABASE_CONNECTION_LIMIT || '10'),
+  
+  // Maximum connections across all instances
+  maxTotalConnections: parseInt(process.env.MAX_TOTAL_DB_CONNECTIONS || '100'),
+  
+  // Connection timeout
+  connectionTimeout: parseInt(process.env.DATABASE_CONNECT_TIMEOUT || '10000'),
+  
+  // Idle timeout
+  idleTimeout: parseInt(process.env.DATABASE_IDLE_TIMEOUT || '30000'),
+  
+  // Connection lifetime
+  maxLifetime: parseInt(process.env.DATABASE_MAX_LIFETIME || '1800000'), // 30 minutes
+  
+  // Query timeout
+  queryTimeout: parseInt(process.env.DATABASE_QUERY_TIMEOUT || '10000')
+};
 
 /**
- * INFRA-018: Caching layer for file metadata (Redis)
+ * CDN Configuration
  */
-function getCacheConfig() {
-  const redisUrl = getEnv('REDIS_URL', 'redis://localhost:6379');
-  const cacheEnabled = !!redisUrl;
+const CDN = {
+  // CDN provider
+  provider: process.env.CDN_PROVIDER || 'cloudflare', // 'cloudflare' | 'cloudfront' | 'fastly'
   
-  if (cacheEnabled) {
-    logger.info('✅ Redis caching enabled');
-  } else {
-    logger.warn('⚠️ Redis caching not configured - consider using Redis for file metadata caching');
+  // CDN URL
+  url: process.env.CDN_URL || 'https://cdn.roleready.com',
+  
+  // Cache control headers
+  cacheControl: {
+    static: 'public, max-age=31536000, immutable', // 1 year for static assets
+    templates: 'public, max-age=3600', // 1 hour for templates
+    images: 'public, max-age=86400', // 1 day for images
+    api: 'no-cache, no-store, must-revalidate' // No cache for API
+  },
+  
+  // Assets to serve from CDN
+  assets: [
+    '/static/**',
+    '/_next/static/**',
+    '/images/**',
+    '/fonts/**',
+    '/templates/**'
+  ],
+  
+  // Purge configuration
+  purge: {
+    onDeploy: true,
+    patterns: [
+      '/static/*',
+      '/_next/static/*'
+    ]
   }
-  
-  return {
-    enabled: cacheEnabled,
-    url: redisUrl,
-    ttl: {
-      fileMetadata: 3600, // 1 hour
-      fileList: 300, // 5 minutes
-      quota: 600 // 10 minutes
-    }
-  };
-}
+};
 
 /**
- * INFRA-019: Load balancing configuration for file download endpoints
+ * Caching Strategy for Scaling
  */
-function getLoadBalancerConfig() {
-  return {
-    // Sticky sessions not needed for file downloads (stateless)
-    // Use round-robin or least-connections
-    strategy: getEnv('LB_STRATEGY', 'round-robin'),
-    
-    // Health check configuration
-    healthCheck: {
+const CACHING_STRATEGY = {
+  // Enable distributed caching
+  distributed: true,
+  
+  // Cache layers
+  layers: {
+    // L1: In-memory cache (per instance)
+    memory: {
       enabled: true,
-      path: '/api/storage/health',
-      interval: 30000, // 30 seconds
-      timeout: 5000, // 5 seconds
-      unhealthyThreshold: 3,
-      healthyThreshold: 2
+      maxSize: '100mb',
+      ttl: 60 // seconds
     },
     
-    // File download specific settings
-    download: {
-      // Use CDN for public files
-      useCDN: true,
-      // Direct storage access for private files (signed URLs)
-      useSignedUrls: true,
-      // Timeout for download requests
-      timeout: 300000 // 5 minutes
-    }
-  };
-}
-
-/**
- * INFRA-020: Storage quota limits per subscription tier
- */
-function getStorageQuotaLimits() {
-  return {
-    FREE: {
-      limitBytes: 5 * 1024 * 1024 * 1024, // 5GB
-      maxFileSize: 10 * 1024 * 1024, // 10MB
-      maxFiles: 100
+    // L2: Redis cache (shared)
+    redis: {
+      enabled: true,
+      ttl: 300 // seconds
     },
-    PRO: {
-      limitBytes: 50 * 1024 * 1024 * 1024, // 50GB
-      maxFileSize: 100 * 1024 * 1024, // 100MB
-      maxFiles: 1000
-    },
-    PREMIUM: {
-      limitBytes: 500 * 1024 * 1024 * 1024, // 500GB
-      maxFileSize: 500 * 1024 * 1024, // 500MB
-      maxFiles: 10000
+    
+    // L3: CDN cache (edge)
+    cdn: {
+      enabled: true,
+      ttl: 3600 // seconds
     }
-  };
+  }
+};
+
+/**
+ * Auto-scaling Rules
+ */
+const AUTO_SCALING_RULES = [
+  {
+    name: 'Scale up on high CPU',
+    metric: 'cpu',
+    threshold: 70,
+    action: 'scale_up',
+    adjustment: 2 // Add 2 instances
+  },
+  {
+    name: 'Scale up on high memory',
+    metric: 'memory',
+    threshold: 80,
+    action: 'scale_up',
+    adjustment: 2
+  },
+  {
+    name: 'Scale up on high request rate',
+    metric: 'requests_per_second',
+    threshold: 1000,
+    action: 'scale_up',
+    adjustment: 3
+  },
+  {
+    name: 'Scale down on low CPU',
+    metric: 'cpu',
+    threshold: 30,
+    action: 'scale_down',
+    adjustment: 1 // Remove 1 instance
+  },
+  {
+    name: 'Scale down on low request rate',
+    metric: 'requests_per_second',
+    threshold: 200,
+    action: 'scale_down',
+    adjustment: 1
+  }
+];
+
+/**
+ * Get scaling recommendations
+ */
+function getScalingRecommendations(metrics) {
+  const recommendations = [];
+  
+  for (const rule of AUTO_SCALING_RULES) {
+    const metricValue = metrics[rule.metric];
+    
+    if (rule.action === 'scale_up' && metricValue > rule.threshold) {
+      recommendations.push({
+        rule: rule.name,
+        action: 'scale_up',
+        adjustment: rule.adjustment,
+        reason: `${rule.metric} (${metricValue}) exceeds threshold (${rule.threshold})`
+      });
+    } else if (rule.action === 'scale_down' && metricValue < rule.threshold) {
+      recommendations.push({
+        rule: rule.name,
+        action: 'scale_down',
+        adjustment: rule.adjustment,
+        reason: `${rule.metric} (${metricValue}) below threshold (${rule.threshold})`
+      });
+    }
+  }
+  
+  return recommendations;
 }
 
 /**
- * Get quota limit for subscription tier
+ * Calculate optimal instance count
  */
-function getQuotaLimitForTier(tier) {
-  const limits = getStorageQuotaLimits();
-  // Handle null, undefined, or invalid tier by defaulting to FREE
-  const normalizedTier = (tier && typeof tier === 'string') ? tier.toUpperCase() : 'FREE';
-  return limits[normalizedTier] || limits.FREE;
-}
-
-/**
- * Enforce quota limits based on subscription tier
- */
-async function enforceQuotaLimits(userId, fileSize, prisma) {
-  const user = await prisma.users.findUnique({
-    where: { id: userId },
-    select: { subscriptionTier: true }
-  });
+function calculateOptimalInstances(currentLoad, currentInstances) {
+  const { minInstances, maxInstances, targetCPU } = HORIZONTAL_SCALING;
   
-  if (!user) {
-    throw new Error('User not found');
-  }
+  // Calculate required instances based on CPU utilization
+  const requiredInstances = Math.ceil((currentLoad / targetCPU) * currentInstances);
   
-  const limits = getQuotaLimitForTier(user.subscriptionTier);
-  
-  // Check file size limit
-  if (fileSize > limits.maxFileSize) {
-    throw new Error(`File size exceeds limit for ${user.subscriptionTier} tier: ${(limits.maxFileSize / 1024 / 1024).toFixed(0)}MB`);
-  }
-  
-  // Check total quota
-  const quota = await prisma.storage_quotas.findUnique({
-    where: { userId }
-  });
-  
-  if (quota) {
-    const newUsed = Number(quota.usedBytes) + fileSize;
-    if (newUsed > limits.limitBytes) {
-      throw new Error(`Storage quota exceeded for ${user.subscriptionTier} tier: ${(limits.limitBytes / 1024 / 1024 / 1024).toFixed(0)}GB`);
-    }
-  }
-  
-  return limits;
+  // Ensure within min/max bounds
+  return Math.max(minInstances, Math.min(maxInstances, requiredInstances));
 }
 
 module.exports = {
-  getStorageConfig,
-  getCDNConfig,
-  getDatabasePoolConfig,
-  getCacheConfig,
-  getLoadBalancerConfig,
-  getStorageQuotaLimits,
-  getQuotaLimitForTier,
-  enforceQuotaLimits
+  HORIZONTAL_SCALING,
+  LOAD_BALANCER,
+  DATABASE_POOLING,
+  CDN,
+  CACHING_STRATEGY,
+  AUTO_SCALING_RULES,
+  getScalingRecommendations,
+  calculateOptimalInstances
 };
 

@@ -303,6 +303,7 @@ export function DashboardModals(props: DashboardModalsProps) {
           onClose={() => setShowSaveToCloudModal(false)}
           onConfirm={onConfirmSaveToCloud}
           defaultFileName={resumeFileName}
+          existingResumeNames={cloudResumes.map(r => r.name || r.metadata?.originalFileName || '')}
         />
       )}
 

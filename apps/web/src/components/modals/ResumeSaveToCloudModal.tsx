@@ -3,22 +3,30 @@
  * Handles saving resume to cloud storage with metadata
  */
 
-import React, { useState } from 'react';
-import { Cloud, X } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Cloud, X, AlertTriangle } from 'lucide-react';
 
 interface ResumeSaveToCloudModalProps {
   onClose: () => void;
   onConfirm: (fileName: string, description: string) => void;
   defaultFileName: string;
+  existingResumeNames?: string[]; // List of existing resume names
 }
 
 export default function ResumeSaveToCloudModal({ 
   onClose, 
   onConfirm,
-  defaultFileName 
+  defaultFileName,
+  existingResumeNames = []
 }: ResumeSaveToCloudModalProps) {
   const [fileName, setFileName] = useState(defaultFileName);
   const [description, setDescription] = useState('');
+
+  // Check for duplicate names (case-insensitive)
+  const isDuplicate = useMemo(() => {
+    const trimmedName = fileName.trim().toLowerCase();
+    return existingResumeNames.some(name => name.toLowerCase() === trimmedName);
+  }, [fileName, existingResumeNames]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -54,8 +62,23 @@ export default function ResumeSaveToCloudModal({
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
               placeholder="Resume name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                isDuplicate ? 'border-yellow-500' : 'border-gray-300'
+              }`}
             />
+            {isDuplicate && (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-yellow-800">
+                    Duplicate Name Warning
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    You already have a resume with this name. You can still proceed, but it may cause confusion.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

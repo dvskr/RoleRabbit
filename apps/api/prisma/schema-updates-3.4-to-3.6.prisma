@@ -1,0 +1,316 @@
+// ============================================================================
+// PRISMA SCHEMA UPDATES: Sections 3.4 - 3.6
+// ============================================================================
+// This file contains schema updates for:
+// - 3.4: Missing Constraints
+// - 3.5: Data Migration (column additions)
+// - 3.6: Performance optimizations (indexes)
+//
+// NOTE: Some constraints are enforced at database level (see SQL migrations)
+// ============================================================================
+
+// ============================================================================
+// UPDATED BaseResume MODEL (with all new features)
+// ============================================================================
+
+model BaseResume {
+  id          String   @id @default(cuid())
+  userId      String
+  slotNumber  Int      // Constraint: 1-5 (enforced at DB level)
+  name        String   // Constraint: max 100 chars (enforced at DB level)
+  isActive    Boolean  @default(true)
+  
+  // Resume data
+  data        Json
+  formatting  Json     @default("{}")
+  metadata    Json     @default("{}")
+  
+  // File reference
+  fileHash    String?
+  
+  // Template reference (will be FK when templates in DB)
+  templateId  String?
+  
+  // Embedding for semantic search
+  embedding   Float[]?
+  embeddingUpdatedAt DateTime?
+  
+  // NEW: Soft delete support (Section 3.2)
+  deletedAt   DateTime?
+  
+  // NEW: Optimistic locking (Section 3.2)
+  version     Int      @default(1)
+  
+  // NEW: Tagging support (Section 3.2)
+  tags        String[] @default([])
+  
+  // NEW: Archiving support (Section 3.2)
+  archivedAt  DateTime?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workingDraft       WorkingDraft?
+  tailoredVersions   TailoredVersion[]
+  aiRequestLogs      AIRequestLog[]
+  versions           ResumeVersion[]    // NEW: Version history
+  shareLinks         ResumeShareLink[]  // NEW: Share links
+  analytics          ResumeAnalytics?   // NEW: Analytics
+  
+  // Indexes
+  @@unique([userId, slotNumber])
+  @@index([userId])
+  @@index([isActive])
+  @@index([fileHash])
+  @@index([templateId])
+  @@index([deletedAt])              // NEW: For soft delete queries
+  @@index([archivedAt])             // NEW: For archive queries
+  @@index([tags])                   // NEW: For tag filtering (GIN index in PostgreSQL)
+  @@index([name])                   // NEW: For name search (Section 3.3)
+  @@index([userId, name])           // NEW: Unique constraint (partial, excluding deleted)
+}
+
+// ============================================================================
+// UPDATED WorkingDraft MODEL
+// ============================================================================
+
+model WorkingDraft {
+  id            String   @id @default(cuid())
+  baseResumeId  String   @unique
+  userId        String
+  
+  data          Json
+  formatting    Json     @default("{}")
+  hasChanges    Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  baseResume    BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([baseResumeId])
+  @@index([updatedAt])  // NEW: For finding stale drafts (Section 3.3)
+}
+
+// ============================================================================
+// UPDATED TailoredVersion MODEL
+// ============================================================================
+
+model TailoredVersion {
+  id              String   @id @default(cuid())
+  baseResumeId    String
+  userId          String
+  
+  data            Json
+  formatting      Json     @default("{}")
+  diff            Json     @default("{}")
+  
+  jobTitle        String?
+  jobDescription  String?
+  atsScoreBefore  Float?
+  atsScoreAfter   Float?
+  
+  createdAt       DateTime @default(now())
+  
+  baseResume      BaseResume     @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiRequestLogs   AIRequestLog[]
+  
+  @@index([baseResumeId])
+  @@index([userId])
+  @@index([userId, createdAt])  // NEW: Composite index (Section 3.3)
+}
+
+// ============================================================================
+// UPDATED AIRequestLog MODEL
+// ============================================================================
+
+model AIRequestLog {
+  id                 String   @id @default(cuid())
+  userId             String
+  baseResumeId       String?
+  tailoredVersionId  String?
+  
+  operation          String
+  model              String
+  tokensUsed         Int
+  costUsd            Float
+  durationMs         Int
+  
+  success            Boolean
+  errorMessage       String?
+  
+  createdAt          DateTime @default(now())
+  
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseResume        BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
+  tailoredVersion   TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([baseResumeId])
+  @@index([createdAt])              // NEW: Standalone index (Section 3.3)
+  @@index([userId, createdAt])      // Composite index for user's request history
+}
+
+// ============================================================================
+// UPDATED ResumeCache MODEL
+// ============================================================================
+
+model ResumeCache {
+  id            String   @id @default(cuid())
+  baseResumeId  String   @unique
+  userId        String
+  
+  cacheType     String
+  cacheKey      String   @unique
+  cacheData     Json
+  
+  lastUsedAt    DateTime @default(now())
+  expiresAt     DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([cacheKey])
+  @@index([lastUsedAt])  // NEW: For cache cleanup (Section 3.3)
+}
+
+// ============================================================================
+// NEW TABLES (from Section 3.1)
+// ============================================================================
+
+model ResumeTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  description String
+  layout      String
+  colorScheme String
+  isPremium   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  cssClasses  Json
+  previewUrl  String?
+  
+  rating      Float    @default(0)
+  usageCount  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@index([isPremium])
+  @@index([isActive])
+}
+
+model ResumeVersion {
+  id            String   @id @default(cuid())
+  baseResumeId  String
+  userId        String
+  versionNumber Int
+  changeType    String
+  
+  data          Json
+  formatting    Json
+  metadata      Json
+  
+  createdAt     DateTime @default(now())
+  
+  baseResume    BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([baseResumeId, versionNumber])
+  @@index([baseResumeId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ResumeShareLink {
+  id           String    @id @default(cuid())
+  baseResumeId String
+  userId       String
+  token        String    @unique
+  
+  viewCount    Int       @default(0)
+  isActive     Boolean   @default(true)
+  expiresAt    DateTime?
+  
+  createdAt    DateTime  @default(now())
+  
+  baseResume   BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([baseResumeId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model ResumeAnalytics {
+  id             String    @id @default(cuid())
+  baseResumeId   String    @unique
+  
+  viewCount      Int       @default(0)
+  exportCount    Int       @default(0)
+  tailorCount    Int       @default(0)
+  shareCount     Int       @default(0)
+  
+  lastViewedAt   DateTime?
+  lastExportedAt DateTime?
+  lastTailoredAt DateTime?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  baseResume     BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  
+  @@index([baseResumeId])
+}
+
+// ============================================================================
+// UPDATED User MODEL (add new relations)
+// ============================================================================
+
+model User {
+  id                    String            @id @default(cuid())
+  email                 String            @unique
+  // ... other user fields ...
+  
+  // Relations
+  baseResumes           BaseResume[]
+  workingDrafts         WorkingDraft[]
+  tailoredVersions      TailoredVersion[]
+  aiRequestLogs         AIRequestLog[]
+  resumeCaches          ResumeCache[]
+  resumeVersions        ResumeVersion[]    // NEW
+  resumeShareLinks      ResumeShareLink[]  // NEW
+  
+  // ... rest of user model ...
+}
+
+// ============================================================================
+// NOTES ON CONSTRAINTS (enforced at database level)
+// ============================================================================
+
+// The following constraints are enforced via SQL migrations:
+// 
+// 1. CHECK constraint on BaseResume.slotNumber (1-5)
+// 2. CHECK constraint on BaseResume.name length (max 100 chars)
+// 3. UNIQUE constraint on BaseResume.[userId, name] (excluding deleted)
+// 4. CHECK constraint on BaseResume.archivedAt >= createdAt
+// 5. CHECK constraint on BaseResume.deletedAt >= createdAt
+// 6. CHECK constraint on BaseResume.version > 0
+// 7. CHECK constraint on ResumeVersion.versionNumber > 0
+// 8. CHECK constraint on ResumeShareLink.viewCount >= 0
+// 9. CHECK constraint on ResumeAnalytics counts >= 0
+// 10. CHECK constraint on ResumeTemplate.rating (0-5)
+//
+// See: apps/api/prisma/migrations/add_constraints.sql
+

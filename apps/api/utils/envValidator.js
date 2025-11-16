@@ -1,9 +1,9 @@
 /**
  * Environment Variable Validator
  * Validates required environment variables on startup
+ * 
+ * Note: Uses console instead of logger to avoid circular dependencies
  */
-
-const logger = require('./logger');
 
 /**
  * Required environment variables for production
@@ -110,29 +110,29 @@ function validateEnv(options = {}) {
 
   const valid = errors.length === 0;
 
-  // Log results
+  // Log results (using console to avoid circular dependency with logger)
   if (logResults) {
     if (valid) {
-      logger.info('[ENV] ✅ All required environment variables are set');
+      console.log('[ENV] ✅ All required environment variables are set');
       if (warnings.length > 0) {
         warnings.forEach(w => {
-          logger.warn(`[ENV] ⚠️  ${w.message}`);
+          console.warn(`[ENV] ⚠️  ${w.message}`);
         });
       }
     } else {
-      logger.error('[ENV] ❌ Environment variable validation failed');
+      console.error('[ENV] ❌ Environment variable validation failed');
       errors.forEach(e => {
-        logger.error(`[ENV] ❌ ${e.message}`);
-        logger.error(`[ENV]    Description: ${e.description}`);
-        logger.error(`[ENV]    Example: ${e.example}`);
+        console.error(`[ENV] ❌ ${e.message}`);
+        console.error(`[ENV]    Description: ${e.description}`);
+        console.error(`[ENV]    Example: ${e.example}`);
       });
     }
   }
 
   // Exit if errors and exitOnError is true
   if (!valid && exitOnError) {
-    logger.error('[ENV] 🛑 Application cannot start without required environment variables');
-    logger.error('[ENV] 📝 Please create a .env file based on .env.example');
+    console.error('[ENV] 🛑 Application cannot start without required environment variables');
+    console.error('[ENV] 📝 Please create a .env file based on .env.example');
     process.exit(1);
   }
 

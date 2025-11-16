@@ -1,144 +1,251 @@
 /**
- * BE-053: Idempotency keys for file uploads
- * Prevents duplicate uploads when client retries
+ * Idempotency Utility
+ * 
+ * Prevents duplicate operations on double-click or network retry.
+ * Stores idempotency keys and returns existing resources.
  */
-
-const { prisma } = require('./db');
-const logger = require('./logger');
-const { ERROR_CODES } = require('./errorCodes');
-
-// In-memory cache for idempotency keys (in production, use Redis)
-const idempotencyCache = new Map(); // key -> { result, expiresAt }
-
-// Cleanup expired keys every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, data] of idempotencyCache.entries()) {
-    if (data.expiresAt < now) {
-      idempotencyCache.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
 
 /**
- * Check if idempotency key exists and return cached result
- * BE-053: Idempotency keys for file uploads
+ * Idempotency store (in-memory)
+ * For production, use Redis
  */
-async function checkIdempotencyKey(key, userId) {
-  if (!key) {
-    return { exists: false };
+class IdempotencyStore {
+  constructor() {
+    this.store = new Map();
+    this.ttl = 86400000; // 24 hours
+    this.cleanupInterval = setInterval(() => this.cleanup(), 3600000); // Cleanup every hour
   }
 
-  // Check in-memory cache first
-  const cached = idempotencyCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) {
-    // Verify it belongs to the same user
-    if (cached.userId === userId) {
-      logger.info(`Idempotency key ${key} found in cache, returning cached result`);
-      return {
-        exists: true,
-        result: cached.result
-      };
-    } else {
-      logger.warn(`Idempotency key ${key} belongs to different user`);
-      return { exists: false };
+  /**
+   * Check if key exists and return cached response
+   */
+  async get(key) {
+    const entry = this.store.get(key);
+    
+    if (!entry) {
+      return null;
     }
+
+    // Check if expired
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
+      return null;
+    }
+
+    return entry.response;
   }
 
-  // Check database for persistent idempotency keys
-  try {
-    const idempotencyRecord = await prisma.idempotency_keys.findUnique({
-      where: { key }
+  /**
+   * Store response for key
+   */
+  async set(key, response, ttl = this.ttl) {
+    this.store.set(key, {
+      response,
+      expiresAt: Date.now() + ttl,
+      createdAt: Date.now()
     });
+  }
 
-    if (idempotencyRecord) {
-      // Verify it belongs to the same user
-      if (idempotencyRecord.userId === userId) {
-        // Check if it's still valid (e.g., within 24 hours)
-        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-        if (Date.now() - idempotencyRecord.createdAt.getTime() < maxAge) {
-          logger.info(`Idempotency key ${key} found in database, returning cached result`);
-          return {
-            exists: true,
-            result: idempotencyRecord.result ? JSON.parse(idempotencyRecord.result) : null
-          };
-        } else {
-          // Expired, delete it
-          await prisma.idempotency_keys.delete({ where: { key } });
-        }
-      } else {
-        logger.warn(`Idempotency key ${key} belongs to different user`);
-        return { exists: false };
+  /**
+   * Delete key
+   */
+  async delete(key) {
+    this.store.delete(key);
+  }
+
+  /**
+   * Cleanup expired entries
+   */
+  cleanup() {
+    const now = Date.now();
+    for (const [key, entry] of this.store.entries()) {
+      if (now > entry.expiresAt) {
+        this.store.delete(key);
       }
     }
-  } catch (error) {
-    // If IdempotencyKey table doesn't exist, just log and continue
-    logger.warn('IdempotencyKey table not found, using in-memory cache only:', error.message);
   }
 
-  return { exists: false };
+  /**
+   * Destroy store
+   */
+  destroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    this.store.clear();
+  }
 }
 
+// Global idempotency store
+const globalStore = new IdempotencyStore();
+
 /**
- * Store idempotency key result
+ * Redis-based idempotency store (for production)
  */
-async function storeIdempotencyKey(key, userId, result, ttl = 24 * 60 * 60 * 1000) {
-  if (!key) return;
+class RedisIdempotencyStore {
+  constructor(redisClient) {
+    this.redis = redisClient;
+    this.ttl = 86400; // 24 hours in seconds
+  }
 
-  const expiresAt = Date.now() + ttl;
+  async get(key) {
+    try {
+      const value = await this.redis.get(`idempotency:${key}`);
+      if (!value) return null;
+      return JSON.parse(value);
+    } catch (error) {
+      console.error('Redis idempotency get error:', error);
+      return null;
+    }
+  }
 
-  // Store in memory cache
-  idempotencyCache.set(key, {
-    userId,
-    result,
-    expiresAt
-  });
+  async set(key, response, ttl = this.ttl) {
+    try {
+      await this.redis.setex(
+        `idempotency:${key}`,
+        ttl,
+        JSON.stringify(response)
+      );
+    } catch (error) {
+      console.error('Redis idempotency set error:', error);
+    }
+  }
 
-  // Store in database for persistence (if table exists)
-  try {
-    await prisma.idempotency_keys.upsert({
-      where: { key },
-      update: {
-        userId,
-        result: JSON.stringify(result),
-        expiresAt: new Date(expiresAt)
-      },
-      create: {
-        key,
-        userId,
-        result: JSON.stringify(result),
-        expiresAt: new Date(expiresAt)
-      }
-    });
-  } catch (error) {
-    // If IdempotencyKey table doesn't exist, just use in-memory cache
-    logger.warn('IdempotencyKey table not found, using in-memory cache only:', error.message);
+  async delete(key) {
+    try {
+      await this.redis.del(`idempotency:${key}`);
+    } catch (error) {
+      console.error('Redis idempotency delete error:', error);
+    }
   }
 }
 
 /**
  * Generate idempotency key from request
  */
-function generateIdempotencyKey(request) {
-  // Client should send Idempotency-Key header
-  const headerKey = request.headers['idempotency-key'];
-  if (headerKey) {
-    return headerKey;
+function generateIdempotencyKey(req, customKey = null) {
+  if (customKey) {
+    return customKey;
   }
 
-  // Fallback: generate from request body hash (less reliable)
-  const crypto = require('crypto');
-  const bodyHash = crypto.createHash('sha256')
-    .update(JSON.stringify(request.body || {}))
-    .digest('hex')
-    .substring(0, 32);
+  // Use header if provided
+  if (req.headers['idempotency-key']) {
+    return req.headers['idempotency-key'];
+  }
+
+  // Generate from request details
+  const userId = req.user?.id || 'anonymous';
+  const method = req.method;
+  const path = req.path;
+  const body = JSON.stringify(req.body || {});
   
-  return `auto_${bodyHash}`;
+  // Create hash
+  const crypto = require('crypto');
+  const hash = crypto
+    .createHash('sha256')
+    .update(`${userId}:${method}:${path}:${body}`)
+    .digest('hex');
+
+  return hash;
+}
+
+/**
+ * Idempotency middleware
+ * 
+ * Usage:
+ *   router.post('/resumes', idempotencyMiddleware(), handler);
+ */
+function idempotencyMiddleware(options = {}) {
+  const {
+    store = globalStore,
+    ttl = 86400000, // 24 hours
+    methods = ['POST', 'PUT', 'PATCH'],
+    keyGenerator = generateIdempotencyKey
+  } = options;
+
+  return async (req, res, next) => {
+    try {
+      // Only apply to specified methods
+      if (!methods.includes(req.method)) {
+        return next();
+      }
+
+      // Generate idempotency key
+      const key = keyGenerator(req);
+      if (!key) {
+        return next();
+      }
+
+      // Check if key exists
+      const cached = await store.get(key);
+      if (cached) {
+        console.log(`Idempotency hit: ${key}`);
+        return res.status(cached.statusCode || 200).json(cached.body);
+      }
+
+      // Store original send function
+      const originalJson = res.json;
+
+      // Override json function to cache response
+      res.json = function(body) {
+        // Cache successful responses
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          store.set(key, {
+            statusCode: res.statusCode,
+            body
+          }, ttl).catch(error => {
+            console.error('Idempotency store error:', error);
+          });
+        }
+
+        return originalJson.call(this, body);
+      };
+
+      next();
+    } catch (error) {
+      console.error('Idempotency middleware error:', error);
+      // Don't block request on idempotency error
+      next();
+    }
+  };
+}
+
+/**
+ * Manual idempotency check
+ */
+async function checkIdempotency(key, store = globalStore) {
+  const cached = await store.get(key);
+  return {
+    exists: !!cached,
+    response: cached
+  };
+}
+
+/**
+ * Manual idempotency store
+ */
+async function storeIdempotency(key, response, store = globalStore, ttl = 86400000) {
+  await store.set(key, response, ttl);
+}
+
+/**
+ * Create idempotency store
+ */
+function createIdempotencyStore(redisClient = null) {
+  if (redisClient) {
+    return new RedisIdempotencyStore(redisClient);
+  }
+  return new IdempotencyStore();
 }
 
 module.exports = {
-  checkIdempotencyKey,
-  storeIdempotencyKey,
-  generateIdempotencyKey
+  IdempotencyStore,
+  RedisIdempotencyStore,
+  generateIdempotencyKey,
+  idempotencyMiddleware,
+  checkIdempotency,
+  storeIdempotency,
+  createIdempotencyStore,
+  globalStore
 };
 

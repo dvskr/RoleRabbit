@@ -15,6 +15,8 @@ interface ContactFieldsGridProps {
   setCustomFields: (fields: CustomField[]) => void;
   setShowAddFieldModal: (show: boolean) => void;
   colors: ThemeColors;
+  externalErrors?: Record<string, string>;
+  showRequired?: boolean;
 }
 
 const CONTACT_FIELD_ICONS = [
@@ -33,9 +35,12 @@ export default function ContactFieldsGrid({
   setCustomFields,
   setShowAddFieldModal,
   colors,
+  externalErrors = {},
+  showRequired = false,
 }: ContactFieldsGridProps) {
-  // Validation errors state
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  // Validation errors state (merge internal and external errors)
+  const [internalErrors, setInternalErrors] = useState<Record<string, string>>({});
+  const validationErrors = { ...internalErrors, ...externalErrors };
 
   // Use accentCyan for all icons
   const getIconColor = () => {
@@ -58,10 +63,10 @@ export default function ContactFieldsGrid({
     }
 
     if (!validation.isValid) {
-      setValidationErrors(prev => ({ ...prev, [field]: validation.error || '' }));
+      setInternalErrors(prev => ({ ...prev, [field]: validation.error || '' }));
       return false;
     } else {
-      setValidationErrors(prev => {
+      setInternalErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
@@ -75,14 +80,14 @@ export default function ContactFieldsGrid({
     setResumeData((prev: ResumeData) => ({ ...prev, [field]: value }));
     
     // Clear error when user starts typing
-    if (validationErrors[field]) {
-      setValidationErrors(prev => {
+    if (internalErrors[field]) {
+      setInternalErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
       });
     }
-  }, [setResumeData, validationErrors]);
+  }, [setResumeData, internalErrors]);
 
   // Handle field blur with validation and URL normalization
   const handleFieldBlur = useCallback((field: string, value: string, inputElement: HTMLInputElement) => {
@@ -110,10 +115,10 @@ export default function ContactFieldsGrid({
 
     // Update validation errors state
     if (!validation.isValid) {
-      setValidationErrors(prev => ({ ...prev, [field]: validation.error || '' }));
+      setInternalErrors(prev => ({ ...prev, [field]: validation.error || '' }));
       inputElement.style.borderColor = colors.errorRed;
     } else {
-      setValidationErrors(prev => {
+      setInternalErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[field];
         return newErrors;
@@ -131,6 +136,10 @@ export default function ContactFieldsGrid({
         const IconComponent = CONTACT_FIELD_ICONS[idx];
         const hasError = !!validationErrors[field];
         const fieldValue = resumeData[field] || '';
+        const isRequired = field === 'email' || field === 'phone';
+        const isEmpty = !fieldValue || fieldValue.trim() === '';
+        const showRequiredError = showRequired && isRequired && isEmpty;
+        const displayError = hasError || showRequiredError;
 
         return (
           <div key={field} className="flex flex-col gap-1">
@@ -144,27 +153,30 @@ export default function ContactFieldsGrid({
                 />
               )}
               <input
+                id={field}
+                name={field}
                 aria-label={field.charAt(0).toUpperCase() + field.slice(1)}
-                aria-invalid={hasError}
-                aria-describedby={hasError ? `${field}-error` : undefined} 
+                aria-invalid={displayError}
+                aria-required={isRequired}
+                aria-describedby={displayError ? `${field}-error` : undefined} 
                 type={field === 'email' ? 'email' : field === 'phone' ? 'tel' : 'text'}
                 className="flex-1 border-2 outline-none rounded-lg px-2 sm:px-3 py-2 min-w-0 max-w-full break-words overflow-wrap-anywhere text-sm transition-all" 
                 style={{
-                  background: colors.inputBackground,
-                  border: `2px solid ${hasError ? colors.errorRed : colors.border}`,
+                  background: displayError ? '#fef2f2' : colors.inputBackground,
+                  border: `2px solid ${displayError ? colors.errorRed : colors.border}`,
                   color: colors.primaryText,
                 }}
                 value={fieldValue} 
                 onChange={(e) => handleFieldChange(field, e.target.value)}
-                placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                placeholder={`${field.charAt(0).toUpperCase() + field.slice(1)}${isRequired ? ' *' : ''}`}
                 onFocus={(e) => {
-                  e.target.style.borderColor = hasError ? colors.errorRed : colors.accentCyan;
-                  e.target.style.outline = `2px solid ${hasError ? `${colors.errorRed}40` : `${colors.accentCyan}40`}`;
+                  e.target.style.borderColor = displayError ? colors.errorRed : colors.accentCyan;
+                  e.target.style.outline = `2px solid ${displayError ? `${colors.errorRed}40` : `${colors.accentCyan}40`}`;
                 }}
                 onBlur={(e) => handleFieldBlur(field, e.target.value, e.target)}
               />
             </div>
-            {hasError && (
+            {displayError && (
               <div 
                 id={`${field}-error`}
                 className="flex items-center gap-1 ml-6 text-xs" 
@@ -172,7 +184,7 @@ export default function ContactFieldsGrid({
                 role="alert"
               >
                 <AlertCircle size={12} aria-hidden="true" />
-                <span>{validationErrors[field]}</span>
+                <span>{validationErrors[field] || `${field.charAt(0).toUpperCase() + field.slice(1)} is required`}</span>
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import type { SetStateAction } from 'react';
 import dynamic from 'next/dynamic';
 
@@ -59,6 +59,11 @@ import { useAIProgress } from '../../hooks/useAIProgress';
 import { ConflictIndicator } from '../../components/ConflictIndicator';
 import { DraftStatusIndicator } from '../../components/features/ResumeEditor/DraftStatusIndicator';
 import { DraftDiffViewer } from '../../components/features/ResumeEditor/DraftDiffViewer';
+import { OfflineBanner } from '../../components/OfflineBanner';
+import DiscardDraftModal from '../../components/modals/DiscardDraftModal';
+import KeyboardShortcutsModal from '../../components/modals/KeyboardShortcutsModal';
+import ConflictResolutionModal from '../../components/modals/ConflictResolutionModal';
+import { ValidationSummary } from '../../components/ValidationSummary';
 import { PlusCircle, Upload, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 // Lazy load heavy analytics and modal components
 const CoverLetterAnalytics = dynamic(() => import('../../components/CoverLetterAnalytics'), { ssr: false });
@@ -89,8 +94,6 @@ import {
 import { ResumePreview } from './components/ResumePreview';
 import { CustomSectionEditor } from './components/CustomSectionEditor';
 import { DashboardModals } from './components/DashboardModals';
-// Import accessibility components
-import { SkipLinks, MainContent } from '../../components/accessibility/SkipLinks';
 // Import dashboard hooks
 import { useDashboardUI } from './hooks/useDashboardUI';
 import { useDashboardTemplates } from './hooks/useDashboardTemplates';
@@ -157,6 +160,11 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
   const { theme } = useTheme();
   const colors = theme.colors;
   const initializingCustomFieldsRef = useRef(false);
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationWarnings, setValidationWarnings] = useState<Record<string, string>>({});
+  const [showValidationSummary, setShowValidationSummary] = useState(false);
   
   // Dashboard-specific state hooks
   const dashboardUI = useDashboardUI(initialTab);
@@ -348,6 +356,47 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
     };
   }, []);
 
+  // Warn user about unsaved changes before leaving page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only show warning if there are unsaved changes (draft exists)
+      if (hasDraft && activeTab === 'editor') {
+        e.preventDefault();
+        // Chrome requires returnValue to be set
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasDraft, activeTab]);
+
+  // Keyboard shortcut to show shortcuts modal (?)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Press ? to show keyboard shortcuts
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Don't trigger if user is typing in an input/textarea
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        setShowKeyboardShortcuts(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyPress);
+    };
+  }, []);
+
   // Set hasDraft immediately when changes are made
   useEffect(() => {
     if (hasChanges && currentResumeId) {
@@ -396,11 +445,39 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   // Draft handlers
   const handleCommitDraft = useCallback(async () => {
+    // Validate required fields before saving
+    const validationErrors: Record<string, string> = {};
+    
+    if (!resumeData.name || resumeData.name.trim() === '') {
+      validationErrors['name'] = 'Name is required';
+    }
+    if (!resumeData.email || resumeData.email.trim() === '') {
+      validationErrors['email'] = 'Email is required';
+    }
+    if (!resumeData.phone || resumeData.phone.trim() === '') {
+      validationErrors['phone'] = 'Phone is required';
+    }
+    
+    // If there are validation errors, show them and prevent save
+    if (Object.keys(validationErrors).length > 0) {
+      const errorMessages = Object.values(validationErrors).join(', ');
+      showToast(`Please fix the following errors: ${errorMessages}`, 'error', 6000);
+      setValidationErrors(validationErrors); // Show errors in UI
+      setShowValidationSummary(true); // Show validation summary
+      return;
+    }
+    
     try {
       const result = await commitDraft();
       if (result?.success) {
         showToast('Resume saved successfully!', 'success', 4000);
         setHasDraft(false);
+        setValidationErrors({}); // Clear errors on success
+      } else if (result?.hasConflict) {
+        // ✅ Show conflict resolution modal
+        logger.warn('Conflict detected, showing resolution modal');
+        setShowConflictModal(true);
+        setServerVersion(result.serverVersion);
       } else {
         showToast(result?.error || 'Failed to save resume', 'error', 6000);
       }
@@ -408,29 +485,68 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       logger.error('Failed to commit draft', error);
       showToast('Failed to save resume', 'error', 6000);
     }
-  }, [commitDraft, showToast]);
+  }, [commitDraft, showToast, resumeData]);
 
-  const handleDiscardDraft = useCallback(async () => {
+  // State for discard draft modal
+  const [showDiscardDraftModal, setShowDiscardDraftModal] = useState(false);
+  
+  // State for keyboard shortcuts modal
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  
+  // State for conflict resolution modal
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [serverVersion, setServerVersion] = useState<any>(null);
+
+  // Conflict resolution handlers
+  const handleKeepMine = useCallback(async () => {
+    logger.info('User chose to keep their version');
+    setShowConflictModal(false);
+    // Force save by updating lastServerUpdatedAt to current server time
+    if (serverVersion?.updatedAt) {
+      // This will allow the next save to proceed
+      // The commitDraft will be called again automatically
+    }
+    showToast('Keeping your changes. Please save again to confirm.', 'info', 4000);
+  }, [serverVersion, showToast]);
+
+  const handleUseServer = useCallback(async () => {
+    logger.info('User chose to use server version');
+    setShowConflictModal(false);
+    if (currentResumeId) {
+      try {
+        await loadResumeById(currentResumeId);
+        showToast('Loaded server version successfully', 'success', 4000);
+        setHasDraft(false);
+      } catch (error) {
+        logger.error('Failed to load server version', error);
+        showToast('Failed to load server version', 'error', 6000);
+      }
+    }
+  }, [currentResumeId, loadResumeById, showToast]);
+
+  const handleReviewChanges = useCallback(() => {
+    logger.info('User chose to review changes');
+    setShowConflictModal(false);
+    setShowDiffViewer(true);
+  }, []);
+
+  const handleDiscardDraft = useCallback(() => {
     if (!currentResumeId) {
       logger.warn('🎯 handleDiscardDraft: No current resume ID');
       return;
     }
     
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      '⚠️ Discard Draft?\n\n' +
-      'This will permanently delete your draft and revert to the base resume.\n' +
-      'This action cannot be undone.\n\n' +
-      'Click OK to discard, or Cancel to keep your draft.'
-    );
-    
-    if (!confirmed) {
-      logger.info('🎯 handleDiscardDraft: User cancelled');
+    // Show modal instead of window.confirm
+    setShowDiscardDraftModal(true);
+  }, [currentResumeId]);
+
+  const handleConfirmDiscardDraftModal = useCallback(async () => {
+    if (!currentResumeId) {
       return;
     }
     
     try {
-      logger.info('🎯 handleDiscardDraft: User confirmed, discarding draft');
+      logger.info('🎯 handleConfirmDiscardDraftModal: User confirmed, discarding draft');
       const result = await discardDraft();
       if (result?.success) {
         showToast('Draft discarded, reverted to base resume', 'success', 4000);
@@ -439,7 +555,7 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         showToast(result?.error || 'Failed to discard draft', 'error', 6000);
       }
     } catch (error) {
-      logger.error('❌ handleDiscardDraft: Failed to discard draft', error);
+      logger.error('❌ handleConfirmDiscardDraftModal: Failed to discard draft', error);
       showToast('Failed to discard draft', 'error', 6000);
     }
   }, [currentResumeId, discardDraft, showToast]);
@@ -477,26 +593,36 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
       return;
     }
 
-    // Mark as loading to prevent concurrent loads
-    loadingResumeIdRef.current = activeId;
-    setCurrentResumeId(activeId);
+    // ✅ CRITICAL: Wait for any ongoing save before switching resumes
+    const switchResume = async () => {
+      // If currently saving, wait a bit for it to complete
+      if (isSaving) {
+        logger.info('Waiting for ongoing save before switching resume...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
 
-    loadResumeById(activeId)
-      .then(() => {
+      // Mark as loading to prevent concurrent loads
+      loadingResumeIdRef.current = activeId;
+      setCurrentResumeId(activeId);
+
+      try {
+        await loadResumeById(activeId);
         // Success - clear loading ref
         if (loadingResumeIdRef.current === activeId) {
           loadingResumeIdRef.current = null;
         }
-      })
-      .catch((error: unknown) => {
+      } catch (error: unknown) {
         logger.error('Failed to load active resume', error);
         showToast('Failed to load selected resume', 'error', 6000);
         // Clear loading ref on error
         if (loadingResumeIdRef.current === activeId) {
           loadingResumeIdRef.current = null;
         }
-      });
-  }, [activeId, currentResumeId, setCurrentResumeId, loadResumeById, showToast]);
+      }
+    };
+
+    switchResume();
+  }, [activeId, currentResumeId, setCurrentResumeId, loadResumeById, showToast, isSaving]);
 
   const setCustomFieldsTracked = useCallback((value: SetStateAction<CustomField[]>) => {
     setCustomFieldsBase((prev) => {
@@ -1111,9 +1237,9 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
 
   return (
     <ErrorBoundary>
-      {/* Skip Links for keyboard accessibility */}
-      <SkipLinks />
-
+      {/* Offline Banner - Fixed at top of screen */}
+      <OfflineBanner />
+      
       <div className="fixed inset-0 flex" style={{ background: colors.background }}>
         {activeTab === 'editor' && resumeApplyState.status !== 'idle' && resumeApplyMessage && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
@@ -1137,17 +1263,14 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
           </div>
         )}
         {/* Sidebar */}
-        <nav id="navigation">
-          <Sidebar
-            activeTab={activeTab}
-            sidebarCollapsed={sidebarCollapsed}
-            onTabChange={handleTabChange}
-            onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-          />
-        </nav>
+        <Sidebar
+          activeTab={activeTab}
+          sidebarCollapsed={sidebarCollapsed}
+          onTabChange={handleTabChange}
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
         {/* Main Content Area */}
-        <MainContent>
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {/* Header */}
           {activeTab === 'editor' ? (
@@ -1333,7 +1456,6 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
             )}
           </div>
         </div>
-        </MainContent>
       </div>
 
       {/* All Modals */}
@@ -1497,6 +1619,24 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
         onLoadFromCloud={handleLoadFromCloud}
         DEFAULT_TEMPLATE_ID={DEFAULT_TEMPLATE_ID}
       />
+      {/* Validation Summary */}
+      {showValidationSummary && (Object.keys(validationErrors).length > 0 || Object.keys(validationWarnings).length > 0) && (
+        <ValidationSummary
+          errors={validationErrors}
+          warnings={validationWarnings}
+          onClose={() => setShowValidationSummary(false)}
+          onJumpToField={(field) => {
+            // Jump to the field (scroll to it and focus it)
+            const element = document.getElementById(field) || document.querySelector(`[name="${field}"]`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              (element as HTMLElement).focus();
+            }
+            setShowValidationSummary(false);
+          }}
+        />
+      )}
+      
       {/* Conflict Indicator */}
       <ConflictIndicator
         conflictDetected={hasConflict}
@@ -1519,6 +1659,33 @@ export default function DashboardPageClient({ initialTab }: DashboardPageClientP
               onClose={() => setShowDiffViewer(false)}
             />
           )}
+      
+      {/* Discard Draft Confirmation Modal */}
+      <DiscardDraftModal
+        isOpen={showDiscardDraftModal}
+        onClose={() => setShowDiscardDraftModal(false)}
+        onConfirm={handleConfirmDiscardDraftModal}
+        changeCount={0} // TODO: Calculate actual change count from diff
+      />
+      
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={showKeyboardShortcuts}
+        onClose={() => setShowKeyboardShortcuts(false)}
+      />
+      
+      {/* Conflict Resolution Modal */}
+      {showConflictModal && serverVersion && (
+        <ConflictResolutionModal
+          isOpen={showConflictModal}
+          onClose={() => setShowConflictModal(false)}
+          yourVersion={resumeData}
+          serverVersion={serverVersion.data || serverVersion}
+          onKeepYours={handleKeepMine}
+          onUseServer={handleUseServer}
+          onReviewChanges={handleReviewChanges}
+        />
+      )}
       
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

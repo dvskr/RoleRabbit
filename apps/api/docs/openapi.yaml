@@ -1,0 +1,663 @@
+openapi: 3.0.3
+info:
+  title: RoleReady Resume Builder API
+  description: |
+    Complete API documentation for the RoleReady Resume Builder platform.
+    
+    ## Features
+    - Resume CRUD operations
+    - AI-powered resume tailoring
+    - Resume export (PDF, DOCX, TXT, JSON)
+    - Resume sharing with public links
+    - Template management
+    - Analytics tracking
+    
+    ## Authentication
+    All endpoints (except public share links) require JWT authentication.
+    Include the token in the Authorization header:
+    ```
+    Authorization: Bearer YOUR_JWT_TOKEN
+    ```
+    
+    ## Rate Limiting
+    - 60 requests per minute per user
+    - 429 status code when limit exceeded
+    
+    ## Error Handling
+    All errors follow this format:
+    ```json
+    {
+      "success": false,
+      "error": "Error message",
+      "code": "ERROR_CODE"
+    }
+    ```
+  version: 1.0.0
+  contact:
+    name: RoleReady Support
+    email: support@roleready.com
+    url: https://roleready.com/support
+  license:
+    name: Proprietary
+    url: https://roleready.com/terms
+
+servers:
+  - url: http://localhost:3001
+    description: Development server
+  - url: https://api.roleready.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Resumes
+    description: Resume CRUD operations
+  - name: Export
+    description: Resume export functionality
+  - name: Sharing
+    description: Resume sharing with public links
+  - name: Templates
+    description: Resume template management
+  - name: Analytics
+    description: Resume usage analytics
+  - name: Tailored Versions
+    description: AI-tailored resume versions
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /api/auth/login
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Resource not found"
+        code:
+          type: string
+          example: "NOT_FOUND"
+
+    BaseResume:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "clx123abc"
+        userId:
+          type: string
+        slotNumber:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Software Engineer Resume"
+        isActive:
+          type: boolean
+        data:
+          type: object
+          description: "Resume content (contact, experience, education, etc.)"
+        formatting:
+          type: object
+        metadata:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TailoredVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        baseResumeId:
+          type: string
+        jobTitle:
+          type: string
+          example: "Senior Software Engineer"
+        company:
+          type: string
+          example: "Google"
+        mode:
+          type: string
+          enum: [PARTIAL, FULL]
+        tone:
+          type: string
+        atsScoreBefore:
+          type: number
+          example: 75
+        atsScoreAfter:
+          type: number
+          example: 85
+        improvement:
+          type: number
+          example: 10
+        createdAt:
+          type: string
+          format: date-time
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "modern-professional"
+        name:
+          type: string
+          example: "Modern Professional"
+        category:
+          type: string
+          example: "professional"
+        description:
+          type: string
+        isPremium:
+          type: boolean
+        colorScheme:
+          type: string
+        preview:
+          type: string
+          format: uri
+        features:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+paths:
+  /api/base-resumes:
+    get:
+      tags: [Resumes]
+      summary: List all resumes
+      description: Get all resumes for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  resumes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BaseResume'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Resumes]
+      summary: Create a new resume
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "My Resume"
+                data:
+                  type: object
+                formatting:
+                  type: object
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: Resume created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  resume:
+                    $ref: '#/components/schemas/BaseResume'
+
+  /api/base-resumes/{id}:
+    get:
+      tags: [Resumes]
+      summary: Get resume by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  resume:
+                    $ref: '#/components/schemas/BaseResume'
+        '404':
+          description: Resume not found
+
+    put:
+      tags: [Resumes]
+      summary: Update resume
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                data:
+                  type: object
+                formatting:
+                  type: object
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Resume updated
+
+    delete:
+      tags: [Resumes]
+      summary: Delete resume
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resume deleted
+
+  /api/base-resumes/{id}/export:
+    post:
+      tags: [Export]
+      summary: Export resume
+      description: Export resume to PDF, DOCX, TXT, or JSON format
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format:
+                  type: string
+                  enum: [pdf, docx, txt, json]
+                  default: pdf
+                templateId:
+                  type: string
+                  description: "Optional template ID"
+      responses:
+        '200':
+          description: Export successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  fileUrl:
+                    type: string
+                    example: "/api/exports/download/abc123"
+                  fileName:
+                    type: string
+                  format:
+                    type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+
+  /api/base-resumes/{id}/duplicate:
+    post:
+      tags: [Resumes]
+      summary: Duplicate resume
+      description: Create a copy of an existing resume
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Resume duplicated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  resume:
+                    $ref: '#/components/schemas/BaseResume'
+
+  /api/base-resumes/{id}/history:
+    get:
+      tags: [Resumes]
+      summary: Get resume history
+      description: Get all tailored versions for a resume
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  versions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TailoredVersion'
+                  count:
+                    type: integer
+
+  /api/base-resumes/{id}/restore/{versionId}:
+    post:
+      tags: [Resumes]
+      summary: Restore resume from version
+      description: Restore resume content from a tailored version
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Resume restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  resume:
+                    $ref: '#/components/schemas/BaseResume'
+                  backupVersionId:
+                    type: string
+                  message:
+                    type: string
+
+  /api/base-resumes/{id}/share:
+    post:
+      tags: [Sharing]
+      summary: Create share link
+      description: Create a public shareable link for a resume
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expiresInDays:
+                  type: integer
+                  default: 30
+                password:
+                  type: string
+                  description: "Optional password protection"
+                allowDownload:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  shareLink:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      token:
+                        type: string
+                      url:
+                        type: string
+                        example: "https://roleready.com/shared/abc123"
+                      expiresAt:
+                        type: string
+                        format: date-time
+                      hasPassword:
+                        type: boolean
+                      allowDownload:
+                        type: boolean
+
+  /api/base-resumes/{id}/analytics:
+    get:
+      tags: [Analytics]
+      summary: Get resume analytics
+      description: Get usage statistics for a resume
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  analytics:
+                    type: object
+                    properties:
+                      resumeId:
+                        type: string
+                      resumeName:
+                        type: string
+                      viewCount:
+                        type: integer
+                      exportCount:
+                        type: integer
+                      tailorCount:
+                        type: integer
+                      shareCount:
+                        type: integer
+                      lastViewed:
+                        type: string
+                        format: date-time
+                      lastExported:
+                        type: string
+                        format: date-time
+
+  /api/resume-templates:
+    get:
+      tags: [Templates]
+      summary: List all templates
+      description: Get all available resume templates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [professional, traditional, creative, minimalist, executive, tech, ats]
+        - name: isPremium
+          in: query
+          schema:
+            type: boolean
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  templates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+                  count:
+                    type: integer
+                  categories:
+                    type: array
+                    items:
+                      type: string
+
+  /api/tailored-versions/{id}:
+    get:
+      tags: [Tailored Versions]
+      summary: Get tailored version
+      description: Get a specific tailored version by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  version:
+                    $ref: '#/components/schemas/TailoredVersion'
+
+  /api/share/{token}:
+    get:
+      tags: [Sharing]
+      summary: Access shared resume
+      description: View a publicly shared resume (no authentication required)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          schema:
+            type: string
+          description: "Required if share link is password-protected"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  resume:
+                    type: object
+                  shareInfo:
+                    type: object
+                    properties:
+                      allowDownload:
+                        type: boolean
+                      expiresAt:
+                        type: string
+                        format: date-time
+        '401':
+          description: Password required
+        '404':
+          description: Share link not found
+        '410':
+          description: Share link expired
+

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Github, Chrome, Star, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { RabbitLogo, RabbitLogoOld } from '@/components/ui/RabbitLogo';
 
 export default function MinimalAuthPage() {
   const router = useRouter();
@@ -263,26 +262,6 @@ export default function MinimalAuthPage() {
       {/* Left Side - Enhanced Content */}
       <div className="hidden lg:flex lg:w-[45%] items-center justify-center relative">
         <div className="max-w-md px-8 text-center relative z-10">
-          {/* Animated Rabbit Logo - Old Version */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.8, type: "spring", stiffness: 100 }}
-            className="mb-8 flex justify-center"
-          >
-            <motion.div
-              animate={{
-                y: [0, -15, 0],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              <RabbitLogoOld size={120} animated={true} />
-            </motion.div>
-          </motion.div>
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -329,25 +308,6 @@ export default function MinimalAuthPage() {
       {/* Right Side - Enhanced Form */}
       <div className="w-full lg:w-[55%] flex items-center justify-center p-8 overflow-y-auto relative z-10">
         <div className="w-full max-w-[400px]">
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            className="mb-6 flex justify-center"
-          >
-            <Link href="/landing" className="flex items-center gap-1 group">
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400 }}
-              >
-                <RabbitLogo size={64} />
-              </motion.div>
-              <span className="text-4xl font-bold">
-                <span className="text-white">Role</span>
-                <span className="text-emerald-500">Rabbit</span>
-              </span>
-            </Link>
-          </motion.div>
 
           {/* Tab Toggle */}
           <motion.div

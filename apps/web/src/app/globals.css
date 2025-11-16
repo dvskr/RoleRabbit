@@ -597,3 +597,359 @@ body,
 .sidebar-scroller::-webkit-scrollbar-thumb:hover {
   background: rgba(156, 163, 175, 0.8);
 }
+
+/* ========================================
+   ACCESSIBILITY (a11y) STYLES
+   ======================================== */
+
+/* Screen Reader Only - Hide visually but keep accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip Links - For keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #3b82f6;
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  z-index: 10000;
+  font-weight: 600;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #fbbf24;
+  outline-offset: 2px;
+}
+
+/* Focus Indicators - Visible for keyboard users */
+*:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast focus for dark mode */
+[data-theme="dark"] *:focus-visible,
+.dark *:focus-visible {
+  outline-color: #60a5fa;
+}
+
+/* Remove default focus outline (replaced with :focus-visible) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  /* Increase contrast for all text */
+  body {
+    color: #000000;
+    background: #ffffff;
+  }
+  
+  [data-theme="dark"] body,
+  .dark body {
+    color: #ffffff;
+    background: #000000;
+  }
+  
+  /* Stronger borders */
+  button,
+  input,
+  textarea,
+  select,
+  .resume-section,
+  .resume-input {
+    border-width: 2px !important;
+    border-color: currentColor !important;
+  }
+  
+  /* Ensure focus indicators are very visible */
+  *:focus-visible {
+    outline-width: 4px;
+    outline-color: #000000;
+  }
+  
+  [data-theme="dark"] *:focus-visible,
+  .dark *:focus-visible {
+    outline-color: #ffffff;
+  }
+  
+  /* Ensure buttons have strong contrast */
+  button,
+  .resume-button,
+  .ai-generate-button,
+  .add-button {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #000000 !important;
+  }
+  
+  [data-theme="dark"] button,
+  [data-theme="dark"] .resume-button,
+  [data-theme="dark"] .ai-generate-button,
+  [data-theme="dark"] .add-button,
+  .dark button,
+  .dark .resume-button,
+  .dark .ai-generate-button,
+  .dark .add-button {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #ffffff !important;
+  }
+}
+
+/* Windows High Contrast Mode */
+@media (forced-colors: active) {
+  /* Use system colors */
+  button,
+  input,
+  textarea,
+  select {
+    border: 1px solid ButtonText;
+  }
+  
+  button:focus,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+  
+  /* Ensure icons are visible */
+  svg,
+  img {
+    forced-color-adjust: auto;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  /* Override the global animation disable and respect user preference */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Disable all custom animations */
+  .loading-logo,
+  .rabbit-ear-left,
+  .rabbit-ear-right,
+  .rabbit-nose,
+  .rabbit-eye-left,
+  .rabbit-eye-right,
+  .rabbit-breathe,
+  .rabbit-loading {
+    animation: none !important;
+  }
+  
+  /* Disable transform animations */
+  .nav-item:hover,
+  .resume-section:hover,
+  button:hover,
+  button:active {
+    transform: none !important;
+  }
+  
+  /* Disable fade-in animations */
+  .loading-screen,
+  .app-loaded {
+    transition: none !important;
+  }
+  
+  /* Keep essential transitions very short */
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    transition: background-color 0.01ms, color 0.01ms, border-color 0.01ms !important;
+  }
+}
+
+/* Keyboard Navigation Indicators */
+body.keyboard-navigation *:focus {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+body.keyboard-navigation [data-theme="dark"] *:focus,
+body.keyboard-navigation.dark *:focus {
+  outline-color: #60a5fa;
+}
+
+/* Ensure interactive elements have visible focus */
+button:focus,
+a:focus,
+input:focus,
+textarea:focus,
+select:focus,
+[role="button"]:focus,
+[role="link"]:focus,
+[role="tab"]:focus,
+[role="menuitem"]:focus,
+[tabindex]:focus {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure sufficient color contrast (WCAG AA: 4.5:1) */
+.text-gray-500 {
+  color: #6b7280; /* 4.54:1 on white */
+}
+
+.text-gray-600 {
+  color: #4b5563; /* 7.07:1 on white */
+}
+
+.text-gray-700 {
+  color: #374151; /* 9.73:1 on white */
+}
+
+/* Dark mode contrast adjustments */
+[data-theme="dark"] .text-gray-300,
+.dark .text-gray-300 {
+  color: #d1d5db; /* 8.59:1 on black */
+}
+
+[data-theme="dark"] .text-gray-400,
+.dark .text-gray-400 {
+  color: #9ca3af; /* 4.54:1 on black */
+}
+
+[data-theme="dark"] .text-gray-500,
+.dark .text-gray-500 {
+  color: #6b7280; /* 2.85:1 on black - increase for better contrast */
+  color: #9ca3af; /* 4.54:1 on black */
+}
+
+/* Ensure links are distinguishable */
+a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Ensure disabled elements are clearly indicated */
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled,
+[aria-disabled="true"] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+/* Ensure loading states are accessible */
+[aria-busy="true"] {
+  cursor: wait;
+}
+
+/* Ensure hidden elements are truly hidden from screen readers */
+[hidden],
+[aria-hidden="true"] {
+  display: none !important;
+}
+
+/* Exception: aria-hidden on decorative icons should not hide them visually */
+svg[aria-hidden="true"],
+img[aria-hidden="true"] {
+  display: inline !important;
+}
+
+/* Ensure form validation errors are visible */
+input:invalid,
+textarea:invalid,
+select:invalid {
+  border-color: #ef4444;
+}
+
+input:invalid:focus,
+textarea:invalid:focus,
+select:invalid:focus {
+  outline-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Ensure success states are visible */
+input:valid:not([type="text"]):not([type="email"]):not([type="password"]),
+textarea:valid,
+select:valid {
+  border-color: #10b981;
+}
+
+/* Touch target size - Minimum 44x44px for mobile */
+@media (pointer: coarse) {
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select,
+  [role="button"],
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Ensure text is selectable for screen readers */
+.resume-section,
+.resume-input,
+.section-title {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* Ensure icons don't interfere with text selection */
+svg {
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+/* Re-enable pointer events for interactive icons */
+button svg,
+a svg,
+[role="button"] svg {
+  pointer-events: auto;
+}

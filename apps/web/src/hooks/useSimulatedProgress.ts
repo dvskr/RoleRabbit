@@ -16,6 +16,7 @@ interface ProgressState {
   elapsedTime: number;
   estimatedTimeRemaining: number;
   isActive: boolean;
+  warningMessage?: string; // Warning message for long-running operations
 }
 
 const TAILOR_STAGES: ProgressStage[] = [
@@ -179,10 +180,19 @@ export function useSimulatedProgress(operation: 'tailor' | 'ats' = 'tailor') {
     const estimatedTotal = calculateEstimatedTotal();
     const remaining = Math.max(0, estimatedTotal - elapsedSec);
 
+    // Determine warning message based on elapsed time
+    let warningMessage: string | undefined;
+    if (elapsedSec >= 60) {
+      warningMessage = "Still working... Large resumes may take up to 2 minutes.";
+    } else if (elapsedSec >= 20) {
+      warningMessage = "This is taking longer than expected. Please wait...";
+    }
+
     setProgressState(prev => ({
       ...prev,
       elapsedTime: elapsedSec,
-      estimatedTimeRemaining: Math.round(remaining)
+      estimatedTimeRemaining: Math.round(remaining),
+      warningMessage
     }));
   }, [progressState.isActive, calculateEstimatedTotal]);
 
@@ -235,7 +245,8 @@ export function useSimulatedProgress(operation: 'tailor' | 'ats' = 'tailor') {
       message: 'Starting...',
       elapsedTime: 0,
       estimatedTimeRemaining: Math.round(calculateEstimatedTotal()),
-      isActive: true
+      isActive: true,
+      warningMessage: undefined
     });
 
     advanceToNextStage();
@@ -264,7 +275,8 @@ export function useSimulatedProgress(operation: 'tailor' | 'ats' = 'tailor') {
       message: '',
       elapsedTime: 0,
       estimatedTimeRemaining: 0,
-      isActive: false
+      isActive: false,
+      warningMessage: undefined
     });
   }, [cleanup]);
 

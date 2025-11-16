@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Home as HomeIcon, User, Cloud, Edit, Layout, Briefcase, MessageSquare, Mail, FileText, Globe, Bot, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
-import { RabbitLogo, RabbitLogoWithText } from '../ui/RabbitLogo';
 import { useTheme } from '../../contexts/ThemeContext';
 import NavigationItem from './NavigationItem';
 

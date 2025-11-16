@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { CheckCircle } from 'lucide-react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { CheckCircle, AlertCircle, X } from 'lucide-react';
+import { FixedSizeGrid as Grid } from 'react-window';
 import { useTheme } from '../contexts/ThemeContext';
 import { TemplatesProps, TemplateViewMode } from './templates/types';
 import { useTemplateFilters } from './templates/hooks/useTemplateFilters';
@@ -137,6 +138,7 @@ function TemplatesInternal({
     isModalOpen: actionsState.showPreviewModal || actionsState.showUploadModal || showKeyboardHelp,
   });
 
+  // ✅ PERFORMANCE: Memoize template filtering and sorting
   // Separate added and not-added templates
   // Sort added templates by their order in addedTemplates array (most recent first)
   const addedTemplatesList = useMemo(
@@ -160,6 +162,57 @@ function TemplatesInternal({
       filterState.filteredTemplates.filter(t => !addedTemplates.includes(t.id)),
     [filterState.filteredTemplates, addedTemplates]
   );
+
+  // ✅ PERFORMANCE: Calculate grid dimensions for virtualization
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  // Update container dimensions on resize
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+        setContainerHeight(containerRef.current.offsetHeight);
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  // Calculate grid layout
+  const CARD_WIDTH = 280;
+  const CARD_HEIGHT = 420;
+  const GAP = 16;
+  const columnCount = Math.max(1, Math.floor((containerWidth + GAP) / (CARD_WIDTH + GAP)));
+  const rowCount = Math.ceil(paginationState.currentTemplates.length / columnCount);
+
+  // ✅ PERFORMANCE: Virtualized grid cell renderer
+  const GridCell = useCallback(({ columnIndex, rowIndex, style }: any) => {
+    const index = rowIndex * columnCount + columnIndex;
+    const template = paginationState.currentTemplates[index];
+
+    if (!template) return null;
+
+    return (
+      <div style={{ ...style, padding: GAP / 2 }}>
+        <TemplateCard
+          key={template.id}
+          template={template}
+          isAdded={addedTemplates.includes(template.id)}
+          isFavorite={actionsState.favorites.includes(template.id)}
+          addedTemplateId={actionsState.addedTemplateId}
+          colors={colors}
+          onFavorite={actionsState.toggleFavorite}
+          onPreview={actionsState.handlePreviewTemplate}
+          onUse={actionsState.handleUseTemplate}
+          onRemove={onRemoveTemplate}
+        />
+      </div>
+    );
+  }, [paginationState.currentTemplates, addedTemplates, actionsState, colors, onRemoveTemplate, columnCount]);
 
   return (
     <div
@@ -222,6 +275,7 @@ function TemplatesInternal({
 
       {/* Main Content */}
       <div
+        ref={containerRef}
         className="flex-1 overflow-y-auto p-2 force-scrollbar"
         role="main"
         aria-label="Template gallery"
@@ -299,26 +353,46 @@ function TemplatesInternal({
 
         {/* All Templates */}
         {viewMode === 'grid' ? (
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6"
-            role="list"
-            aria-label="All available templates in grid view"
-          >
-            {paginationState.currentTemplates.map(template => (
-              <TemplateCard
-                key={template.id} 
-                template={template}
-                isAdded={addedTemplates.includes(template.id)}
-                isFavorite={actionsState.favorites.includes(template.id)}
-                addedTemplateId={actionsState.addedTemplateId}
-                colors={colors}
-                onFavorite={actionsState.toggleFavorite}
-                onPreview={actionsState.handlePreviewTemplate}
-                onUse={actionsState.handleUseTemplate}
-                onRemove={onRemoveTemplate}
-              />
-            ))}
-          </div>
+          isLoading ? (
+            // Show skeleton loaders during initial load
+            <TemplateCardSkeleton colors={colors} count={8} />
+          ) : paginationState.currentTemplates.length > 20 ? (
+            // ✅ PERFORMANCE: Use virtualization for large lists (>20 templates)
+            <div style={{ height: containerHeight - 200 }}>
+              <Grid
+                columnCount={columnCount}
+                columnWidth={CARD_WIDTH + GAP}
+                height={containerHeight - 200}
+                rowCount={rowCount}
+                rowHeight={CARD_HEIGHT + GAP}
+                width={containerWidth}
+              >
+                {GridCell}
+              </Grid>
+            </div>
+          ) : (
+            // Regular grid for smaller lists (better UX for <20 items)
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6"
+              role="list"
+              aria-label="All available templates in grid view"
+            >
+              {paginationState.currentTemplates.map(template => (
+                <TemplateCard
+                  key={template.id} 
+                  template={template}
+                  isAdded={addedTemplates.includes(template.id)}
+                  isFavorite={actionsState.favorites.includes(template.id)}
+                  addedTemplateId={actionsState.addedTemplateId}
+                  colors={colors}
+                  onFavorite={actionsState.toggleFavorite}
+                  onPreview={actionsState.handlePreviewTemplate}
+                  onUse={actionsState.handleUseTemplate}
+                  onRemove={onRemoveTemplate}
+                />
+              ))}
+            </div>
+          )
         ) : (
           <div className="space-y-4 pb-8">
             {/* Added Templates List View */}

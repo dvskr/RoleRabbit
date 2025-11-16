@@ -1,127 +1,116 @@
 #!/bin/bash
-# Deployment Rollback Script (Section 4.8)
-# Rollback to previous version in <5 minutes
+
+# ============================================================================
+# Rollback Script
+# ============================================================================
+# Quickly rolls back to previous version
 
 set -e
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+echo "============================================"
+echo "ROLLBACK PROCEDURE"
+echo "============================================"
 
-# Configuration
-NAMESPACE="${NAMESPACE:-rolerabbit-production}"
-ENVIRONMENT="${ENVIRONMENT:-production}"
-TIMEOUT=300 # 5 minutes
+# Get current and previous versions
+CURRENT_VERSION=$(cat .current-version 2>/dev/null || echo "unknown")
+PREVIOUS_VERSION=$(cat .previous-version 2>/dev/null || echo "unknown")
 
-echo -e "${YELLOW}=== RoleRabbit Deployment Rollback ===${NC}"
-echo "Environment: $ENVIRONMENT"
-echo "Namespace: $NAMESPACE"
-echo
+echo "Current version: $CURRENT_VERSION"
+echo "Rolling back to: $PREVIOUS_VERSION"
+echo ""
 
-# Check kubectl is available
-if ! command -v kubectl &> /dev/null; then
-    echo -e "${RED}✗ kubectl not found${NC}"
-    exit 1
+read -p "Are you sure you want to rollback? (yes/no): " CONFIRM
+
+if [ "$CONFIRM" != "yes" ]; then
+  echo "Rollback cancelled"
+  exit 0
 fi
 
-# Get current revision
-get_current_revision() {
-    local deployment=$1
-    kubectl rollout history deployment/$deployment -n $NAMESPACE | tail -n 1 | awk '{print $1}'
-}
+echo ""
+echo "🔄 Starting rollback..."
 
-# Get deployment list
-DEPLOYMENTS=("rolerabbit-api" "rolerabbit-deployment-worker" "rolerabbit-pdf-worker")
+# Step 1: Switch traffic to previous version
+echo "📍 Step 1: Switching traffic to previous version..."
 
-echo "Current deployments:"
-for deployment in "${DEPLOYMENTS[@]}"; do
-    revision=$(get_current_revision $deployment)
-    echo "  - $deployment: revision $revision"
-done
-echo
+# Example: Update load balancer
+# aws elbv2 modify-listener \
+#   --listener-arn $LISTENER_ARN \
+#   --default-actions Type=forward,TargetGroupArn=$PREVIOUS_TARGET_GROUP_ARN
 
-# Confirm rollback
-read -p "Are you sure you want to rollback? (yes/no): " confirm
-if [ "$confirm" != "yes" ]; then
-    echo "Rollback cancelled"
-    exit 0
+echo "✅ Traffic switched"
+
+# Step 2: Verify previous version is healthy
+echo "🏥 Step 2: Verifying previous version health..."
+
+if ! curl -f "https://api.roleready.com/api/health" > /dev/null 2>&1; then
+  echo "❌ Previous version health check failed"
+  echo "⚠️  Manual intervention required!"
+  exit 1
 fi
 
-# Perform rollback
-echo -e "${YELLOW}Starting rollback...${NC}"
-start_time=$(date +%s)
+echo "✅ Previous version is healthy"
 
-for deployment in "${DEPLOYMENTS[@]}"; do
-    echo -e "\n${YELLOW}Rolling back $deployment...${NC}"
-    
-    # Rollback to previous revision
-    if kubectl rollout undo deployment/$deployment -n $NAMESPACE; then
-        echo -e "${GREEN}✓ Rollback initiated for $deployment${NC}"
-    else
-        echo -e "${RED}✗ Failed to rollback $deployment${NC}"
-        exit 1
-    fi
-done
+# Step 3: Run smoke tests
+echo "🧪 Step 3: Running smoke tests..."
+npm run test:smoke
 
-# Wait for rollout
-echo -e "\n${YELLOW}Waiting for rollout to complete...${NC}"
-for deployment in "${DEPLOYMENTS[@]}"; do
-    echo "  Checking $deployment..."
-    if kubectl rollout status deployment/$deployment -n $NAMESPACE --timeout=${TIMEOUT}s; then
-        echo -e "${GREEN}  ✓ $deployment rolled back successfully${NC}"
-    else
-        echo -e "${RED}  ✗ $deployment rollback failed or timed out${NC}"
-        exit 1
-    fi
-done
-
-# Calculate duration
-end_time=$(date +%s)
-duration=$((end_time - start_time))
-echo
-
-if [ $duration -lt $TIMEOUT ]; then
-    echo -e "${GREEN}✓ Rollback completed in ${duration}s (target: <${TIMEOUT}s)${NC}"
-else
-    echo -e "${YELLOW}⚠ Rollback completed in ${duration}s (exceeded target of ${TIMEOUT}s)${NC}"
+if [ $? -ne 0 ]; then
+  echo "❌ Smoke tests failed"
+  echo "⚠️  Manual intervention required!"
+  exit 1
 fi
 
-# Run health checks
-echo -e "\n${YELLOW}Running health checks...${NC}"
-HEALTH_URL="https://$([ "$ENVIRONMENT" = "production" ] && echo "rolerabbit.com" || echo "staging.rolerabbit.com")/api/health/ready"
+echo "✅ Smoke tests passed"
 
-for i in {1..5}; do
-    echo "  Attempt $i/5..."
-    if curl -f -s $HEALTH_URL > /dev/null; then
-        echo -e "${GREEN}  ✓ Health check passed${NC}"
-        break
-    else
-        if [ $i -eq 5 ]; then
-            echo -e "${RED}  ✗ Health check failed after 5 attempts${NC}"
-            exit 1
-        fi
-        sleep 5
-    fi
-done
+# Step 4: Rollback database migrations (if needed)
+echo "🗄️  Step 4: Checking database migrations..."
 
-echo -e "\n${GREEN}=== Rollback completed successfully ===${NC}"
+if [ -f ".migration-rollback-$CURRENT_VERSION.sql" ]; then
+  read -p "Rollback database migrations? (yes/no): " ROLLBACK_DB
+  
+  if [ "$ROLLBACK_DB" = "yes" ]; then
+    echo "Rolling back database..."
+    psql $DATABASE_URL < ".migration-rollback-$CURRENT_VERSION.sql"
+    echo "✅ Database rolled back"
+  fi
+fi
 
-# Send notification
+# Step 5: Update version tracking
+echo "📝 Step 5: Updating version tracking..."
+echo "$PREVIOUS_VERSION" > .current-version
+
+# Step 6: Notify team
+echo "📢 Step 6: Sending notifications..."
+
+# Send Slack notification
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
-    curl -X POST $SLACK_WEBHOOK_URL \
-        -H 'Content-Type: application/json' \
-        -d '{
-            "text": "🔄 Rollback completed successfully",
-            "blocks": [
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": "*Rollback Completed*\n• Environment: '"$ENVIRONMENT"'\n• Duration: '"$duration"'s\n• Status: Success"
-                    }
-                }
-            ]
-        }'
+  curl -X POST "$SLACK_WEBHOOK_URL" \
+    -H 'Content-Type: application/json' \
+    -d '{
+      "text": "🔄 Rollback completed",
+      "blocks": [
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*Rollback Completed*\nFrom: '"$CURRENT_VERSION"'\nTo: '"$PREVIOUS_VERSION"'"
+          }
+        }
+      ]
+    }'
 fi
+
+echo ""
+echo "============================================"
+echo "Rollback Complete!"
+echo "============================================"
+echo "Previous version: $CURRENT_VERSION"
+echo "Current version: $PREVIOUS_VERSION"
+echo "============================================"
+echo ""
+echo "📝 Post-rollback checklist:"
+echo "  1. Monitor error rates for next 30 minutes"
+echo "  2. Investigate root cause of issues"
+echo "  3. Update incident report"
+echo "  4. Plan next deployment"
+

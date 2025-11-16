@@ -1,6 +1,19 @@
 // Database connection and utilities
 const { PrismaClient } = require('@prisma/client');
-const logger = require('./logger');
+
+// Lazy load logger to avoid circular dependencies
+let logger;
+const getLogger = () => {
+  if (!logger) {
+    try {
+      logger = require('./logger');
+    } catch (error) {
+      // Fallback to console if logger fails
+      logger = console;
+    }
+  }
+  return logger;
+};
 
 // ============================================
 // CONNECTION POOL CONFIGURATION
@@ -53,12 +66,15 @@ if (databaseUrl && databaseUrl.startsWith('postgresql://')) {
   
   databaseUrl = urlObj.toString();
   
-  logger.info('Database connection pool configured', {
-    connectionLimit: POOL_CONFIG.connectionLimit,
-    poolTimeout: POOL_CONFIG.poolTimeout,
-    connectTimeout: POOL_CONFIG.connectTimeout,
-    pgbouncer: POOL_CONFIG.pgbouncer
-  });
+  const log = getLogger();
+  if (log && typeof log.info === 'function') {
+    log.info('Database connection pool configured', {
+      connectionLimit: POOL_CONFIG.connectionLimit,
+      poolTimeout: POOL_CONFIG.poolTimeout,
+      connectTimeout: POOL_CONFIG.connectTimeout,
+      pgbouncer: POOL_CONFIG.pgbouncer
+    });
+  }
 }
 
 const prisma = new PrismaClient({
@@ -81,7 +97,10 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 async function connectDB() {
   try {
     await prisma.$connect();
-    logger.info('✅ Database connected successfully');
+    const log = getLogger();
+    if (log && typeof log.info === 'function') {
+      log.info('✅ Database connected successfully');
+    }
     
     // Test connection with a simple query
     await prisma.$queryRaw`SELECT 1`;
@@ -89,7 +108,10 @@ async function connectDB() {
     reconnectAttempts = 0;
     return true;
   } catch (error) {
-    logger.error('❌ Database connection error:', error);
+    const log = getLogger();
+    if (log && typeof log.error === 'function') {
+      log.error('❌ Database connection error:', error);
+    }
     isConnected = false;
     // Don't exit - let the server continue and retry
     return false;
@@ -100,7 +122,10 @@ async function connectDB() {
 async function reconnectDB() {
   // Prevent multiple simultaneous reconnection attempts
   if (isReconnecting) {
-    logger.warn('Reconnection already in progress, waiting...');
+    const log = getLogger();
+    if (log && typeof log.warn === 'function') {
+      log.warn('Reconnection already in progress, waiting...');
+    }
     // Wait for ongoing reconnection to complete
     while (isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -111,7 +136,10 @@ async function reconnectDB() {
   isReconnecting = true;
   
   try {
-    logger.info('Attempting to reconnect to database...');
+    const log = getLogger();
+    if (log && typeof log.info === 'function') {
+      log.info('Attempting to reconnect to database...');
+    }
     await prisma.$disconnect().catch(() => {}); // Ignore disconnect errors
     await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
     
@@ -120,14 +148,22 @@ async function reconnectDB() {
     
     isConnected = true;
     reconnectAttempts = 0;
-    logger.info('✅ Database reconnected successfully');
+    const logSuccess = getLogger();
+    if (logSuccess && typeof logSuccess.info === 'function') {
+      logSuccess.info('✅ Database reconnected successfully');
+    }
     return true;
   } catch (error) {
     reconnectAttempts++;
-    logger.error(`❌ Database reconnection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} failed:`, error.message);
+    const logError = getLogger();
+    if (logError && typeof logError.error === 'function') {
+      logError.error(`❌ Database reconnection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS} failed:`, error.message);
+    }
     
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      logger.error('❌ Max reconnection attempts reached. Database connection unavailable.');
+      if (logError && typeof logError.error === 'function') {
+        logError.error('❌ Max reconnection attempts reached. Database connection unavailable.');
+      }
       isConnected = false;
       isReconnecting = false;
       return false;
@@ -162,11 +198,14 @@ async function safeQuery(queryFn, retries = 1) {
       error.code === 'P1000'; // P1000 = connection string missing
     
     if (isConnectionError && retries > 0) {
-      logger.warn('Database connection error detected, attempting to reconnect...', {
-        error: errorMessage,
-        code: error.code,
-        retriesLeft: retries - 1
-      });
+      const log = getLogger();
+      if (log && typeof log.warn === 'function') {
+        log.warn('Database connection error detected, attempting to reconnect...', {
+          error: errorMessage,
+          code: error.code,
+          retriesLeft: retries - 1
+        });
+      }
       
       isConnected = false;
       
@@ -189,20 +228,32 @@ async function safeQuery(queryFn, retries = 1) {
 async function disconnectDB() {
   try {
     await prisma.$disconnect();
-    logger.info('🔌 Database disconnected');
+    const log = getLogger();
+    if (log && typeof log.info === 'function') {
+      log.info('🔌 Database disconnected');
+    }
   } catch (error) {
-    logger.error('Error disconnecting database:', error);
+    const log = getLogger();
+    if (log && typeof log.error === 'function') {
+      log.error('Error disconnecting database:', error);
+    }
   }
 }
 
 // Handle database connection errors (Prisma events)
 try {
   prisma.$on('error', (e) => {
-    logger.error('Prisma error:', e);
+    const log = getLogger();
+    if (log && typeof log.error === 'function') {
+      log.error('Prisma error:', e);
+    }
   });
 } catch (error) {
   // Prisma event handlers may not be available in all versions
-  logger.warn('Could not set Prisma error handler:', error.message);
+  const log = getLogger();
+  if (log && typeof log.warn === 'function') {
+    log.warn('Could not set Prisma error handler:', error.message);
+  }
 }
 
 // Get connection pool statistics
