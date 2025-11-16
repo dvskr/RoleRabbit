@@ -9,7 +9,12 @@ interface ChatMessageProps {
   colors: ThemeColors;
 }
 
-export function ChatMessage({ message, colors }: ChatMessageProps) {
+/**
+ * ChatMessage Component
+ * Section 1.9 requirement #6: Memoized presentational component
+ * Prevents unnecessary re-renders when other chat messages change
+ */
+export const ChatMessage = React.memo(function ChatMessage({ message, colors }: ChatMessageProps) {
   return (
     <div className={`flex gap-2 ${message.role === 'user' ? 'flex-row-reverse' : ''}`} suppressHydrationWarning>
       {message.role === 'assistant' ? (
@@ -62,5 +67,5 @@ export function ChatMessage({ message, colors }: ChatMessageProps) {
       </div>
     </div>
   );
-}
+});
 

@@ -118,3 +118,168 @@ export function batchUpdates(updates: (() => void)[]): void {
     updates.forEach(update => update());
   }
 }
+
+/**
+ * React Hooks for Performance Optimization
+ * Section 1.9 requirements
+ */
+
+import { useState, useEffect, useRef, useCallback } from 'react';
+
+/**
+ * Hook for debounced values
+ * Requirement #1, #2: Debounce text inputs
+ *
+ * @param value - Value to debounce
+ * @param delay - Milliseconds to wait
+ * @returns Debounced value
+ */
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+/**
+ * Hook for debounced callbacks
+ * Requirement #1, #2: Debounce form inputs and subdomain check
+ *
+ * @param callback - Function to debounce
+ * @param delay - Milliseconds to wait
+ * @returns Debounced callback
+ */
+export function useDebouncedCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  delay: number
+): DebouncedFunction<T> {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const callbackRef = useRef(callback);
+
+  // Update callback ref on each render
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const debouncedFn = useCallback(
+    (...args: Parameters<T>) => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        callbackRef.current(...args);
+      }, delay);
+    },
+    [delay]
+  ) as DebouncedFunction<T>;
+
+  debouncedFn.cancel = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  return debouncedFn;
+}
+
+/**
+ * Hook for throttled callbacks
+ * Requirement #3: Throttle scroll and resize handlers
+ *
+ * @param callback - Function to throttle
+ * @param limit - Minimum milliseconds between executions
+ * @returns Throttled callback
+ */
+export function useThrottledCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  limit: number
+): (...args: Parameters<T>) => void {
+  const inThrottleRef = useRef<boolean>(false);
+  const callbackRef = useRef(callback);
+
+  // Update callback ref on each render
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
+
+  return useCallback(
+    (...args: Parameters<T>) => {
+      if (!inThrottleRef.current) {
+        callbackRef.current(...args);
+        inThrottleRef.current = true;
+        setTimeout(() => {
+          inThrottleRef.current = false;
+        }, limit);
+      }
+    },
+    [limit]
+  );
+}
+
+/**
+ * Hook for lazy loading images
+ * Requirement #8: Lazy load images in preview panel
+ *
+ * @param src - Image source URL
+ * @param placeholder - Placeholder while loading
+ * @returns Object with image state and ref
+ */
+export function useLazyImage(src: string, placeholder?: string) {
+  const [imageSrc, setImageSrc] = useState<string | undefined>(placeholder);
+  const [imageRef, setImageRef] = useState<HTMLImageElement | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!imageRef || !isClient) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setImageSrc(src);
+            setIsLoaded(true);
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      {
+        rootMargin: '50px', // Start loading 50px before element is visible
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(imageRef);
+
+    return () => {
+      if (imageRef) {
+        observer.unobserve(imageRef);
+      }
+    };
+  }, [imageRef, src]);
+
+  return {
+    imageSrc,
+    imageRef: setImageRef,
+    isLoaded,
+  };
+}

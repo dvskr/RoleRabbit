@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build output
+.next
+out
+dist
+build
+
+# Cache
+.turbo
+.cache
+.parcel-cache
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+
+# Testing coverage
+coverage
+
+# Database
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated files
+public/api-docs/openapi.yaml
+*.min.js
+*.min.css
+
+# Migrations (preserve exact formatting)
+apps/web/src/database/migrations/*.sql

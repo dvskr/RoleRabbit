@@ -82,8 +82,15 @@ export default function AIPortfolioBuilder({ profileData }: AIPortfolioBuilderPr
           />
 
           {/* Tab Content */}
-          <div className="p-4" suppressHydrationWarning>
-            {activeTab === 'ai-chat' && (
+          <div suppressHydrationWarning>
+            <div
+              role="tabpanel"
+              id="panel-ai-chat"
+              aria-labelledby="tab-ai-chat"
+              hidden={activeTab !== 'ai-chat'}
+              className="p-4"
+              tabIndex={0}
+            >
               <ChatPanel
                 messages={messages}
                 inputMessage={inputMessage}
@@ -92,9 +99,16 @@ export default function AIPortfolioBuilder({ profileData }: AIPortfolioBuilderPr
                 onQuickAction={handleQuickAction}
                 colors={colors}
               />
-            )}
+            </div>
 
-            {activeTab === 'style' && (
+            <div
+              role="tabpanel"
+              id="panel-style"
+              aria-labelledby="tab-style"
+              hidden={activeTab !== 'style'}
+              className="p-4"
+              tabIndex={0}
+            >
               <StylePanel
                 designStyle={designStyle}
                 themeColor={themeColor}
@@ -104,9 +118,16 @@ export default function AIPortfolioBuilder({ profileData }: AIPortfolioBuilderPr
                 onTypographyChange={setTypography}
                 colors={colors}
               />
-            )}
+            </div>
 
-            {activeTab === 'sections' && (
+            <div
+              role="tabpanel"
+              id="panel-sections"
+              aria-labelledby="tab-sections"
+              hidden={activeTab !== 'sections'}
+              className="p-4"
+              tabIndex={0}
+            >
               <SectionsPanel
                 sections={sections}
                 onToggleVisibility={toggleSectionVisibility}
@@ -114,7 +135,7 @@ export default function AIPortfolioBuilder({ profileData }: AIPortfolioBuilderPr
                 onAdd={addSection}
                 colors={colors}
               />
-            )}
+            </div>
           </div>
         </div>
 

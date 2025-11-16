@@ -1,0 +1,205 @@
+# Docker Compose Production Configuration (Section 4.5)
+# Multi-instance deployment with load balancing
+
+version: '3.8'
+
+services:
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+      - api-1
+      - api-2
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # API Server Instance 1
+  api-1:
+    build:
+      context: ..
+      dockerfile: ./apps/web/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - INSTANCE_ID=api-1
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DB_POOL_MIN=5
+      - DB_POOL_MAX=25
+    env_file:
+      - ../.env.production
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # API Server Instance 2
+  api-2:
+    build:
+      context: ..
+      dockerfile: ./apps/web/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - INSTANCE_ID=api-2
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - DB_POOL_MIN=5
+      - DB_POOL_MAX=25
+    env_file:
+      - ../.env.production
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Deployment Worker Instance 1
+  deployment-worker-1:
+    build:
+      context: ..
+      dockerfile: ./apps/workers/Dockerfile
+    command: ["node", "dist/workers/deployment.js"]
+    environment:
+      - NODE_ENV=production
+      - WORKER_ID=deployment-1
+      - DEPLOYMENT_CONCURRENCY=5
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    env_file:
+      - ../.env.production
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # Deployment Worker Instance 2
+  deployment-worker-2:
+    build:
+      context: ..
+      dockerfile: ./apps/workers/Dockerfile
+    command: ["node", "dist/workers/deployment.js"]
+    environment:
+      - NODE_ENV=production
+      - WORKER_ID=deployment-2
+      - DEPLOYMENT_CONCURRENCY=5
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    env_file:
+      - ../.env.production
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # PDF Worker Instance
+  pdf-worker:
+    build:
+      context: ..
+      dockerfile: ./apps/workers/Dockerfile
+    command: ["node", "dist/workers/pdf.js"]
+    environment:
+      - NODE_ENV=production
+      - WORKER_ID=pdf-1
+      - PDF_CONCURRENCY=10
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+    env_file:
+      - ../.env.production
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # Prometheus Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://monitoring.rolerabbit.com
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # Alertmanager
+  alertmanager:
+    image: prom/alertmanager:latest
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+  # Node Exporter (for system metrics)
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: unless-stopped
+    networks:
+      - rolerabbit-network
+
+networks:
+  rolerabbit-network:
+    driver: bridge
+
+volumes:
+  nginx-cache:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:

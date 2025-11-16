@@ -1,7 +1,23 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Upload, User, Briefcase, Linkedin, Github, Globe } from 'lucide-react';
+import {
+  validateName,
+  validateEmail,
+  validateURL,
+  validateBio,
+  validateImageFile,
+  sanitizeText,
+  collectFormErrors,
+  isFormValid,
+  VALIDATION_LIMITS,
+} from '../../utils/formValidation';
+import { ValidationMessage } from '../validation/ValidationMessage';
+import { CharacterCount } from '../validation/CharacterCount';
+import { FormValidationSummary } from '../validation/FormValidationSummary';
+import { LoadingOverlay, ButtonSpinner } from '../loading/LoadingSpinner';
+import { useUniqueId, useKeyboardNavigation } from '../../hooks/useA11y';
 
 interface SetupProfileData {
   firstName?: string;
@@ -40,149 +56,350 @@ interface SetupStepProps {
   onComplete: (data: SetupFormData) => void;
 }
 
+interface FieldState {
+  value: string;
+  touched: boolean;
+}
+
 export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
   const initialName = profileData ? `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() : '';
-  const [name, setName] = useState<string>(initialName);
-  const [email, setEmail] = useState<string>(profileData?.email ?? '');
-  const [role, setRole] = useState<string>(profileData?.currentRole ?? '');
+
+  // Loading states (Section 1.6)
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Generate unique IDs for accessibility (Section 1.8 requirement #4)
+  const nameErrorId = useUniqueId('name-error');
+  const emailErrorId = useUniqueId('email-error');
+  const roleErrorId = useUniqueId('role-error');
+  const bioErrorId = useUniqueId('bio-error');
+  const linkedinErrorId = useUniqueId('linkedin-error');
+  const githubErrorId = useUniqueId('github-error');
+  const websiteErrorId = useUniqueId('website-error');
+
+  // Field states
+  const [name, setName] = useState<FieldState>({ value: initialName, touched: false });
+  const [email, setEmail] = useState<FieldState>({ value: profileData?.email ?? '', touched: false });
+  const [role, setRole] = useState<FieldState>({ value: profileData?.currentRole ?? '', touched: false });
   const [company, setCompany] = useState<string>(profileData?.currentCompany ?? '');
-  const [bio, setBio] = useState<string>(profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '');
-  const [linkedin, setLinkedin] = useState<string>(profileData?.linkedin ?? '');
-  const [github, setGithub] = useState<string>(profileData?.github ?? '');
-  const [website, setWebsite] = useState<string>(profileData?.website ?? profileData?.portfolio ?? '');
+  const [bio, setBio] = useState<FieldState>({
+    value: profileData?.professionalBio ?? profileData?.bio ?? profileData?.professionalSummary?.overview ?? '',
+    touched: false,
+  });
+  const [linkedin, setLinkedin] = useState<FieldState>({ value: profileData?.linkedin ?? '', touched: false });
+  const [github, setGithub] = useState<FieldState>({ value: profileData?.github ?? '', touched: false });
+  const [website, setWebsite] = useState<FieldState>({
+    value: profileData?.website ?? profileData?.portfolio ?? '',
+    touched: false,
+  });
   const [profilePic, setProfilePic] = useState<string | null>(profileData?.profilePicture ?? null);
   const [template, setTemplate] = useState<string>('modern');
+
+  // Validation state
+  const [imageError, setImageError] = useState<string>('');
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Simulate loading profile data on mount (Section 1.6 requirement #1)
+  useEffect(() => {
+    const loadProfileData = async () => {
+      // Simulate fetching profile data
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsInitialLoading(false);
+    };
+
+    loadProfileData();
+  }, []);
+
   const templates = [
-    { 
-      id: 'modern', 
-      name: 'Modern Designer', 
-      preview: 'Futuristic with glassmorphism' 
+    {
+      id: 'modern',
+      name: 'Modern Designer',
+      preview: 'Futuristic with glassmorphism',
     },
-    { 
-      id: 'minimal', 
-      name: 'Minimalist', 
-      preview: 'Clean typography focused' 
+    {
+      id: 'minimal',
+      name: 'Minimalist',
+      preview: 'Clean typography focused',
     },
-    { 
-      id: 'creative', 
-      name: 'Creative Showcase', 
-      preview: 'Bold gradients & animations' 
+    {
+      id: 'creative',
+      name: 'Creative Showcase',
+      preview: 'Bold gradients & animations',
     },
-    { 
-      id: 'professional', 
-      name: 'Executive Professional', 
-      preview: 'Corporate & sophisticated' 
-    }
+    {
+      id: 'professional',
+      name: 'Executive Professional',
+      preview: 'Corporate & sophisticated',
+    },
   ];
+
+  // Keyboard navigation for template selection (Section 1.8 requirement #7)
+  const { handleKeyDown: handleTemplateKeyDown, setCurrentIndex } = useKeyboardNavigation(
+    templates,
+    (index) => {
+      setTemplate(templates[index].id);
+    },
+    {
+      orientation: 'both',
+      initialIndex: templates.findIndex(t => t.id === template),
+    }
+  );
+
+  // Update current index when template changes
+  React.useEffect(() => {
+    const index = templates.findIndex(t => t.id === template);
+    if (index !== -1) {
+      setCurrentIndex(index);
+    }
+  }, [template, setCurrentIndex]);
+
+  // Validation
+  const nameValidation = validateName(name.value);
+  const emailValidation = validateEmail(email.value);
+  const roleValidation = validateName(role.value); // Uses same validation as name
+  const bioValidation = validateBio(bio.value);
+  const linkedinValidation = validateURL(linkedin.value, 'LinkedIn URL', false);
+  const githubValidation = validateURL(github.value, 'GitHub URL', false);
+  const websiteValidation = validateURL(website.value, 'Website URL', false);
+
+  const validations = {
+    name: nameValidation,
+    email: emailValidation,
+    role: roleValidation,
+    bio: bioValidation,
+    linkedin: linkedinValidation,
+    github: githubValidation,
+    website: websiteValidation,
+  };
+
+  const formErrors = collectFormErrors(validations);
+  const formValid = isFormValid(validations);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePic(reader.result as string);
+    if (!file) return;
+
+    // Validate image file
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      setImageError(validation.error || '');
+      return;
+    }
+
+    setImageError('');
+
+    // Read and set image
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePic(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleContinue = async () => {
+    setAttemptedSubmit(true);
+
+    // Mark all fields as touched
+    setName(prev => ({ ...prev, touched: true }));
+    setEmail(prev => ({ ...prev, touched: true }));
+    setRole(prev => ({ ...prev, touched: true }));
+    setBio(prev => ({ ...prev, touched: true }));
+    setLinkedin(prev => ({ ...prev, touched: true }));
+    setGithub(prev => ({ ...prev, touched: true }));
+    setWebsite(prev => ({ ...prev, touched: true }));
+
+    if (!formValid) {
+      // Scroll to top to show errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Set saving state (Section 1.6 requirement #2)
+    setIsSaving(true);
+
+    try {
+      // Sanitize all text inputs before submitting
+      const data: SetupFormData = {
+        name: sanitizeText(name.value),
+        email: email.value.trim(),
+        role: company ? `${sanitizeText(role.value)} at ${sanitizeText(company)}` : sanitizeText(role.value),
+        bio: sanitizeText(bio.value),
+        professionalBio: sanitizeText(bio.value),
+        linkedin: linkedin.value.trim(),
+        github: github.value.trim(),
+        website: website.value.trim(),
+        profilePic,
+        template,
+        links: [linkedin.value, github.value, website.value].filter(Boolean),
       };
-      reader.readAsDataURL(file);
+
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      onComplete(data);
+    } finally {
+      setIsSaving(false);
     }
   };
-
-
-  const handleContinue = () => {
-    const data: SetupFormData = {
-      name,
-      email,
-      role: company ? `${role} at ${company}` : role,
-      bio,
-      professionalBio: bio,
-      linkedin,
-      github,
-      website,
-      profilePic,
-      template,
-      links: [linkedin, github, website].filter(Boolean)
-    };
-    onComplete(data);
-  };
-
-  const isFormValid = name.trim() && email.trim() && role.trim();
 
   return (
     <div className="h-full overflow-y-auto bg-gray-50">
       <div className="max-w-4xl mx-auto p-8">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-8 relative">
+          {/* Loading overlay when fetching profile data (Section 1.6 requirement #1) */}
+          {isInitialLoading && <LoadingOverlay text="Loading your profile..." />}
+
           <h2 className="text-3xl font-bold text-gray-900 mb-6">Setup Your Portfolio</h2>
           <p className="text-gray-600 mb-8">Let's start by gathering your basic information</p>
 
+          {/* Form Validation Summary */}
+          <FormValidationSummary errors={formErrors} show={attemptedSubmit && !formValid} />
 
           {/* Profile Picture Upload */}
           <div className="mb-8">
             <p className="block text-sm font-medium text-gray-700 mb-3">Profile Picture</p>
-            <div className="flex items-center gap-6">
-              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+            <div className="flex items-start gap-6">
+              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {profilePic ? (
-                  <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={profilePic} alt="Profile picture preview" className="w-full h-full object-cover" />
                 ) : (
-                  <User size={40} className="text-gray-400" />
+                  <User size={40} className="text-gray-400" aria-hidden="true" />
                 )}
               </div>
-              <div>
+              <div className="flex-1">
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  aria-label="Upload profile picture"
                   className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-purple-500 hover:text-purple-600 transition-all"
                 >
-                  <Upload size={16} className="inline mr-2" />
+                  <Upload size={16} className="inline mr-2" aria-hidden="true" />
                   Upload Photo
                 </button>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} aria-label="Upload profile picture" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={VALIDATION_LIMITS.ALLOWED_FILE_TYPES?.IMAGE?.join(',') || 'image/*'}
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  aria-label="Upload profile picture file input"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Max size: 5MB. Allowed: JPG, PNG, WebP
+                </p>
+                <ValidationMessage error={imageError} />
               </div>
             </div>
           </div>
 
           {/* Basic Information */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
+            {/* Name Field */}
             <div>
-              <label htmlFor="setup-full-name" className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+              <label htmlFor="setup-full-name" className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name <span className="text-red-600">*</span>
+              </label>
               <input
                 id="setup-full-name"
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                value={name.value}
+                onChange={e => setName({ value: e.target.value, touched: name.touched })}
+                onBlur={() => setName(prev => ({ ...prev, touched: true }))}
+                placeholder="e.g., John Doe"
+                maxLength={VALIDATION_LIMITS.NAME.MAX}
+                required
+                aria-required="true"
+                aria-invalid={!nameValidation.isValid && (name.touched || attemptedSubmit)}
+                aria-describedby={!nameValidation.isValid && (name.touched || attemptedSubmit) ? nameErrorId : undefined}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  !nameValidation.isValid && (name.touched || attemptedSubmit)
+                    ? 'border-red-500'
+                    : 'border-gray-300'
+                }`}
               />
+              <div className="flex items-center justify-between mt-1">
+                <ValidationMessage error={nameValidation.error} show={name.touched || attemptedSubmit} id={nameErrorId} />
+                <CharacterCount
+                  current={nameValidation.charCount || 0}
+                  max={nameValidation.maxChars || VALIDATION_LIMITS.NAME.MAX}
+                  className="ml-auto"
+                />
+              </div>
             </div>
+
+            {/* Email Field */}
             <div>
-              <label htmlFor="setup-email" className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+              <label htmlFor="setup-email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email <span className="text-red-600">*</span>
+              </label>
               <input
                 id="setup-email"
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={email.value}
+                onChange={e => setEmail({ value: e.target.value, touched: email.touched })}
+                onBlur={() => setEmail(prev => ({ ...prev, touched: true }))}
                 placeholder="john@example.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                maxLength={VALIDATION_LIMITS.EMAIL.MAX}
+                required
+                aria-required="true"
+                aria-invalid={!emailValidation.isValid && (email.touched || attemptedSubmit)}
+                aria-describedby={!emailValidation.isValid && (email.touched || attemptedSubmit) ? emailErrorId : undefined}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  !emailValidation.isValid && (email.touched || attemptedSubmit)
+                    ? 'border-red-500'
+                    : 'border-gray-300'
+                }`}
               />
+              <ValidationMessage error={emailValidation.error} show={email.touched || attemptedSubmit} id={emailErrorId} />
             </div>
+
+            {/* Role Field */}
             <div>
-              <label htmlFor="setup-role" className="block text-sm font-medium text-gray-700 mb-2">Role *</label>
+              <label htmlFor="setup-role" className="block text-sm font-medium text-gray-700 mb-2">
+                Role <span className="text-red-600">*</span>
+              </label>
               <input
                 id="setup-role"
                 type="text"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                placeholder="Software Engineer"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                value={role.value}
+                onChange={e => setRole({ value: e.target.value, touched: role.touched })}
+                onBlur={() => setRole(prev => ({ ...prev, touched: true }))}
+                placeholder="e.g., Senior Software Engineer"
+                maxLength={VALIDATION_LIMITS.ROLE.MAX}
+                required
+                aria-required="true"
+                aria-invalid={!roleValidation.isValid && (role.touched || attemptedSubmit)}
+                aria-describedby={!roleValidation.isValid && (role.touched || attemptedSubmit) ? roleErrorId : undefined}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                  !roleValidation.isValid && (role.touched || attemptedSubmit)
+                    ? 'border-red-500'
+                    : 'border-gray-300'
+                }`}
               />
+              <div className="flex items-center justify-between mt-1">
+                <ValidationMessage error={roleValidation.error} show={role.touched || attemptedSubmit} id={roleErrorId} />
+                <CharacterCount
+                  current={roleValidation.charCount || 0}
+                  max={roleValidation.maxChars || VALIDATION_LIMITS.ROLE.MAX}
+                  className="ml-auto"
+                />
+              </div>
             </div>
+
+            {/* Company Field */}
             <div>
-              <label htmlFor="setup-company" className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+              <label htmlFor="setup-company" className="block text-sm font-medium text-gray-700 mb-2">
+                Company
+              </label>
               <input
                 id="setup-company"
                 type="text"
                 value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                placeholder="Tech Corp"
+                onChange={e => setCompany(e.target.value)}
+                placeholder="e.g., Google, Microsoft, Acme Corp"
+                maxLength={100}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
@@ -190,50 +407,115 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
 
           {/* Bio */}
           <div className="mb-6">
-            <label htmlFor="setup-bio" className="block text-sm font-medium text-gray-700 mb-2">Professional Bio</label>
+            <label htmlFor="setup-bio" className="block text-sm font-medium text-gray-700 mb-2">
+              Professional Bio
+            </label>
             <textarea
               id="setup-bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell us about yourself..."
+              value={bio.value}
+              onChange={e => setBio({ value: e.target.value, touched: bio.touched })}
+              onBlur={() => setBio(prev => ({ ...prev, touched: true }))}
+              placeholder="e.g., Passionate software engineer with 5 years of experience building scalable web applications..."
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              maxLength={VALIDATION_LIMITS.BIO.MAX}
+              aria-invalid={!bioValidation.isValid && (bio.touched || attemptedSubmit)}
+              aria-describedby={!bioValidation.isValid && (bio.touched || attemptedSubmit) ? bioErrorId : undefined}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                !bioValidation.isValid && (bio.touched || attemptedSubmit)
+                  ? 'border-red-500'
+                  : 'border-gray-300'
+              }`}
             />
+            <div className="flex items-center justify-between mt-1">
+              <ValidationMessage error={bioValidation.error} show={bio.touched || attemptedSubmit} id={bioErrorId} />
+              <CharacterCount
+                current={bioValidation.charCount || 0}
+                max={bioValidation.maxChars || VALIDATION_LIMITS.BIO.MAX}
+                className="ml-auto"
+              />
+            </div>
           </div>
 
           {/* Social Links */}
           <div className="mb-8">
             <p className="block text-sm font-medium text-gray-700 mb-3">Social Links</p>
             <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Linkedin size={20} className="text-blue-600" />
-                <input
-                  type="url"
-                  value={linkedin}
-                  onChange={(e) => setLinkedin(e.target.value)}
-                  placeholder="https://linkedin.com/in/yourname"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+              {/* LinkedIn */}
+              <div>
+                <div className="flex items-center gap-3">
+                  <Linkedin size={20} className="text-blue-600 flex-shrink-0" aria-hidden="true" />
+                  <div className="flex-1">
+                    <label htmlFor="setup-linkedin" className="sr-only">LinkedIn URL</label>
+                    <input
+                      id="setup-linkedin"
+                      type="url"
+                      value={linkedin.value}
+                      onChange={e => setLinkedin({ value: e.target.value, touched: linkedin.touched })}
+                      onBlur={() => setLinkedin(prev => ({ ...prev, touched: true }))}
+                      placeholder="https://linkedin.com/in/yourname"
+                      aria-invalid={!linkedinValidation.isValid && (linkedin.touched || attemptedSubmit)}
+                      aria-describedby={!linkedinValidation.isValid && (linkedin.touched || attemptedSubmit) ? linkedinErrorId : undefined}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                        !linkedinValidation.isValid && (linkedin.touched || attemptedSubmit)
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <ValidationMessage error={linkedinValidation.error} show={linkedin.touched || attemptedSubmit} id={linkedinErrorId} />
               </div>
-              <div className="flex items-center gap-3">
-                <Github size={20} className="text-gray-800" />
-                <input
-                  type="url"
-                  value={github}
-                  onChange={(e) => setGithub(e.target.value)}
-                  placeholder="https://github.com/yourname"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+
+              {/* GitHub */}
+              <div>
+                <div className="flex items-center gap-3">
+                  <Github size={20} className="text-gray-800 flex-shrink-0" aria-hidden="true" />
+                  <div className="flex-1">
+                    <label htmlFor="setup-github" className="sr-only">GitHub URL</label>
+                    <input
+                      id="setup-github"
+                      type="url"
+                      value={github.value}
+                      onChange={e => setGithub({ value: e.target.value, touched: github.touched })}
+                      onBlur={() => setGithub(prev => ({ ...prev, touched: true }))}
+                      placeholder="https://github.com/yourname"
+                      aria-invalid={!githubValidation.isValid && (github.touched || attemptedSubmit)}
+                      aria-describedby={!githubValidation.isValid && (github.touched || attemptedSubmit) ? githubErrorId : undefined}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                        !githubValidation.isValid && (github.touched || attemptedSubmit)
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <ValidationMessage error={githubValidation.error} show={github.touched || attemptedSubmit} id={githubErrorId} />
               </div>
-              <div className="flex items-center gap-3">
-                <Globe size={20} className="text-purple-600" />
-                <input
-                  type="url"
-                  value={website}
-                  onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="https://yourwebsite.com"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+
+              {/* Website */}
+              <div>
+                <div className="flex items-center gap-3">
+                  <Globe size={20} className="text-purple-600 flex-shrink-0" aria-hidden="true" />
+                  <div className="flex-1">
+                    <label htmlFor="setup-website" className="sr-only">Website URL</label>
+                    <input
+                      id="setup-website"
+                      type="url"
+                      value={website.value}
+                      onChange={e => setWebsite({ value: e.target.value, touched: website.touched })}
+                      onBlur={() => setWebsite(prev => ({ ...prev, touched: true }))}
+                      placeholder="https://yourwebsite.com"
+                      aria-invalid={!websiteValidation.isValid && (website.touched || attemptedSubmit)}
+                      aria-describedby={!websiteValidation.isValid && (website.touched || attemptedSubmit) ? websiteErrorId : undefined}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                        !websiteValidation.isValid && (website.touched || attemptedSubmit)
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <ValidationMessage error={websiteValidation.error} show={website.touched || attemptedSubmit} id={websiteErrorId} />
               </div>
             </div>
           </div>
@@ -241,15 +523,23 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
           {/* Template Selection */}
           <div className="mb-8">
             <p className="block text-sm font-medium text-gray-700 mb-3">Choose Template</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {templates.map((t) => (
+            <div
+              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+              role="radiogroup"
+              aria-label="Portfolio template selection"
+              onKeyDown={handleTemplateKeyDown}
+            >
+              {templates.map((t, index) => (
                 <button
                   key={t.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={template === t.id}
+                  aria-label={`${t.name}: ${t.preview}`}
+                  tabIndex={template === t.id ? 0 : -1}
                   onClick={() => setTemplate(t.id)}
-                  className={`p-4 border-2 rounded-lg text-left transition-all ${
-                    template === t.id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                  className={`p-4 border-2 rounded-lg text-left transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                    template === t.id ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   {/* Template Preview */}
@@ -318,12 +608,23 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
           {/* Continue Button */}
           <div className="flex justify-end">
             <button
+              type="button"
               onClick={handleContinue}
-              disabled={!isFormValid}
+              disabled={(!formValid && attemptedSubmit) || isSaving}
               className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title={!formValid ? 'Please fix validation errors' : isSaving ? 'Saving...' : ''}
             >
-              Continue
-              <Briefcase size={20} />
+              {isSaving ? (
+                <>
+                  <ButtonSpinner size="sm" variant="white" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Continue
+                  <Briefcase size={20} />
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -331,4 +632,3 @@ export default function SetupStep({ profileData, onComplete }: SetupStepProps) {
     </div>
   );
 }
-

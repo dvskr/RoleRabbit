@@ -1,6 +1,7 @@
 /**
  * User-friendly error message utilities
  * Converts technical errors into actionable user messages
+ * Maps backend error codes to user-friendly messages (Section 1.5)
  */
 
 export interface ErrorContext {
@@ -10,8 +11,49 @@ export interface ErrorContext {
   originalError?: any;
 }
 
+// HTTP Status Code to User-Friendly Message Mapping (Section 1.5 requirement)
+export const HTTP_STATUS_MESSAGES: Record<number, string> = {
+  // Client Errors (4xx)
+  400: 'Invalid request. Please check your input and try again.',
+  401: 'You need to be logged in to perform this action.',
+  403: "You don't have permission to access this resource.",
+  404: 'Portfolio not found.',
+  405: 'This action is not allowed.',
+  408: 'Request timeout. Please try again.',
+  409: 'This action conflicts with the current state. Please refresh and try again.',
+  413: 'The file is too large. Please upload a smaller file.',
+  415: 'This file type is not supported.',
+  422: 'Unable to process your request. Please check your input.',
+  429: 'Too many requests, please wait a moment and try again.',
+
+  // Server Errors (5xx)
+  500: 'Server error, please try again.',
+  502: 'Unable to connect to the server. Please try again.',
+  503: 'The service is temporarily unavailable. Please try again later.',
+  504: 'The request took too long. Please try again.',
+};
+
+// Backend Error Codes to User-Friendly Messages (Section 1.5 requirement)
+export const ERROR_CODE_MESSAGES: Record<string, string> = {
+  // Portfolio-specific errors
+  PORTFOLIO_NOT_FOUND: 'Portfolio not found.',
+  PORTFOLIO_NAME_TAKEN: 'This portfolio name is already taken.',
+  PORTFOLIO_LIMIT_REACHED: 'You have reached the maximum number of portfolios.',
+  SUBDOMAIN_NOT_AVAILABLE: 'This subdomain is already taken.',
+  SUBDOMAIN_INVALID: 'Invalid subdomain format.',
+  CUSTOM_DOMAIN_INVALID: 'Invalid custom domain.',
+  TEMPLATE_NOT_FOUND: 'Template not found.',
+
+  // General errors
+  VALIDATION_ERROR: 'Please check your input and try again.',
+  UNAUTHORIZED: "You don't have permission to perform this action.",
+  RATE_LIMIT_EXCEEDED: 'Too many requests, please wait.',
+  SERVER_ERROR: 'Server error, please try again.',
+};
+
 /**
  * Gets user-friendly error message based on error type
+ * First checks specific error codes, then HTTP status codes, then falls back to pattern matching
  */
 export const getUserFriendlyError = (
   error: any,
@@ -20,6 +62,25 @@ export const getUserFriendlyError = (
   const errorMessage = error?.message || error?.error || String(error || 'Unknown error');
   const lowerMessage = errorMessage.toLowerCase();
   const statusCode = error?.statusCode || error?.status;
+  const errorCode = error?.code || error?.errorCode || context.errorCode;
+
+  // First, check for specific error codes (Section 1.5 requirement)
+  if (errorCode && typeof errorCode === 'string' && ERROR_CODE_MESSAGES[errorCode]) {
+    return {
+      message: ERROR_CODE_MESSAGES[errorCode],
+      action: getActionForErrorCode(errorCode),
+      canRetry: isRetryableErrorCode(errorCode),
+    };
+  }
+
+  // Second, check for HTTP status codes (Section 1.5 requirement)
+  if (statusCode && HTTP_STATUS_MESSAGES[statusCode]) {
+    return {
+      message: HTTP_STATUS_MESSAGES[statusCode],
+      action: getActionForStatusCode(statusCode),
+      canRetry: isRetryableStatusCode(statusCode),
+    };
+  }
 
   // Network/Connection errors
   if (
@@ -181,4 +242,61 @@ export const getErrorRecoverySteps = (error: any, context: ErrorContext = {}): s
 
   return steps;
 };
+
+/**
+ * Helper: Get action text for specific error codes
+ */
+function getActionForErrorCode(errorCode: string): string | undefined {
+  const actions: Record<string, string> = {
+    PORTFOLIO_NOT_FOUND: 'Go back to portfolios list',
+    PORTFOLIO_NAME_TAKEN: 'Choose a different name',
+    PORTFOLIO_LIMIT_REACHED: 'Upgrade your plan or delete unused portfolios',
+    SUBDOMAIN_NOT_AVAILABLE: 'Try a different subdomain',
+    SUBDOMAIN_INVALID: 'Check subdomain requirements',
+    CUSTOM_DOMAIN_INVALID: 'Check domain format',
+    TEMPLATE_NOT_FOUND: 'Go back to templates',
+    VALIDATION_ERROR: 'Fix the errors and try again',
+    UNAUTHORIZED: 'Log in or contact support',
+    RATE_LIMIT_EXCEEDED: 'Wait a moment and try again',
+    SERVER_ERROR: 'Try again in a few moments',
+  };
+  return actions[errorCode];
+}
+
+/**
+ * Helper: Check if error code is retryable
+ */
+function isRetryableErrorCode(errorCode: string): boolean {
+  const retryable = [
+    'RATE_LIMIT_EXCEEDED',
+    'SERVER_ERROR',
+    'SUBDOMAIN_NOT_AVAILABLE',
+  ];
+  return retryable.includes(errorCode);
+}
+
+/**
+ * Helper: Get action text for HTTP status codes
+ */
+function getActionForStatusCode(statusCode: number): string | undefined {
+  if (statusCode === 401) return 'Log in again';
+  if (statusCode === 403) return 'Contact support if you believe this is an error';
+  if (statusCode === 404) return 'Check the URL or go back';
+  if (statusCode === 429) return 'Wait a moment and try again';
+  if (statusCode >= 500) return 'Try again in a few moments';
+  return 'Try again';
+}
+
+/**
+ * Helper: Check if HTTP status code is retryable
+ */
+function isRetryableStatusCode(statusCode: number): boolean {
+  // 5xx server errors are retryable
+  if (statusCode >= 500 && statusCode < 600) return true;
+  // 408 (Timeout) and 429 (Rate Limit) are retryable
+  if (statusCode === 408 || statusCode === 429) return true;
+  // 404 can be retried (might be temporary)
+  if (statusCode === 404) return true;
+  return false;
+}
 

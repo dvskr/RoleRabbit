@@ -1,0 +1,203 @@
+# Alertmanager Configuration (Section 4.6)
+
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Route alerts to receivers
+route:
+  # Default receiver
+  receiver: 'default'
+
+  # Group alerts by cluster, alertname, and severity
+  group_by: ['cluster', 'alertname', 'severity']
+
+  # Wait 30s to batch alerts together
+  group_wait: 30s
+
+  # Send a notification after 5m if new alerts for same group arrive
+  group_interval: 5m
+
+  # Re-send alert after 4h if still firing
+  repeat_interval: 4h
+
+  # Sub-routes for different alert types
+  routes:
+    # Critical alerts go to PagerDuty
+    - match:
+        severity: critical
+      receiver: 'pagerduty'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # Warning alerts go to Slack
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+      group_wait: 30s
+
+    # API alerts
+    - match:
+        component: api
+      receiver: 'slack-api'
+
+    # Deployment alerts
+    - match:
+        component: deployment
+      receiver: 'slack-deployments'
+
+    # Database alerts
+    - match:
+        component: database
+      receiver: 'slack-database'
+
+    # Queue alerts
+    - match:
+        component: queue
+      receiver: 'slack-queue'
+
+# Inhibition rules (suppress alerts when other alerts are firing)
+inhibit_rules:
+  # Inhibit all alerts if instance is down
+  - source_match:
+      alertname: 'InstanceDown'
+    target_match_re:
+      instance: '.*'
+    equal: ['instance']
+
+  # Inhibit warning if critical alert exists
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'component']
+
+# Receivers (notification destinations)
+receivers:
+  # Default receiver (email)
+  - name: 'default'
+    email_configs:
+      - to: 'alerts@rolerabbit.com'
+        from: 'prometheus@rolerabbit.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: '${SMTP_USERNAME}'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: '[RoleRabbit] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          Alert: {{ .Labels.alertname }}
+          Severity: {{ .Labels.severity }}
+          Component: {{ .Labels.component }}
+          Description: {{ .Annotations.description }}
+          {{ end }}
+
+  # PagerDuty for critical alerts
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        description: '{{ .GroupLabels.alertname }}: {{ .GroupLabels.instance }}'
+        severity: '{{ .CommonLabels.severity }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          alertname: '{{ .GroupLabels.alertname }}'
+          component: '{{ .GroupLabels.component }}'
+
+  # Slack for warnings
+  - name: 'slack-warnings'
+    slack_configs:
+      - channel: '#alerts-warnings'
+        username: 'RoleRabbit Alerts'
+        icon_emoji: ':warning:'
+        title: '{{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Component:* {{ .Labels.component }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Slack for API alerts
+  - name: 'slack-api'
+    slack_configs:
+      - channel: '#alerts-api'
+        username: 'RoleRabbit API Alerts'
+        icon_emoji: ':rotating_light:'
+        title: '{{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          *Status:* {{ .Status }}
+          {{ end }}
+        send_resolved: true
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+  # Slack for deployment alerts
+  - name: 'slack-deployments'
+    slack_configs:
+      - channel: '#alerts-deployments'
+        username: 'RoleRabbit Deployment Alerts'
+        icon_emoji: ':rocket:'
+        title: '{{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Slack for database alerts
+  - name: 'slack-database'
+    slack_configs:
+      - channel: '#alerts-database'
+        username: 'RoleRabbit Database Alerts'
+        icon_emoji: ':database:'
+        title: '{{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Slack for queue alerts
+  - name: 'slack-queue'
+    slack_configs:
+      - channel: '#alerts-queue'
+        username: 'RoleRabbit Queue Alerts'
+        icon_emoji: ':hourglass:'
+        title: '{{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Alert:* {{ .Labels.alertname }}
+          *Severity:* {{ .Labels.severity }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Webhook for custom integrations
+  - name: 'webhook'
+    webhook_configs:
+      - url: '${ALERT_WEBHOOK_URL}'
+        send_resolved: true
+        http_config:
+          basic_auth:
+            username: '${WEBHOOK_USERNAME}'
+            password: '${WEBHOOK_PASSWORD}'

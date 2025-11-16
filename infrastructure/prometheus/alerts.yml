@@ -1,0 +1,294 @@
+# Prometheus Alert Rules (Section 4.6)
+
+groups:
+  - name: deployment_alerts
+    interval: 1m
+    rules:
+      # Alert if deployment failure rate >10%
+      - alert: HighDeploymentFailureRate
+        expr: |
+          (
+            sum(rate(rolerabbit_deployment_failure_total[5m])) /
+            sum(rate(rolerabbit_portfolio_deployments_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "High deployment failure rate detected"
+          description: "Deployment failure rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # Alert if deployment queue is growing
+      - alert: DeploymentQueueBacklog
+        expr: rolerabbit_deployment_queue_length > 50
+        for: 10m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "Deployment queue has significant backlog"
+          description: "{{ $value }} deployments waiting in queue"
+
+      # Alert if deployment duration is too high
+      - alert: SlowDeployments
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(rolerabbit_deployment_duration_seconds_bucket[5m])) by (le)
+          ) > 300
+        for: 10m
+        labels:
+          severity: warning
+          component: deployment
+        annotations:
+          summary: "Deployments are taking too long"
+          description: "95th percentile deployment time is {{ $value }}s (threshold: 300s)"
+
+  - name: api_alerts
+    interval: 1m
+    rules:
+      # Alert if API error rate >5%
+      - alert: HighAPIErrorRate
+        expr: |
+          (
+            sum(rate(rolerabbit_http_requests_total{status_code=~"5.."}[5m])) /
+            sum(rate(rolerabbit_http_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Alert if API response time is slow
+      - alert: SlowAPIResponses
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(rolerabbit_http_request_duration_seconds_bucket[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API responses are slow"
+          description: "95th percentile response time is {{ $value }}s (threshold: 2s)"
+
+      # Alert if API is down
+      - alert: APIDown
+        expr: up{job="rolerabbit-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API instance is down"
+          description: "API instance {{ $labels.instance }} is not responding"
+
+  - name: database_alerts
+    interval: 1m
+    rules:
+      # Alert if database connections >80%
+      - alert: HighDatabaseConnections
+        expr: |
+          (
+            rolerabbit_database_connections_active /
+            (rolerabbit_database_connections_active + rolerabbit_database_connections_idle)
+          ) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database connection usage"
+          description: "Database connections at {{ $value | humanizePercentage }} of pool capacity (threshold: 80%)"
+
+      # Alert if database query errors are high
+      - alert: DatabaseQueryErrors
+        expr: rate(rolerabbit_database_query_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database query error rate"
+          description: "{{ $value }} database errors per second"
+
+      # Alert if database response time is slow
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(rolerabbit_database_query_duration_seconds_bucket[5m])) by (le)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database queries are slow"
+          description: "95th percentile query time is {{ $value }}s (threshold: 1s)"
+
+  - name: queue_alerts
+    interval: 1m
+    rules:
+      # Alert if queue job failure rate is high
+      - alert: HighQueueJobFailureRate
+        expr: |
+          (
+            sum(rate(rolerabbit_queue_jobs_failed_total[5m])) by (queue) /
+            sum(rate(rolerabbit_queue_jobs_completed_total[5m])) by (queue)
+          ) > 0.15
+        for: 5m
+        labels:
+          severity: warning
+          component: queue
+        annotations:
+          summary: "High queue job failure rate"
+          description: "Queue {{ $labels.queue }} failure rate is {{ $value | humanizePercentage }} (threshold: 15%)"
+
+      # Alert if queue is not being processed
+      - alert: QueueStalled
+        expr: |
+          (rolerabbit_queue_jobs_waiting > 10) AND
+          (rate(rolerabbit_queue_jobs_completed_total[5m]) == 0)
+        for: 10m
+        labels:
+          severity: critical
+          component: queue
+        annotations:
+          summary: "Queue processing appears stalled"
+          description: "Queue {{ $labels.queue }} has {{ $value }} waiting jobs but no completed jobs in last 5 minutes"
+
+  - name: system_alerts
+    interval: 1m
+    rules:
+      # Alert if memory usage is high
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes
+          ) / node_memory_MemTotal_bytes > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # Alert if CPU usage is high
+      - alert: HighCPUUsage
+        expr: |
+          100 - (
+            avg by (instance) (
+              irate(node_cpu_seconds_total{mode="idle"}[5m])
+            ) * 100
+          ) > 85
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% (threshold: 85%)"
+
+      # Alert if disk usage is high
+      - alert: HighDiskUsage
+        expr: |
+          (
+            node_filesystem_avail_bytes{mountpoint="/"} /
+            node_filesystem_size_bytes{mountpoint="/"}
+          ) < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Low disk space"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining (threshold: 15%)"
+
+      # Alert if instance is down
+      - alert: InstanceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Instance is down"
+          description: "{{ $labels.job }} instance {{ $labels.instance }} has been down for more than 5 minutes"
+
+  - name: storage_alerts
+    interval: 1m
+    rules:
+      # Alert if storage upload failure rate is high
+      - alert: HighStorageUploadFailureRate
+        expr: |
+          (
+            sum(rate(rolerabbit_storage_uploads_total{status="failed"}[5m])) /
+            sum(rate(rolerabbit_storage_uploads_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "High storage upload failure rate"
+          description: "Storage upload failure rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+  - name: cdn_alerts
+    interval: 1m
+    rules:
+      # Alert if CDN invalidation failure rate is high
+      - alert: HighCDNInvalidationFailureRate
+        expr: |
+          (
+            sum(rate(rolerabbit_cdn_invalidations_total{status="failed"}[5m])) /
+            sum(rate(rolerabbit_cdn_invalidations_total[5m]))
+          ) > 0.15
+        for: 5m
+        labels:
+          severity: warning
+          component: cdn
+        annotations:
+          summary: "High CDN invalidation failure rate"
+          description: "CDN invalidation failure rate is {{ $value | humanizePercentage }} (threshold: 15%)"
+
+  - name: ssl_alerts
+    interval: 1m
+    rules:
+      # Alert if SSL provisioning is failing
+      - alert: SSLProvisioningFailures
+        expr: rate(rolerabbit_ssl_certificates_provisioned_total[1h]) == 0 AND rate(rolerabbit_ssl_provisioning_duration_seconds_count[1h]) > 0
+        for: 30m
+        labels:
+          severity: warning
+          component: ssl
+        annotations:
+          summary: "SSL certificate provisioning is failing"
+          description: "No successful SSL provisioning in the last hour despite attempts"
+
+  - name: error_alerts
+    interval: 1m
+    rules:
+      # Alert if total error rate is high
+      - alert: HighErrorRate
+        expr: rate(rolerabbit_errors_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High application error rate"
+          description: "{{ $value }} errors per second across all components"
+
+      # Alert if critical errors are occurring
+      - alert: CriticalErrors
+        expr: rate(rolerabbit_errors_total{severity="critical"}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical errors detected"
+          description: "{{ $value }} critical errors per second in {{ $labels.component }}"
