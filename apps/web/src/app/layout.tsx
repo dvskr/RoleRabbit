@@ -6,6 +6,7 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { ProfileProvider } from '../contexts/ProfileContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import GlobalErrorBoundary from '../components/GlobalErrorBoundary';
+import { ServiceWorkerRegistration } from '../components/ServiceWorkerRegistration';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -80,6 +81,7 @@ export default function RootLayout({
         style={{ margin: 0, padding: 0, backgroundColor: initialBodyBackground }}
         suppressHydrationWarning
       >
+        <ServiceWorkerRegistration />
         <GlobalErrorBoundary level="page">
           <ThemeProvider initialThemeMode={initialTheme}>
             <AuthProvider>

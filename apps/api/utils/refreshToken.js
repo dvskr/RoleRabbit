@@ -3,6 +3,7 @@
  */
 
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 const { prisma } = require('./db');
 const logger = require('./logger');
 
@@ -20,12 +21,22 @@ function generateRefreshToken() {
  * @returns {Promise<string>} The refresh token
  */
 async function createRefreshToken(userId, expiresInDays = 7) {
+  // Ensure refresh_tokens model exists (defensive check)
+  if (!prisma.refresh_tokens) {
+    logger.error('Prisma refresh_tokens model not found. Run "npx prisma generate" to regenerate the client.');
+    throw new Error('Refresh token model not available');
+  }
+  
   const token = generateRefreshToken();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-  await prisma.refreshToken.create({
+  // Generate UUID for refresh token id
+  const refreshTokenId = uuidv4();
+
+  await prisma.refresh_tokens.create({
     data: {
+      id: refreshTokenId,
       userId,
       token,
       expiresAt,
@@ -42,9 +53,15 @@ async function createRefreshToken(userId, expiresInDays = 7) {
  */
 async function verifyRefreshToken(token) {
   try {
-    const refreshToken = await prisma.refreshToken.findUnique({
+    // Ensure refresh_tokens model exists (defensive check)
+    if (!prisma.refresh_tokens) {
+      logger.error('Prisma refresh_tokens model not found. Run "npx prisma generate" to regenerate the client.');
+      return null;
+    }
+    
+    const refreshToken = await prisma.refresh_tokens.findUnique({
       where: { token },
-      include: { user: true },
+      include: { users: true },
     });
 
     if (!refreshToken) {
@@ -54,7 +71,7 @@ async function verifyRefreshToken(token) {
     // Check if token is expired
     if (new Date() > refreshToken.expiresAt) {
       // Remove expired token
-      await prisma.refreshToken.delete({
+      await prisma.refresh_tokens.delete({
         where: { token },
       });
       return null;
@@ -62,7 +79,7 @@ async function verifyRefreshToken(token) {
 
     return {
       userId: refreshToken.userId,
-      user: refreshToken.user,
+      user: refreshToken.users,
     };
   } catch (error) {
     logger.error('Error decoding refresh token:', error);
@@ -76,7 +93,7 @@ async function verifyRefreshToken(token) {
  */
 async function deleteRefreshToken(token) {
   try {
-    await prisma.refreshToken.delete({
+    await prisma.refresh_tokens.delete({
       where: { token },
     });
   } catch (error) {
@@ -90,7 +107,7 @@ async function deleteRefreshToken(token) {
  */
 async function deleteAllUserRefreshTokens(userId) {
   try {
-    await prisma.refreshToken.deleteMany({
+    await prisma.refresh_tokens.deleteMany({
       where: { userId },
     });
   } catch (error) {
@@ -103,7 +120,7 @@ async function deleteAllUserRefreshTokens(userId) {
  */
 async function cleanupExpiredTokens() {
   try {
-    const result = await prisma.refreshToken.deleteMany({
+    const result = await prisma.refresh_tokens.deleteMany({
       where: {
         expiresAt: {
           lt: new Date(),

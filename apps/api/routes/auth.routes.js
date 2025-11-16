@@ -9,8 +9,8 @@
  * - 2FA (via separate twoFactorAuth.routes.js)
  */
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// Use shared Prisma client instance
+const { prisma } = require('../utils/db');
 
 // Import utilities
 const { registerUser, authenticateUser, getUserById, resetUserPassword } = require('../auth');
@@ -150,11 +150,11 @@ async function authRoutes(fastify, _options) {
     }
   });
 
-  // Login endpoint
+  // Login endpoint - More lenient rate limiting for login attempts
   fastify.post('/api/auth/login', {
     config: {
       rateLimit: {
-        max: 5,
+        max: 10, // Increased from 5 to 10
         timeWindow: '15 minutes'
       }
     }
@@ -208,26 +208,34 @@ async function authRoutes(fastify, _options) {
       const userAgent = request.headers['user-agent'];
       const sessionId = await createSession(user.id, ipAddress, userAgent, 7); // 10 years
       
-      // Fetch user profile data
-      const userProfile = await prisma.userProfile.findUnique({
-        where: { userId: user.id },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          phone: true,
-          personalEmail: true,
-          location: true,
-          profilePicture: true,
-          professionalBio: true,
-          linkedin: true,
-          github: true,
-          portfolio: true,
-          website: true,
-          createdAt: true,
-          updatedAt: true
+      // Fetch user profile data if available
+      let userProfile = null;
+      if (prisma.user_profiles) {
+        try {
+          userProfile = await prisma.user_profiles.findUnique({
+            where: { userId: user.id },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              personalEmail: true,
+              location: true,
+              profilePicture: true,
+              professionalBio: true,
+              linkedin: true,
+              github: true,
+              portfolio: true,
+              website: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          });
+        } catch (profileError) {
+          // User profile may not exist, which is fine
+          logger.debug('User profile not found:', profileError.message);
         }
-      });
+      }
       
       // Prepare user object first - ensure it's serializable
       // Merge user and profile data
@@ -434,26 +442,34 @@ async function authRoutes(fastify, _options) {
       });
     }
     
-    // Fetch user profile data
-    const userProfile = await prisma.userProfile.findUnique({
-      where: { userId: user.id },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        personalEmail: true,
-        location: true,
-        profilePicture: true,
-        professionalBio: true,
-        linkedin: true,
-        github: true,
-        portfolio: true,
-        website: true,
-        createdAt: true,
-        updatedAt: true
+    // Fetch user profile data if available
+    let userProfile = null;
+    if (prisma.user_profiles) {
+      try {
+        userProfile = await prisma.user_profiles.findUnique({
+          where: { userId: user.id },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            personalEmail: true,
+            location: true,
+            profilePicture: true,
+            professionalBio: true,
+            linkedin: true,
+            github: true,
+            portfolio: true,
+            website: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
+      } catch (profileError) {
+        // User profile may not exist, which is fine
+        logger.debug('User profile not found:', profileError.message);
       }
-    });
+    }
     
     // Merge user and profile data
     const userWithProfile = {
@@ -520,7 +536,7 @@ async function authRoutes(fastify, _options) {
       }
       
       // Find user by email (only select fields that exist in users table)
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { email },
         select: {
           id: true,
@@ -684,7 +700,7 @@ async function authRoutes(fastify, _options) {
       }
 
       // Get user's current email
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         select: { email: true }
       });
@@ -762,7 +778,7 @@ async function authRoutes(fastify, _options) {
       }
 
       // Check if email is already in use
-      const existingUser = await prisma.user.findUnique({
+      const existingUser = await prisma.users.findUnique({
         where: { email: newEmail.toLowerCase() }
       });
 
@@ -842,7 +858,7 @@ async function authRoutes(fastify, _options) {
         });
 
         // Send notification to current email
-        const user = await prisma.user.findUnique({
+        const user = await prisma.users.findUnique({
           where: { id: userId },
           select: { email: true }
         });
@@ -887,7 +903,7 @@ async function authRoutes(fastify, _options) {
         }
 
         // Get current email before updating
-        const user = await prisma.user.findUnique({
+        const user = await prisma.users.findUnique({
           where: { id: userId },
           select: { email: true }
         });
@@ -895,7 +911,7 @@ async function authRoutes(fastify, _options) {
         const oldEmail = user?.email;
 
         // Update email
-        await prisma.user.update({
+        await prisma.users.update({
           where: { id: userId },
           data: { email: newEmail.toLowerCase() }
         });

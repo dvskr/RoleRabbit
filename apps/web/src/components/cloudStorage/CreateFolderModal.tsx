@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FolderPlus, X } from 'lucide-react';
+import { FolderPlus, X, AlertCircle } from 'lucide-react';
 import { CreateFolderModalProps } from './types';
 import { MODAL_BACKDROP_STYLE, MODAL_MAX_WIDTH } from './constants';
+import { validateFolderName, MAX_FOLDER_NAME_LENGTH } from '../../utils/validation';
 
 export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   isOpen,
@@ -12,10 +13,19 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   colors,
 }) => {
   const [folderName, setFolderName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
+    // FE-027: Validate folder name
+    const validation = validateFolderName(folderName);
+    if (!validation.valid) {
+      setNameError(validation.error || 'Invalid folder name');
+      return;
+    }
+    
+    setNameError(null);
     if (folderName.trim()) {
       onConfirm(folderName.trim());
       setFolderName('');
@@ -91,22 +101,52 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
             <input
               type="text"
               value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // FE-027: Enforce max length
+                if (value.length <= MAX_FOLDER_NAME_LENGTH) {
+                  setFolderName(value);
+                  // Clear error when user types
+                  if (nameError) {
+                    setNameError(null);
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                // FE-027: Validate on blur
+                const validation = validateFolderName(e.target.value);
+                if (!validation.valid) {
+                  setNameError(validation.error || 'Invalid folder name');
+                  e.currentTarget.style.borderColor = colors.errorRed;
+                } else {
+                  setNameError(null);
+                  e.currentTarget.style.borderColor = colors.border;
+                }
+              }}
               placeholder="My Folder"
+              maxLength={MAX_FOLDER_NAME_LENGTH}
               className="w-full px-3 py-2 rounded-lg transition-all"
               style={{
                 background: colors.inputBackground,
-                border: `1px solid ${colors.border}`,
+                border: `1px solid ${nameError ? colors.errorRed : colors.border}`,
                 color: colors.primaryText,
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = colors.borderFocused;
               }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = colors.border;
-              }}
               autoFocus
             />
+            {nameError && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <AlertCircle size={14} style={{ color: colors.errorRed }} />
+                <p className="text-xs" style={{ color: colors.errorRed }}>
+                  {nameError}
+                </p>
+              </div>
+            )}
+            <p className="text-xs mt-1" style={{ color: colors.tertiaryText }}>
+              {folderName.length} / {MAX_FOLDER_NAME_LENGTH} characters
+            </p>
           </div>
         </div>
 

@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { logger } from '../../../../utils/logger';
 import apiService from '../../../../services/apiService';
 import { FileComment } from '../../../../types/cloudStorage';
+import { validateComment, MAX_COMMENT_LENGTH } from '../../../../utils/validation';
 
 interface UseCommentsProps {
   fileId: string;
@@ -99,10 +100,18 @@ export const useComments = ({ fileId, onAddComment, onCommentsLoaded, initialCom
   }, [showComments]); // Only depend on showComments
 
   const handleCommentSubmit = async () => {
+    // FE-028: Validate comment content length
+    const validation = validateComment(newComment);
+    if (!validation.valid) {
+      setError(validation.error || 'Comment validation failed');
+      return;
+    }
+    
     if (!newComment.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     setSubmitSuccess(false);
+    setError(null);
 
     // Add timeout to prevent infinite "Sending..." state
     const timeoutId = setTimeout(() => {

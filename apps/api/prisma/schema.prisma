@@ -7,15 +7,1180 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum SubscriptionTier {
-  FREE
-  PRO
-  PREMIUM
+model ai_drafts {
+  id           String       @id
+  userId       String
+  baseResumeId String
+  action       AIAction
+  payload      Json
+  metadata     Json?
+  expiresAt    DateTime
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  base_resumes base_resumes @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  users        users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([baseResumeId])
+  @@index([expiresAt])
+  @@index([userId])
 }
 
-enum TailorMode {
-  PARTIAL
-  FULL
+model ai_request_logs {
+  id                String             @id
+  userId            String
+  baseResumeId      String?
+  tailoredVersionId String?
+  action            AIAction
+  provider          String?
+  model             String?
+  tokensUsed        Int?
+  costUsd           Decimal?           @db.Decimal(12, 4)
+  status            String             @default("success")
+  errorMessage      String?
+  metadata          Json?
+  createdAt         DateTime           @default(now())
+  base_resumes      base_resumes?      @relation(fields: [baseResumeId], references: [id])
+  tailored_versions tailored_versions? @relation(fields: [tailoredVersionId], references: [id])
+  users             users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([action, createdAt])
+  @@index([action])
+  @@index([baseResumeId])
+  @@index([tailoredVersionId])
+  @@index([userId, action, createdAt])
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+model analytics_events {
+  id         String   @id
+  userId     String
+  event      String
+  properties String   @default("{}")
+  sessionId  String?
+  timestamp  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  users      users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([event])
+  @@index([event, timestamp])
+  @@index([timestamp])
+  @@index([userId])
+  @@index([userId, timestamp])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model base_resumes {
+  id                                           String                @id
+  userId                                       String
+  slotNumber                                   Int
+  name                                         String
+  isActive                                     Boolean               @default(false)
+  data                                         Json
+  formatting                                   Json?                 @default("{}")
+  metadata                                     Json?                 @default("{}")
+  lastAIAccessedAt                             DateTime?
+  parsingConfidence                            Float?
+  createdAt                                    DateTime              @default(now())
+  updatedAt                                    DateTime
+  embedding                                    String?
+  embedding_updated_at                         DateTime?
+  fileHash                                     String?
+  storageFileId                                String?
+  ai_drafts                                    ai_drafts[]
+  ai_request_logs                              ai_request_logs[]
+  storage_files                                storage_files?        @relation(fields: [storageFileId], references: [id])
+  users_base_resumes_userIdTousers             users                 @relation("base_resumes_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+  generated_documents                          generated_documents[]
+  resume_cache                                 resume_cache[]
+  tailored_versions                            tailored_versions[]
+  tailoring_analytics                          tailoring_analytics[]
+  users_users_activeBaseResumeIdTobase_resumes users?                @relation("users_activeBaseResumeIdTobase_resumes")
+  working_drafts                               working_drafts?
+
+  @@unique([userId, slotNumber])
+  @@index([fileHash])
+  @@index([storageFileId])
+  @@index([userId, isActive])
+  @@index([userId, updatedAt])
+}
+
+model certifications {
+  id            String        @id
+  profileId     String
+  name          String
+  issuer        String?
+  date          String?
+  expiryDate    String?
+  credentialId  String?
+  credentialUrl String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  user_profiles user_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([issuer])
+  @@index([profileId])
+}
+
+model company_insights {
+  id        String   @id
+  jobId     String
+  userId    String
+  type      String
+  title     String
+  content   String
+  source    String?
+  date      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  jobs      jobs     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([type])
+  @@index([userId])
+}
+
+model credential_reminders {
+  id           String      @id
+  credentialId String
+  reminderDate DateTime
+  isSent       Boolean     @default(false)
+  priority     String      @default("medium")
+  createdAt    DateTime    @default(now())
+  credentials  credentials @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+
+  @@index([credentialId])
+  @@index([isSent])
+  @@index([reminderDate])
+}
+
+model credentials {
+  id                   String                 @id
+  userId               String
+  fileId               String?
+  credentialType       String
+  name                 String
+  issuer               String
+  issuedDate           String
+  expirationDate       String?
+  credentialId         String?
+  verificationUrl      String?
+  qrCode               String?
+  verificationStatus   String                 @default("pending")
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime
+  credential_reminders credential_reminders[]
+  storage_files        storage_files?         @relation(fields: [fileId], references: [id])
+  users                users                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([credentialType])
+  @@index([fileId])
+  @@index([userId])
+  @@index([verificationStatus])
+}
+
+model education {
+  id            String        @id
+  profileId     String
+  institution   String
+  degree        String?
+  field         String?
+  endDate       String?
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  startDate     String?
+  gpa           String?
+  honors        String?
+  location      String?
+  user_profiles user_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([institution])
+  @@index([profileId])
+}
+
+model file_access_logs {
+  id            String        @id
+  fileId        String
+  userId        String
+  action        String
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime      @default(now())
+  storage_files storage_files @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  users         users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([fileId])
+  @@index([userId])
+}
+
+model file_comments {
+  id                                  String          @id
+  fileId                              String
+  userId                              String
+  content                             String          @db.VarChar(5000)
+  parentId                            String?
+  isResolved                          Boolean         @default(false)
+  createdAt                           DateTime        @default(now())
+  updatedAt                           DateTime
+  editedAt                            DateTime?
+  editedBy                            String?
+  mentions                            String[]        @default([])
+  users_file_comments_editedByTousers users?          @relation("file_comments_editedByTousers", fields: [editedBy], references: [id])
+  storage_files                       storage_files   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  file_comments                       file_comments?  @relation("file_commentsTofile_comments", fields: [parentId], references: [id], onDelete: Cascade)
+  other_file_comments                 file_comments[] @relation("file_commentsTofile_comments")
+  users_file_comments_userIdTousers   users           @relation("file_comments_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+  // DB-030: editedAt column - Already exists (line 228)
+  // DB-031: editedBy column - Already exists (line 229)
+  // DB-032: mentions column - Already exists (line 230)
+  // DB-033: Check constraint preventing parentId = id - Enforced at application level (validation)
+  // DB-034: Check constraint on content length - Already enforced with @db.VarChar(5000) (line 223)
+
+  @@index([editedBy])
+  @@index([fileId])
+  @@index([parentId])
+}
+
+model file_shares {
+  id                                  String         @id
+  fileId                              String
+  userId                              String
+  sharedWith                          String
+  permission                          FilePermission @default(VIEW) // DB-021: Enum for permission validation
+  expiresAt                           DateTime?
+  createdAt                           DateTime       @default(now())
+  updatedAt                           DateTime
+  createdBy                           String? // DB-056: Track who created
+  updatedBy                           String? // DB-056: Track who updated
+  notifiedAt                          DateTime?
+  accessedAt                          DateTime?
+  lastAccessedAt                      DateTime?
+  storage_files                       storage_files  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  users_file_shares_sharedWithTousers users          @relation("file_shares_sharedWithTousers", fields: [sharedWith], references: [id], onDelete: Cascade)
+  users_file_shares_userIdTousers     users          @relation("file_shares_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+  users_file_shares_createdByTousers  users?         @relation("file_shares_createdByTousers", fields: [createdBy], references: [id])
+  users_file_shares_updatedByTousers  users?         @relation("file_shares_updatedByTousers", fields: [updatedBy], references: [id])
+  // DB-021: Check constraint on permission enum - Now using FilePermission enum
+  // DB-022: Check constraint on expiresAt > createdAt - Enforced at application level (validation)
+
+  @@unique([fileId, sharedWith])
+  @@index([accessedAt])
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@index([fileId])
+  @@index([lastAccessedAt])
+  @@index([sharedWith])
+  @@index([updatedBy])
+  @@index([userId, fileId])
+}
+
+model generated_documents {
+  id                String             @id
+  userId            String
+  baseResumeId      String?
+  tailoredVersionId String?
+  type              GeneratedDocType   @default(COVER_LETTER)
+  templateId        String?
+  tone              String?
+  jobTitle          String?
+  company           String?
+  data              Json
+  storagePath       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime
+  base_resumes      base_resumes?      @relation(fields: [baseResumeId], references: [id])
+  tailored_versions tailored_versions? @relation(fields: [tailoredVersionId], references: [id])
+  resume_templates  resume_templates?  @relation(fields: [templateId], references: [id])
+  users             users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([type])
+  @@index([userId])
+}
+
+model idempotency_keys {
+  id        String   @id
+  key       String   @unique
+  userId    String
+  result    String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([key])
+  @@index([userId])
+}
+
+model interview_notes {
+  id          String   @id
+  jobId       String
+  userId      String
+  type        String
+  date        String
+  interviewer String?
+  notes       String
+  questions   String[] @default([])
+  feedback    String?
+  rating      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  jobs        jobs     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([jobId])
+  @@index([userId])
+}
+
+model job_attachments {
+  id             String        @id
+  jobId          String
+  userId         String
+  fileId         String
+  attachmentType String        @default("other")
+  createdAt      DateTime      @default(now())
+  storage_files  storage_files @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  jobs           jobs          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users          users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, fileId])
+  @@index([fileId])
+  @@index([jobId])
+  @@index([userId])
+}
+
+model job_notes {
+  id        String   @id
+  jobId     String
+  userId    String
+  title     String
+  content   String
+  tags      String[] @default([])
+  date      String
+  category  String   @default("other")
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  jobs      jobs     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([jobId])
+  @@index([userId])
+}
+
+model job_reminders {
+  id          String      @id
+  jobId       String
+  userId      String
+  title       String
+  description String
+  dueDate     String
+  completed   Boolean     @default(false)
+  priority    JobPriority @default(MEDIUM)
+  type        String      @default("other")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime
+  jobs        jobs        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users       users       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([completed])
+  @@index([dueDate])
+  @@index([jobId])
+  @@index([userId])
+}
+
+model jobs {
+  id                String              @id
+  userId            String
+  title             String
+  company           String
+  location          String
+  status            JobStatus           @default(APPLIED)
+  priority          JobPriority?        @default(MEDIUM)
+  appliedDate       String
+  salary            String?
+  description       String?
+  url               String?
+  notes             String?
+  nextStep          String?
+  nextStepDate      String?
+  contact           Json?
+  requirements      String[]            @default([])
+  benefits          String[]            @default([])
+  remote            Boolean             @default(false)
+  companySize       String?
+  industry          String?
+  isFavorite        Boolean             @default(false)
+  deletedAt         DateTime?
+  createdAt         DateTime            @default(now())
+  lastUpdated       DateTime
+  company_insights  company_insights[]
+  interview_notes   interview_notes[]
+  job_attachments   job_attachments[]
+  job_notes         job_notes[]
+  job_reminders     job_reminders[]
+  users             users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referral_contacts referral_contacts[]
+  salary_offers     salary_offers[]
+
+  @@index([appliedDate])
+  @@index([company])
+  @@index([deletedAt])
+  @@index([isFavorite])
+  @@index([priority])
+  @@index([status])
+  @@index([userId])
+}
+
+model languages {
+  id            String        @id
+  profileId     String
+  name          String
+  proficiency   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  user_profiles user_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model password_reset_tokens {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([token])
+  @@index([userId])
+}
+
+model projects {
+  id            String        @id
+  profileId     String
+  title         String
+  description   String?
+  technologies  String?
+  date          String?
+  link          String?
+  github        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  media         String?
+  user_profiles user_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model prompt_tests {
+  id              String          @id
+  userId          String
+  variantId       String
+  operation       String
+  variant         String
+  inputHash       String
+  success         Boolean
+  durationMs      Int
+  tokensUsed      Int?
+  costUsd         Float?
+  qualityScore    Float?
+  userRating      Int?
+  outputMetrics   String          @default("{}")
+  error           String?
+  createdAt       DateTime        @default(now())
+  users           users           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt_variants prompt_variants @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([operation])
+  @@index([operation, variant, createdAt])
+  @@index([userId])
+  @@index([variantId])
+  @@index([variant])
+}
+
+model prompt_variants {
+  id           String         @id
+  name         String
+  operation    String
+  variant      String
+  prompt       String
+  metadata     String         @default("{}")
+  isActive     Boolean        @default(true)
+  isControl    Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  prompt_tests prompt_tests[]
+
+  @@unique([operation, variant])
+  @@index([isActive])
+  @@index([operation])
+}
+
+model referral_contacts {
+  id           String   @id
+  jobId        String
+  userId       String
+  name         String
+  position     String
+  relationship String
+  contacted    Boolean  @default(false)
+  date         String
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  jobs         jobs     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([contacted])
+  @@index([jobId])
+  @@index([userId])
+}
+
+model refresh_tokens {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([token])
+  @@index([userId])
+}
+
+model resume_cache {
+  id           String        @id
+  userId       String
+  baseResumeId String?
+  fileHash     String        @unique
+  method       String
+  data         Json
+  confidence   Float?
+  hitCount     Int           @default(0)
+  createdAt    DateTime      @default(now())
+  lastUsedAt   DateTime      @default(now())
+  expiresAt    DateTime?
+  base_resumes base_resumes? @relation(fields: [baseResumeId], references: [id])
+  users        users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model resume_templates {
+  id                      String                    @id
+  name                    String
+  category                TemplateCategory
+  description             String
+  preview                 String
+  features                String[]
+  difficulty              TemplateDifficulty
+  industry                String[]
+  layout                  TemplateLayout
+  colorScheme             TemplateColorScheme
+  isPremium               Boolean                   @default(false)
+  rating                  Float                     @default(0)
+  downloads               Int                       @default(0)
+  author                  String                    @default("RoleReady Team")
+  tags                    String[]
+  templateData            Json?
+  isActive                Boolean                   @default(true)
+  isApproved              Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  generated_documents     generated_documents[]
+  template_usage_history  template_usage_history[]
+  user_template_favorites user_template_favorites[]
+
+  @@index([category])
+  @@index([difficulty])
+  @@index([downloads])
+  @@index([isActive])
+  @@index([isPremium])
+  @@index([rating])
+}
+
+model resumes {
+  id                String   @id
+  userId            String
+  fileName          String
+  templateId        String?
+  data              Json
+  sectionOrder      String[] @default([])
+  sectionVisibility Json     @default("{}")
+  customSections    Json     @default("[]")
+  customFields      Json     @default("[]")
+  formatting        Json     @default("{}")
+  isStarred         Boolean  @default(false)
+  isArchived        Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  users             users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([fileName])
+  @@index([isArchived])
+  @@index([isStarred])
+  @@index([userId])
+}
+
+model salary_offers {
+  id        String   @id
+  jobId     String
+  userId    String
+  amount    Float
+  currency  String   @default("USD")
+  equity    String?
+  benefits  String[] @default([])
+  notes     String?
+  date      String
+  status    String   @default("initial")
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  jobs      jobs     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([status])
+  @@index([userId])
+}
+
+model saved_views {
+  id        String   @id
+  userId    String
+  name      String
+  filters   Json
+  columns   String[] @default([])
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model sessions {
+  id           String   @id
+  userId       String
+  device       String?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+  lastActivity DateTime @default(now())
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  users        users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([userId])
+}
+
+model share_links {
+  id                                 String         @id
+  fileId                             String
+  userId                             String
+  token                              String         @unique
+  password                           String?
+  expiresAt                          DateTime?
+  maxDownloads                       Int?
+  downloadCount                      Int            @default(0)
+  createdAt                          DateTime       @default(now())
+  permission                         FilePermission @default(VIEW) // DB-026: Enum for permission validation
+  createdBy                          String? // DB-056: Track who created
+  updatedBy                          String? // DB-056: Track who updated
+  accessedAt                         DateTime?
+  lastAccessedAt                     DateTime?
+  storage_files                      storage_files  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  users                              users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users_share_links_createdByTousers users?         @relation("share_links_createdByTousers", fields: [createdBy], references: [id])
+  users_share_links_updatedByTousers users?         @relation("share_links_updatedByTousers", fields: [updatedBy], references: [id])
+  // DB-025: createdBy column - Already exists as userId (line 674)
+  // DB-026: Check constraint on permission enum - Now using FilePermission enum
+  // DB-027: Check constraint on expiresAt > createdAt - Enforced at application level (validation)
+  // DB-028: Check constraint on maxDownloads > 0 - Enforced at application level (validation)
+  // DB-029: Check constraint on downloadCount >= 0 - Enforced at application level (default 0)
+
+  @@index([accessedAt])
+  @@index([createdBy])
+  @@index([expiresAt])
+  @@index([fileId])
+  @@index([lastAccessedAt])
+  @@index([permission])
+  @@index([token])
+  @@index([updatedBy])
+  @@index([userId, fileId])
+}
+
+model skills {
+  id          String        @id
+  name        String        @unique
+  category    String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  user_skills user_skills[]
+
+  @@index([category])
+  @@index([name])
+}
+
+model storage_files {
+  id                                    String             @id
+  userId                                String
+  name                                  String
+  fileName                              String
+  type                                  String
+  contentType                           String
+  size                                  BigInt
+  storagePath                           String
+  publicUrl                             String?
+  description                           String?
+  isPublic                              Boolean            @default(false)
+  isStarred                             Boolean            @default(false)
+  isArchived                            Boolean            @default(false)
+  folderId                              String?
+  deletedAt                             DateTime?
+  deletedBy                             String? // DB-058: Track who deleted
+  downloadCount                         Int                @default(0)
+  viewCount                             Int                @default(0)
+  createdAt                             DateTime           @default(now())
+  updatedAt                             DateTime
+  fileHash                              String?
+  version                               Int                @default(1) // DB-001: Version column for file versioning
+  isCorrupted                           Boolean            @default(false)
+  thumbnail                             String? // DB-005: Thumbnail path/URL (equivalent to thumbnailPath)
+  tags                                  String[]           @default([])
+  expiresAt                             DateTime?
+  lastAccessedAt                        DateTime?
+  metadata                              Json?
+  uploadedBy                            String?
+  modifiedBy                            String?
+  base_resumes                          base_resumes[]
+  credentials                           credentials[]
+  file_access_logs                      file_access_logs[]
+  file_comments                         file_comments[]
+  file_shares                           file_shares[]
+  job_attachments                       job_attachments[]
+  share_links                           share_links[]
+  storage_folders                       storage_folders?   @relation(fields: [folderId], references: [id])
+  file_versions                         file_versions[]
+  users_storage_files_deletedByTousers  users?             @relation("storage_files_deletedByTousers", fields: [deletedBy], references: [id])
+  users_storage_files_modifiedByTousers users?             @relation("storage_files_modifiedByTousers", fields: [modifiedBy], references: [id])
+  users_storage_files_uploadedByTousers users?             @relation("storage_files_uploadedByTousers", fields: [uploadedBy], references: [id])
+  users_storage_files_userIdTousers     users              @relation("storage_files_userIdTousers", fields: [userId], references: [id], onDelete: Cascade)
+  // DB-009: Unique constraint on (userId, name) - NOT implemented to allow duplicate names (can add with folderId for uniqueness)
+  // DB-010: Check constraint on size > 0 - Enforced at application level (validation)
+  // DB-011: Check constraint on contentType format - Enforced at application level (validation)
+
+  // DB-042: Add missing indexes for frequently queried fields
+  @@index([createdAt]) // For sorting by creation date
+  @@index([updatedAt]) // For sorting by update date
+  @@index([deletedAt])
+  @@index([expiresAt])
+  @@index([fileHash])
+  @@index([folderId])
+  @@index([isArchived])
+  @@index([isStarred])
+  @@index([lastAccessedAt])
+  @@index([deletedBy])
+  @@index([modifiedBy])
+  @@index([type])
+  @@index([uploadedBy])
+  @@index([userId])
+  // DB-043: Add composite indexes for common query patterns
+  @@index([userId, deletedAt, type]) // Common filter: user's files by type, excluding deleted
+  @@index([userId, isStarred, deletedAt]) // Starred files query
+  @@index([userId, isArchived, deletedAt]) // Archived files query
+  @@index([userId, folderId, deletedAt]) // Files in folder query
+  @@index([userId, createdAt]) // Sort by creation date
+  @@index([userId, updatedAt]) // Sort by update date
+}
+
+// BE-011: File versioning model
+model file_versions {
+  id            String        @id @default(uuid())
+  fileId        String
+  versionNumber Int
+  fileName      String
+  contentType   String
+  size          BigInt
+  storagePath   String
+  fileHash      String?
+  description   String?
+  createdBy     String
+  createdAt     DateTime      @default(now())
+  metadata      Json?
+  storage_files storage_files @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  users         users         @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+  @@index([fileId, versionNumber])
+  @@index([createdAt])
+  @@index([createdBy])
+}
+
+model storage_folders {
+  id                                     String            @id
+  userId                                 String
+  name                                   String
+  parentId                               String?
+  color                                  String?
+  createdAt                              DateTime          @default(now())
+  updatedAt                              DateTime
+  deletedAt                              DateTime?
+  deletedBy                              String? // DB-058: Track who deleted
+  createdBy                              String? // DB-056: Track who created
+  updatedBy                              String? // DB-056: Track who updated
+  description                            String?
+  icon                                   String?
+  sortOrder                              Int               @default(0)
+  metadata                               Json?
+  storage_files                          storage_files[]
+  storage_folders                        storage_folders?  @relation("storage_foldersTostorage_folders", fields: [parentId], references: [id], onDelete: Cascade)
+  other_storage_folders                  storage_folders[] @relation("storage_foldersTostorage_folders")
+  users                                  users             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  users_storage_folders_deletedByTousers users?            @relation("storage_folders_deletedByTousers", fields: [deletedBy], references: [id])
+  users_storage_folders_createdByTousers users?            @relation("storage_folders_createdByTousers", fields: [createdBy], references: [id])
+  users_storage_folders_updatedByTousers users?            @relation("storage_folders_updatedByTousers", fields: [updatedBy], references: [id])
+  // DB-017: Check constraint preventing parentId = id is enforced at application level
+
+  @@unique([userId, name]) // DB-016: Unique constraint on (userId, name)
+  @@index([createdBy])
+  @@index([deletedAt])
+  @@index([deletedBy])
+  @@index([parentId])
+  @@index([sortOrder])
+  @@index([updatedBy])
+  @@index([userId])
+  @@index([userId, deletedAt])
+  @@index([userId, parentId])
+}
+
+model storage_quotas {
+  id         String           @id
+  userId     String           @unique
+  usedBytes  BigInt           @default(0)
+  limitBytes BigInt           @default(5368709120)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime
+  tier       SubscriptionTier @default(FREE)
+  warnedAt   DateTime?
+  upgradedAt DateTime?
+  users      users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // DB-035: tier column - Already exists (SubscriptionTier enum, line 828)
+  // DB-036: warnedAt column - Already exists (line 829)
+  // DB-037: upgradedAt column - Already exists (line 830)
+  // DB-038: Check constraint on usedBytes >= 0 - Enforced at application level (default 0)
+  // DB-039: Check constraint on limitBytes > 0 - Enforced at application level (default 5368709120)
+  // DB-040: Check constraint on usedBytes <= limitBytes - Enforced at application level (quota management)
+
+  @@index([tier])
+  @@index([userId])
+}
+
+model tailored_versions {
+  id                  String                @id
+  baseResumeId        String
+  userId              String
+  jobTitle            String?
+  company             String?
+  jobDescriptionHash  String?
+  mode                TailorMode            @default(PARTIAL)
+  tone                String?
+  data                Json
+  diff                Json?
+  atsScoreBefore      Int?
+  atsScoreAfter       Int?
+  isPromoted          Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  ai_request_logs     ai_request_logs[]
+  generated_documents generated_documents[]
+  base_resumes        base_resumes          @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+  users               users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([baseResumeId, createdAt])
+  @@index([baseResumeId])
+  @@index([jobDescriptionHash])
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+model tailoring_analytics {
+  id                 String       @id
+  userId             String
+  resumeId           String
+  mode               String
+  scoreBefore        Float
+  scoreAfter         Float
+  improvement        Float
+  improvementRate    Float
+  targetScore        Float
+  targetMet          Boolean
+  tokensUsed         Int?
+  durationMs         Int
+  confidence         Float        @default(0)
+  warningCount       Int          @default(0)
+  changeCount        Int          @default(0)
+  keywordsAddedCount Int          @default(0)
+  costEstimate       Float        @default(0)
+  timestamp          DateTime     @default(now())
+  createdAt          DateTime     @default(now())
+  base_resumes       base_resumes @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  users              users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mode])
+  @@index([timestamp])
+  @@index([userId])
+  @@index([userId, timestamp])
+}
+
+model template_usage_history {
+  id               String              @id
+  userId           String
+  templateId       String
+  action           TemplateUsageAction
+  metadata         Json?
+  createdAt        DateTime            @default(now())
+  resume_templates resume_templates    @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  users            users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([action])
+  @@index([templateId, createdAt])
+  @@index([templateId])
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+model user_profiles {
+  id                  String             @id
+  userId              String             @unique
+  firstName           String?
+  lastName            String?
+  phone               String?
+  location            String?
+  profilePicture      String?
+  linkedin            String?
+  github              String?
+  website             String?
+  profileCompleteness Int                @default(0)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime
+  personalEmail       String?
+  portfolio           String?
+  professionalBio     String?
+  certifications      certifications[]
+  education           education[]
+  languages           languages[]
+  projects            projects[]
+  users               users              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user_skills         user_skills[]
+  work_experiences    work_experiences[]
+
+  @@index([userId])
+}
+
+model user_skills {
+  id                String        @id
+  profileId         String
+  skillId           String
+  yearsOfExperience Int?
+  verified          Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime
+  user_profiles     user_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skills            skills        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, skillId])
+  @@index([profileId])
+  @@index([skillId])
+}
+
+model user_template_favorites {
+  id               String           @id
+  userId           String
+  templateId       String
+  createdAt        DateTime         @default(now())
+  resume_templates resume_templates @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  users            users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, templateId])
+  @@index([templateId])
+  @@index([userId])
+}
+
+model user_template_preferences {
+  id             String   @id
+  userId         String   @unique
+  filterSettings Json     @default("{}")
+  sortPreference String   @default("popular")
+  viewMode       String   @default("grid")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  users          users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id                                                  String                     @id
+  email                                               String                     @unique
+  name                                                String
+  password                                            String?
+  provider                                            String                     @default("local")
+  providerId                                          String?                    @unique
+  emailNotifications                                  Boolean                    @default(true)
+  createdAt                                           DateTime                   @default(now())
+  updatedAt                                           DateTime
+  twoFactorEnabled                                    Boolean                    @default(false)
+  twoFactorSecret                                     String?
+  twoFactorBackupCodes                                String?
+  activeBaseResumeId                                  String?                    @unique
+  coverLetterAiUsageCount                             Int                        @default(0)
+  coverLetterAiUsageResetAt                           DateTime?
+  portfolioPublishesCount                             Int                        @default(0)
+  portfolioPublishesResetAt                           DateTime?
+  resumeAiUsageCount                                  Int                        @default(0)
+  resumeAiUsageResetAt                                DateTime?
+  subscriptionEndsAt                                  DateTime?
+  subscriptionTier                                    SubscriptionTier           @default(FREE)
+  tailorPreferredMode                                 TailorMode?                @default(PARTIAL)
+  tailorPreferredTone                                 String?                    @default("professional")
+  tailorPreferredLength                               String?                    @default("thorough")
+  ai_drafts                                           ai_drafts[]
+  ai_request_logs                                     ai_request_logs[]
+  analytics_events                                    analytics_events[]
+  base_resumes_base_resumes_userIdTousers             base_resumes[]             @relation("base_resumes_userIdTousers")
+  company_insights                                    company_insights[]
+  credentials                                         credentials[]
+  file_access_logs                                    file_access_logs[]
+  file_comments_file_comments_editedByTousers         file_comments[]            @relation("file_comments_editedByTousers")
+  file_comments_file_comments_userIdTousers           file_comments[]            @relation("file_comments_userIdTousers")
+  file_shares_file_shares_sharedWithTousers           file_shares[]              @relation("file_shares_sharedWithTousers")
+  file_shares_file_shares_userIdTousers               file_shares[]              @relation("file_shares_userIdTousers")
+  file_shares_file_shares_createdByTousers            file_shares[]              @relation("file_shares_createdByTousers")
+  file_shares_file_shares_updatedByTousers            file_shares[]              @relation("file_shares_updatedByTousers")
+  file_versions                                       file_versions[]
+  generated_documents                                 generated_documents[]
+  idempotency_keys                                    idempotency_keys[]
+  interview_notes                                     interview_notes[]
+  job_attachments                                     job_attachments[]
+  job_notes                                           job_notes[]
+  job_reminders                                       job_reminders[]
+  jobs                                                jobs[]
+  password_reset_tokens                               password_reset_tokens[]
+  prompt_tests                                        prompt_tests[]
+  referral_contacts                                   referral_contacts[]
+  refresh_tokens                                      refresh_tokens[]
+  resume_cache                                        resume_cache[]
+  resumes                                             resumes[]
+  salary_offers                                       salary_offers[]
+  saved_views                                         saved_views[]
+  sessions                                            sessions[]
+  share_links                                         share_links[]
+  share_links_share_links_createdByTousers            share_links[]              @relation("share_links_createdByTousers")
+  share_links_share_links_updatedByTousers            share_links[]              @relation("share_links_updatedByTousers")
+  storage_files_storage_files_deletedByTousers        storage_files[]            @relation("storage_files_deletedByTousers")
+  storage_files_storage_files_modifiedByTousers       storage_files[]            @relation("storage_files_modifiedByTousers")
+  storage_files_storage_files_uploadedByTousers       storage_files[]            @relation("storage_files_uploadedByTousers")
+  storage_files_storage_files_userIdTousers           storage_files[]            @relation("storage_files_userIdTousers")
+  storage_folders                                     storage_folders[]
+  storage_folders_storage_folders_deletedByTousers    storage_folders[]          @relation("storage_folders_deletedByTousers")
+  storage_folders_storage_folders_createdByTousers    storage_folders[]          @relation("storage_folders_createdByTousers")
+  storage_folders_storage_folders_updatedByTousers    storage_folders[]          @relation("storage_folders_updatedByTousers")
+  storage_quotas                                      storage_quotas?
+  tailored_versions                                   tailored_versions[]
+  tailoring_analytics                                 tailoring_analytics[]
+  template_usage_history                              template_usage_history[]
+  user_profiles                                       user_profiles?
+  user_template_favorites                             user_template_favorites[]
+  user_template_preferences                           user_template_preferences?
+  base_resumes_users_activeBaseResumeIdTobase_resumes base_resumes?              @relation("users_activeBaseResumeIdTobase_resumes", fields: [activeBaseResumeId], references: [id])
+  webhook_configs                                     webhook_configs?
+  webhook_logs                                        webhook_logs[]
+
+  @@index([email])
+  @@index([provider, providerId])
+}
+
+model webhook_configs {
+  id            String   @id
+  userId        String   @unique
+  url           String
+  secret        String
+  enabled       Boolean  @default(true)
+  enabledEvents String   @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  users         users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([enabled])
+  @@index([userId])
+}
+
+model webhook_logs {
+  id          String    @id
+  userId      String
+  event       String
+  url         String
+  payload     String
+  success     Boolean
+  statusCode  Int?
+  attempts    Int       @default(1)
+  error       String?
+  deliveryId  String    @unique
+  deliveredAt DateTime?
+  createdAt   DateTime  @default(now())
+  users       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([deliveryId])
+  @@index([event])
+  @@index([success])
+  @@index([userId, createdAt])
+  @@index([userId])
+}
+
+model work_experiences {
+  id            String        @id
+  profileId     String
+  company       String
+  role          String
+  location      String?
+  startDate     String
+  endDate       String?
+  isCurrent     Boolean       @default(false)
+  description   String?
+  projectType   String?       @default("Full-time")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  technologies  String[]      @default([])
+  user_profiles user_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([company])
+  @@index([profileId])
+}
+
+model working_drafts {
+  id           String       @id
+  baseResumeId String       @unique
+  data         Json
+  formatting   Json?        @default("{}")
+  metadata     Json?        @default("{}")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime
+  base_resumes base_resumes @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
+
+  @@index([baseResumeId])
 }
 
 enum AIAction {
@@ -35,6 +1200,12 @@ enum GeneratedDocType {
   OTHER
 }
 
+enum JobPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum JobStatus {
   APPLIED
   INTERVIEW
@@ -42,1137 +1213,64 @@ enum JobStatus {
   REJECTED
 }
 
-enum JobPriority {
-  LOW
-  MEDIUM
-  HIGH
+enum SubscriptionTier {
+  FREE
+  PRO
+  PREMIUM
 }
 
-model Certification {
-  id        String @id @default(cuid())
-  profileId String
-
-  name          String
-  issuer        String?
-  date          String?
-  expiryDate    String?
-  credentialId  String?
-  credentialUrl String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@index([issuer])
-  @@map("certifications")
+enum TailorMode {
+  PARTIAL
+  FULL
 }
 
-model CredentialReminder {
-  id           String   @id @default(cuid())
-  credentialId String
-  reminderDate DateTime
-  isSent       Boolean  @default(false)
-  priority     String   @default("medium") // low, medium, high
-
-  createdAt DateTime @default(now())
-
-  credential Credential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
-
-  @@index([credentialId])
-  @@index([reminderDate])
-  @@index([isSent])
-  @@map("credential_reminders")
+enum TemplateCategory {
+  ATS
+  CREATIVE
+  MODERN
+  CLASSIC
+  EXECUTIVE
+  MINIMAL
+  ACADEMIC
+  TECHNICAL
+  STARTUP
+  FREELANCE
 }
 
-model Credential {
-  id     String  @id @default(cuid())
-  userId String
-  fileId String? // Associated file if any
-
-  credentialType  String // certification, license, visa, degree, badge
-  name            String
-  issuer          String
-  issuedDate      String
-  expirationDate  String?
-  credentialId    String? // External credential ID
-  verificationUrl String?
-  qrCode          String? // Base64 QR code
-
-  verificationStatus String @default("pending") // pending, verified, expired, revoked
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user      User                 @relation("Credentials", fields: [userId], references: [id], onDelete: Cascade)
-  file      StorageFile?         @relation(fields: [fileId], references: [id], onDelete: SetNull)
-  reminders CredentialReminder[]
-
-  @@index([userId])
-  @@index([fileId])
-  @@index([credentialType])
-  @@index([verificationStatus])
-  @@map("credentials")
+enum TemplateColorScheme {
+  MONOCHROME
+  BLUE
+  GREEN
+  PURPLE
+  RED
+  ORANGE
+  CUSTOM
 }
 
-model Education {
-  id        String @id @default(cuid())
-  profileId String
-
-  institution String
-  degree      String?
-  field       String?
-  startDate   String?
-  endDate     String?
-  gpa         String?
-  honors      String?
-  location    String?
-  description String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@index([institution])
-  @@map("education")
+enum TemplateDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
 }
 
-model Language {
-  id        String @id @default(cuid())
-  profileId String
-
-  name        String
-  proficiency String? // Native, Fluent, Conversational, Basic, etc.
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("languages")
+enum TemplateLayout {
+  SINGLE_COLUMN
+  TWO_COLUMN
+  HYBRID
 }
 
-model FileAccessLog {
-  id        String  @id @default(cuid())
-  fileId    String
-  userId    String
-  action    String // view, download, share, edit, delete
-  ipAddress String?
-  userAgent String?
-
-  createdAt DateTime @default(now())
-
-  file StorageFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  user User        @relation("FileAccessLogs", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([fileId])
-  @@index([userId])
-  @@index([createdAt])
-  @@map("file_access_logs")
+enum TemplateUsageAction {
+  PREVIEW
+  DOWNLOAD
+  USE
+  FAVORITE
+  SHARE
 }
 
-model FileComment {
-  id       String  @id @default(cuid())
-  fileId   String
-  userId   String
-  content  String
-  parentId String? // For threaded comments
-
-  isResolved Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  file    StorageFile   @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  user    User          @relation("FileComments", fields: [userId], references: [id], onDelete: Cascade)
-  parent  FileComment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
-  replies FileComment[] @relation("CommentThread")
-
-  @@index([fileId])
-  @@index([parentId])
-  @@map("file_comments")
-}
-
-model FileShare {
-  id         String @id @default(cuid())
-  fileId     String
-  userId     String // User who shared
-  sharedWith String // User ID of recipient
-
-  permission String    @default("view") // view, comment, edit, admin
-  expiresAt  DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  file      StorageFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  sharer    User        @relation("FileShares", fields: [userId], references: [id], onDelete: Cascade)
-  recipient User        @relation("SharedWithMe", fields: [sharedWith], references: [id], onDelete: Cascade)
-
-  @@unique([fileId, sharedWith])
-  @@index([fileId])
-  @@index([sharedWith])
-  @@map("file_shares")
-}
-
-model PasswordResetToken {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  createdAt DateTime @default(now())
-  expiresAt DateTime
-  used      Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([token])
-  @@index([expiresAt])
-  @@map("password_reset_tokens")
-}
-
-model Project {
-  id        String @id @default(cuid())
-  profileId String
-
-  title        String
-  description  String?
-  technologies String? // JSON array or comma-separated
-  date         String?
-  link         String?
-  github       String?
-  media        String? // JSON array of media URLs
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@map("projects")
-}
-
-model RefreshToken {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([token])
-  @@index([expiresAt])
-  @@map("refresh_tokens")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  userId       String
-  device       String? // Device info (desktop, mobile, tablet)
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-  lastActivity DateTime @default(now())
-  expiresAt    DateTime
-  isActive     Boolean  @default(true)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isActive])
-  @@index([expiresAt])
-  @@map("sessions")
-}
-
-model ShareLink {
-  id     String @id @default(cuid())
-  fileId String
-  userId String
-
-  token         String    @unique
-  password      String? // Hashed password if protected
-  permission    String    @default("view") // view, comment, edit, admin
-  expiresAt     DateTime?
-  maxDownloads  Int?
-  downloadCount Int       @default(0)
-
-  createdAt DateTime @default(now())
-
-  file StorageFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([fileId])
-  @@map("share_links")
-}
-
-model Skill {
-  id       String  @id @default(cuid())
-  name     String  @unique // Normalized skill name
-  category String? // e.g., "Technical", "Soft", "Language"
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  userSkills UserSkill[]
-
-  @@index([name])
-  @@index([category])
-  @@map("skills")
-}
-
-model StorageFile {
-  id     String @id @default(cuid())
-  userId String
-
-  // File Information
-  name        String // Display name
-  fileName    String // Original filename
-  type        String // resume, template, backup, document, etc.
-  contentType String // MIME type (e.g., application/pdf)
-  size        BigInt // File size in bytes
-  storagePath String // Path in Supabase Storage or local filesystem
-  publicUrl   String? // Public URL if bucket is public
-  fileHash    String? // SHA-256 hash of file content for change detection
-
-  // Metadata
-  description String? // File description
-  isPublic    Boolean @default(false)
-  isStarred   Boolean @default(false)
-  isArchived  Boolean @default(false)
-  folderId    String? // Parent folder ID
-
-  // Soft delete
-  deletedAt DateTime?
-
-  // File metrics
-  downloadCount Int @default(0)
-  viewCount     Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder                   StorageFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  shares                   FileShare[]
-  shareLinks               ShareLink[]
-  comments                 FileComment[]
-  accessLogs               FileAccessLog[]
-  credentials              Credential[]
-  baseResumes              BaseResume[]
-  jobAttachments           JobAttachment[]  @relation("JobAttachments")
-
-  @@index([userId])
-  @@index([folderId])
-  @@index([type])
-  @@index([deletedAt])
-  @@index([isStarred])
-  @@index([isArchived])
-  @@index([fileHash])
-  @@map("storage_files")
-}
-
-model StorageFolder {
-  id     String @id @default(cuid())
-  userId String
-
-  name     String
-  parentId String? // For nested folders
-  color    String? // Optional folder color
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  // Relations
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent   StorageFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children StorageFolder[] @relation("FolderHierarchy")
-  files    StorageFile[]
-
-  @@index([userId])
-  @@index([parentId])
-  @@index([deletedAt])
-  @@map("storage_folders")
-}
-
-model StorageQuota {
-  id         String @id @default(cuid())
-  userId     String @unique
-  usedBytes  BigInt @default(0)
-  limitBytes BigInt @default(5368709120) // 5GB default
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("storage_quotas")
-}
-
-model UserProfile {
-  id     String @id @default(cuid())
-  userId String @unique
-
-  // Profile Tab - Basic Information
-  firstName      String?
-  lastName       String?
-  phone          String?
-  personalEmail  String? // Personal/contact email (separate from login email)
-  location       String?
-  profilePicture String?
-
-  // Profile Tab - Social Links
-  linkedin  String?
-  github    String?
-  portfolio String? // Portfolio URL
-  website   String?
-
-  // Professional Tab
-  professionalBio String? @map("professionalBio")
-
-  // Profile Analytics & Metrics
-  profileCompleteness Int @default(0) // Percentage (0-100)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations - Only keep what's needed for the tabs
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workExperiences WorkExperience[] // Professional Tab
-  projects        Project[] // Professional Tab - Separate section
-  education       Education[] // Skills & Expertise Tab
-  certifications  Certification[] // Skills & Expertise Tab
-  languages       Language[] // Skills & Expertise Tab
-  userSkills      UserSkill[] // Skills & Expertise Tab
-
-  @@index([userId])
-  @@map("user_profiles")
-}
-
-model UserSkill {
-  id        String @id @default(cuid())
-  profileId String
-  skillId   String
-
-  yearsOfExperience Int?
-  verified          Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  skill   Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
-
-  @@unique([profileId, skillId])
-  @@index([profileId])
-  @@index([skillId])
-  @@map("user_skills")
-}
-
-model User {
-  id         String  @id @default(cuid())
-  email      String  @unique
-  name       String
-  password   String? // Optional for OAuth users
-  provider   String  @default("local") // local, google, github
-  providerId String? @unique
-
-  // Two-Factor Authentication
-  twoFactorEnabled     Boolean @default(false)
-  twoFactorSecret      String?
-  twoFactorBackupCodes String? // JSON array of backup codes
-
-  // Preferences (frequently accessed)
-  emailNotifications Boolean @default(true)
-
-  // Tailoring Preferences
-  tailorPreferredMode   TailorMode? @default(PARTIAL)
-  tailorPreferredTone   String?     @default("professional")
-  tailorPreferredLength String?     @default("thorough")
-
-  // Subscription & Usage Tracking
-  subscriptionTier          SubscriptionTier @default(FREE)
-  subscriptionEndsAt        DateTime?
-  activeBaseResumeId        String?          @unique
-  resumeAiUsageCount        Int              @default(0)
-  resumeAiUsageResetAt      DateTime?
-  coverLetterAiUsageCount   Int              @default(0)
-  coverLetterAiUsageResetAt DateTime?
-  portfolioPublishesCount   Int              @default(0)
-  portfolioPublishesResetAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  profile             UserProfile?
-  refreshTokens       RefreshToken[]
-  sessions            Session[]
-  passwordResetTokens PasswordResetToken[]
-  storageFiles        StorageFile[]
-  storageFolders      StorageFolder[]
-  fileShares          FileShare[]          @relation("FileShares")
-  sharedFiles         FileShare[]          @relation("SharedWithMe")
-  shareLinks          ShareLink[]
-  fileComments        FileComment[]        @relation("FileComments")
-  fileAccessLogs      FileAccessLog[]      @relation("FileAccessLogs")
-  credentials         Credential[]         @relation("Credentials")
-  storageQuota        StorageQuota?
-  resumes             Resume[]             @relation("Resumes")
-  baseResumes         BaseResume[]         @relation("UserBaseResumes")
-  tailoredVersions    TailoredVersion[]
-  generatedDocuments  GeneratedDocument[]
-  aiRequests          AIRequestLog[]
-  aiDrafts            AIDraft[]
-  resumeCacheEntries  ResumeCache[]
-  tailoringAnalytics  TailoringAnalytics[]
-  analyticsEvents     AnalyticsEvent[]     @relation("AnalyticsEvents")
-  webhookConfig       WebhookConfig?       @relation("WebhookConfig")
-  webhookLogs         WebhookLog[]         @relation("WebhookLogs")
-  promptTests         PromptTest[]         @relation("PromptTests")
-  activeBaseResume    BaseResume?          @relation("ActiveBaseResume", fields: [activeBaseResumeId], references: [id], onDelete: SetNull)
-  jobs                Job[]                @relation("UserJobs")
-  interviewNotes      InterviewNote[]      @relation("UserInterviewNotes")
-  salaryOffers        SalaryOffer[]        @relation("UserSalaryOffers")
-  companyInsights     CompanyInsight[]     @relation("UserCompanyInsights")
-  referralContacts    ReferralContact[]    @relation("UserReferralContacts")
-  jobNotes            JobNote[]            @relation("UserJobNotes")
-  jobReminders        JobReminder[]        @relation("UserJobReminders")
-  savedViews          SavedView[]          @relation("UserSavedViews")
-  jobAttachments      JobAttachment[]      @relation("UserJobAttachments")
-
-  @@index([email])
-  @@index([provider, providerId])
-  @@map("users")
-}
-
-model WorkExperience {
-  id        String @id @default(cuid())
-  profileId String
-
-  company      String
-  role         String
-  location     String?
-  startDate    String
-  endDate      String?
-  isCurrent    Boolean  @default(false)
-  description  String?
-  technologies String[] @default([]) // Technologies/tools used in this role
-  projectType  String?  @default("Full-time") // Full-time, Part-time, Contract, etc.
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  profile UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([profileId])
-  @@index([company])
-  @@map("work_experiences")
-}
-
-model BaseResume {
-  id                 String    @id @default(cuid())
-  userId             String
-  slotNumber         Int
-  name               String
-  isActive           Boolean   @default(false)
-  data               Json
-  formatting         Json?     @default("{}")
-  metadata           Json?     @default("{}")
-  lastAIAccessedAt   DateTime?
-  parsingConfidence  Float?
-  embedding          String?   @db.Text // pgvector embedding stored as text
-  embeddingUpdatedAt DateTime? @map("embedding_updated_at")
-  storageFileId      String? // Link to uploaded file for parsing
-  fileHash           String? // SHA-256 hash for cache lookup
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user               User                 @relation("UserBaseResumes", fields: [userId], references: [id], onDelete: Cascade)
-  activeUser         User?                @relation("ActiveBaseResume")
-  storageFile        StorageFile?         @relation(fields: [storageFileId], references: [id], onDelete: SetNull)
-  workingDraft       WorkingDraft? // One-to-one relation with working draft
-  tailoredVersions   TailoredVersion[]
-  generatedDocuments GeneratedDocument[]
-  resumeCaches       ResumeCache[]
-  aiRequests         AIRequestLog[]
-  aiDrafts           AIDraft[]
-  tailoringAnalytics TailoringAnalytics[]
-
-  @@unique([userId, slotNumber])
-  @@index([userId, isActive]) // For finding active resume per user
-  @@index([userId, updatedAt]) // For sorting user's resumes by last modified
-  @@index([storageFileId])
-  @@index([fileHash]) // For cache lookup during parsing
-  @@map("base_resumes")
-}
-
-model WorkingDraft {
-  id           String @id @default(cuid())
-  baseResumeId String @unique
-  data         Json // Current edits (not yet committed to base)
-  formatting   Json?  @default("{}")
-  metadata     Json?  @default("{}")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  baseResume BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
-
-  @@index([baseResumeId])
-  @@map("working_drafts")
-}
-
-model TailoredVersion {
-  id                 String     @id @default(cuid())
-  baseResumeId       String
-  userId             String
-  jobTitle           String?
-  company            String?
-  jobDescriptionHash String?
-  mode               TailorMode @default(PARTIAL)
-  tone               String?
-  data               Json
-  diff               Json?
-  atsScoreBefore     Int?
-  atsScoreAfter      Int?
-  isPromoted         Boolean    @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  baseResume         BaseResume          @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
-  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generatedDocuments GeneratedDocument[]
-  aiRequests         AIRequestLog[]
-
-  @@index([baseResumeId])
-  @@index([userId])
-  @@index([jobDescriptionHash])
-  @@index([userId, createdAt]) // For fetching user's recent tailored versions
-  @@index([baseResumeId, createdAt]) // For fetching recent versions of a resume
-  @@map("tailored_versions")
-}
-
-model ResumeCache {
-  id           String    @id @default(cuid())
-  userId       String
-  baseResumeId String?
-  fileHash     String    @unique
-  method       String
-  data         Json
-  confidence   Float?
-  hitCount     Int       @default(0)
-  createdAt    DateTime  @default(now())
-  lastUsedAt   DateTime  @default(now())
-  expiresAt    DateTime?
-
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseResume BaseResume? @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@map("resume_cache")
-}
-
-model AIRequestLog {
-  id                String   @id @default(cuid())
-  userId            String
-  baseResumeId      String?
-  tailoredVersionId String?
-  action            AIAction
-  provider          String?
-  model             String?
-  tokensUsed        Int?
-  costUsd           Decimal? @db.Decimal(12, 4)
-  status            String   @default("success")
-  errorMessage      String?
-  metadata          Json?
-  createdAt         DateTime @default(now())
-
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseResume      BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
-  tailoredVersion TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([baseResumeId])
-  @@index([tailoredVersionId])
-  @@index([action])
-  @@index([userId, createdAt]) // For fetching user's recent AI requests
-  @@index([action, createdAt]) // For analytics by action type over time
-  @@index([userId, action, createdAt]) // For user's requests by action type
-  @@map("ai_request_logs")
-}
-
-model GeneratedDocument {
-  id                String           @id @default(cuid())
-  userId            String
-  baseResumeId      String?
-  tailoredVersionId String?
-  type              GeneratedDocType @default(COVER_LETTER)
-  templateId        String?
-  tone              String?
-  jobTitle          String?
-  company           String?
-  data              Json
-  storagePath       String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseResume      BaseResume?      @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
-  tailoredVersion TailoredVersion? @relation(fields: [tailoredVersionId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([type])
-  @@map("generated_documents")
-}
-
-model Resume {
-  id     String @id @default(cuid())
-  userId String
-
-  // Basic Info
-  fileName   String
-  templateId String? // Selected template ID
-
-  // Resume Data (stored as JSON)
-  // Contains: name, title, email, phone, location, summary, skills, experience, education, projects, certifications
-  data Json // Complete resume data structure
-
-  // Section Configuration
-  sectionOrder      String[] @default([]) // Order of sections
-  sectionVisibility Json     @default("{}") // Which sections are visible
-  customSections    Json     @default("[]") // Custom sections added by user
-  customFields      Json     @default("[]") // Custom contact fields
-
-  // Formatting Options
-  formatting Json @default("{}") // fontFamily, fontSize, lineSpacing, sectionSpacing, margins, headingStyle, bulletStyle
-
-  // Metadata
-  isStarred  Boolean @default(false)
-  isArchived Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation("Resumes", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([fileName])
-  @@index([isStarred])
-  @@index([isArchived])
-  @@index([createdAt])
-  @@map("resumes")
-}
-
-model AIDraft {
-  id           String   @id @default(cuid())
-  userId       String
-  baseResumeId String
-  action       AIAction
-  payload      Json
-  metadata     Json?
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  baseResume BaseResume @relation(fields: [baseResumeId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([baseResumeId])
-  @@index([expiresAt])
-  @@map("ai_drafts")
-}
-
-model TailoringAnalytics {
-  id                 String   @id @default(cuid())
-  userId             String
-  resumeId           String
-  mode               String
-  scoreBefore        Float
-  scoreAfter         Float
-  improvement        Float
-  improvementRate    Float
-  targetScore        Float
-  targetMet          Boolean
-  tokensUsed         Int?
-  durationMs         Int
-  confidence         Float    @default(0)
-  warningCount       Int      @default(0)
-  changeCount        Int      @default(0)
-  keywordsAddedCount Int      @default(0)
-  costEstimate       Float    @default(0)
-  timestamp          DateTime @default(now())
-  createdAt          DateTime @default(now())
-
-  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resume BaseResume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([timestamp])
-  @@index([mode])
-  @@index([userId, timestamp])
-  @@map("tailoring_analytics")
-}
-
-// ============================================================
-// Job Tracker Models
-// ============================================================
-
-model Job {
-  id     String @id @default(cuid())
-  userId String
-
-  // Basic Information
-  title    String
-  company  String
-  location String
-  status   JobStatus    @default(APPLIED)
-  priority JobPriority? @default(MEDIUM)
-
-  // Application Details
-  appliedDate   String // Date in YYYY-MM-DD format
-  salary        String? // Salary range or amount
-  description   String? @db.Text
-  url           String? // Job posting URL
-  notes         String? @db.Text
-  nextStep      String?
-  nextStepDate  String? // Date in YYYY-MM-DD format
-
-  // Contact Information (JSON)
-  contact Json? // {name, email, phone}
-
-  // Additional Details
-  requirements String[] @default([])
-  benefits     String[] @default([])
-  remote       Boolean  @default(false)
-  companySize  String?
-  industry     String?
-
-  // Metadata
-  isFavorite Boolean   @default(false)
-  deletedAt  DateTime? // Soft delete
-
-  createdAt   DateTime @default(now())
-  lastUpdated DateTime @updatedAt
-
-  // Relations
-  user            User              @relation("UserJobs", fields: [userId], references: [id], onDelete: Cascade)
-  interviewNotes  InterviewNote[]
-  salaryOffers    SalaryOffer[]
-  companyInsights CompanyInsight[]
-  referrals       ReferralContact[]
-  jobNotes        JobNote[]
-  reminders       JobReminder[]
-  attachments     JobAttachment[]
-
-  @@index([userId])
-  @@index([status])
-  @@index([priority])
-  @@index([company])
-  @@index([appliedDate])
-  @@index([deletedAt])
-  @@index([isFavorite])
-  @@map("jobs")
-}
-
-model InterviewNote {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  type        String // phone, technical, behavioral, final, other
-  date        String // Date in YYYY-MM-DD format
-  interviewer String?
-  notes       String  @db.Text
-  questions   String[] @default([])
-  feedback    String?  @db.Text
-  rating      Int? // 1-5 rating
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserInterviewNotes", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([date])
-  @@map("interview_notes")
-}
-
-model SalaryOffer {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  amount   Float
-  currency String  @default("USD")
-  equity   String? // Stock options, RSUs, etc.
-  benefits String[] @default([])
-  notes    String?  @db.Text
-  date     String // Date in YYYY-MM-DD format
-  status   String  @default("initial") // initial, countered, accepted, rejected
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserSalaryOffers", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([status])
-  @@map("salary_offers")
-}
-
-model CompanyInsight {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  type    String // culture, benefits, growth, reviews, news, other
-  title   String
-  content String @db.Text
-  source  String?
-  date    String // Date in YYYY-MM-DD format
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserCompanyInsights", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([type])
-  @@map("company_insights")
-}
-
-model ReferralContact {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  name         String
-  position     String
-  relationship String
-  contacted    Boolean @default(false)
-  date         String // Date in YYYY-MM-DD format
-  notes        String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserReferralContacts", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([contacted])
-  @@map("referral_contacts")
-}
-
-model JobNote {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  title    String
-  content  String   @db.Text
-  tags     String[] @default([])
-  date     String // Date in YYYY-MM-DD format
-  category String   @default("other") // research, application, interview, offer, other
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserJobNotes", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([category])
-  @@map("job_notes")
-}
-
-model JobReminder {
-  id    String @id @default(cuid())
-  jobId String
-  userId String
-
-  title       String
-  description String  @db.Text
-  dueDate     String // Date in YYYY-MM-DD format
-  completed   Boolean     @default(false)
-  priority    JobPriority @default(MEDIUM)
-  type        String      @default("other") // follow-up, deadline, interview, application, other
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User @relation("UserJobReminders", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([jobId])
-  @@index([userId])
-  @@index([dueDate])
-  @@index([completed])
-  @@map("job_reminders")
-}
-
-model SavedView {
-  id     String @id @default(cuid())
-  userId String
-
-  name    String
-  filters Json // JobFilters as JSON
-  columns String[] @default([])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation("UserSavedViews", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("saved_views")
-}
-
-model JobAttachment {
-  id        String @id @default(cuid())
-  jobId     String
-  userId    String
-  fileId    String
-  attachmentType String @default("other") // resume, cover_letter, portfolio, other
-
-  createdAt DateTime @default(now())
-
-  job  Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  user User        @relation("UserJobAttachments", fields: [userId], references: [id], onDelete: Cascade)
-  file StorageFile @relation("JobAttachments", fields: [fileId], references: [id], onDelete: Cascade)
-
-  @@unique([jobId, fileId]) // Prevent duplicate attachments
-  @@index([jobId])
-  @@index([userId])
-  @@index([fileId])
-  @@map("job_attachments")
-}
-
-model AnalyticsEvent {
-  id         String   @id @default(cuid())
-  userId     String
-  event      String   // Event name (e.g., 'resume_uploaded', 'ats_check_success')
-  properties String   @default("{}") // JSON string of event properties
-  sessionId  String?  // Optional session identifier
-  timestamp  DateTime @default(now())
-  createdAt  DateTime @default(now())
-
-  user User @relation("AnalyticsEvents", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([event])
-  @@index([timestamp])
-  @@index([userId, timestamp])
-  @@index([event, timestamp])
-  @@map("analytics_events")
-}
-
-model WebhookConfig {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  url           String   // Webhook endpoint URL
-  secret        String   // HMAC secret for signature verification
-  enabled       Boolean  @default(true)
-  enabledEvents String   @default("[]") // JSON array of enabled event types
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation("WebhookConfig", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([enabled])
-  @@map("webhook_configs")
-}
-
-model WebhookLog {
-  id          String    @id @default(cuid())
-  userId      String
-  event       String    // Event type
-  url         String    // Webhook URL that was called
-  payload     String    // JSON payload sent
-  success     Boolean   // Whether delivery was successful
-  statusCode  Int?      // HTTP status code received
-  attempts    Int       @default(1) // Number of delivery attempts
-  error       String?   // Error message if failed
-  deliveryId  String    @unique // Unique delivery identifier
-  deliveredAt DateTime? // When successfully delivered
-  createdAt   DateTime  @default(now())
-
-  user User @relation("WebhookLogs", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([event])
-  @@index([success])
-  @@index([createdAt])
-  @@index([userId, createdAt])
-  @@index([deliveryId])
-  @@map("webhook_logs")
-}
-
-model PromptVariant {
-  id          String   @id @default(cuid())
-  name        String   // Descriptive name (e.g., "Tailoring Prompt v2")
-  operation   String   // Operation type (e.g., "tailoring", "ats_analysis", "content_generation")
-  variant     String   // Variant identifier (e.g., "A", "B", "control")
-  prompt      String   @db.Text // The actual prompt text
-  metadata    String   @default("{}") // JSON metadata (compression settings, etc.)
-  isActive    Boolean  @default(true)
-  isControl   Boolean  @default(false) // Whether this is the control variant
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tests PromptTest[]
-
-  @@unique([operation, variant])
-  @@index([operation])
-  @@index([isActive])
-  @@map("prompt_variants")
-}
-
-model PromptTest {
-  id             String   @id @default(cuid())
-  userId         String
-  variantId      String
-  operation      String   // Operation type
-  variant        String   // Variant identifier
-  inputHash      String   // Hash of input data (for grouping similar tests)
-  success        Boolean  // Whether operation succeeded
-  durationMs     Int      // Operation duration
-  tokensUsed     Int?     // Tokens consumed
-  costUsd        Float?   // Cost in USD
-  qualityScore   Float?   // Quality score (0-100)
-  userRating     Int?     // User rating (1-5 stars)
-  outputMetrics  String   @default("{}") // JSON metrics (ATS score, keyword count, etc.)
-  error          String?  // Error message if failed
-  createdAt      DateTime @default(now())
-
-  user           User          @relation("PromptTests", fields: [userId], references: [id], onDelete: Cascade)
-  promptVariant  PromptVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@index([variantId])
-  @@index([operation])
-  @@index([variant])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([operation, variant, createdAt])
-  @@map("prompt_tests")
+// DB-021, DB-026: Permission enum for file shares and share links
+enum FilePermission {
+  VIEW
+  COMMENT
+  EDIT
+  ADMIN
 }

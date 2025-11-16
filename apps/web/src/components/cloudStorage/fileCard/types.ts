@@ -22,6 +22,10 @@ export interface FileCardProps {
   onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
   onMove?: (fileId: string, folderId: string | null) => void | Promise<void>;
   folders?: Array<{ id: string; name: string; color?: string }>;
+  // FE-035: Loading state for individual file operations
+  isLoading?: boolean;
+  // FE-031: Operation error state
+  operationError?: { error: string; retryable: boolean };
 }
 
 export type SharePermission = 'view' | 'comment' | 'edit' | 'admin';

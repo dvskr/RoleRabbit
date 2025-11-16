@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Share2, X, UserPlus, Trash2, Loader2, CheckCircle2 } from 'lucide-react';
+import { Share2, X, UserPlus, Trash2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ResumeFile } from '../../../types/cloudStorage';
 import { SharePermission } from '../types';
 import { MODAL_OVERLAY_STYLE, SHARE_MODAL, SHARE_PERMISSIONS } from '../constants';
@@ -31,6 +31,8 @@ interface ShareModalProps {
     handleShareSubmit: () => void | Promise<void>;
     isSharing?: boolean;
     shareSuccess?: boolean;
+    emailError?: string | null;
+    setEmailError?: (error: string | null) => void;
   };
   onRemoveShare?: (fileId: string, shareId: string) => void | Promise<void>;
 }
@@ -117,7 +119,13 @@ export const ShareModal: React.FC<ShareModalProps> = ({
             <input
               type="email"
               value={fileSharing.shareEmail}
-              onChange={(e) => fileSharing.setShareEmail(e.target.value)}
+              onChange={(e) => {
+                fileSharing.setShareEmail(e.target.value);
+                // Clear error when user types
+                if (fileSharing.setEmailError && fileSharing.emailError) {
+                  fileSharing.setEmailError(null);
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && fileSharing.shareEmail.trim() && !fileSharing.isSharing && !fileSharing.shareSuccess && fileSharing.handleShareSubmit) {
                   e.preventDefault();
@@ -130,16 +138,24 @@ export const ShareModal: React.FC<ShareModalProps> = ({
               className="w-full px-3 py-2 rounded-lg focus:outline-none transition-all"
               style={{
                 background: colors.inputBackground,
-                border: `1px solid ${colors.border}`,
+                border: `1px solid ${fileSharing.emailError ? colors.errorRed : colors.border}`,
                 color: colors.primaryText,
               }}
               onFocus={(e) => {
                 e.currentTarget.style.borderColor = colors.borderFocused;
               }}
               onBlur={(e) => {
-                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.borderColor = fileSharing.emailError ? colors.errorRed : colors.border;
               }}
             />
+            {fileSharing.emailError && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <AlertCircle size={14} style={{ color: colors.errorRed }} />
+                <p className="text-xs" style={{ color: colors.errorRed }}>
+                  {fileSharing.emailError}
+                </p>
+              </div>
+            )}
             {fileSharing.shareSuccess && (
               <div 
                 className="mt-2 px-3 py-2 rounded-lg flex items-center space-x-2"
